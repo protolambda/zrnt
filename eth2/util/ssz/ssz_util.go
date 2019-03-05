@@ -79,16 +79,15 @@ func sszSerialize(v reflect.Value, dst *[]byte) (encodedLen uint32) {
 			encodedLen += serializedSize
 		}
 		return encodedLen
-	// Not used in the spec currently, free lines for challenge ;)
-	//case reflect.Slice: // "list"
-	//	for i, size := 0, v.Len(); i < size; i++ {
-	//		// allocate size prefix: BYTES_PER_LENGTH_PREFIX
-	//		s, e := withSize(dst, 4)
-	//		serializedSize := sszSerialize(v.Index(i), dst)
-	//		binary.LittleEndian.PutUint32((*dst)[s:e], serializedSize)
-	//		encodedLen += 4 + serializedSize
-	//	}
-	//	return encodedLen
+	case reflect.Slice: // "list"
+		for i, size := 0, v.Len(); i < size; i++ {
+			// allocate size prefix: BYTES_PER_LENGTH_PREFIX
+			s, e := withSize(dst, 4)
+			serializedSize := sszSerialize(v.Index(i), dst)
+			binary.LittleEndian.PutUint32((*dst)[s:e], serializedSize)
+			encodedLen += 4 + serializedSize
+		}
+		return encodedLen
 	case reflect.Struct: // "container"
 		for i, size := 0, v.NumField(); i < size; i++ {
 			// allocate size prefix: BYTES_PER_LENGTH_PREFIX

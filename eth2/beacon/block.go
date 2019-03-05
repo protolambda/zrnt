@@ -7,16 +7,17 @@ type BeaconBlock struct {
 	Slot          eth2.Slot
 	Parent_root   eth2.Root
 	State_root    eth2.Root
-	Randao_reveal [96]byte
-	Eth1_data     Eth1Data
-
-	// Body
+	//
+	//// Body
 	Body BeaconBlockBody
-	// Signature
-	Signature eth2.BLSSignature
+	//// Signature
+	Signature eth2.BLSSignature `ssz:"signature"`
 }
 
 type BeaconBlockBody struct {
+	Randao_reveal [96]byte
+	Eth1_data     Eth1Data
+
 	Proposer_slashings []ProposerSlashing
 	Attester_slashings []AttesterSlashing
 	Attestations       []Attestation

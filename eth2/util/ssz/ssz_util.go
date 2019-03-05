@@ -7,7 +7,9 @@ import (
 	"reflect"
 )
 
-func Signed_root(input interface{}, signType string) eth2.Root {
+// constructs a merkle_root of the given struct (panics if it's not a struct, or a pointer to one),
+// but ignores any fields that are tagged with `ssz:"signature"`
+func Signed_root(input interface{}) eth2.Root {
 	subRoots := make([]eth2.Bytes32, 0)
 	v := reflect.ValueOf(input)
 	if v.Kind() == reflect.Ptr {
@@ -16,13 +18,13 @@ func Signed_root(input interface{}, signType string) eth2.Root {
 	if v.Kind() != reflect.Struct {
 		panic("cannot get partial root for signing, input is not a struct")
 	}
-	ignored := v.FieldByName(signType)
+	vType := v.Type()
 	for i, fields := 0, v.NumField(); i < fields; i++ {
-		f := v.Field(i)
-		if f == ignored {
+		// ignore all fields with a signatures
+		if tag, ok := vType.Field(i).Tag.Lookup("ssz"); ok && tag == "signature" {
 			break
 		}
-		subRoots = append(subRoots, eth2.Bytes32(sszHashTreeRoot(f)))
+		subRoots = append(subRoots, eth2.Bytes32(sszHashTreeRoot(v.Field(i))))
 	}
 	return merkle.Merkle_root(subRoots)
 }
@@ -121,7 +123,9 @@ func sszHashTreeRoot(v reflect.Value) eth2.Root {
 		switch v.Type().Elem().Kind() {
 		// "list of basic objects"
 		case reflect.Uint8, reflect.Uint32, reflect.Uint64, reflect.Bool, reflect.Array:
-			return sszMixInLength(merkle.Merkle_root(sszPack(v)), uint64(v.Len()))
+			packedData := sszPack(v)
+			root := merkle.Merkle_root(packedData)
+			return sszMixInLength(root, uint64(v.Len()))
 		// Interpretation: list of composite / var-size (i.e. the non-basic) objects
 		default:
 			data := make([]eth2.Bytes32, v.Len())
@@ -144,7 +148,18 @@ func sszHashTreeRoot(v reflect.Value) eth2.Root {
 
 func sszPack(input reflect.Value) []eth2.Bytes32 {
 	serialized := make([]byte, 0)
-	sszSerialize(input, &serialized)
+	switch input.Kind() {
+	case reflect.Array, reflect.Slice:
+		for i, length := 0, input.Len(); i < length; i++ {
+			sszSerialize(input.Index(i), &serialized)
+		}
+	case reflect.Struct:
+		for i, length := 0, input.NumField(); i < length; i++ {
+			sszSerialize(input.Field(i), &serialized)
+		}
+	default:
+		sszSerialize(input, &serialized)
+	}
 	// floored: handle all normal chunks first
 	flooredChunkCount := len(serialized) / 32
 	// ceiled: include any partial chunk at end as full chunk (with padding)

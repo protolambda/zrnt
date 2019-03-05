@@ -24,7 +24,7 @@ type Proposal struct {
 	// Block root
 	Block_root eth2.Root
 	// Signature
-	Signature eth2.BLSSignature
+	Signature eth2.BLSSignature `ssz:"signature"`
 }
 
 type AttesterSlashing struct {
@@ -42,7 +42,7 @@ type SlashableAttestation struct {
 	// Custody bitfield
 	Custody_bitfield bitfield.Bitfield
 	// Aggregate signature
-	Aggregate_signature eth2.BLSSignature
+	Aggregate_signature eth2.BLSSignature `ssz:"signature"`
 }
 
 type Attestation struct {
@@ -53,7 +53,7 @@ type Attestation struct {
 	// Custody bitfield
 	Custody_bitfield bitfield.Bitfield
 	// BLS aggregate signature
-	Aggregate_signature eth2.BLSSignature
+	Aggregate_signature eth2.BLSSignature `ssz:"signature"`
 }
 
 type AttestationData struct {
@@ -113,7 +113,7 @@ type DepositInput struct {
 	// Withdrawal credentials
 	Withdrawal_credentials eth2.Root
 	// A BLS signature of this `DepositInput`
-	Proof_of_possession eth2.BLSSignature
+	Proof_of_possession eth2.BLSSignature `ssz:"signature"`
 }
 
 type VoluntaryExit struct {
@@ -122,7 +122,7 @@ type VoluntaryExit struct {
 	// Index of the exiting validator
 	Validator_index eth2.ValidatorIndex
 	// Validator signature
-	Signature eth2.BLSSignature
+	Signature eth2.BLSSignature `ssz:"signature"`
 }
 
 type Transfer struct {
@@ -139,9 +139,8 @@ type Transfer struct {
 	// Sender withdrawal pubkey
 	Pubkey eth2.BLSPubkey
 	// Sender signature
-	Signature eth2.BLSSignature
+	Signature eth2.BLSSignature `ssz:"signature"`
 }
-
 
 type Validator struct {
 	// BLS public key

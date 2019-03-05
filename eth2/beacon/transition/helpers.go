@@ -78,7 +78,7 @@ func get_total_balance(state *beacon.BeaconState, indices []eth2.ValidatorIndex)
 func process_deposit(state *beacon.BeaconState, dep *beacon.Deposit) error {
 	deposit_input := &dep.Deposit_data.Deposit_input
 
-	if !bls.Bls_verify(deposit_input.Pubkey, ssz.Signed_root(deposit_input, "proof_of_possession"), deposit_input.Proof_of_possession, get_domain(state.Fork, state.Epoch(), eth2.DOMAIN_DEPOSIT)) {
+	if !bls.Bls_verify(deposit_input.Pubkey, ssz.Signed_root(deposit_input, "Proof_of_possession"), deposit_input.Proof_of_possession, get_domain(state.Fork, state.Epoch(), eth2.DOMAIN_DEPOSIT)) {
 		// simply don't handle the deposit. (TODO: should this be an error (making block invalid)?)
 		return nil
 	}

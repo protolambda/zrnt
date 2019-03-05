@@ -25,8 +25,8 @@ func ApplyBlock(state *beacon.BeaconState, block *beacon.BeaconBlock) error {
 	proposer := state.Validator_registry[get_beacon_proposer_index(state, state.Slot)]
 	// Block signature
 	{
-		proposal := beacon.Proposal{Slot: block.Slot, Shard: eth2.BEACON_CHAIN_SHARD_NUMBER, Block_root: ssz.Signed_root(block, "signature"), Signature: block.Signature}
-		if !bls.Bls_verify(proposer.Pubkey, ssz.Signed_root(proposal, "signature"), proposal.Signature, get_domain(state.Fork, state.Epoch(), eth2.DOMAIN_PROPOSAL)) {
+		proposal := beacon.Proposal{Slot: block.Slot, Shard: eth2.BEACON_CHAIN_SHARD_NUMBER, Block_root: ssz.Signed_root(block, "Signature"), Signature: block.Signature}
+		if !bls.Bls_verify(proposer.Pubkey, ssz.Signed_root(proposal, "Signature"), proposal.Signature, get_domain(state.Fork, state.Epoch(), eth2.DOMAIN_PROPOSAL)) {
 			return errors.New("block signature invalid")
 		}
 	}
@@ -71,8 +71,8 @@ func ApplyBlock(state *beacon.BeaconState, block *beacon.BeaconBlock) error {
 			proposer := state.Validator_registry[ps.Proposer_index]
 			if !(ps.Proposal_1.Slot == ps.Proposal_2.Slot && ps.Proposal_1.Shard == ps.Proposal_2.Shard &&
 				ps.Proposal_1.Block_root != ps.Proposal_2.Block_root && proposer.Slashed == false &&
-				bls.Bls_verify(proposer.Pubkey, ssz.Signed_root(ps.Proposal_1, "signature"), ps.Proposal_1.Signature, get_domain(state.Fork, ps.Proposal_1.Slot.ToEpoch(), eth2.DOMAIN_PROPOSAL)) &&
-				bls.Bls_verify(proposer.Pubkey, ssz.Signed_root(ps.Proposal_2, "signature"), ps.Proposal_2.Signature, get_domain(state.Fork, ps.Proposal_2.Slot.ToEpoch(), eth2.DOMAIN_PROPOSAL))) {
+				bls.Bls_verify(proposer.Pubkey, ssz.Signed_root(ps.Proposal_1, "Signature"), ps.Proposal_1.Signature, get_domain(state.Fork, ps.Proposal_1.Slot.ToEpoch(), eth2.DOMAIN_PROPOSAL)) &&
+				bls.Bls_verify(proposer.Pubkey, ssz.Signed_root(ps.Proposal_2, "Signature"), ps.Proposal_2.Signature, get_domain(state.Fork, ps.Proposal_2.Slot.ToEpoch(), eth2.DOMAIN_PROPOSAL))) {
 				return errors.New(fmt.Sprintf("proposer slashing %d is invalid", i))
 			}
 			if err := slash_validator(state, ps.Proposer_index); err != nil {
@@ -245,7 +245,7 @@ func ApplyBlock(state *beacon.BeaconState, block *beacon.BeaconBlock) error {
 			validator := state.Validator_registry[exit.Validator_index]
 			if !(validator.Exit_epoch > get_delayed_activation_exit_epoch(state.Epoch()) &&
 				state.Epoch() > exit.Epoch &&
-				bls.Bls_verify(validator.Pubkey, ssz.Signed_root(exit, "signature"),
+				bls.Bls_verify(validator.Pubkey, ssz.Signed_root(exit, "Signature"),
 					exit.Signature, get_domain(state.Fork, exit.Epoch, eth2.DOMAIN_EXIT))) {
 				return errors.New(fmt.Sprintf("voluntary exit %d could not be verified", i))
 			}
@@ -278,7 +278,7 @@ func ApplyBlock(state *beacon.BeaconState, block *beacon.BeaconBlock) error {
 				state.Slot == transfer.Slot &&
 				(state.Epoch() >= state.Validator_registry[transfer.From].Withdrawable_epoch || state.Validator_registry[transfer.From].Activation_epoch == eth2.FAR_FUTURE_EPOCH) &&
 				state.Validator_registry[transfer.From].Withdrawal_credentials == withdrawCred &&
-				bls.Bls_verify(transfer.Pubkey, ssz.Signed_root(transfer, "signature"), transfer.Signature, get_domain(state.Fork, transfer.Slot.ToEpoch(), eth2.DOMAIN_TRANSFER))) {
+				bls.Bls_verify(transfer.Pubkey, ssz.Signed_root(transfer, "Signature"), transfer.Signature, get_domain(state.Fork, transfer.Slot.ToEpoch(), eth2.DOMAIN_TRANSFER))) {
 				return errors.New(fmt.Sprintf("transfer %d is invalid", i))
 			}
 			state.Validator_balances[transfer.From] -= transfer.Amount + transfer.Fee

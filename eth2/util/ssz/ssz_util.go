@@ -19,7 +19,7 @@ func Signed_root(input interface{}, signType string) eth2.Root {
 	ignored := v.FieldByName(signType)
 	for i, fields := 0, v.NumField(); i < fields; i++ {
 		f := v.Field(i)
-		if f.Pointer() == ignored.Pointer() {
+		if f == ignored {
 			break
 		}
 		subRoots = append(subRoots, eth2.Bytes32(sszHashTreeRoot(f)))

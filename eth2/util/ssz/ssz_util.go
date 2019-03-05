@@ -37,7 +37,7 @@ func withSize(dst *[]byte, size uint64) (start uint64, end uint64) {
 	// if capacity is too low, extend it.
 	start, end = uint64(len(*dst)), uint64(len(*dst))+size
 	if uint64(cap(*dst)) < end {
-		res := make([]byte, len(*dst), len(*dst)*2)
+		res := make([]byte, end, end*2)
 		copy(res[0:start], *dst)
 		*dst = res
 	}

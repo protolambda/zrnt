@@ -8,6 +8,9 @@ import (
 // Merkleize values (where len(values) is a power of two) and return the Merkle root.
 // Note that the leaves are not hashed.
 func Merkle_root(values []eth2.Bytes32) eth2.Root {
+	if len(values) == 0 {
+		return eth2.Root{}
+	}
 	o := make([]eth2.Bytes32, len(values)*2)
 	copy(o[len(values):], values)
 	for i := len(values) - 1; i >= 0; i-- {

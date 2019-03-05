@@ -2,8 +2,8 @@ package ssz
 
 import (
 	"encoding/binary"
-	"go-beacon-transition/eth2"
-	"go-beacon-transition/eth2/util/merkle"
+	"github.com/protolambda/go-beacon-transition/eth2"
+	"github.com/protolambda/go-beacon-transition/eth2/util/merkle"
 	"reflect"
 )
 

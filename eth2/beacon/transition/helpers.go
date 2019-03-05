@@ -4,14 +4,15 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"go-beacon-transition/eth2"
-	"go-beacon-transition/eth2/beacon"
-	"go-beacon-transition/eth2/util/bitfield"
-	"go-beacon-transition/eth2/util/bls"
-	"go-beacon-transition/eth2/util/hash"
-	"go-beacon-transition/eth2/util/math"
-	"go-beacon-transition/eth2/util/ssz"
-	"go-beacon-transition/eth2/util/validatorset"
+	"github.com/protolambda/eth2-shuffle"
+	"github.com/protolambda/go-beacon-transition/eth2"
+	"github.com/protolambda/go-beacon-transition/eth2/beacon"
+	"github.com/protolambda/go-beacon-transition/eth2/util/bitfield"
+	"github.com/protolambda/go-beacon-transition/eth2/util/bls"
+	"github.com/protolambda/go-beacon-transition/eth2/util/hash"
+	"github.com/protolambda/go-beacon-transition/eth2/util/math"
+	"github.com/protolambda/go-beacon-transition/eth2/util/ssz"
+	"github.com/protolambda/go-beacon-transition/eth2/util/validatorset"
 )
 
 // Set the validator with the given index as withdrawable
@@ -269,7 +270,12 @@ func get_shuffling(seed eth2.Bytes32, validators []beacon.Validator, epoch eth2.
 	committee_count := get_epoch_committee_count(uint64(len(active_validator_indices)))
 	commitees := make([][]eth2.ValidatorIndex, committee_count, committee_count)
 	// Active validators, shuffled in-place.
-	shuffleValidatorIndices(active_validator_indices, seed)
+	// TODO shuffleValidatorIndices(active_validator_indices, seed)
+	hashFn := func(input []byte) []byte {
+		res := hash.Hash(input)
+		return res[:]
+	}
+	eth2_shuffle.ShuffleList(hashFn, eth2.ValidatorIndexList(active_validator_indices).RawIndexSlice(), eth2.SHUFFLE_ROUND_COUNT, seed)
 	committee_size := uint64(len(active_validator_indices)) / committee_count
 	for i := uint64(0); i < committee_count; i += committee_size {
 		commitees[i] = active_validator_indices[i : i+committee_size]

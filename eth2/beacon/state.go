@@ -1,6 +1,6 @@
 package beacon
 
-import "go-beacon-transition/eth2"
+import "github.com/protolambda/go-beacon-transition/eth2"
 
 type BeaconState struct {
 	// Misc

@@ -1,8 +1,8 @@
 package beacon
 
 import (
-	"go-beacon-transition/eth2"
-	"go-beacon-transition/eth2/util/bitfield"
+	"github.com/protolambda/go-beacon-transition/eth2"
+	"github.com/protolambda/go-beacon-transition/eth2/util/bitfield"
 )
 
 // NOTE: these containers are going to be moved to sub-packages, per-topic.

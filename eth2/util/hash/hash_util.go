@@ -2,7 +2,7 @@ package hash
 
 import (
 	"crypto/sha256"
-	"go-beacon-transition/eth2"
+	"github.com/protolambda/go-beacon-transition/eth2"
 )
 
 func Hash(input []byte) (out eth2.Bytes32) {

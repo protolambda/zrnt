@@ -1,5 +1,10 @@
 package eth2
 
+import (
+	"reflect"
+	"unsafe"
+)
+
 type Slot uint64
 type Epoch uint64
 type Shard uint64
@@ -26,3 +31,17 @@ func (e Epoch) GetStartSlot() Slot {
 	return Slot(e) * SLOTS_PER_EPOCH
 }
 
+type ValidatorIndexList []ValidatorIndex
+
+func (raw ValidatorIndexList) RawIndexSlice() []uint64 {
+	// Get the slice header
+	header := *(*reflect.SliceHeader)(unsafe.Pointer(&raw))
+
+	// The length and capacity of the slice are different.
+	header.Len /= 8
+	header.Cap /= 8
+
+	// Convert slice header to an []uint64
+	data := *(*[]uint64)(unsafe.Pointer(&header))
+	return data
+}

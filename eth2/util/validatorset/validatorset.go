@@ -1,7 +1,7 @@
 package validatorset
 
 import (
-	"go-beacon-transition/eth2"
+	"github.com/protolambda/go-beacon-transition/eth2"
 )
 
 type ValidatorIndexSet []eth2.ValidatorIndex

@@ -1,6 +1,6 @@
 package math
 
-import "go-beacon-transition/eth2"
+import "github.com/protolambda/go-beacon-transition/eth2"
 
 // Typed wrappers for min/max, may want to unify or move.
 

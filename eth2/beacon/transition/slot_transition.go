@@ -1,9 +1,9 @@
 package transition
 
 import (
-	"go-beacon-transition/eth2"
-	"go-beacon-transition/eth2/beacon"
-	"go-beacon-transition/eth2/util/merkle"
+	"github.com/protolambda/go-beacon-transition/eth2"
+	"github.com/protolambda/go-beacon-transition/eth2/beacon"
+	"github.com/protolambda/go-beacon-transition/eth2/util/merkle"
 )
 
 // Let previous_block_root be the hash_tree_root of the previous beacon block processed in the chain.

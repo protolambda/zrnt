@@ -16,10 +16,10 @@ func Merkle_root(values []eth2.Bytes32) eth2.Root {
 		return eth2.Root(values[0])
 	}
 	power2 := math.NextPowerOfTwo(uint64(len(values)))
-	o := make([]eth2.Bytes32, power2 << 1)
+	o := make([]eth2.Bytes32, power2<<1)
 	copy(o[power2:], values)
 	for i := int64(power2) - 1; i >= 0; i-- {
-		o[i] = hash.Hash(append(o[i*2][:], o[i*2+1][:]...))
+		o[i] = hash.Hash(append(o[i<<1][:], o[(i<<1)+1][:]...))
 	}
 	return eth2.Root(o[1])
 }

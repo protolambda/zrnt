@@ -119,7 +119,7 @@ type Transfer struct {
 	// Sender index
 	Sender eth2.ValidatorIndex
 	// Recipient index
-	To eth2.ValidatorIndex
+	Recipient eth2.ValidatorIndex
 	// Amount in Gwei
 	Amount eth2.Gwei
 	// Fee in Gwei for block proposer

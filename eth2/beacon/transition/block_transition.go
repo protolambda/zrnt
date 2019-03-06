@@ -1,14 +1,12 @@
 package transition
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"github.com/protolambda/go-beacon-transition/eth2"
 	"github.com/protolambda/go-beacon-transition/eth2/beacon"
 	"github.com/protolambda/go-beacon-transition/eth2/util/bls"
 	"github.com/protolambda/go-beacon-transition/eth2/util/hash"
-	"github.com/protolambda/go-beacon-transition/eth2/util/merkle"
 	"github.com/protolambda/go-beacon-transition/eth2/util/ssz"
 )
 
@@ -22,22 +20,27 @@ func ApplyBlock(state *beacon.BeaconState, block *beacon.BeaconBlock) error {
 		return errors.New("cannot apply block to pre-block-state at different slot")
 	}
 
-	proposer := state.Validator_registry[get_beacon_proposer_index(state, state.Slot)]
-	// Block signature
-	{
-		proposal := beacon.Proposal{Slot: block.Slot, Shard: eth2.BEACON_CHAIN_SHARD_NUMBER, Block_root: ssz.Signed_root(block), Signature: block.Signature}
-		if !bls.Bls_verify(proposer.Pubkey, ssz.Signed_root(proposal), proposal.Signature, get_domain(state.Fork, state.Epoch(), eth2.DOMAIN_PROPOSAL)) {
-			return errors.New("block signature invalid")
-		}
-	}
-
-	// RANDAO
-	{
-		if !bls.Bls_verify(proposer.Pubkey, ssz.Hash_tree_root(state.Epoch()), block.Randao_reveal, get_domain(state.Fork, state.Epoch(), eth2.DOMAIN_RANDAO)) {
-			return errors.New("randao invalid")
-		}
-		state.Latest_randao_mixes[state.Epoch()%eth2.LATEST_RANDAO_MIXES_LENGTH] = hash.XorBytes32(get_randao_mix(state, state.Epoch()), hash.Hash(block.Randao_reveal[:]))
-	}
+	// TODO update
+	//propIndex, err := get_beacon_proposer_index(state, state.Slot, false)
+	//if err != nil {
+	//	return err
+	//}
+	//proposer := state.Validator_registry[propIndex]
+	//// Block signature
+	//{
+	//	proposal := beacon.Proposal{Slot: block.Slot, Shard: eth2.BEACON_CHAIN_SHARD_NUMBER, Block_root: ssz.Signed_root(block), Signature: block.Signature}
+	//	if !bls.Bls_verify(proposer.Pubkey, ssz.Signed_root(proposal), proposal.Signature, get_domain(state.Fork, state.Epoch(), eth2.DOMAIN_PROPOSAL)) {
+	//		return errors.New("block signature invalid")
+	//	}
+	//}
+	//
+	//// RANDAO
+	//{
+	//	if !bls.Bls_verify(proposer.Pubkey, ssz.Hash_tree_root(state.Epoch()), block.Randao_reveal, get_domain(state.Fork, state.Epoch(), eth2.DOMAIN_RANDAO)) {
+	//		return errors.New("randao invalid")
+	//	}
+	//	state.Latest_randao_mixes[state.Epoch()%eth2.LATEST_RANDAO_MIXES_LENGTH] = hash.XorBytes32(get_randao_mix(state, state.Epoch()), hash.Hash(block.Randao_reveal[:]))
+	//}
 
 	// Eth1 data
 	{
@@ -45,20 +48,21 @@ func ApplyBlock(state *beacon.BeaconState, block *beacon.BeaconBlock) error {
 		// Otherwise, append to state.Eth1_data_votes a new Eth1DataVote(eth1_data=block.Eth1_data, vote_count=1).
 		found := false
 		for i, vote := range state.Eth1_data_votes {
-			if vote.Eth1_data == block.Eth1_data {
+			if vote.Eth1_data == block.Body.Eth1_data {
 				state.Eth1_data_votes[i].Vote_count += 1
 				found = true
 				break
 			}
 		}
 		if !found {
-			state.Eth1_data_votes = append(state.Eth1_data_votes, beacon.Eth1DataVote{Eth1_data: block.Eth1_data, Vote_count: 1})
+			state.Eth1_data_votes = append(state.Eth1_data_votes, beacon.Eth1DataVote{Eth1_data: block.Body.Eth1_data, Vote_count: 1})
 		}
 	}
 
 	// Transactions
 	// START ------------------------------
 
+	// TODO: update
 	// Proposer slashings
 	{
 		if len(block.Body.Proposer_slashings) > eth2.MAX_PROPOSER_SLASHINGS {
@@ -69,10 +73,10 @@ func ApplyBlock(state *beacon.BeaconState, block *beacon.BeaconBlock) error {
 				return errors.New("invalid proposer index")
 			}
 			proposer := state.Validator_registry[ps.Proposer_index]
-			if !(ps.Proposal_1.Slot == ps.Proposal_2.Slot && ps.Proposal_1.Shard == ps.Proposal_2.Shard &&
-				ps.Proposal_1.Block_root != ps.Proposal_2.Block_root && proposer.Slashed == false &&
-				bls.Bls_verify(proposer.Pubkey, ssz.Signed_root(ps.Proposal_1), ps.Proposal_1.Signature, get_domain(state.Fork, ps.Proposal_1.Slot.ToEpoch(), eth2.DOMAIN_PROPOSAL)) &&
-				bls.Bls_verify(proposer.Pubkey, ssz.Signed_root(ps.Proposal_2), ps.Proposal_2.Signature, get_domain(state.Fork, ps.Proposal_2.Slot.ToEpoch(), eth2.DOMAIN_PROPOSAL))) {
+			if !(ps.Header_1.Slot == ps.Header_2.Slot &&
+				ps.Header_1.BlockBodyRoot != ps.Header_2.BlockBodyRoot && proposer.Slashed == false &&
+				bls.Bls_verify(proposer.Pubkey, ssz.Signed_root(ps.Header_1), ps.Header_1.Signature, get_domain(state.Fork, ps.Header_1.Slot.ToEpoch(), eth2.DOMAIN_BEACON_BLOCK)) &&
+				bls.Bls_verify(proposer.Pubkey, ssz.Signed_root(ps.Header_2), ps.Header_2.Signature, get_domain(state.Fork, ps.Header_2.Slot.ToEpoch(), eth2.DOMAIN_BEACON_BLOCK))) {
 				return errors.New(fmt.Sprintf("proposer slashing %d is invalid", i))
 			}
 			if err := slash_validator(state, ps.Proposer_index); err != nil {
@@ -208,7 +212,7 @@ func ApplyBlock(state *beacon.BeaconState, block *beacon.BeaconBlock) error {
 		if len(block.Body.Deposits) > eth2.MAX_DEPOSITS {
 			return errors.New("too many deposits")
 		}
-		for i, dep := range block.Body.Deposits {
+		for _, dep := range block.Body.Deposits {
 			if err := Process_deposit(state, &dep); err != nil {
 				return err
 			}
@@ -226,7 +230,7 @@ func ApplyBlock(state *beacon.BeaconState, block *beacon.BeaconBlock) error {
 			if !(validator.Exit_epoch > get_delayed_activation_exit_epoch(state.Epoch()) &&
 				state.Epoch() > exit.Epoch &&
 				bls.Bls_verify(validator.Pubkey, ssz.Signed_root(exit),
-					exit.Signature, get_domain(state.Fork, exit.Epoch, eth2.DOMAIN_EXIT))) {
+					exit.Signature, get_domain(state.Fork, exit.Epoch, eth2.DOMAIN_VOLUNTARY_EXIT))) {
 				return errors.New(fmt.Sprintf("voluntary exit %d could not be verified", i))
 			}
 			initiate_validator_exit(state, exit.Validator_index)
@@ -252,18 +256,22 @@ func ApplyBlock(state *beacon.BeaconState, block *beacon.BeaconBlock) error {
 			// overwrite first byte, remainder (the [1:] part, is still the hash)
 			withdrawCred[0] = eth2.BLS_WITHDRAWAL_PREFIX_BYTE
 			// verify transfer data + signature. No separate error messages for line limit challenge...
-			if !(state.Validator_balances[transfer.From] >= transfer.Amount && state.Validator_balances[transfer.From] >= transfer.Fee &&
-				((state.Validator_balances[transfer.From] == transfer.Amount+transfer.Fee) ||
-					(state.Validator_balances[transfer.From] >= transfer.Amount+transfer.Fee+eth2.MIN_DEPOSIT_AMOUNT)) &&
+			if !(state.Validator_balances[transfer.Sender] >= transfer.Amount && state.Validator_balances[transfer.Sender] >= transfer.Fee &&
+				((state.Validator_balances[transfer.Sender] == transfer.Amount+transfer.Fee) ||
+					(state.Validator_balances[transfer.Sender] >= transfer.Amount+transfer.Fee+eth2.MIN_DEPOSIT_AMOUNT)) &&
 				state.Slot == transfer.Slot &&
-				(state.Epoch() >= state.Validator_registry[transfer.From].Withdrawable_epoch || state.Validator_registry[transfer.From].Activation_epoch == eth2.FAR_FUTURE_EPOCH) &&
-				state.Validator_registry[transfer.From].Withdrawal_credentials == withdrawCred &&
+				(state.Epoch() >= state.Validator_registry[transfer.Sender].Withdrawable_epoch || state.Validator_registry[transfer.Sender].Activation_epoch == eth2.FAR_FUTURE_EPOCH) &&
+				state.Validator_registry[transfer.Sender].Withdrawal_credentials == withdrawCred &&
 				bls.Bls_verify(transfer.Pubkey, ssz.Signed_root(transfer), transfer.Signature, get_domain(state.Fork, transfer.Slot.ToEpoch(), eth2.DOMAIN_TRANSFER))) {
 				return errors.New(fmt.Sprintf("transfer %d is invalid", i))
 			}
-			state.Validator_balances[transfer.From] -= transfer.Amount + transfer.Fee
-			state.Validator_balances[transfer.To] += transfer.Amount
-			state.Validator_balances[get_beacon_proposer_index(state, state.Slot)] += transfer.Fee
+			state.Validator_balances[transfer.Sender] -= transfer.Amount + transfer.Fee
+			state.Validator_balances[transfer.Recipient] += transfer.Amount
+			propIndex, err := get_beacon_proposer_index(state, state.Slot, false)
+			if err != nil {
+				return err
+			}
+			state.Validator_balances[propIndex] += transfer.Fee
 		}
 	}
 

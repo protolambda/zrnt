@@ -23,8 +23,8 @@ func GetEmptyBlock() *BeaconBlock {
 }
 
 // Return the block header corresponding to a block with ``state_root`` set to ``ZERO_HASH``.
-func (block *BeaconBlock) GetTemporaryBlockHeader() *BeaconBlockHeader {
-	return &BeaconBlockHeader{
+func (block *BeaconBlock) GetTemporaryBlockHeader() BeaconBlockHeader {
+	return BeaconBlockHeader{
 		Slot: block.Slot,
 		PreviousBlockRoot: block.PreviousBlockRoot,
 		State_root: block.State_root,

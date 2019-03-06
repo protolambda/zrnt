@@ -92,7 +92,7 @@ func Process_deposit(state *beacon.BeaconState, dep *beacon.Deposit) error {
 
 	// Deposits must be processed in order
 	if dep.Index != state.Deposit_index {
-		return errors.New(fmt.Sprintf("deposit %d has index %d that does not match with state index %d", i, dep.Index, state.Deposit_index))
+		return errors.New(fmt.Sprintf("deposit has index %d that does not match with state index %d", dep.Index, state.Deposit_index))
 	}
 
 	// Let serialized_deposit_data be the serialized form of deposit.deposit_data.
@@ -114,7 +114,7 @@ func Process_deposit(state *beacon.BeaconState, dep *beacon.Deposit) error {
 		eth2.DEPOSIT_CONTRACT_TREE_DEPTH,
 		uint64(dep.Index),
 		state.Latest_eth1_data.Deposit_root) {
-		return errors.New(fmt.Sprintf("deposit %d has merkle proof that failed to be verified", i))
+		return errors.New(fmt.Sprintf("deposit %d has merkle proof that failed to be verified", dep.Index))
 	}
 
 	// Increment the next deposit index we are expecting. Note that this
@@ -250,11 +250,6 @@ func Generate_seed(state *beacon.BeaconState, epoch eth2.Epoch) eth2.Bytes32 {
 	return hash.Hash(buf)
 }
 
-// Return the number of committees in one epoch.
-func get_epoch_committee_count(active_validator_count uint64) uint64 {
-	return math.MaxU64(1, math.MinU64(uint64(eth2.SHARD_COUNT)/uint64(eth2.SLOTS_PER_EPOCH), active_validator_count/uint64(eth2.SLOTS_PER_EPOCH)/eth2.TARGET_COMMITTEE_SIZE)) * uint64(eth2.SLOTS_PER_EPOCH)
-}
-
 type CrosslinkCommittee struct {
 	Committee []eth2.ValidatorIndex
 	Shard     eth2.Shard
@@ -277,26 +272,23 @@ func get_crosslink_committees_at_slot(state *beacon.BeaconState, slot eth2.Slot,
 	var shuffling_epoch eth2.Epoch
 	var shuffling_start_shard eth2.Shard
 	if epoch == current_epoch {
-		committees_per_epoch = get_epoch_committee_count(get_active_validator_count(state.Validator_registry, current_epoch))
+		committees_per_epoch = get_current_epoch_committee_count(state)
 		seed = state.Current_shuffling_seed
 		shuffling_epoch = state.Current_shuffling_epoch
 		shuffling_start_shard = state.Current_shuffling_start_shard
 	} else if epoch == previous_epoch {
-		committees_per_epoch = get_epoch_committee_count(get_active_validator_count(state.Validator_registry, previous_epoch))
+		committees_per_epoch = get_previous_epoch_committee_count(state)
 		seed = state.Previous_shuffling_seed
 		shuffling_epoch = state.Previous_shuffling_epoch
 		shuffling_start_shard = state.Previous_shuffling_start_shard
 	} else if epoch == next_epoch {
-		committees_per_epoch = get_epoch_committee_count(get_active_validator_count(state.Validator_registry, next_epoch))
-		shuffling_epoch = next_epoch
-
 		epochs_since_last_registry_update := current_epoch - state.Validator_registry_update_epoch
 		if registryChange {
 			committees_per_epoch = get_next_epoch_committee_count(state)
 			seed = Generate_seed(state, next_epoch)
 			shuffling_epoch = next_epoch
 			current_committees_per_epoch := get_current_epoch_committee_count(state)
-			shuffling_start_shard = (state.Current_shuffling_start_shard + current_committees_per_epoch) % eth2.SHARD_COUNT
+			shuffling_start_shard = (state.Current_shuffling_start_shard + eth2.Shard(current_committees_per_epoch)) % eth2.SHARD_COUNT
 		} else if epochs_since_last_registry_update > 1 && math.Is_power_of_two(uint64(epochs_since_last_registry_update)) {
 			committees_per_epoch = get_next_epoch_committee_count(state)
 			seed = Generate_seed(state, next_epoch)
@@ -428,7 +420,11 @@ func slash_validator(state *beacon.BeaconState, index eth2.ValidatorIndex) error
 	state.Latest_slashed_balances[state.Epoch()%eth2.LATEST_SLASHED_EXIT_LENGTH] += Get_effective_balance(state, index)
 
 	whistleblower_reward := Get_effective_balance(state, index) / eth2.WHISTLEBLOWER_REWARD_QUOTIENT
-	state.Validator_balances[get_beacon_proposer_index(state, state.Slot)] += whistleblower_reward
+	prop_index, err := get_beacon_proposer_index(state, state.Slot, false)
+	if err != nil {
+		return err
+	}
+	state.Validator_balances[prop_index] += whistleblower_reward
 	state.Validator_balances[index] -= whistleblower_reward
 	validator.Slashed = true
 	validator.Withdrawable_epoch = state.Epoch() + eth2.LATEST_SLASHED_EXIT_LENGTH
@@ -464,4 +460,34 @@ func get_beacon_proposer_index(state *beacon.BeaconState, slot eth2.Slot, regist
 	committeeData, _ := get_crosslink_committees_at_slot(state, slot, registryChange)
 	first_committee_data := committeeData[0]
 	return first_committee_data.Committee[slot%eth2.Slot(len(first_committee_data.Committee))], nil
+}
+
+func get_epoch_committee_count(active_validator_count uint64) uint64 {
+	return math.MaxU64(1,
+		math.MinU64(
+			uint64(eth2.SHARD_COUNT)/uint64(eth2.SLOTS_PER_EPOCH),
+			active_validator_count/uint64(eth2.SLOTS_PER_EPOCH)/eth2.TARGET_COMMITTEE_SIZE,
+		)) * uint64(eth2.SLOTS_PER_EPOCH)
+}
+
+// Return the number of committees in the previous epoch of the given ``state``.
+func get_previous_epoch_committee_count(state *beacon.BeaconState) uint64 {
+	return get_epoch_committee_count(get_active_validator_count(
+		state.Validator_registry,
+		state.Previous_shuffling_epoch,
+	))
+}
+// Return the number of committees in the current epoch of the given ``state``.
+func get_current_epoch_committee_count(state *beacon.BeaconState) uint64 {
+	return get_epoch_committee_count(get_active_validator_count(
+		state.Validator_registry,
+		state.Current_shuffling_epoch,
+	))
+}
+// Return the number of committees in the next epoch of the given ``state``.
+func get_next_epoch_committee_count(state *beacon.BeaconState) uint64 {
+	return get_epoch_committee_count(get_active_validator_count(
+		state.Validator_registry,
+		state.Epoch() + 1,
+	))
 }

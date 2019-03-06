@@ -47,6 +47,10 @@ func withSize(dst *[]byte, size uint64) (start uint64, end uint64) {
 	return start, end
 }
 
+// Note: when this is changed,
+//  don't forget to change the PutUint32 calls that make put the length in this allocated space.
+const BYTES_PER_LENGTH_PREFIX = 4
+
 func sszSerialize(v reflect.Value, dst *[]byte) (encodedLen uint32) {
 	switch v.Kind() {
 	case reflect.Ptr:
@@ -55,11 +59,10 @@ func sszSerialize(v reflect.Value, dst *[]byte) (encodedLen uint32) {
 		s, _ := withSize(dst, 1)
 		(*dst)[s] = byte(v.Uint())
 		return 1
-		// Commented, not really used in spec.
-		//case reflect.Uint32: // "uintN"
-		//	s, e := withSize(dst, 4)
-		//	binary.LittleEndian.PutUint32((*dst)[s:e], uint32(v.Uint()))
-		//return 4
+	case reflect.Uint32: // "uintN"
+		s, e := withSize(dst, 4)
+		binary.LittleEndian.PutUint32((*dst)[s:e], uint32(v.Uint()))
+		return 4
 	case reflect.Uint64: // "uintN"
 		s, e := withSize(dst, 8)
 		binary.LittleEndian.PutUint64((*dst)[s:e], uint64(v.Uint()))
@@ -73,30 +76,37 @@ func sszSerialize(v reflect.Value, dst *[]byte) (encodedLen uint32) {
 		}
 		return 1
 	case reflect.Array: // "tuple"
-		// TODO: We're ignoring that arrays with variable sized items (eg. slices) are a thing in Go. Don't use them.
-		// Possible workarounds for this: (i) check sizes before encoding. (ii) panic if serializedSize is irregular.
-		// Special fields (e.g. "Root", "Bytes32" will just be packed as packed arrays, which is fine, little-endian!)
-		for i, size := 0, v.Len(); i < size; i++ {
-			serializedSize := sszSerialize(v.Index(i), dst)
-			encodedLen += serializedSize
+		if isFixedLength(v.Type().Elem()) {
+			for i, size := 0, v.Len(); i < size; i++ {
+				serializedSize := sszSerialize(v.Index(i), dst)
+				encodedLen += serializedSize
+			}
+		} else {
+			for i, size := 0, v.Len(); i < size; i++ {
+				// allocate size prefix
+				s, e := withSize(dst, BYTES_PER_LENGTH_PREFIX)
+				serializedSize := sszSerialize(v.Index(i), dst)
+				binary.LittleEndian.PutUint32((*dst)[s:e], serializedSize)
+				encodedLen += BYTES_PER_LENGTH_PREFIX + serializedSize
+			}
 		}
 		return encodedLen
 	case reflect.Slice: // "list"
 		for i, size := 0, v.Len(); i < size; i++ {
-			// allocate size prefix: BYTES_PER_LENGTH_PREFIX
-			s, e := withSize(dst, 4)
+			// allocate size prefix
+			s, e := withSize(dst, BYTES_PER_LENGTH_PREFIX)
 			serializedSize := sszSerialize(v.Index(i), dst)
 			binary.LittleEndian.PutUint32((*dst)[s:e], serializedSize)
-			encodedLen += 4 + serializedSize
+			encodedLen += BYTES_PER_LENGTH_PREFIX + serializedSize
 		}
 		return encodedLen
 	case reflect.Struct: // "container"
 		for i, size := 0, v.NumField(); i < size; i++ {
-			// allocate size prefix: BYTES_PER_LENGTH_PREFIX
-			s, e := withSize(dst, 4)
+			// allocate size prefix
+			s, e := withSize(dst, BYTES_PER_LENGTH_PREFIX)
 			serializedSize := sszSerialize(v.Field(i), dst)
 			binary.LittleEndian.PutUint32((*dst)[s:e], serializedSize)
-			encodedLen += 4 + serializedSize
+			encodedLen += BYTES_PER_LENGTH_PREFIX + serializedSize
 		}
 		return encodedLen
 	default:
@@ -111,36 +121,70 @@ func Hash_tree_root(input interface{}) eth2.Root {
 // TODO: see specs #679, comment.
 // Implementation here simply assumes fixed-length arrays only have elements of fixed-length.
 
+func isFixedLength(vt reflect.Type) bool {
+	switch vt.Kind() {
+	case reflect.Uint8, reflect.Uint32, reflect.Uint64, reflect.Bool:
+		return true
+	case reflect.Slice:
+		return false
+	case reflect.Array:
+		return isFixedLength(vt.Elem())
+	case reflect.Struct:
+		for i, length := 0, vt.NumField(); i < length; i++ {
+			if !isFixedLength(vt.Field(i).Type) {
+				return false
+			}
+		}
+		return true
+	default:
+		panic("is-fixed length: unsupported value type: " + vt.String())
+		return false
+	}
+}
+
+// only call this for slices and arrays, not structs
+func varSizeListElementsRoot(v reflect.Value) eth2.Root {
+	items := v.Len()
+	data := make([]eth2.Bytes32, items)
+	for i := 0; i < items; i++ {
+		data[i] = eth2.Bytes32(sszHashTreeRoot(v.Index(i)))
+	}
+	return merkle.Merkle_root(data)
+}
+
+func varSizeStructElementsRoot(v reflect.Value) eth2.Root {
+	fields := v.NumField()
+	data := make([]eth2.Bytes32, fields)
+	for i := 0; i < fields; i++ {
+		data[i] = eth2.Bytes32(sszHashTreeRoot(v.Field(i)))
+	}
+	return merkle.Merkle_root(data)
+}
+
 // Compute hash tree root for a value
 func sszHashTreeRoot(v reflect.Value) eth2.Root {
 	switch v.Kind() {
 	case reflect.Ptr:
 		return sszHashTreeRoot(v.Elem())
-	// "basic object or a tuple of basic objects"
-	case reflect.Uint8, reflect.Uint32, reflect.Uint64, reflect.Bool, reflect.Array:
+	// "basic object? -> pack and merkle_root
+	case reflect.Uint8, reflect.Uint32, reflect.Uint64, reflect.Bool:
 		return merkle.Merkle_root(sszPack(v))
+	// "array of fixed length items? -> pack and merkle_root
+	// "array of var length items? ->
+	case reflect.Array:
+		if isFixedLength(v.Type().Elem()) {
+			return merkle.Merkle_root(sszPack(v))
+		} else {
+			return varSizeListElementsRoot(v)
+		}
 	case reflect.Slice:
-		switch v.Type().Elem().Kind() {
-		// "list of basic objects"
-		case reflect.Uint8, reflect.Uint32, reflect.Uint64, reflect.Bool, reflect.Array:
-			packedData := sszPack(v)
-			root := merkle.Merkle_root(packedData)
-			return sszMixInLength(root, uint64(v.Len()))
-		// Interpretation: list of composite / var-size (i.e. the non-basic) objects
-		default:
-			data := make([]eth2.Bytes32, v.Len())
-			for i := 0; i < v.Len(); i++ {
-				data[i] = eth2.Bytes32(sszHashTreeRoot(v.Index(i)))
-			}
-			return sszMixInLength(merkle.Merkle_root(data), uint64(v.Len()))
+		if isFixedLength(v.Type().Elem()) {
+			return sszMixInLength(merkle.Merkle_root(sszPack(v)), uint64(v.Len()))
+		} else {
+			return sszMixInLength(varSizeListElementsRoot(v), uint64(v.Len()))
 		}
-	// Interpretation: container, similar to list of complex objects, but without length prefix.
 	case reflect.Struct:
-		data := make([]eth2.Bytes32, v.NumField())
-		for i, length := 0, v.NumField(); i < length; i++ {
-			data[i] = eth2.Bytes32(sszHashTreeRoot(v.Field(i)))
-		}
-		return merkle.Merkle_root(data)
+		return varSizeStructElementsRoot(v)
 	default:
 		panic("tree-hash: unsupported value kind: " + v.Kind().String())
 	}

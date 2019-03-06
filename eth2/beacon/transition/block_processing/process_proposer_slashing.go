@@ -2,7 +2,6 @@ package block_processing
 
 import (
 	"errors"
-	"fmt"
 	"github.com/protolambda/go-beacon-transition/eth2"
 	"github.com/protolambda/go-beacon-transition/eth2/beacon"
 	"github.com/protolambda/go-beacon-transition/eth2/beacon/transition"
@@ -26,7 +25,7 @@ func ProcessProposerSlashing(state *beacon.BeaconState, ps *beacon.ProposerSlash
 	if !transition.Is_validator_index(state, ps.Proposer_index) {
 		return errors.New("invalid proposer index")
 	}
-	proposer := state.Validator_registry[ps.Proposer_index]
+	proposer := &state.Validator_registry[ps.Proposer_index]
 	if !(ps.Header_1.Slot == ps.Header_2.Slot &&
 		ps.Header_1.BlockBodyRoot != ps.Header_2.BlockBodyRoot && proposer.Slashed == false &&
 		bls.Bls_verify(proposer.Pubkey, ssz.Signed_root(ps.Header_1), ps.Header_1.Signature, transition.Get_domain(state.Fork, ps.Header_1.Slot.ToEpoch(), eth2.DOMAIN_BEACON_BLOCK)) &&

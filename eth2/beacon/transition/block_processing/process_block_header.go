@@ -21,12 +21,9 @@ func ProcessBlockHeader(state *beacon.BeaconState, block *beacon.BeaconBlock) er
 	// Save current block as the new latest block
 	state.LatestBlockHeader = block.GetTemporaryBlockHeader()
 
-	propIndex, err := transition.Get_beacon_proposer_index(state, state.Slot, false)
-	if err != nil {
-		return err
-	}
+	propIndex := transition.Get_beacon_proposer_index(state, state.Slot, false)
 	// Verify proposer signature
-	proposer := state.Validator_registry[propIndex]
+	proposer := &state.Validator_registry[propIndex]
 	// Block signature
 	if !bls.Bls_verify(
 		proposer.Pubkey,

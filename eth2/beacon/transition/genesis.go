@@ -21,8 +21,8 @@ func GetGenesisBeaconState(validatorDeposits []beacon.Deposit, time eth2.Timesta
 		// (all default values)
 		// Finality
 		Previous_justified_epoch: eth2.GENESIS_EPOCH,
-		Justified_epoch: eth2.GENESIS_EPOCH,
-		Finalized_epoch: eth2.GENESIS_EPOCH,
+		Justified_epoch:          eth2.GENESIS_EPOCH,
+		Finalized_epoch:          eth2.GENESIS_EPOCH,
 		// Recent state
 		LatestBlockHeader: beacon.GetEmptyBlock().GetTemporaryBlockHeader(),
 		// Ethereum 1.0 chain data

@@ -48,10 +48,7 @@ func ProcessTransfer(state *beacon.BeaconState, transfer *beacon.Transfer) error
 	}
 	state.Validator_balances[transfer.Sender] -= transfer.Amount + transfer.Fee
 	state.Validator_balances[transfer.Recipient] += transfer.Amount
-	propIndex, err := transition.Get_beacon_proposer_index(state, state.Slot, false)
-	if err != nil {
-		return err
-	}
+	propIndex := transition.Get_beacon_proposer_index(state, state.Slot, false)
 	state.Validator_balances[propIndex] += transfer.Fee
 	return nil
 }

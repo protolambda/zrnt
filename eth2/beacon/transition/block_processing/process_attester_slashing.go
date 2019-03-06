@@ -2,12 +2,9 @@ package block_processing
 
 import (
 	"errors"
-	"fmt"
 	"github.com/protolambda/go-beacon-transition/eth2"
 	"github.com/protolambda/go-beacon-transition/eth2/beacon"
 	"github.com/protolambda/go-beacon-transition/eth2/beacon/transition"
-	"github.com/protolambda/go-beacon-transition/eth2/util/bls"
-	"github.com/protolambda/go-beacon-transition/eth2/util/ssz"
 )
 
 func ProcessAttesterSlashings(state *beacon.BeaconState, block *beacon.BeaconBlock) error {
@@ -26,12 +23,12 @@ func ProcessAttesterSlashing(state *beacon.BeaconState, attester_slashing *beaco
 	// verify the attester_slashing
 	if !(sa1.Data != sa2.Data && (transition.Is_double_vote(&sa1.Data, &sa2.Data) || transition.Is_surround_vote(&sa1.Data, &sa2.Data)) &&
 		transition.Verify_slashable_attestation(state, sa1) && transition.Verify_slashable_attestation(state, sa2)) {
-		return errors.New(fmt.Sprintf("attester slashing %d is invalid", i))
+		return errors.New("attester slashing is invalid")
 	}
 	// keep track of effectiveness
 	slashedAny := false
 	// run slashings where applicable
-ValLoop:
+
 	// indices are trusted, they have been verified by verify_slashable_attestation(...)
 	for _, v1 := range sa1.Validator_indices {
 		for _, v2 := range sa2.Validator_indices {
@@ -40,13 +37,12 @@ ValLoop:
 					return err
 				}
 				slashedAny = true
-				// continue to look for next validator in outer loop (because there are no duplicates in attestation)
-				continue ValLoop
+				continue
 			}
 		}
 	}
 	// "Verify that len(slashable_indices) >= 1."
 	if !slashedAny {
-		return errors.New(fmt.Sprintf("attester slashing %d is not effective, hence invalid", i))
+		return errors.New("attester slashing %d is not effective, hence invalid")
 	}
 }

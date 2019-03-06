@@ -11,13 +11,14 @@ import (
 )
 
 func ProcessRandao(state *beacon.BeaconState, block *beacon.BeaconBlock) error {
-	propIndex, _ := transition.Get_beacon_proposer_index(state, state.Slot, false)
-	proposer := state.Validator_registry[propIndex]
+	propIndex := transition.Get_beacon_proposer_index(state, state.Slot, false)
+	proposer := &state.Validator_registry[propIndex]
 	if !bls.Bls_verify(
 		proposer.Pubkey,
 		ssz.Hash_tree_root(state.Epoch()),
 		block.Body.Randao_reveal,
-		transition.Get_domain(state.Fork, state.Epoch(), eth2.DOMAIN_RANDAO)) {
+		transition.Get_domain(state.Fork, state.Epoch(), eth2.DOMAIN_RANDAO),
+	) {
 		return errors.New("randao invalid")
 	}
 	state.Latest_randao_mixes[state.Epoch()%eth2.LATEST_RANDAO_MIXES_LENGTH] = hash.XorBytes32(

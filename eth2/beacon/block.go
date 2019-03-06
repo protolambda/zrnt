@@ -1,6 +1,9 @@
 package beacon
 
-import "github.com/protolambda/go-beacon-transition/eth2"
+import (
+	"github.com/protolambda/go-beacon-transition/eth2"
+	"github.com/protolambda/go-beacon-transition/eth2/util/ssz"
+)
 
 type BeaconBlock struct {
 	// Header
@@ -8,9 +11,9 @@ type BeaconBlock struct {
 	PreviousBlockRoot eth2.Root
 	State_root        eth2.Root
 
-	//// Body
+	// Body
 	Body BeaconBlockBody
-	//// Signature
+	// Signature
 	Signature eth2.BLSSignature `ssz:"signature"`
 }
 
@@ -25,16 +28,16 @@ func GetEmptyBlock() *BeaconBlock {
 // Return the block header corresponding to a block with ``state_root`` set to ``ZERO_HASH``.
 func (block *BeaconBlock) GetTemporaryBlockHeader() BeaconBlockHeader {
 	return BeaconBlockHeader{
-		Slot: block.Slot,
+		Slot:              block.Slot,
 		PreviousBlockRoot: block.PreviousBlockRoot,
-		State_root: block.State_root,
-		BlockBodyRoot: eth2.Root{},// empty hash, "temporary" part.
-		Signature: block.Signature,
+		State_root:        eth2.Root{}, // empty hash, "temporary" part.
+		BlockBodyRoot:     ssz.Hash_tree_root(block),
+		Signature:         block.Signature,
 	}
 }
 
 type BeaconBlockHeader struct {
-	Slot eth2.Slot
+	Slot              eth2.Slot
 	PreviousBlockRoot eth2.Root
 	State_root        eth2.Root
 
@@ -45,7 +48,7 @@ type BeaconBlockHeader struct {
 }
 
 type BeaconBlockBody struct {
-	Randao_reveal [96]byte
+	Randao_reveal eth2.BLSSignature
 	Eth1_data     Eth1Data
 
 	Proposer_slashings []ProposerSlashing
@@ -55,4 +58,3 @@ type BeaconBlockBody struct {
 	Voluntary_exits    []VoluntaryExit
 	Transfers          []Transfer
 }
-

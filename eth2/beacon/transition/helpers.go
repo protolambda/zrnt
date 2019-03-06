@@ -8,11 +8,8 @@ import (
 	"github.com/protolambda/go-beacon-transition/eth2"
 	"github.com/protolambda/go-beacon-transition/eth2/beacon"
 	"github.com/protolambda/go-beacon-transition/eth2/util/bitfield"
-	"github.com/protolambda/go-beacon-transition/eth2/util/bls"
 	"github.com/protolambda/go-beacon-transition/eth2/util/hash"
 	"github.com/protolambda/go-beacon-transition/eth2/util/math"
-	"github.com/protolambda/go-beacon-transition/eth2/util/merkle"
-	"github.com/protolambda/go-beacon-transition/eth2/util/ssz"
 	"github.com/protolambda/go-beacon-transition/eth2/util/validatorset"
 )
 
@@ -85,8 +82,6 @@ func Get_total_balance(state *beacon.BeaconState, indices []eth2.ValidatorIndex)
 	}
 	return sum
 }
-
-
 
 // Update validator registry.
 func Update_validator_registry(state *beacon.BeaconState) {
@@ -274,7 +269,6 @@ func Get_state_root(state *beacon.BeaconState, slot eth2.Slot) (eth2.Root, error
 	return state.Latest_state_roots[slot%eth2.SLOTS_PER_HISTORICAL_ROOT], nil
 }
 
-
 func Is_validator_index(state *beacon.BeaconState, index eth2.ValidatorIndex) bool {
 	return index < eth2.ValidatorIndex(len(state.Validator_registry))
 }
@@ -290,17 +284,13 @@ func Slash_validator(state *beacon.BeaconState, index eth2.ValidatorIndex) error
 	state.Latest_slashed_balances[state.Epoch()%eth2.LATEST_SLASHED_EXIT_LENGTH] += Get_effective_balance(state, index)
 
 	whistleblower_reward := Get_effective_balance(state, index) / eth2.WHISTLEBLOWER_REWARD_QUOTIENT
-	prop_index, err := Get_beacon_proposer_index(state, state.Slot, false)
-	if err != nil {
-		return err
-	}
+	prop_index := Get_beacon_proposer_index(state, state.Slot, false)
 	state.Validator_balances[prop_index] += whistleblower_reward
 	state.Validator_balances[index] -= whistleblower_reward
 	validator.Slashed = true
 	validator.Withdrawable_epoch = state.Epoch() + eth2.LATEST_SLASHED_EXIT_LENGTH
 	return nil
 }
-
 
 // Get the domain number that represents the fork meta and signature domain.
 func Get_domain(fork beacon.Fork, epoch eth2.Epoch, dom eth2.BLSDomain) eth2.BLSDomain {
@@ -311,16 +301,16 @@ func Get_domain(fork beacon.Fork, epoch eth2.Epoch, dom eth2.BLSDomain) eth2.BLS
 }
 
 // Return the beacon proposer index for the slot.
-func Get_beacon_proposer_index(state *beacon.BeaconState, slot eth2.Slot, registryChange bool) (eth2.ValidatorIndex, error) {
+func Get_beacon_proposer_index(state *beacon.BeaconState, slot eth2.Slot, registryChange bool) eth2.ValidatorIndex {
 	epoch := slot.ToEpoch()
 	currentEpoch := slot.ToEpoch()
 	if currentEpoch-1 <= epoch && epoch <= currentEpoch+1 {
-		return 0, errors.New("epoch of given slot out of range")
+		panic("epoch of given slot out of range")
 	}
 	// ignore error, slot input is trusted here
 	committeeData, _ := Get_crosslink_committees_at_slot(state, slot, registryChange)
 	first_committee_data := committeeData[0]
-	return first_committee_data.Committee[slot%eth2.Slot(len(first_committee_data.Committee))], nil
+	return first_committee_data.Committee[slot%eth2.Slot(len(first_committee_data.Committee))]
 }
 
 func Get_epoch_committee_count(active_validator_count uint64) uint64 {
@@ -338,6 +328,7 @@ func Get_previous_epoch_committee_count(state *beacon.BeaconState) uint64 {
 		state.Previous_shuffling_epoch,
 	))
 }
+
 // Return the number of committees in the current epoch of the given ``state``.
 func Get_current_epoch_committee_count(state *beacon.BeaconState) uint64 {
 	return Get_epoch_committee_count(Get_active_validator_count(
@@ -345,10 +336,11 @@ func Get_current_epoch_committee_count(state *beacon.BeaconState) uint64 {
 		state.Current_shuffling_epoch,
 	))
 }
+
 // Return the number of committees in the next epoch of the given ``state``.
 func Get_next_epoch_committee_count(state *beacon.BeaconState) uint64 {
 	return Get_epoch_committee_count(Get_active_validator_count(
 		state.Validator_registry,
-		state.Epoch() + 1,
+		state.Epoch()+1,
 	))
 }

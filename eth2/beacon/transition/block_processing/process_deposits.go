@@ -25,7 +25,6 @@ func ProcessDeposits(state *beacon.BeaconState, block *beacon.BeaconBlock) error
 	}
 }
 
-
 // Process a deposit from Ethereum 1.0.
 func ProcessDeposit(state *beacon.BeaconState, dep *beacon.Deposit) error {
 	deposit_input := &dep.Deposit_data.Deposit_input
@@ -97,11 +96,11 @@ func ProcessDeposit(state *beacon.BeaconState, dep *beacon.Deposit) error {
 		state.Validator_balances = append(state.Validator_balances, amount)
 	} else {
 		// known pubkey, check withdrawal credentials first, then increase balance.
-		if state.Validator_registry[val_index].Withdrawal_credentials != deposit_input.Withdrawal_credentials {
+		if state.Validator_registry[val_index].Withdrawal_credentials != withdrawalCredentials {
 			return errors.New("deposit has wrong withdrawal credentials")
 		}
 		// Increase balance by deposit amount
-		state.Validator_balances[val_index] += dep.Deposit_data.Amount
+		state.Validator_balances[val_index] += amount
 	}
 	return nil
 }

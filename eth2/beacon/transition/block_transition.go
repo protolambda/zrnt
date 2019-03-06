@@ -36,12 +36,10 @@ func ApplyBlock(state *beacon.BeaconState, block *beacon.BeaconBlock) error {
 		return err
 	}
 
-
 	// Attestations
 	if err := block_processing.ProcessAttestations(state, block); err != nil {
 		return err
 	}
-
 
 	// Deposits
 	if err := block_processing.ProcessDeposits(state, block); err != nil {

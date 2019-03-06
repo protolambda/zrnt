@@ -16,7 +16,6 @@ type ProposerSlashing struct {
 	Header_2 BeaconBlockHeader
 }
 
-
 type AttesterSlashing struct {
 	// First slashable attestation
 	Slashable_attestation_1 SlashableAttestation

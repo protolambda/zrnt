@@ -31,4 +31,3 @@ func StateTransition(preState *beacon.BeaconState, block *beacon.BeaconBlock) (r
 	}
 	return state, nil
 }
-

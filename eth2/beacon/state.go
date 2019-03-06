@@ -41,13 +41,13 @@ type BeaconState struct {
 	Latest_slashed_balances [eth2.LATEST_SLASHED_EXIT_LENGTH]eth2.Gwei
 	LatestBlockHeader       BeaconBlockHeader
 	Latest_attestations     []PendingAttestation
-	HistoricalRoots     []eth2.Root
+	HistoricalRoots         []eth2.Root
 
 	// Ethereum 1.0 chain data
 	//Latest_eth1_data Eth1Data
 	Latest_eth1_data Eth1Data
-	Eth1_data_votes []Eth1DataVote
-	Deposit_index   eth2.DepositIndex
+	Eth1_data_votes  []Eth1DataVote
+	Deposit_index    eth2.DepositIndex
 }
 
 // Make a deep copy of the state object

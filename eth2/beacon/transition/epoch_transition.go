@@ -30,7 +30,6 @@ func EpochTransition(state *beacon.BeaconState) {
 
 	// Eth1 Data
 
-
 	// Helper data
 	// Note: Rewards and penalties are for participation in the previous epoch,
 	//  so the "active validator" set is drawn from get_active calls on previous_epoch
@@ -320,7 +319,7 @@ func EpochTransition(state *beacon.BeaconState) {
 			// Attestations should be included timely.
 			// TODO Difference from spec: it is easier (and faster) to iterate through the precomputed map
 			for attester_index, att_index := range previous_epoch_earliest_attestations {
-				proposer_index, _ := Get_beacon_proposer_index(state, state.Latest_attestations[att_index].Inclusion_slot, false)
+				proposer_index := Get_beacon_proposer_index(state, state.Latest_attestations[att_index].Inclusion_slot, false)
 				state.Validator_balances[proposer_index] += base_reward(attester_index) / eth2.ATTESTATION_INCLUSION_REWARD_QUOTIENT
 			}
 		}
@@ -447,7 +446,6 @@ func EpochTransition(state *beacon.BeaconState) {
 			state.Latest_active_index_roots[(next_epoch+eth2.ACTIVATION_EXIT_DELAY)%eth2.LATEST_ACTIVE_INDEX_ROOTS_LENGTH] = ssz.Hash_tree_root(Get_active_validator_indices(state.Validator_registry, next_epoch+eth2.ACTIVATION_EXIT_DELAY))
 			state.Latest_slashed_balances[next_epoch%eth2.LATEST_SLASHED_EXIT_LENGTH] = state.Latest_slashed_balances[current_epoch%eth2.LATEST_SLASHED_EXIT_LENGTH]
 
-
 			// TODO randao
 
 			// Remove any attestation in state.Latest_attestations such that slot_to_epoch(attestation.Data.Slot) < current_epoch
@@ -462,4 +460,3 @@ func EpochTransition(state *beacon.BeaconState) {
 		}
 	}
 }
-

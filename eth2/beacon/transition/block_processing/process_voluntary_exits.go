@@ -22,7 +22,7 @@ func ProcessVoluntaryExits(state *beacon.BeaconState, block *beacon.BeaconBlock)
 }
 
 func ProcessVoluntaryExit(state *beacon.BeaconState, exit *beacon.VoluntaryExit) error {
-	validator := state.Validator_registry[exit.Validator_index]
+	validator := &state.Validator_registry[exit.Validator_index]
 	if !(validator.Exit_epoch > transition.Get_delayed_activation_exit_epoch(state.Epoch()) &&
 		state.Epoch() > exit.Epoch &&
 		bls.Bls_verify(validator.Pubkey, ssz.Signed_root(exit),

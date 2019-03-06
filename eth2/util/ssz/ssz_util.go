@@ -170,7 +170,8 @@ func sszHashTreeRoot(v reflect.Value) eth2.Root {
 	case reflect.Uint8, reflect.Uint32, reflect.Uint64, reflect.Bool:
 		return merkle.Merkle_root(sszPack(v))
 	// "array of fixed length items? -> pack and merkle_root
-	// "array of var length items? ->
+	// "array of var length items? -> take the merkle root of every element
+	// 		(if it aligns in a single chunk, it will just be as-is, not hashed again, see merklezeition)
 	case reflect.Array:
 		if isFixedLength(v.Type().Elem()) {
 			return merkle.Merkle_root(sszPack(v))

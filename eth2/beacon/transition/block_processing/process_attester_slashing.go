@@ -21,8 +21,11 @@ func ProcessAttesterSlashings(state *beacon.BeaconState, block *beacon.BeaconBlo
 func ProcessAttesterSlashing(state *beacon.BeaconState, attester_slashing *beacon.AttesterSlashing) error {
 	sa1, sa2 := &attester_slashing.Slashable_attestation_1, &attester_slashing.Slashable_attestation_2
 	// verify the attester_slashing
-	if !(sa1.Data != sa2.Data && (transition.Is_double_vote(&sa1.Data, &sa2.Data) || transition.Is_surround_vote(&sa1.Data, &sa2.Data)) &&
-		transition.Verify_slashable_attestation(state, sa1) && transition.Verify_slashable_attestation(state, sa2)) {
+	if !(sa1.Data != sa2.Data && (
+			transition.Is_double_vote(&sa1.Data, &sa2.Data) ||
+			transition.Is_surround_vote(&sa1.Data, &sa2.Data)) &&
+		transition.Verify_slashable_attestation(state, sa1) &&
+		transition.Verify_slashable_attestation(state, sa2)) {
 		return errors.New("attester slashing is invalid")
 	}
 	// keep track of effectiveness

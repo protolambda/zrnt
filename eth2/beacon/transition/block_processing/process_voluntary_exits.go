@@ -22,6 +22,9 @@ func ProcessVoluntaryExits(state *beacon.BeaconState, block *beacon.BeaconBlock)
 }
 
 func ProcessVoluntaryExit(state *beacon.BeaconState, exit *beacon.VoluntaryExit) error {
+	if !transition.Is_validator_index(state, exit.Validator_index) {
+		return errors.New("invalid exit validator index")
+	}
 	validator := &state.Validator_registry[exit.Validator_index]
 	if !(validator.Exit_epoch > transition.Get_delayed_activation_exit_epoch(state.Epoch()) &&
 		state.Epoch() > exit.Epoch &&

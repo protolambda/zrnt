@@ -16,12 +16,12 @@ func ProcessTransfers(state *beacon.BeaconState, block *beacon.BeaconBlock) erro
 		return errors.New("too many transfers")
 	}
 	// check if all TXs are distinct
-	distinctionCheckSet := make(map[eth2.BLSSignature]uint64)
+	distinctionCheckSet := make(map[eth2.BLSSignature]struct{})
 	for i, v := range block.Body.Transfers {
 		if existing, ok := distinctionCheckSet[v.Signature]; ok {
 			return errors.New(fmt.Sprintf("transfer %d is the same as transfer %d, aborting", i, existing))
 		}
-		distinctionCheckSet[v.Signature] = uint64(i)
+		distinctionCheckSet[v.Signature] = struct{}{}
 	}
 
 	for _, transfer := range block.Body.Transfers {
@@ -36,7 +36,8 @@ func ProcessTransfer(state *beacon.BeaconState, transfer *beacon.Transfer) error
 	withdrawCred := eth2.Root(hash.Hash(transfer.Pubkey[:]))
 	// overwrite first byte, remainder (the [1:] part, is still the hash)
 	withdrawCred[0] = eth2.BLS_WITHDRAWAL_PREFIX_BYTE
-	// verify transfer data + signature. No separate error messages for line limit challenge...
+	// verify transfer data + signature
+	// TODO: fix formatting/quality
 	if !(state.Validator_balances[transfer.Sender] >= transfer.Amount && state.Validator_balances[transfer.Sender] >= transfer.Fee &&
 		((state.Validator_balances[transfer.Sender] == transfer.Amount+transfer.Fee) ||
 			(state.Validator_balances[transfer.Sender] >= transfer.Amount+transfer.Fee+eth2.MIN_DEPOSIT_AMOUNT)) &&

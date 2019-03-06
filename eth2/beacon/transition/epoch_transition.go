@@ -47,7 +47,7 @@ func EpochTransition(state *beacon.BeaconState) {
 	// Helper data
 	// Note: Rewards and penalties are for participation in the previous epoch,
 	//  so the "active validator" set is drawn from get_active calls on previous_epoch
-	previous_active_validator_indices := validatorset.ValidatorIndexSet(get_active_validator_indices(state.Validator_registry, previous_epoch))
+	previous_active_validator_indices := validatorset.ValidatorIndexSet(Get_active_validator_indices(state.Validator_registry, previous_epoch))
 
 	// Copy over the keys of our per-validator map to get a set of validator indices with previous epoch attestations.
 	previous_epoch_attester_indices := make(validatorset.ValidatorIndexSet, 0, len(previous_epoch_earliest_attestations))
@@ -95,8 +95,8 @@ func EpochTransition(state *beacon.BeaconState) {
 	{
 		previous_epoch_boundary_attesting_balance := get_total_balance(state, previous_epoch_boundary_attester_indices)
 		current_epoch_boundary_attesting_balance := get_total_balance(state, current_epoch_boundary_attester_indices)
-		previous_total_balance := get_total_balance(state, get_active_validator_indices(state.Validator_registry, previous_epoch))
-		current_total_balance := get_total_balance(state, get_active_validator_indices(state.Validator_registry, current_epoch))
+		previous_total_balance := get_total_balance(state, Get_active_validator_indices(state.Validator_registry, previous_epoch))
+		current_total_balance := get_total_balance(state, Get_active_validator_indices(state.Validator_registry, current_epoch))
 
 		// > Justification
 		new_justified_epoch := state.Justified_epoch
@@ -158,7 +158,7 @@ func EpochTransition(state *beacon.BeaconState) {
 						// error ignored, attestation is trusted.
 						participants, _ := get_attestation_participants(state, &att.Data, &att.Aggregation_bitfield)
 						for _, participant := range participants {
-							weightedCrosslinks[att.Data.Crosslink_data_root] += get_effective_balance(state, participant)
+							weightedCrosslinks[att.Data.Crosslink_data_root] += Get_effective_balance(state, participant)
 						}
 					}
 				}
@@ -221,19 +221,19 @@ func EpochTransition(state *beacon.BeaconState) {
 		// different than the actual balances during previous epoch transition.
 		// Due to the tight bound on validator churn each epoch and small per-epoch rewards/penalties,
 		// the potential balance difference is very low and only marginally affects consensus safety.
-		previous_total_balance := get_total_balance(state, get_active_validator_indices(state.Validator_registry, previous_epoch))
+		previous_total_balance := get_total_balance(state, Get_active_validator_indices(state.Validator_registry, previous_epoch))
 
 		base_reward_quotient := eth2.Gwei(math.Integer_squareroot(uint64(previous_total_balance))) / eth2.BASE_REWARD_QUOTIENT
 
 		base_reward := func(index eth2.ValidatorIndex) eth2.Gwei {
 			// magic number 5 is from spec. (TODO add reasoning?)
-			return get_effective_balance(state, index) / base_reward_quotient / 5
+			return Get_effective_balance(state, index) / base_reward_quotient / 5
 		}
 
 		epochs_since_finality := next_epoch - state.Finalized_epoch
 
 		inactivity_penalty := func(index eth2.ValidatorIndex) eth2.Gwei {
-			return base_reward(index) + (get_effective_balance(state, index) * eth2.Gwei(epochs_since_finality) / eth2.INACTIVITY_PENALTY_QUOTIENT / 2)
+			return base_reward(index) + (Get_effective_balance(state, index) * eth2.Gwei(epochs_since_finality) / eth2.INACTIVITY_PENALTY_QUOTIENT / 2)
 		}
 
 		scaled_value := func(valueFn eth2.ValueFunction, scale eth2.Gwei) eth2.ValueFunction {
@@ -375,7 +375,7 @@ func EpochTransition(state *beacon.BeaconState) {
 		// > Ejections
 		{
 			// After we are done slashing, eject the validators that don't have enough balance left.
-			for _, vIndex := range get_active_validator_indices(state.Validator_registry, current_epoch) {
+			for _, vIndex := range Get_active_validator_indices(state.Validator_registry, current_epoch) {
 				if state.Validator_balances[vIndex] < eth2.EJECTION_BALANCE {
 					exit_validator(state, vIndex)
 				}
@@ -407,14 +407,14 @@ func EpochTransition(state *beacon.BeaconState) {
 					committee_count := get_epoch_committee_count(get_active_validator_count(state.Validator_registry, current_epoch))
 					state.Current_shuffling_start_shard = (state.Current_shuffling_start_shard + eth2.Shard(committee_count)) % eth2.SHARD_COUNT
 					// ignore error, current_shuffling_epoch is a trusted input
-					state.Current_shuffling_seed = generate_seed(state, state.Current_shuffling_epoch)
+					state.Current_shuffling_seed = Generate_seed(state, state.Current_shuffling_epoch)
 				} else {
 					// If a validator registry update does not happen:
 					epochs_since_last_registry_update := current_epoch - state.Validator_registry_update_epoch
 					if epochs_since_last_registry_update > 1 && math.Is_power_of_two(uint64(epochs_since_last_registry_update)) {
 						state.Current_shuffling_epoch = next_epoch
 						// Note that state.Current_shuffling_start_shard is left unchanged
-						state.Current_shuffling_seed = generate_seed(state, state.Current_shuffling_epoch)
+						state.Current_shuffling_seed = Generate_seed(state, state.Current_shuffling_epoch)
 					}
 				}
 			}
@@ -422,7 +422,7 @@ func EpochTransition(state *beacon.BeaconState) {
 
 		// > process slashings
 		{
-			active_validator_indices := get_active_validator_indices(state.Validator_registry, current_epoch)
+			active_validator_indices := Get_active_validator_indices(state.Validator_registry, current_epoch)
 			total_balance := get_total_balance(state, active_validator_indices)
 
 			for index, validator := range state.Validator_registry {
@@ -431,7 +431,7 @@ func EpochTransition(state *beacon.BeaconState) {
 					epoch_index := current_epoch % eth2.LATEST_SLASHED_EXIT_LENGTH
 					total_at_start := state.Latest_slashed_balances[(epoch_index+1)%eth2.LATEST_SLASHED_EXIT_LENGTH]
 					total_at_end := state.Latest_slashed_balances[epoch_index]
-					balance := get_effective_balance(state, eth2.ValidatorIndex(index))
+					balance := Get_effective_balance(state, eth2.ValidatorIndex(index))
 					state.Validator_balances[index] -= math.Max(balance*math.Min((total_at_end-total_at_start)*3, total_balance)/total_balance, balance/eth2.MIN_PENALTY_QUOTIENT)
 				}
 			}
@@ -457,7 +457,7 @@ func EpochTransition(state *beacon.BeaconState) {
 
 		// > final updates
 		{
-			state.Latest_active_index_roots[(next_epoch+eth2.ACTIVATION_EXIT_DELAY)%eth2.LATEST_ACTIVE_INDEX_ROOTS_LENGTH] = ssz.Hash_tree_root(get_active_validator_indices(state.Validator_registry, next_epoch+eth2.ACTIVATION_EXIT_DELAY))
+			state.Latest_active_index_roots[(next_epoch+eth2.ACTIVATION_EXIT_DELAY)%eth2.LATEST_ACTIVE_INDEX_ROOTS_LENGTH] = ssz.Hash_tree_root(Get_active_validator_indices(state.Validator_registry, next_epoch+eth2.ACTIVATION_EXIT_DELAY))
 			state.Latest_slashed_balances[next_epoch%eth2.LATEST_SLASHED_EXIT_LENGTH] = state.Latest_slashed_balances[current_epoch%eth2.LATEST_SLASHED_EXIT_LENGTH]
 			state.Latest_randao_mixes[next_epoch%eth2.LATEST_RANDAO_MIXES_LENGTH] = get_randao_mix(state, current_epoch)
 			// Remove any attestation in state.Latest_attestations such that slot_to_epoch(attestation.Data.Slot) < current_epoch

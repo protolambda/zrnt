@@ -11,6 +11,7 @@ import (
 	"github.com/protolambda/go-beacon-transition/eth2/util/bls"
 	"github.com/protolambda/go-beacon-transition/eth2/util/hash"
 	"github.com/protolambda/go-beacon-transition/eth2/util/math"
+	"github.com/protolambda/go-beacon-transition/eth2/util/merkle"
 	"github.com/protolambda/go-beacon-transition/eth2/util/ssz"
 	"github.com/protolambda/go-beacon-transition/eth2/util/validatorset"
 )
@@ -42,6 +43,17 @@ func initiate_validator_exit(state *beacon.BeaconState, index eth2.ValidatorInde
 	state.Validator_registry[index].Initiated_exit = true
 }
 
+// Activate the validator of the given index
+func Activate_validator(state *beacon.BeaconState, index eth2.ValidatorIndex, is_genesis bool) {
+	validator := &state.Validator_registry[index]
+
+	if is_genesis {
+		validator.Activation_epoch = eth2.GENESIS_EPOCH
+	} else {
+		validator.Activation_epoch = get_delayed_activation_exit_epoch(state.Epoch())
+	}
+}
+
 func get_active_validator_count(validator_registry []beacon.Validator, epoch eth2.Epoch) (count uint64) {
 	for _, v := range validator_registry {
 		if v.IsActive(epoch) {
@@ -51,7 +63,7 @@ func get_active_validator_count(validator_registry []beacon.Validator, epoch eth
 	return count
 }
 
-func get_active_validator_indices(validator_registry []beacon.Validator, epoch eth2.Epoch) []eth2.ValidatorIndex {
+func Get_active_validator_indices(validator_registry []beacon.Validator, epoch eth2.Epoch) []eth2.ValidatorIndex {
 	res := make([]eth2.ValidatorIndex, 0, len(validator_registry))
 	for i, v := range validator_registry {
 		if v.IsActive(epoch) {
@@ -62,23 +74,60 @@ func get_active_validator_indices(validator_registry []beacon.Validator, epoch e
 }
 
 // Return the effective balance (also known as "balance at stake") for a validator with the given index.
-func get_effective_balance(state *beacon.BeaconState, index eth2.ValidatorIndex) eth2.Gwei {
+func Get_effective_balance(state *beacon.BeaconState, index eth2.ValidatorIndex) eth2.Gwei {
 	return math.Max(state.Validator_balances[index], eth2.MAX_DEPOSIT_AMOUNT)
 }
 
 // Return the combined effective balance of an array of validators.
 func get_total_balance(state *beacon.BeaconState, indices []eth2.ValidatorIndex) (sum eth2.Gwei) {
 	for _, vIndex := range indices {
-		sum += get_effective_balance(state, vIndex)
+		sum += Get_effective_balance(state, vIndex)
 	}
 	return sum
 }
 
 // Process a deposit from Ethereum 1.0.
-func process_deposit(state *beacon.BeaconState, dep *beacon.Deposit) error {
+func Process_deposit(state *beacon.BeaconState, dep *beacon.Deposit) error {
 	deposit_input := &dep.Deposit_data.Deposit_input
 
-	if !bls.Bls_verify(deposit_input.Pubkey, ssz.Signed_root(deposit_input, "Proof_of_possession"), deposit_input.Proof_of_possession, get_domain(state.Fork, state.Epoch(), eth2.DOMAIN_DEPOSIT)) {
+	// Deposits must be processed in order
+	if dep.Index != state.Deposit_index {
+		return errors.New(fmt.Sprintf("deposit %d has index %d that does not match with state index %d", i, dep.Index, state.Deposit_index))
+	}
+
+	// Let serialized_deposit_data be the serialized form of deposit.deposit_data.
+	// It should equal 8 bytes for deposit_data.amount +
+	//              8 bytes for deposit_data.timestamp +
+	//              176 bytes for deposit_data.deposit_input
+	// That is, it should match deposit_data in the Ethereum 1.0 deposit contract
+	//  of which the hash was placed into the Merkle tree.
+	dep_input_bytes := ssz.SSZEncode(dep.Deposit_data.Deposit_input)
+	serialized_deposit_data := make([]byte, 8+8+len(dep_input_bytes), 8+8+len(dep_input_bytes))
+	binary.LittleEndian.PutUint64(serialized_deposit_data[0:8], uint64(dep.Deposit_data.Amount))
+	binary.LittleEndian.PutUint64(serialized_deposit_data[8:16], uint64(dep.Deposit_data.Timestamp))
+	copy(serialized_deposit_data[16:], dep_input_bytes)
+
+	// Verify the Merkle branch
+	if !merkle.Verify_merkle_branch(
+		hash.Hash(serialized_deposit_data),
+		dep.Proof,
+		eth2.DEPOSIT_CONTRACT_TREE_DEPTH,
+		uint64(dep.Index),
+		state.Latest_eth1_data.Deposit_root) {
+		return errors.New(fmt.Sprintf("deposit %d has merkle proof that failed to be verified", i))
+	}
+
+	// Increment the next deposit index we are expecting. Note that this
+	// needs to be done here because while the deposit contract will never
+	// create an invalid Merkle branch, it may admit an invalid deposit
+	// object, and we need to be able to skip over it
+	state.Deposit_index += 1
+
+	if !bls.Bls_verify(
+		deposit_input.Pubkey,
+		ssz.Signed_root(deposit_input),
+		deposit_input.Proof_of_possession,
+		get_domain(state.Fork, state.Epoch(), eth2.DOMAIN_DEPOSIT)) {
 		// simply don't handle the deposit. (TODO: should this be an error (making block invalid)?)
 		return nil
 	}
@@ -91,16 +140,21 @@ func process_deposit(state *beacon.BeaconState, dep *beacon.Deposit) error {
 		}
 	}
 
+	pubkey := state.Validator_registry[val_index].Pubkey
+	amount := dep.Deposit_data.Amount
+	withdrawalCredentials := deposit_input.Withdrawal_credentials
 	// Check if it is a known validator that is depositing ("if pubkey not in validator_pubkeys")
 	if val_index == eth2.ValidatorIndexMarker {
 		// Not a known pubkey, add new validator
 		validator := beacon.Validator{
-			Pubkey: state.Validator_registry[val_index].Pubkey, Withdrawal_credentials: deposit_input.Withdrawal_credentials,
-			Activation_epoch: eth2.FAR_FUTURE_EPOCH, Exit_epoch: eth2.FAR_FUTURE_EPOCH, Withdrawable_epoch: eth2.FAR_FUTURE_EPOCH,
+			Pubkey:                 pubkey,
+			Withdrawal_credentials: withdrawalCredentials,
+			Activation_epoch:       eth2.FAR_FUTURE_EPOCH, Exit_epoch: eth2.FAR_FUTURE_EPOCH, Withdrawable_epoch: eth2.FAR_FUTURE_EPOCH,
 			Initiated_exit: false, Slashed: false,
 		}
 		// Note: In phase 2 registry indices that have been withdrawn for a long time will be recycled.
-		state.Validator_registry, state.Validator_balances = append(state.Validator_registry, validator), append(state.Validator_balances, dep.Deposit_data.Amount)
+		state.Validator_registry = append(state.Validator_registry, validator)
+		state.Validator_balances = append(state.Validator_balances, amount)
 	} else {
 		// known pubkey, check withdrawal credentials first, then increase balance.
 		if state.Validator_registry[val_index].Withdrawal_credentials != deposit_input.Withdrawal_credentials {
@@ -115,7 +169,7 @@ func process_deposit(state *beacon.BeaconState, dep *beacon.Deposit) error {
 // Update validator registry.
 func update_validator_registry(state *beacon.BeaconState) {
 	// The total effective balance of active validators
-	total_balance := get_total_balance(state, get_active_validator_indices(state.Validator_registry, state.Epoch()))
+	total_balance := get_total_balance(state, Get_active_validator_indices(state.Validator_registry, state.Epoch()))
 
 	// The maximum balance churn in Gwei (for deposits and exits separately)
 	max_balance_churn := math.Max(eth2.MAX_DEPOSIT_AMOUNT, total_balance/(2*eth2.MAX_BALANCE_CHURN_QUOTIENT))
@@ -126,7 +180,7 @@ func update_validator_registry(state *beacon.BeaconState) {
 		for index, validator := range state.Validator_registry {
 			if validator.Activation_epoch == eth2.FAR_FUTURE_EPOCH && state.Validator_balances[index] >= eth2.MAX_DEPOSIT_AMOUNT {
 				// Check the balance churn would be within the allowance
-				balance_churn += get_effective_balance(state, eth2.ValidatorIndex(index))
+				balance_churn += Get_effective_balance(state, eth2.ValidatorIndex(index))
 				if balance_churn > max_balance_churn {
 					break
 				}
@@ -142,7 +196,7 @@ func update_validator_registry(state *beacon.BeaconState) {
 		for index, validator := range state.Validator_registry {
 			if validator.Exit_epoch == eth2.FAR_FUTURE_EPOCH && validator.Initiated_exit {
 				// Check the balance churn would be within the allowance
-				balance_churn += get_effective_balance(state, eth2.ValidatorIndex(index))
+				balance_churn += Get_effective_balance(state, eth2.ValidatorIndex(index))
 				if balance_churn > max_balance_churn {
 					break
 				}
@@ -186,7 +240,7 @@ func get_attestation_participants(state *beacon.BeaconState, attestation_data *b
 }
 
 // Generate a seed for the given epoch
-func generate_seed(state *beacon.BeaconState, epoch eth2.Epoch) eth2.Bytes32 {
+func Generate_seed(state *beacon.BeaconState, epoch eth2.Epoch) eth2.Bytes32 {
 	buf := make([]byte, 32*3)
 	mix := get_randao_mix(state, epoch-eth2.MIN_SEED_LOOKAHEAD)
 	copy(buf[0:32], mix[:])
@@ -233,20 +287,27 @@ func get_crosslink_committees_at_slot(state *beacon.BeaconState, slot eth2.Slot,
 		shuffling_epoch = state.Previous_shuffling_epoch
 		shuffling_start_shard = state.Previous_shuffling_start_shard
 	} else if epoch == next_epoch {
-		current_committees_per_epoch := get_epoch_committee_count(get_active_validator_count(state.Validator_registry, current_epoch))
 		committees_per_epoch = get_epoch_committee_count(get_active_validator_count(state.Validator_registry, next_epoch))
 		shuffling_epoch = next_epoch
 
 		epochs_since_last_registry_update := current_epoch - state.Validator_registry_update_epoch
 		if registryChange {
-			seed = generate_seed(state, next_epoch)
-			shuffling_start_shard = (state.Current_shuffling_start_shard + eth2.Shard(current_committees_per_epoch)) % eth2.SHARD_COUNT
+			committees_per_epoch = get_next_epoch_committee_count(state)
+			seed = Generate_seed(state, next_epoch)
+			shuffling_epoch = next_epoch
+			current_committees_per_epoch := get_current_epoch_committee_count(state)
+			shuffling_start_shard = (state.Current_shuffling_start_shard + current_committees_per_epoch) % eth2.SHARD_COUNT
 		} else if epochs_since_last_registry_update > 1 && math.Is_power_of_two(uint64(epochs_since_last_registry_update)) {
-			seed = generate_seed(state, next_epoch)
+			committees_per_epoch = get_next_epoch_committee_count(state)
+			seed = Generate_seed(state, next_epoch)
+			shuffling_epoch = next_epoch
 			shuffling_start_shard = state.Current_shuffling_start_shard
 		} else {
+			committees_per_epoch = get_current_epoch_committee_count(state)
 			seed = state.Current_shuffling_seed
+			shuffling_epoch = state.Current_shuffling_epoch
 			shuffling_start_shard = state.Current_shuffling_start_shard
+
 		}
 	}
 	shuffling := get_shuffling(seed, state.Validator_registry, shuffling_epoch)
@@ -266,7 +327,7 @@ func get_crosslink_committees_at_slot(state *beacon.BeaconState, slot eth2.Slot,
 // Shuffle active validators and split into crosslink committees.
 // Return a list of committees (each a list of validator indices).
 func get_shuffling(seed eth2.Bytes32, validators []beacon.Validator, epoch eth2.Epoch) [][]eth2.ValidatorIndex {
-	active_validator_indices := get_active_validator_indices(validators, epoch)
+	active_validator_indices := Get_active_validator_indices(validators, epoch)
 	committee_count := get_epoch_committee_count(uint64(len(active_validator_indices)))
 	commitees := make([][]eth2.ValidatorIndex, committee_count, committee_count)
 	// Active validators, shuffled in-place.
@@ -285,10 +346,18 @@ func get_shuffling(seed eth2.Bytes32, validators []beacon.Validator, epoch eth2.
 
 // Return the block root at a recent slot.
 func get_block_root(state *beacon.BeaconState, slot eth2.Slot) (eth2.Root, error) {
-	if !(state.Slot <= slot+eth2.LATEST_BLOCK_ROOTS_LENGTH && slot < state.Slot) {
+	if !(slot < state.Slot && state.Slot <= slot+eth2.SLOTS_PER_HISTORICAL_ROOT) {
 		return eth2.Root{}, errors.New("slot is not a recent slot, cannot find block root")
 	}
-	return state.Latest_block_roots[slot%eth2.LATEST_BLOCK_ROOTS_LENGTH], nil
+	return state.Latest_block_roots[slot%eth2.SLOTS_PER_HISTORICAL_ROOT], nil
+}
+
+// Return the state root at a recent slot.
+func Get_state_root(state *beacon.BeaconState, slot eth2.Slot) (eth2.Root, error) {
+	if !(slot < state.Slot && state.Slot <= slot+eth2.SLOTS_PER_HISTORICAL_ROOT) {
+		return eth2.Root{}, errors.New("slot is not a recent slot, cannot find state root")
+	}
+	return state.Latest_state_roots[slot%eth2.SLOTS_PER_HISTORICAL_ROOT], nil
 }
 
 // Verify validity of slashable_attestation fields.
@@ -356,9 +425,9 @@ func slash_validator(state *beacon.BeaconState, index eth2.ValidatorIndex) error
 		return errors.New("cannot slash validator after withdrawal epoch")
 	}
 	exit_validator(state, index)
-	state.Latest_slashed_balances[state.Epoch()%eth2.LATEST_SLASHED_EXIT_LENGTH] += get_effective_balance(state, index)
+	state.Latest_slashed_balances[state.Epoch()%eth2.LATEST_SLASHED_EXIT_LENGTH] += Get_effective_balance(state, index)
 
-	whistleblower_reward := get_effective_balance(state, index) / eth2.WHISTLEBLOWER_REWARD_QUOTIENT
+	whistleblower_reward := Get_effective_balance(state, index) / eth2.WHISTLEBLOWER_REWARD_QUOTIENT
 	state.Validator_balances[get_beacon_proposer_index(state, state.Slot)] += whistleblower_reward
 	state.Validator_balances[index] -= whistleblower_reward
 	validator.Slashed = true
@@ -385,8 +454,14 @@ func get_domain(fork beacon.Fork, epoch eth2.Epoch, dom eth2.BLSDomain) eth2.BLS
 }
 
 // Return the beacon proposer index for the slot.
-func get_beacon_proposer_index(state *beacon.BeaconState, slot eth2.Slot) eth2.ValidatorIndex {
+func get_beacon_proposer_index(state *beacon.BeaconState, slot eth2.Slot, registryChange bool) (eth2.ValidatorIndex, error) {
+	epoch := slot.ToEpoch()
+	currentEpoch := slot.ToEpoch()
+	if currentEpoch-1 <= epoch && epoch <= currentEpoch+1 {
+		return 0, errors.New("epoch of given slot out of range")
+	}
 	// ignore error, slot input is trusted here
-	first_committee_data, _ := get_crosslink_committees_at_slot(state, slot, false)
-	return first_committee_data[0].Committee[slot%eth2.Slot(len(first_committee_data[0].Committee))]
+	committeeData, _ := get_crosslink_committees_at_slot(state, slot, registryChange)
+	first_committee_data := committeeData[0]
+	return first_committee_data.Committee[slot%eth2.Slot(len(first_committee_data.Committee))], nil
 }

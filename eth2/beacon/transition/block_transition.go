@@ -209,27 +209,7 @@ func ApplyBlock(state *beacon.BeaconState, block *beacon.BeaconBlock) error {
 			return errors.New("too many deposits")
 		}
 		for i, dep := range block.Body.Deposits {
-			if dep.Index != state.Deposit_index {
-				return errors.New(fmt.Sprintf("deposit %d has index %d that does not match with state index %d", i, dep.Index, state.Deposit_index))
-			}
-			// Let serialized_deposit_data be the serialized form of deposit.deposit_data.
-			// It should be 8 bytes for deposit_data.amount
-			//  followed by 8 bytes for deposit_data.timestamp
-			//  and then the DepositInput bytes.
-			// That is, it should match deposit_data in the Ethereum 1.0 deposit contract
-			//  of which the hash was placed into the Merkle tree.
-			dep_input_bytes := ssz.SSZEncode(dep.Deposit_data.Deposit_input)
-			serialized_deposit_data := make([]byte, 8+8+len(dep_input_bytes), 8+8+len(dep_input_bytes))
-			binary.LittleEndian.PutUint64(serialized_deposit_data[0:8], uint64(dep.Deposit_data.Amount))
-			binary.LittleEndian.PutUint64(serialized_deposit_data[8:16], uint64(dep.Deposit_data.Timestamp))
-			copy(serialized_deposit_data[16:], dep_input_bytes)
-
-			// verify the deposit
-			if !merkle.Verify_merkle_branch(hash.Hash(serialized_deposit_data), dep.Branch, eth2.DEPOSIT_CONTRACT_TREE_DEPTH,
-				uint64(dep.Index), state.Latest_eth1_data.Deposit_root) {
-				return errors.New(fmt.Sprintf("deposit %d has merkle proof that failed to be verified", i))
-			}
-			if err := process_deposit(state, &dep); err != nil {
+			if err := Process_deposit(state, &dep); err != nil {
 				return err
 			}
 			state.Deposit_index += 1

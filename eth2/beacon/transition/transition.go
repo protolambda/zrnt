@@ -15,10 +15,7 @@ func StateTransition(preState *beacon.BeaconState, block *beacon.BeaconBlock) (r
 	state := preState.Copy()
 	// happens at the start of every Slot
 	for i := state.Slot; i < block.Slot; i++ {
-		// Verified earlier, before calling StateTransition:
-		// > The parent block with root `block.parent_root` has been processed and accepted
-		// Hence, we can update latest block roots with the parent block root
-		SlotTransition(state, block.Parent_root)
+		AdvanceSlot(state)
 	}
 	// happens at every block
 	if err := ApplyBlock(state, block); err != nil {

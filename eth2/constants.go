@@ -19,7 +19,7 @@ const MAX_DEPOSIT_AMOUNT Gwei = (1 << 5) * 1000000000 // =  32,000,000,000  Gwei
 const EJECTION_BALANCE Gwei = (1 << 4) * 1000000000 // =  16,000,000,000  Gwei
 
 // Initial values
-// unused const GENESIS_FORK_VERSION uint64 = 0
+const GENESIS_FORK_VERSION uint64 = 0
 const GENESIS_SLOT Slot = 1 << 32
 const GENESIS_EPOCH = Epoch(GENESIS_SLOT / SLOTS_PER_EPOCH)
 
@@ -38,7 +38,7 @@ const EPOCHS_PER_ETH1_VOTING_PERIOD Epoch = 1 << 4       // =  16  epochs  ~1.7 
 const MIN_VALIDATOR_WITHDRAWABILITY_DELAY Epoch = 1 << 8 // =  256  epochs  ~27 hours
 
 // State list lengths
-const LATEST_BLOCK_ROOTS_LENGTH Slot = 1 << 13         // =  8,192  slots  ~13 hours
+const SLOTS_PER_HISTORICAL_ROOT Slot = 1 << 13         // =  8,192  slots  ~13 hours
 const LATEST_RANDAO_MIXES_LENGTH Epoch = 1 << 13       // =  8,192  epochs  ~36 days
 const LATEST_ACTIVE_INDEX_ROOTS_LENGTH Epoch = 1 << 13 // =  8,192  epochs  ~36 days
 const LATEST_SLASHED_EXIT_LENGTH Epoch = 1 << 13       // =  8,192  epochs  ~36 days
@@ -59,7 +59,14 @@ const MAX_VOLUNTARY_EXITS = 1 << 4    // =  16
 const MAX_TRANSFERS = 1 << 4          // =  16
 
 // Signature domains
-const DOMAIN_DEPOSIT, DOMAIN_ATTESTATION, DOMAIN_PROPOSAL, DOMAIN_EXIT, DOMAIN_RANDAO, DOMAIN_TRANSFER BLSDomain = 0, 1, 2, 3, 4, 5
+const (
+	DOMAIN_BEACON_BLOCK BLSDomain = iota
+	DOMAIN_RANDAO
+	DOMAIN_ATTESTATION
+	DOMAIN_DEPOSIT
+	DOMAIN_VOLUNTARY_EXIT
+	DOMAIN_TRANSFER
+)
 
 // Custom constant, not in spec: An impossible validator index used to mark special internal cases. (all 1s binary)
 const ValidatorIndexMarker = ValidatorIndex(^uint64(0))

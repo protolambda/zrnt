@@ -11,21 +11,11 @@ type ProposerSlashing struct {
 	// Proposer index
 	Proposer_index eth2.ValidatorIndex
 	// First proposal
-	Proposal_1 Proposal
+	Header_1 BeaconBlockHeader
 	// Second proposal
-	Proposal_2 Proposal
+	Header_2 BeaconBlockHeader
 }
 
-type Proposal struct {
-	// Slot number
-	Slot eth2.Slot
-	// Shard number (`BEACON_CHAIN_SHARD_NUMBER` for beacon chain)
-	Shard eth2.Shard
-	// Block root
-	Block_root eth2.Root
-	// Signature
-	Signature eth2.BLSSignature `ssz:"signature"`
-}
 
 type AttesterSlashing struct {
 	// First slashable attestation
@@ -91,7 +81,7 @@ type Crosslink struct {
 
 type Deposit struct {
 	// Branch in the deposit tree
-	Branch []eth2.Root
+	Proof []eth2.Root
 	// Index in the deposit tree
 	Index eth2.DepositIndex
 	// Data
@@ -127,7 +117,7 @@ type VoluntaryExit struct {
 
 type Transfer struct {
 	// Sender index
-	From eth2.ValidatorIndex
+	Sender eth2.ValidatorIndex
 	// Recipient index
 	To eth2.ValidatorIndex
 	// Amount in Gwei

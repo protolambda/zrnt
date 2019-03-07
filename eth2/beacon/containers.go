@@ -1,7 +1,9 @@
 package beacon
 
 import (
-	"github.com/protolambda/go-beacon-transition/eth2"
+	"crypto/sha256"
+	"github.com/protolambda/eth2-shuffle"
+	"github.com/protolambda/go-beacon-transition/eth2/beacon/stake"
 	"github.com/protolambda/go-beacon-transition/eth2/util/bitfield"
 )
 
@@ -9,7 +11,7 @@ import (
 
 type ProposerSlashing struct {
 	// Proposer index
-	Proposer_index eth2.ValidatorIndex
+	Proposer_index ValidatorIndex
 	// First proposal
 	Header_1 BeaconBlockHeader
 	// Second proposal
@@ -25,13 +27,13 @@ type AttesterSlashing struct {
 
 type SlashableAttestation struct {
 	// Validator indices
-	Validator_indices []eth2.ValidatorIndex
+	Validator_indices []ValidatorIndex
 	// Attestation data
 	Data AttestationData
 	// Custody bitfield
 	Custody_bitfield bitfield.Bitfield
 	// Aggregate signature
-	Aggregate_signature eth2.BLSSignature `ssz:"signature"`
+	Aggregate_signature BLSSignature `ssz:"signature"`
 }
 
 type Attestation struct {
@@ -42,26 +44,26 @@ type Attestation struct {
 	// Custody bitfield
 	Custody_bitfield bitfield.Bitfield
 	// BLS aggregate signature
-	Aggregate_signature eth2.BLSSignature `ssz:"signature"`
+	Aggregate_signature BLSSignature `ssz:"signature"`
 }
 
 type AttestationData struct {
 	// Slot number
-	Slot eth2.Slot
+	Slot Slot
 	// Shard number
-	Shard eth2.Shard
+	Shard Shard
 	// Root of the signed beacon block
-	Beacon_block_root eth2.Root
+	Beacon_block_root Root
 	// Root of the ancestor at the epoch boundary
-	Epoch_boundary_root eth2.Root
+	Epoch_boundary_root Root
 	// Data from the shard since the last attestation
-	Crosslink_data_root eth2.Root
+	Crosslink_data_root Root
 	// Last crosslink
 	Latest_crosslink Crosslink
 	// Last justified epoch in the beacon state
-	Justified_epoch eth2.Epoch
+	Justified_epoch Epoch
 	// Hash of the last justified beacon block
-	Justified_block_root eth2.Root
+	Justified_block_root Root
 }
 
 type AttestationDataAndCustodyBit struct {
@@ -73,82 +75,82 @@ type AttestationDataAndCustodyBit struct {
 
 type Crosslink struct {
 	// Epoch number
-	Epoch eth2.Epoch
+	Epoch Epoch
 	// Shard data since the previous crosslink
-	Crosslink_data_root eth2.Root
+	Crosslink_data_root Root
 }
 
 type Deposit struct {
 	// Branch in the deposit tree
-	Proof []eth2.Root
+	Proof []Root
 	// Index in the deposit tree
-	Index eth2.DepositIndex
+	Index DepositIndex
 	// Data
 	Deposit_data DepositData
 }
 
 type DepositData struct {
 	// Amount in Gwei
-	Amount eth2.Gwei
+	Amount Gwei
 	// Timestamp from deposit contract
-	Timestamp eth2.Timestamp
+	Timestamp Timestamp
 	// Deposit input
 	Deposit_input DepositInput
 }
 
 type DepositInput struct {
 	// BLS pubkey
-	Pubkey eth2.BLSPubkey
+	Pubkey BLSPubkey
 	// Withdrawal credentials
-	Withdrawal_credentials eth2.Root
+	Withdrawal_credentials Root
 	// A BLS signature of this `DepositInput`
-	Proof_of_possession eth2.BLSSignature `ssz:"signature"`
+	Proof_of_possession BLSSignature `ssz:"signature"`
 }
 
 type VoluntaryExit struct {
 	// Minimum epoch for processing exit
-	Epoch eth2.Epoch
+	Epoch Epoch
 	// Index of the exiting validator
-	Validator_index eth2.ValidatorIndex
+	Validator_index ValidatorIndex
 	// Validator signature
-	Signature eth2.BLSSignature `ssz:"signature"`
+	Signature BLSSignature `ssz:"signature"`
 }
 
 type Transfer struct {
 	// Sender index
-	Sender eth2.ValidatorIndex
+	Sender ValidatorIndex
 	// Recipient index
-	Recipient eth2.ValidatorIndex
+	Recipient ValidatorIndex
 	// Amount in Gwei
-	Amount eth2.Gwei
+	Amount Gwei
 	// Fee in Gwei for block proposer
-	Fee eth2.Gwei
+	Fee Gwei
 	// Inclusion slot
-	Slot eth2.Slot
+	Slot Slot
 	// Sender withdrawal pubkey
-	Pubkey eth2.BLSPubkey
+	Pubkey BLSPubkey
 	// Sender signature
-	Signature eth2.BLSSignature `ssz:"signature"`
+	Signature BLSSignature `ssz:"signature"`
 }
 
 type Validator struct {
 	// BLS public key
-	Pubkey eth2.BLSPubkey
+	Pubkey BLSPubkey
 	// Withdrawal credentials
-	Withdrawal_credentials eth2.Root
+	Withdrawal_credentials Root
 	// Epoch when validator activated
-	Activation_epoch eth2.Epoch
+	Activation_epoch Epoch
 	// Epoch when validator exited
-	Exit_epoch eth2.Epoch
+	Exit_epoch Epoch
 	// Epoch when validator is eligible to withdraw
-	Withdrawable_epoch eth2.Epoch
+	Withdrawable_epoch Epoch
 	// Did the validator initiate an exit
 	Initiated_exit bool
 	// Was the validator slashed
 	Slashed bool
 }
 
-func (v *Validator) IsActive(epoch eth2.Epoch) bool {
+func (v *Validator) IsActive(epoch Epoch) bool {
 	return v.Activation_epoch <= epoch && epoch < v.Exit_epoch
 }
 
@@ -160,7 +162,7 @@ type PendingAttestation struct {
 	// Custody bitfield
 	Custody_bitfield bitfield.Bitfield
 	// Inclusion slot
-	Inclusion_slot eth2.Slot
+	Inclusion_slot Slot
 }
 
 type Fork struct {
@@ -170,11 +172,11 @@ type Fork struct {
 	// Current fork version
 	Current_version uint64
 	// Fork epoch number
-	Epoch eth2.Epoch
+	Epoch Epoch
 }
 
 // Return the fork version of the given epoch
-func (f Fork) GetVersion(epoch eth2.Epoch) uint64 {
+func (f Fork) GetVersion(epoch Epoch) uint64 {
 	if epoch < f.Epoch {
 		return f.Previous_version
 	}
@@ -183,9 +185,9 @@ func (f Fork) GetVersion(epoch eth2.Epoch) uint64 {
 
 type Eth1Data struct {
 	// Root of the deposit tree
-	Deposit_root eth2.Root
+	Deposit_root Root
 	// Block hash
-	Block_hash eth2.Root
+	Block_hash Root
 }
 
 type Eth1DataVote struct {
@@ -193,4 +195,77 @@ type Eth1DataVote struct {
 	Eth1_data Eth1Data
 	// Vote count
 	Vote_count uint64
+}
+
+type ValidatorBalances []Gwei
+
+func (balances ValidatorBalances) ApplyStakeDeltas(deltas *stake.Deltas) {
+	if len(deltas.Penalties) != len(balances) || len(deltas.Rewards) != len(balances) {
+		panic("cannot apply deltas to balances list with different length")
+	}
+	for i := 0; i < len(balances); i++ {
+		balances[i] = Max(
+			0,
+			balances[i]+deltas.Rewards[i]-deltas.Penalties[i],
+		)
+	}
+}
+
+// Return the effective balance (also known as "balance at stake") for a validator with the given index.
+func (balances ValidatorBalances) Get_effective_balance(index ValidatorIndex) Gwei {
+	return Max(balances[index], MAX_DEPOSIT_AMOUNT)
+}
+
+// Return the combined effective balance of an array of validators.
+func (balances ValidatorBalances) Get_total_balance(indices []ValidatorIndex) (sum Gwei) {
+	for _, vIndex := range indices {
+		sum += balances.Get_effective_balance(vIndex)
+	}
+	return sum
+}
+
+type ValidatorRegistry []Validator
+
+func (vr ValidatorRegistry) Is_validator_index(index ValidatorIndex) bool {
+	return index < ValidatorIndex(len(vr))
+}
+
+func (vr ValidatorRegistry) Get_active_validator_indices(epoch Epoch) ValidatorIndexList {
+	res := make([]ValidatorIndex, 0, len(vr))
+	for i, v := range vr {
+		if v.IsActive(epoch) {
+			res = append(res, ValidatorIndex(i))
+		}
+	}
+	return res
+}
+
+func (vr ValidatorRegistry) Get_active_validator_count(epoch Epoch) (count uint64) {
+	for _, v := range vr {
+		if v.IsActive(epoch) {
+			count++
+		}
+	}
+	return
+}
+
+// Shuffle active validators and split into crosslink committees.
+// Return a list of committees (each a list of validator indices).
+func (vr ValidatorRegistry) Get_shuffling(seed Bytes32, epoch Epoch) [][]ValidatorIndex {
+	active_validator_indices := vr.Get_active_validator_indices(epoch)
+	committee_count := Get_epoch_committee_count(uint64(len(active_validator_indices)))
+	commitees := make([][]ValidatorIndex, committee_count, committee_count)
+	// Active validators, shuffled in-place.
+	hash := sha256.New()
+	hashFn := func(in []byte) []byte {
+		hash.Reset()
+		hash.Write(in)
+		return hash.Sum(nil)
+	}
+	eth2_shuffle.ShuffleList(hashFn, ValidatorIndexList(active_validator_indices).RawIndexSlice(), SHUFFLE_ROUND_COUNT, seed)
+	committee_size := uint64(len(active_validator_indices)) / committee_count
+	for i := uint64(0); i < committee_count; i += committee_size {
+		commitees[i] = active_validator_indices[i : i+committee_size]
+	}
+	return commitees
 }

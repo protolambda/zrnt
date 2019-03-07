@@ -2,7 +2,6 @@ package transition
 
 import (
 	"errors"
-	"github.com/protolambda/go-beacon-transition/eth2"
 	"github.com/protolambda/go-beacon-transition/eth2/beacon"
 	"github.com/protolambda/go-beacon-transition/eth2/util/ssz"
 )
@@ -22,7 +21,7 @@ func StateTransition(preState *beacon.BeaconState, block *beacon.BeaconBlock) (r
 		return nil, err
 	}
 	// "happens at the end of the last Slot of every epoch "
-	if (state.Slot+1)%eth2.SLOTS_PER_EPOCH == 0 {
+	if (state.Slot+1)%beacon.SLOTS_PER_EPOCH == 0 {
 		EpochTransition(state)
 	}
 	// State root verification

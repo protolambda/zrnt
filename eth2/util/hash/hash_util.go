@@ -2,10 +2,10 @@ package hash
 
 import (
 	"crypto/sha256"
-	"github.com/protolambda/go-beacon-transition/eth2"
+	"github.com/protolambda/go-beacon-transition/eth2/beacon"
 )
 
-func Hash(input []byte) (out eth2.Bytes32) {
+func Hash(input []byte) (out beacon.Bytes32) {
 	// TODO this could be optimized,
 	//  in reality you don't want to re-init the hashing function every time you call this
 	hash := sha256.New()
@@ -14,7 +14,7 @@ func Hash(input []byte) (out eth2.Bytes32) {
 	return out
 }
 
-func XorBytes32(a eth2.Bytes32, b eth2.Bytes32) (out eth2.Bytes32) {
+func XorBytes32(a beacon.Bytes32, b beacon.Bytes32) (out beacon.Bytes32) {
 	for i := 0; i < 32; i++ {
 		out[i] = a[i] ^ b[i]
 	}

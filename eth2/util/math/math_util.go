@@ -1,17 +1,5 @@
 package math
 
-import "github.com/protolambda/go-beacon-transition/eth2"
-
-// Typed wrappers for min/max, may want to unify or move.
-
-func Max(a eth2.Gwei, b eth2.Gwei) eth2.Gwei {
-	return eth2.Gwei(MaxU64(uint64(a), uint64(b)))
-}
-func Min(a eth2.Gwei, b eth2.Gwei) eth2.Gwei {
-	return eth2.Gwei(MinU64(uint64(a), uint64(b)))
-}
-
-
 func MaxU64(a uint64, b uint64) uint64 {
 	if a > b {
 		return a

@@ -21,6 +21,7 @@ func ProcessBlockDeposits(state *beacon.BeaconState, block *beacon.BeaconBlock) 
 		}
 		state.Deposit_index += 1
 	}
+	return nil
 }
 
 // Process a deposit from Ethereum 1.0.

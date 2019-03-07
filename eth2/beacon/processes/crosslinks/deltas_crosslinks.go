@@ -5,7 +5,7 @@ import (
 	"github.com/protolambda/go-beacon-transition/eth2/beacon/stake"
 )
 
-func DeltasCrosslinks(state *beacon.BeaconState) *stake.Deltas {
+func DeltasCrosslinks(state *beacon.BeaconState) *beacon.Deltas {
 	return stake.NewDeltas(uint64(len(state.Validator_registry)))
 	// TODO: implement crosslinks rewards again
 	//// Crosslinks should be created by the committees

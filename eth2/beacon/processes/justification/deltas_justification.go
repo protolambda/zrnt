@@ -5,7 +5,7 @@ import (
 	"github.com/protolambda/go-beacon-transition/eth2/beacon/stake"
 )
 
-func DeltasJustification(state *beacon.BeaconState) *stake.Deltas {
+func DeltasJustification(state *beacon.BeaconState) *beacon.Deltas {
 	return stake.NewDeltas(uint64(len(state.Validator_registry)))
 	// TODO: implement justification rewards/penalties as deltas
 	//// > Justification and finalization

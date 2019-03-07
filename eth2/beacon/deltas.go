@@ -1,20 +1,16 @@
-package stake
-
-import (
-	"github.com/protolambda/go-beacon-transition/eth2/beacon"
-)
+package beacon
 
 type Deltas struct {
 	// element for each validator in registry
-	Rewards []beacon.Gwei
+	Rewards []Gwei
 	// element for each validator in registry
-	Penalties []beacon.Gwei
+	Penalties []Gwei
 }
 
 func NewDeltas(validatorCount uint64) *Deltas {
 	return &Deltas{
-		Rewards: make([]beacon.Gwei, validatorCount, validatorCount),
-		Penalties: make([]beacon.Gwei, validatorCount, validatorCount),
+		Rewards: make([]Gwei, validatorCount, validatorCount),
+		Penalties: make([]Gwei, validatorCount, validatorCount),
 	}
 }
 
@@ -31,5 +27,5 @@ func (deltas *Deltas) Add(other *Deltas) {
 	}
 }
 
-type DeltasCalculator func(state *beacon.BeaconState) *Deltas
+type DeltasCalculator func(state *BeaconState) *Deltas
 

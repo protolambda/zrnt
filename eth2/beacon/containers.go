@@ -3,7 +3,6 @@ package beacon
 import (
 	"crypto/sha256"
 	"github.com/protolambda/eth2-shuffle"
-	"github.com/protolambda/go-beacon-transition/eth2/beacon/stake"
 	"github.com/protolambda/go-beacon-transition/eth2/util/bitfield"
 )
 
@@ -82,7 +81,7 @@ type Crosslink struct {
 
 type Deposit struct {
 	// Branch in the deposit tree
-	Proof []Root
+	Proof [][32]byte
 	// Index in the deposit tree
 	Index DepositIndex
 	// Data
@@ -199,7 +198,7 @@ type Eth1DataVote struct {
 
 type ValidatorBalances []Gwei
 
-func (balances ValidatorBalances) ApplyStakeDeltas(deltas *stake.Deltas) {
+func (balances ValidatorBalances) ApplyStakeDeltas(deltas *Deltas) {
 	if len(deltas.Penalties) != len(balances) || len(deltas.Rewards) != len(balances) {
 		panic("cannot apply deltas to balances list with different length")
 	}

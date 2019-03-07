@@ -2,15 +2,14 @@ package ssz
 
 import (
 	"encoding/binary"
-	"github.com/protolambda/go-beacon-transition/eth2"
 	"github.com/protolambda/go-beacon-transition/eth2/util/merkle"
 	"reflect"
 )
 
 // constructs a merkle_root of the given struct (panics if it's not a struct, or a pointer to one),
 // but ignores any fields that are tagged with `ssz:"signature"`
-func Signed_root(input interface{}) eth2.Root {
-	subRoots := make([]eth2.Bytes32, 0)
+func Signed_root(input interface{}) [32]byte {
+	subRoots := make([][32]byte, 0)
 	v := reflect.ValueOf(input)
 	if v.Kind() == reflect.Ptr {
 		v = v.Elem()
@@ -24,7 +23,7 @@ func Signed_root(input interface{}) eth2.Root {
 		if tag, ok := vType.Field(i).Tag.Lookup("ssz"); ok && tag == "signature" {
 			break
 		}
-		subRoots = append(subRoots, eth2.Bytes32(sszHashTreeRoot(v.Field(i))))
+		subRoots = append(subRoots, sszHashTreeRoot(v.Field(i)))
 	}
 	return merkle.Merkle_root(subRoots)
 }
@@ -114,7 +113,7 @@ func sszSerialize(v reflect.Value, dst *[]byte) (encodedLen uint32) {
 	}
 }
 
-func Hash_tree_root(input interface{}) eth2.Root {
+func Hash_tree_root(input interface{}) [32]byte {
 	return sszHashTreeRoot(reflect.ValueOf(input))
 }
 
@@ -143,26 +142,26 @@ func isFixedLength(vt reflect.Type) bool {
 }
 
 // only call this for slices and arrays, not structs
-func varSizeListElementsRoot(v reflect.Value) eth2.Root {
+func varSizeListElementsRoot(v reflect.Value) [32]byte {
 	items := v.Len()
-	data := make([]eth2.Bytes32, items)
+	data := make([][32]byte, items)
 	for i := 0; i < items; i++ {
-		data[i] = eth2.Bytes32(sszHashTreeRoot(v.Index(i)))
+		data[i] = sszHashTreeRoot(v.Index(i))
 	}
 	return merkle.Merkle_root(data)
 }
 
-func varSizeStructElementsRoot(v reflect.Value) eth2.Root {
+func varSizeStructElementsRoot(v reflect.Value) [32]byte {
 	fields := v.NumField()
-	data := make([]eth2.Bytes32, fields)
+	data := make([][32]byte, fields)
 	for i := 0; i < fields; i++ {
-		data[i] = eth2.Bytes32(sszHashTreeRoot(v.Field(i)))
+		data[i] = sszHashTreeRoot(v.Field(i))
 	}
 	return merkle.Merkle_root(data)
 }
 
 // Compute hash tree root for a value
-func sszHashTreeRoot(v reflect.Value) eth2.Root {
+func sszHashTreeRoot(v reflect.Value) [32]byte {
 	switch v.Kind() {
 	case reflect.Ptr:
 		return sszHashTreeRoot(v.Elem())
@@ -191,7 +190,7 @@ func sszHashTreeRoot(v reflect.Value) eth2.Root {
 	}
 }
 
-func sszPack(input reflect.Value) []eth2.Bytes32 {
+func sszPack(input reflect.Value) [][32]byte {
 	serialized := make([]byte, 0)
 	switch input.Kind() {
 	case reflect.Array, reflect.Slice:
@@ -208,7 +207,7 @@ func sszPack(input reflect.Value) []eth2.Bytes32 {
 	// floored: handle all normal chunks first
 	flooredChunkCount := len(serialized) / 32
 	// ceiled: include any partial chunk at end as full chunk (with padding)
-	out := make([]eth2.Bytes32, (len(serialized)+31)/32)
+	out := make([][32]byte, (len(serialized)+31)/32)
 	for i := 0; i < flooredChunkCount; i++ {
 		copy(out[i][:], serialized[i<<5:(i+1)<<5])
 	}
@@ -219,8 +218,8 @@ func sszPack(input reflect.Value) []eth2.Bytes32 {
 	return out
 }
 
-func sszMixInLength(data eth2.Root, length uint64) eth2.Root {
-	lengthInput := eth2.Bytes32{}
+func sszMixInLength(data [32]byte, length uint64) [32]byte {
+	lengthInput := [32]byte{}
 	binary.LittleEndian.PutUint64(lengthInput[:], length)
-	return merkle.Merkle_root([]eth2.Bytes32{eth2.Bytes32(data), lengthInput})
+	return merkle.Merkle_root([][32]byte{data, lengthInput})
 }

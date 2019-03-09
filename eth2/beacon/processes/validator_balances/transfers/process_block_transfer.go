@@ -36,18 +36,18 @@ func ProcessTransfer(state *beacon.BeaconState, transfer *beacon.Transfer) error
 	withdrawCred[0] = beacon.BLS_WITHDRAWAL_PREFIX_BYTE
 	// verify transfer data + signature
 	// TODO: fix formatting/quality
-	if !(state.Validator_balances[transfer.Sender] >= transfer.Amount && state.Validator_balances[transfer.Sender] >= transfer.Fee &&
-		((state.Validator_balances[transfer.Sender] == transfer.Amount+transfer.Fee) ||
-			(state.Validator_balances[transfer.Sender] >= transfer.Amount+transfer.Fee+beacon.MIN_DEPOSIT_AMOUNT)) &&
+	if !(state.ValidatorBalances[transfer.Sender] >= transfer.Amount && state.ValidatorBalances[transfer.Sender] >= transfer.Fee &&
+		((state.ValidatorBalances[transfer.Sender] == transfer.Amount+transfer.Fee) ||
+			(state.ValidatorBalances[transfer.Sender] >= transfer.Amount+transfer.Fee+beacon.MIN_DEPOSIT_AMOUNT)) &&
 		state.Slot == transfer.Slot &&
-		(state.Epoch() >= state.Validator_registry[transfer.Sender].Withdrawable_epoch || state.Validator_registry[transfer.Sender].Activation_epoch == beacon.FAR_FUTURE_EPOCH) &&
-		state.Validator_registry[transfer.Sender].Withdrawal_credentials == withdrawCred &&
-		bls.Bls_verify(transfer.Pubkey, ssz.Signed_root(transfer), transfer.Signature, beacon.Get_domain(state.Fork, transfer.Slot.ToEpoch(), beacon.DOMAIN_TRANSFER))) {
+		(state.Epoch() >= state.ValidatorRegistry[transfer.Sender].WithdrawableEpoch || state.ValidatorRegistry[transfer.Sender].ActivationEpoch == beacon.FAR_FUTURE_EPOCH) &&
+		state.ValidatorRegistry[transfer.Sender].WithdrawalCredentials == withdrawCred &&
+		bls.BlsVerify(transfer.Pubkey, ssz.SignedRoot(transfer), transfer.Signature, beacon.GetDomain(state.Fork, transfer.Slot.ToEpoch(), beacon.DOMAIN_TRANSFER))) {
 		return errors.New("transfer is invalid")
 	}
-	state.Validator_balances[transfer.Sender] -= transfer.Amount + transfer.Fee
-	state.Validator_balances[transfer.Recipient] += transfer.Amount
-	propIndex := state.Get_beacon_proposer_index(state.Slot, false)
-	state.Validator_balances[propIndex] += transfer.Fee
+	state.ValidatorBalances[transfer.Sender] -= transfer.Amount + transfer.Fee
+	state.ValidatorBalances[transfer.Recipient] += transfer.Amount
+	propIndex := state.GetBeaconProposerIndex(state.Slot, false)
+	state.ValidatorBalances[propIndex] += transfer.Fee
 	return nil
 }

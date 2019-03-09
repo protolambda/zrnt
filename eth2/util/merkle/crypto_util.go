@@ -7,7 +7,7 @@ import (
 
 // Merkleize values (where len(values) is a power of two) and return the Merkle root.
 // Note that the leaves are not hashed.
-func Merkle_root(values [][32]byte) [32]byte {
+func MerkleRoot(values [][32]byte) [32]byte {
 	if len(values) == 0 {
 		return [32]byte{}
 	}
@@ -24,7 +24,7 @@ func Merkle_root(values [][32]byte) [32]byte {
 }
 
 // Verify that the given leaf is on the merkle branch.
-func Verify_merkle_branch(leaf [32]byte, branch [][32]byte, depth uint64, index uint64, root [32]byte) bool {
+func VerifyMerkleBranch(leaf [32]byte, branch [][32]byte, depth uint64, index uint64, root [32]byte) bool {
 	value := leaf
 	for i := uint64(0); i < depth; i++ {
 		if (index>>i)&1 == 1 {

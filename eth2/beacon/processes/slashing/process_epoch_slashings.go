@@ -5,22 +5,22 @@ import (
 )
 
 func ProcessEpochSlashings(state *beacon.BeaconState) {
-	current_epoch := state.Epoch()
-	active_validator_indices := state.Validator_registry.Get_active_validator_indices(current_epoch)
-	total_balance := state.Validator_balances.Get_total_balance(active_validator_indices)
+	currentEpoch := state.Epoch()
+	activeValidatorIndices := state.ValidatorRegistry.GetActiveValidatorIndices(currentEpoch)
+	totalBalance := state.ValidatorBalances.GetTotalBalance(activeValidatorIndices)
 
-	for index, validator := range state.Validator_registry {
+	for index, validator := range state.ValidatorRegistry {
 		if validator.Slashed &&
-			current_epoch == validator.Withdrawable_epoch-(beacon.LATEST_SLASHED_EXIT_LENGTH/2) {
-			epoch_index := current_epoch % beacon.LATEST_SLASHED_EXIT_LENGTH
-			total_at_start := state.Latest_slashed_balances[(epoch_index+1)%beacon.LATEST_SLASHED_EXIT_LENGTH]
-			total_at_end := state.Latest_slashed_balances[epoch_index]
-			balance := state.Validator_balances.Get_effective_balance(beacon.ValidatorIndex(index))
-			state.Validator_balances[index] -= beacon.Max(
+			currentEpoch == validator.WithdrawableEpoch-(beacon.LATEST_SLASHED_EXIT_LENGTH/2) {
+			epochIndex := currentEpoch % beacon.LATEST_SLASHED_EXIT_LENGTH
+			totalAtStart := state.LatestSlashedBalances[(epochIndex+1)%beacon.LATEST_SLASHED_EXIT_LENGTH]
+			totalAtEnd := state.LatestSlashedBalances[epochIndex]
+			balance := state.ValidatorBalances.GetEffectiveBalance(beacon.ValidatorIndex(index))
+			state.ValidatorBalances[index] -= beacon.Max(
 				balance*beacon.Min(
-					(total_at_end-total_at_start)*3,
-					total_balance,
-				)/total_balance,
+					(totalAtEnd-totalAtStart)*3,
+					totalBalance,
+				)/totalBalance,
 				balance/beacon.MIN_PENALTY_QUOTIENT)
 		}
 	}

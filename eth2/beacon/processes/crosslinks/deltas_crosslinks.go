@@ -6,7 +6,7 @@ import (
 )
 
 func DeltasCrosslinks(state *beacon.BeaconState) *beacon.Deltas {
-	return stake.NewDeltas(uint64(len(state.Validator_registry)))
+	return stake.NewDeltas(uint64(len(state.ValidatorRegistry)))
 	// TODO: implement crosslinks rewards again
 	//// Crosslinks should be created by the committees
 	//start, end := previous_epoch.GetStartSlot(), next_epoch.GetStartSlot()

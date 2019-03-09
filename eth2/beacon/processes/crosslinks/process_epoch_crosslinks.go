@@ -5,20 +5,20 @@ import (
 )
 
 func ProcessEpochCrosslinks(state *beacon.BeaconState) {
-	current_epoch := state.Epoch()
-	previous_epoch := current_epoch - 1
-	next_epoch := current_epoch + 1
-	start := previous_epoch.GetStartSlot()
-	end := next_epoch.GetStartSlot()
+	currentEpoch := state.Epoch()
+	previousEpoch := currentEpoch - 1
+	nextEpoch := currentEpoch + 1
+	start := previousEpoch.GetStartSlot()
+	end := nextEpoch.GetStartSlot()
 	for slot := start; slot < end; slot++ {
-		for _, shard_committee := range state.Get_crosslink_committees_at_slot(slot, false) {
-			winning_root, participants := state.Get_winning_root_and_participants(shard_committee.Shard)
-			participating_balance := state.Validator_balances.Get_total_balance(participants)
-			total_balance := state.Validator_balances.Get_total_balance(shard_committee.Committee)
-			if 3*participating_balance >= 2*total_balance {
-				state.Latest_crosslinks[shard_committee.Shard] = beacon.Crosslink{
-					Epoch:               slot.ToEpoch(),
-					Crosslink_data_root: winning_root,
+		for _, shardCommittee := range state.GetCrosslinkCommitteesAtSlot(slot, false) {
+			winningRoot, participants := state.GetWinningRootAndParticipants(shardCommittee.Shard)
+			participatingBalance := state.ValidatorBalances.GetTotalBalance(participants)
+			totalBalance := state.ValidatorBalances.GetTotalBalance(shardCommittee.Committee)
+			if 3*participatingBalance >= 2*totalBalance {
+				state.LatestCrosslinks[shardCommittee.Shard] = beacon.Crosslink{
+					Epoch:             slot.ToEpoch(),
+					CrosslinkDataRoot: winningRoot,
 				}
 			}
 		}

@@ -8,10 +8,10 @@ import (
 )
 
 func ProcessBlockProposerSlashings(state *beacon.BeaconState, block *beacon.BeaconBlock) error {
-	if len(block.Body.Proposer_slashings) > beacon.MAX_PROPOSER_SLASHINGS {
+	if len(block.Body.ProposerSlashings) > beacon.MAX_PROPOSER_SLASHINGS {
 		return errors.New("too many proposer slashings")
 	}
-	for _, ps := range block.Body.Proposer_slashings {
+	for _, ps := range block.Body.ProposerSlashings {
 		if err := ProcessProposerSlashing(state, &ps); err != nil {
 			return err
 		}
@@ -20,17 +20,17 @@ func ProcessBlockProposerSlashings(state *beacon.BeaconState, block *beacon.Beac
 }
 
 func ProcessProposerSlashing(state *beacon.BeaconState, ps *beacon.ProposerSlashing) error {
-	if !state.Validator_registry.Is_validator_index(ps.Proposer_index) {
+	if !state.ValidatorRegistry.IsValidatorIndex(ps.ProposerIndex) {
 		return errors.New("invalid proposer index")
 	}
-	proposer := &state.Validator_registry[ps.Proposer_index]
-	if !(ps.Header_1.Slot == ps.Header_2.Slot &&
-		ps.Header_1.BlockBodyRoot != ps.Header_2.BlockBodyRoot && proposer.Slashed == false &&
-		bls.Bls_verify(proposer.Pubkey, ssz.Signed_root(ps.Header_1), ps.Header_1.Signature, beacon.Get_domain(state.Fork, ps.Header_1.Slot.ToEpoch(), beacon.DOMAIN_BEACON_BLOCK)) &&
-		bls.Bls_verify(proposer.Pubkey, ssz.Signed_root(ps.Header_2), ps.Header_2.Signature, beacon.Get_domain(state.Fork, ps.Header_2.Slot.ToEpoch(), beacon.DOMAIN_BEACON_BLOCK))) {
+	proposer := &state.ValidatorRegistry[ps.ProposerIndex]
+	if !(ps.Header1.Slot == ps.Header2.Slot &&
+		ps.Header1.BlockBodyRoot != ps.Header2.BlockBodyRoot && proposer.Slashed == false &&
+		bls.BlsVerify(proposer.Pubkey, ssz.SignedRoot(ps.Header1), ps.Header1.Signature, beacon.GetDomain(state.Fork, ps.Header1.Slot.ToEpoch(), beacon.DOMAIN_BEACON_BLOCK)) &&
+		bls.BlsVerify(proposer.Pubkey, ssz.SignedRoot(ps.Header2), ps.Header2.Signature, beacon.GetDomain(state.Fork, ps.Header2.Slot.ToEpoch(), beacon.DOMAIN_BEACON_BLOCK))) {
 		return errors.New("proposer slashing is invalid")
 	}
-	if err := state.Slash_validator(ps.Proposer_index); err != nil {
+	if err := state.SlashValidator(ps.ProposerIndex); err != nil {
 		return err
 	}
 }

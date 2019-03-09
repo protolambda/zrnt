@@ -93,7 +93,7 @@ func encodeToMap(v reflect.Value) OrderedMap {
 		// Transform the name to the python formatting: snake case
 		name := toSnakeCase(v.Type().Field(i).Name)
 		out = append(out, OrderedMapEntry{name, encode(f)})
-		fieldHashTreeRoot := ssz.Hash_tree_root(f.Interface())
+		fieldHashTreeRoot := ssz.HashTreeRoot(f.Interface())
 		encodedHashTreeRoot := make([]byte, hex.EncodedLen(len(fieldHashTreeRoot)))
 		hex.Encode(encodedHashTreeRoot, fieldHashTreeRoot[:])
 		out = append(out, OrderedMapEntry{name + "_hash_tree_root", string(encodedHashTreeRoot)})
@@ -106,7 +106,7 @@ func EncodeToTreeRootJSON(v interface{}, indent string) ([]byte, error) {
 
 	// add "hash_tree_root" to top level map
 	if asOrdMap, ok := preEncoded.(OrderedMap); ok {
-		coreHashTreeRoot := ssz.Hash_tree_root(v)
+		coreHashTreeRoot := ssz.HashTreeRoot(v)
 		encodedHashTreeRoot := make([]byte, hex.EncodedLen(len(coreHashTreeRoot)))
 		hex.Encode(encodedHashTreeRoot, coreHashTreeRoot[:])
 		preEncoded = append(asOrdMap, OrderedMapEntry{"hash_tree_root", string(encodedHashTreeRoot)})

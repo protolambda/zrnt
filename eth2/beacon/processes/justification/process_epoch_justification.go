@@ -6,71 +6,71 @@ import (
 
 func ProcessEpochCrosslinks(state *beacon.BeaconState) {
 
-	current_epoch := state.Epoch()
+	currentEpoch := state.Epoch()
 	// epoch numbers are trusted, no errors
-	previous_boundary_block_root, _ := state.Get_block_root((current_epoch - 1).GetStartSlot())
-	current_boundary_block_root, _ := state.Get_block_root(current_epoch.GetStartSlot())
+	previousBoundaryBlockRoot, _ := state.GetBlockRoot((currentEpoch - 1).GetStartSlot())
+	currentBoundaryBlockRoot, _ := state.GetBlockRoot(currentEpoch.GetStartSlot())
 
-	previous_epoch_boundary_attester_indices := make([]beacon.ValidatorIndex, 0)
-	current_epoch_boundary_attester_indices := make([]beacon.ValidatorIndex, 0)
+	previousEpochBoundaryAttesterIndices := make([]beacon.ValidatorIndex, 0)
+	currentEpochBoundaryAttesterIndices := make([]beacon.ValidatorIndex, 0)
 	for _, att := range state.PreviousEpochAttestations {
 		// If the attestation is for the boundary:
-		if att.Data.Epoch_boundary_root == previous_boundary_block_root {
-			participants, _ := state.Get_attestation_participants(&att.Data, &att.Aggregation_bitfield)
+		if att.Data.EpochBoundaryRoot == previousBoundaryBlockRoot {
+			participants, _ := state.GetAttestationParticipants(&att.Data, &att.AggregationBitfield)
 			for _, vIndex := range participants {
-				previous_epoch_boundary_attester_indices = append(previous_epoch_boundary_attester_indices, vIndex)
+				previousEpochBoundaryAttesterIndices = append(previousEpochBoundaryAttesterIndices, vIndex)
 			}
 		}
 	}
 	for _, att := range state.CurrentEpochAttestations {
 		// If the attestation is for the boundary:
-		if att.Data.Epoch_boundary_root == current_boundary_block_root {
-			participants, _ := state.Get_attestation_participants(&att.Data, &att.Aggregation_bitfield)
+		if att.Data.EpochBoundaryRoot == currentBoundaryBlockRoot {
+			participants, _ := state.GetAttestationParticipants(&att.Data, &att.AggregationBitfield)
 			for _, vIndex := range participants {
-				current_epoch_boundary_attester_indices = append(current_epoch_boundary_attester_indices, vIndex)
+				currentEpochBoundaryAttesterIndices = append(currentEpochBoundaryAttesterIndices, vIndex)
 			}
 		}
 	}
 
-	new_justified_epoch := state.Justified_epoch
+	newJustifiedEpoch := state.JustifiedEpoch
 	// Rotate the justification bitfield up one epoch to make room for the current epoch
-	state.Justification_bitfield <<= 1
+	state.JustificationBitfield <<= 1
 
 	// Get the sum balances of the boundary attesters, and the total balance at the time.
-	previous_epoch_boundary_attesting_balance := state.Validator_balances.Get_total_balance(previous_epoch_boundary_attester_indices)
-	previous_total_balance := state.Validator_balances.Get_total_balance(state.Validator_registry.Get_active_validator_indices(current_epoch - 1))
-	current_epoch_boundary_attesting_balance := state.Validator_balances.Get_total_balance(current_epoch_boundary_attester_indices)
-	current_total_balance := state.Validator_balances.Get_total_balance(state.Validator_registry.Get_active_validator_indices(current_epoch))
+	previousEpochBoundaryAttestingBalance := state.ValidatorBalances.GetTotalBalance(previousEpochBoundaryAttesterIndices)
+	previousTotalBalance := state.ValidatorBalances.GetTotalBalance(state.ValidatorRegistry.GetActiveValidatorIndices(currentEpoch - 1))
+	currentEpochBoundaryAttestingBalance := state.ValidatorBalances.GetTotalBalance(currentEpochBoundaryAttesterIndices)
+	currentTotalBalance := state.ValidatorBalances.GetTotalBalance(state.ValidatorRegistry.GetActiveValidatorIndices(currentEpoch))
 
 	// > Justification
 	// If the previous epoch gets justified, fill the second last bit
-	if 3*previous_epoch_boundary_attesting_balance >= 2*previous_total_balance {
-		state.Justification_bitfield |= 2
-		new_justified_epoch = current_epoch - 1
+	if 3*previousEpochBoundaryAttestingBalance >= 2*previousTotalBalance {
+		state.JustificationBitfield |= 2
+		newJustifiedEpoch = currentEpoch - 1
 	}
 	// If the current epoch gets justified, fill the last bit
-	if 3*current_epoch_boundary_attesting_balance >= 2*current_total_balance {
-		state.Justification_bitfield |= 1
-		new_justified_epoch = current_epoch
+	if 3*currentEpochBoundaryAttestingBalance >= 2*currentTotalBalance {
+		state.JustificationBitfield |= 1
+		newJustifiedEpoch = currentEpoch
 	}
 	// > Finalization
 	// The 2nd/3rd/4th most recent epochs are all justified, the 2nd using the 4th as source
-	if (state.Justification_bitfield>>1)&7 == 7 && state.Previous_justified_epoch == current_epoch-3 {
-		state.Finalized_epoch = state.Previous_justified_epoch
+	if (state.JustificationBitfield>>1)&7 == 7 && state.PreviousJustifiedEpoch == currentEpoch-3 {
+		state.FinalizedEpoch = state.PreviousJustifiedEpoch
 	}
 	// The 2nd/3rd most recent epochs are both justified, the 2nd using the 3rd as source
-	if (state.Justification_bitfield>>1)&3 == 3 && state.Previous_justified_epoch == current_epoch-2 {
-		state.Finalized_epoch = state.Previous_justified_epoch
+	if (state.JustificationBitfield>>1)&3 == 3 && state.PreviousJustifiedEpoch == currentEpoch-2 {
+		state.FinalizedEpoch = state.PreviousJustifiedEpoch
 	}
 	// The 1st/2nd/3rd most recent epochs are all justified, the 1st using the 3rd as source
-	if (state.Justification_bitfield>>0)&7 == 7 && state.Justified_epoch == current_epoch-2 {
-		state.Finalized_epoch = state.Justified_epoch
+	if (state.JustificationBitfield>>0)&7 == 7 && state.JustifiedEpoch == currentEpoch-2 {
+		state.FinalizedEpoch = state.JustifiedEpoch
 	}
 	// The 1st/2nd most recent epochs are both justified, the 1st using the 2nd as source
-	if (state.Justification_bitfield>>0)&3 == 3 && state.Justified_epoch == current_epoch-1 {
-		state.Finalized_epoch = state.Justified_epoch
+	if (state.JustificationBitfield>>0)&3 == 3 && state.JustifiedEpoch == currentEpoch-1 {
+		state.FinalizedEpoch = state.JustifiedEpoch
 	}
 	// Rotate justified epochs
-	state.Previous_justified_epoch = state.Justified_epoch
-	state.Justified_epoch = new_justified_epoch
+	state.PreviousJustifiedEpoch = state.JustifiedEpoch
+	state.JustifiedEpoch = newJustifiedEpoch
 }

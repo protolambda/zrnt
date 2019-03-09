@@ -6,12 +6,12 @@ import (
 )
 
 func AdvanceSlot(state *beacon.BeaconState) {
-	state.Latest_state_roots[state.Slot%beacon.SLOTS_PER_HISTORICAL_ROOT] = ssz.Hash_tree_root(state)
+	state.LatestStateRoots[state.Slot%beacon.SLOTS_PER_HISTORICAL_ROOT] = ssz.HashTreeRoot(state)
 	state.Slot += 1
-	if state.LatestBlockHeader.State_root == (beacon.Root{}) {
+	if state.LatestBlockHeader.StateRoot == (beacon.Root{}) {
 		// previous slot is safe, ignore error
-		stRoot, _ := state.Get_state_root(state.Slot - 1)
-		state.LatestBlockHeader.State_root = stRoot
+		stRoot, _ := state.GetStateRoot(state.Slot - 1)
+		state.LatestBlockHeader.StateRoot = stRoot
 	}
-	state.Latest_block_roots[(state.Slot-1)%beacon.SLOTS_PER_HISTORICAL_ROOT] = ssz.Hash_tree_root(state.LatestBlockHeader)
+	state.LatestBlockRoots[(state.Slot-1)%beacon.SLOTS_PER_HISTORICAL_ROOT] = ssz.HashTreeRoot(state.LatestBlockHeader)
 }

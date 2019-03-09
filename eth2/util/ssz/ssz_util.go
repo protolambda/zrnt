@@ -8,7 +8,7 @@ import (
 
 // constructs a merkle_root of the given struct (panics if it's not a struct, or a pointer to one),
 // but ignores any fields that are tagged with `ssz:"signature"`
-func Signed_root(input interface{}) [32]byte {
+func SignedRoot(input interface{}) [32]byte {
 	subRoots := make([][32]byte, 0)
 	v := reflect.ValueOf(input)
 	if v.Kind() == reflect.Ptr {
@@ -25,7 +25,7 @@ func Signed_root(input interface{}) [32]byte {
 		}
 		subRoots = append(subRoots, sszHashTreeRoot(v.Field(i)))
 	}
-	return merkle.Merkle_root(subRoots)
+	return merkle.MerkleRoot(subRoots)
 }
 
 func SSZEncode(input interface{}) []byte {
@@ -113,7 +113,7 @@ func sszSerialize(v reflect.Value, dst *[]byte) (encodedLen uint32) {
 	}
 }
 
-func Hash_tree_root(input interface{}) [32]byte {
+func HashTreeRoot(input interface{}) [32]byte {
 	return sszHashTreeRoot(reflect.ValueOf(input))
 }
 
@@ -152,7 +152,7 @@ func varSizeListElementsRoot(v reflect.Value) [32]byte {
 	for i := 0; i < items; i++ {
 		data[i] = sszHashTreeRoot(v.Index(i))
 	}
-	return merkle.Merkle_root(data)
+	return merkle.MerkleRoot(data)
 }
 
 func varSizeStructElementsRoot(v reflect.Value) [32]byte {
@@ -161,7 +161,7 @@ func varSizeStructElementsRoot(v reflect.Value) [32]byte {
 	for i := 0; i < fields; i++ {
 		data[i] = sszHashTreeRoot(v.Field(i))
 	}
-	return merkle.Merkle_root(data)
+	return merkle.MerkleRoot(data)
 }
 
 // Compute hash tree root for a value
@@ -171,19 +171,19 @@ func sszHashTreeRoot(v reflect.Value) [32]byte {
 		return sszHashTreeRoot(v.Elem())
 	// "basic object? -> pack and merkle_root
 	case reflect.Uint8, reflect.Uint32, reflect.Uint64, reflect.Bool:
-		return merkle.Merkle_root(sszPack(v))
+		return merkle.MerkleRoot(sszPack(v))
 	// "array of fixed length items? -> pack and merkle_root
 	// "array of var length items? -> take the merkle root of every element
 	// 		(if it aligns in a single chunk, it will just be as-is, not hashed again, see merklezeition)
 	case reflect.Array:
 		if isFixedLength(v.Type().Elem(), true) {
-			return merkle.Merkle_root(sszPack(v))
+			return merkle.MerkleRoot(sszPack(v))
 		} else {
 			return varSizeListElementsRoot(v)
 		}
 	case reflect.Slice:
 		if isFixedLength(v.Type().Elem(), true) {
-			return sszMixInLength(merkle.Merkle_root(sszPack(v)), uint64(v.Len()))
+			return sszMixInLength(merkle.MerkleRoot(sszPack(v)), uint64(v.Len()))
 		} else {
 			return sszMixInLength(varSizeListElementsRoot(v), uint64(v.Len()))
 		}
@@ -225,5 +225,5 @@ func sszPack(input reflect.Value) [][32]byte {
 func sszMixInLength(data [32]byte, length uint64) [32]byte {
 	lengthInput := [32]byte{}
 	binary.LittleEndian.PutUint64(lengthInput[:], length)
-	return merkle.Merkle_root([][32]byte{data, lengthInput})
+	return merkle.MerkleRoot([][32]byte{data, lengthInput})
 }

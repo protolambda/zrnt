@@ -6,7 +6,7 @@ import (
 )
 
 func DeltasJustification(state *beacon.BeaconState) *beacon.Deltas {
-	return stake.NewDeltas(uint64(len(state.Validator_registry)))
+	return stake.NewDeltas(uint64(len(state.ValidatorRegistry)))
 	// TODO: implement justification rewards/penalties as deltas
 	//// > Justification and finalization
 	//{

@@ -5,5 +5,5 @@ import (
 )
 
 func ProcessEpochRandao(state *beacon.BeaconState) {
-	state.Latest_randao_mixes[(state.Epoch()+1)%beacon.LATEST_RANDAO_MIXES_LENGTH] = state.Get_randao_mix(state.Epoch())
+	state.LatestRandaoMixes[(state.Epoch()+1)%beacon.LATEST_RANDAO_MIXES_LENGTH] = state.GetRandaoMix(state.Epoch())
 }

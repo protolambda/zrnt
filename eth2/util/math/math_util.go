@@ -15,7 +15,7 @@ func MinU64(a uint64, b uint64) uint64 {
 }
 
 // The largest integer x such that x**2 is less than or equal to n.
-func Integer_squareroot(n uint64) uint64 {
+func IntegerSquareroot(n uint64) uint64 {
 	x := n
 	y := (x + 1) >> 1
 	for y < x {
@@ -25,7 +25,7 @@ func Integer_squareroot(n uint64) uint64 {
 	return x
 }
 
-func Is_power_of_two(n uint64) bool {
+func IsPowerOfTwo(n uint64) bool {
 	return (n > 0) && (n&(n-1) == 0)
 }
 

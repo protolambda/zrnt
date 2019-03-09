@@ -13,9 +13,9 @@ var deltaCalculators = []DeltasCalculator{
 }
 
 func ProcessEpochRewardsAndPenalties(state *beacon.BeaconState) {
-	sum := NewDeltas(uint64(len(state.Validator_registry)))
+	sum := NewDeltas(uint64(len(state.ValidatorRegistry)))
 	for _, calc := range deltaCalculators {
 		sum.Add(calc(state))
 	}
-	state.Validator_balances.ApplyStakeDeltas(sum)
+	state.ValidatorBalances.ApplyStakeDeltas(sum)
 }

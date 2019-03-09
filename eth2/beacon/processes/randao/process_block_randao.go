@@ -9,18 +9,18 @@ import (
 )
 
 func ProcessBlockRandao(state *beacon.BeaconState, block *beacon.BeaconBlock) error {
-	propIndex := state.Get_beacon_proposer_index(state.Slot, false)
-	proposer := &state.Validator_registry[propIndex]
-	if !bls.Bls_verify(
+	propIndex := state.GetBeaconProposerIndex(state.Slot, false)
+	proposer := &state.ValidatorRegistry[propIndex]
+	if !bls.BlsVerify(
 		proposer.Pubkey,
-		ssz.Hash_tree_root(state.Epoch()),
-		block.Body.Randao_reveal,
-		beacon.Get_domain(state.Fork, state.Epoch(), beacon.DOMAIN_RANDAO),
+		ssz.HashTreeRoot(state.Epoch()),
+		block.Body.RandaoReveal,
+		beacon.GetDomain(state.Fork, state.Epoch(), beacon.DOMAIN_RANDAO),
 	) {
 		return errors.New("randao invalid")
 	}
-	state.Latest_randao_mixes[state.Epoch()%beacon.LATEST_RANDAO_MIXES_LENGTH] = hash.XorBytes32(
-		state.Get_randao_mix(state.Epoch()),
-		hash.Hash(block.Body.Randao_reveal[:]))
+	state.LatestRandaoMixes[state.Epoch()%beacon.LATEST_RANDAO_MIXES_LENGTH] = hash.XorBytes32(
+		state.GetRandaoMix(state.Epoch()),
+		hash.Hash(block.Body.RandaoReveal[:]))
 	return nil
 }

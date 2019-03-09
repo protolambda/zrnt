@@ -9,24 +9,24 @@ import (
 )
 
 func ProcessBlockAttesterSlashings(state *beacon.BeaconState, block *beacon.BeaconBlock) error {
-	if len(block.Body.Attester_slashings) > beacon.MAX_ATTESTER_SLASHINGS {
+	if len(block.Body.AttesterSlashings) > beacon.MAX_ATTESTER_SLASHINGS {
 		return errors.New("too many attester slashings")
 	}
-	for _, attester_slashing := range block.Body.Attester_slashings {
-		if err := ProcessAttesterSlashing(state, &attester_slashing); err != nil {
+	for _, attesterSlashing := range block.Body.AttesterSlashings {
+		if err := ProcessAttesterSlashing(state, &attesterSlashing); err != nil {
 			return err
 		}
 	}
 }
 
-func ProcessAttesterSlashing(state *beacon.BeaconState, attester_slashing *beacon.AttesterSlashing) error {
-	sa1, sa2 := &attester_slashing.Slashable_attestation_1, &attester_slashing.Slashable_attestation_2
+func ProcessAttesterSlashing(state *beacon.BeaconState, attesterSlashing *beacon.AttesterSlashing) error {
+	sa1, sa2 := &attesterSlashing.SlashableAttestation1, &attesterSlashing.SlashableAttestation2
 	// verify the attester_slashing
 	if !(sa1.Data != sa2.Data && (
-		Is_double_vote(&sa1.Data, &sa2.Data) ||
-			Is_surround_vote(&sa1.Data, &sa2.Data)) &&
-		Verify_slashable_attestation(state, sa1) &&
-		Verify_slashable_attestation(state, sa2)) {
+		IsDoubleVote(&sa1.Data, &sa2.Data) ||
+			IsSurroundVote(&sa1.Data, &sa2.Data)) &&
+		VerifySlashableAttestation(state, sa1) &&
+		VerifySlashableAttestation(state, sa2)) {
 		return errors.New("attester slashing is invalid")
 	}
 	// keep track of effectiveness
@@ -34,10 +34,10 @@ func ProcessAttesterSlashing(state *beacon.BeaconState, attester_slashing *beaco
 	// run slashings where applicable
 
 	// indices are trusted, they have been verified by verify_slashable_attestation(...)
-	for _, v1 := range sa1.Validator_indices {
-		for _, v2 := range sa2.Validator_indices {
-			if v1 == v2 && !state.Validator_registry[v1].Slashed {
-				if err := slashing.Slash_validator(state, v1); err != nil {
+	for _, v1 := range sa1.ValidatorIndices {
+		for _, v2 := range sa2.ValidatorIndices {
+			if v1 == v2 && !state.ValidatorRegistry[v1].Slashed {
+				if err := slashing.SlashValidator(state, v1); err != nil {
 					return err
 				}
 				slashedAny = true
@@ -52,61 +52,61 @@ func ProcessAttesterSlashing(state *beacon.BeaconState, attester_slashing *beaco
 }
 
 // Verify validity of slashable_attestation fields.
-func Verify_slashable_attestation(state *beacon.BeaconState, slashable_attestation *beacon.SlashableAttestation) bool {
-	if size := len(slashable_attestation.Validator_indices); size == 0 || size > beacon.MAX_INDICES_PER_SLASHABLE_VOTE {
+func VerifySlashableAttestation(state *beacon.BeaconState, slashableAttestation *beacon.SlashableAttestation) bool {
+	if size := len(slashableAttestation.ValidatorIndices); size == 0 || size > beacon.MAX_INDICES_PER_SLASHABLE_VOTE {
 		return false
 	}
 	// [TO BE REMOVED IN PHASE 1]
-	if !slashable_attestation.Custody_bitfield.IsZero() {
+	if !slashableAttestation.CustodyBitfield.IsZero() {
 		return false
 	}
 	// verify the size of the bitfield: it must have exactly enough bits for the given amount of validators.
-	if !slashable_attestation.Custody_bitfield.VerifySize(uint64(len(slashable_attestation.Validator_indices))) {
+	if !slashableAttestation.CustodyBitfield.VerifySize(uint64(len(slashableAttestation.ValidatorIndices))) {
 		return false
 	}
 
 	// simple check if the list is sorted.
-	end := len(slashable_attestation.Validator_indices) - 1
+	end := len(slashableAttestation.ValidatorIndices) - 1
 	for i := 0; i < end; i++ {
-		if slashable_attestation.Validator_indices[i] >= slashable_attestation.Validator_indices[i+1] {
+		if slashableAttestation.ValidatorIndices[i] >= slashableAttestation.ValidatorIndices[i+1] {
 			return false
 		}
 	}
 	// Check the last item of the sorted list
-	if !state.Validator_registry.Is_validator_index(slashable_attestation.Validator_indices[end]) {
+	if !state.ValidatorRegistry.IsValidatorIndex(slashableAttestation.ValidatorIndices[end]) {
 		return false
 	}
 
-	custody_bit_0_pubkeys := make([]beacon.BLSPubkey, 0)
-	custody_bit_1_pubkeys := make([]beacon.BLSPubkey, 0)
+	custodyBit0_pubkeys := make([]beacon.BLSPubkey, 0)
+	custodyBit1_pubkeys := make([]beacon.BLSPubkey, 0)
 
-	for i, validator_index := range slashable_attestation.Validator_indices {
+	for i, validatorIndex := range slashableAttestation.ValidatorIndices {
 		// Update spec, or is this acceptable? (the bitfield verify size doesn't suffice here)
-		if slashable_attestation.Custody_bitfield.GetBit(uint64(i)) == 0 {
-			custody_bit_0_pubkeys = append(custody_bit_0_pubkeys, state.Validator_registry[validator_index].Pubkey)
+		if slashableAttestation.CustodyBitfield.GetBit(uint64(i)) == 0 {
+			custodyBit0_pubkeys = append(custodyBit0_pubkeys, state.ValidatorRegistry[validatorIndex].Pubkey)
 		} else {
-			custody_bit_1_pubkeys = append(custody_bit_1_pubkeys, state.Validator_registry[validator_index].Pubkey)
+			custodyBit1_pubkeys = append(custodyBit1_pubkeys, state.ValidatorRegistry[validatorIndex].Pubkey)
 		}
 	}
 	// don't trust, verify
-	return bls.Bls_verify_multiple(
+	return bls.BlsVerifyMultiple(
 		[]beacon.BLSPubkey{
-			bls.Bls_aggregate_pubkeys(custody_bit_0_pubkeys),
-			bls.Bls_aggregate_pubkeys(custody_bit_1_pubkeys)},
+			bls.BlsAggregatePubkeys(custodyBit0_pubkeys),
+			bls.BlsAggregatePubkeys(custodyBit1_pubkeys)},
 		[]beacon.Root{
-			ssz.Hash_tree_root(beacon.AttestationDataAndCustodyBit{Data: slashable_attestation.Data, Custody_bit: false}),
-			ssz.Hash_tree_root(beacon.AttestationDataAndCustodyBit{Data: slashable_attestation.Data, Custody_bit: true})},
-		slashable_attestation.Aggregate_signature,
-		beacon.Get_domain(state.Fork, slashable_attestation.Data.Slot.ToEpoch(), beacon.DOMAIN_ATTESTATION),
+			ssz.HashTreeRoot(beacon.AttestationDataAndCustodyBit{Data: slashableAttestation.Data, CustodyBit: false}),
+			ssz.HashTreeRoot(beacon.AttestationDataAndCustodyBit{Data: slashableAttestation.Data, CustodyBit: true})},
+		slashableAttestation.AggregateSignature,
+		beacon.GetDomain(state.Fork, slashableAttestation.Data.Slot.ToEpoch(), beacon.DOMAIN_ATTESTATION),
 	)
 }
 
 // Check if a and b have the same target epoch.
-func Is_double_vote(a *beacon.AttestationData, b *beacon.AttestationData) bool {
+func IsDoubleVote(a *beacon.AttestationData, b *beacon.AttestationData) bool {
 	return a.Slot.ToEpoch() == b.Slot.ToEpoch()
 }
 
 // Check if a surrounds b, i.E. source(a) < source(b) and target(a) > target(b)
-func Is_surround_vote(a *beacon.AttestationData, b *beacon.AttestationData) bool {
-	return a.Justified_epoch < b.Justified_epoch && a.Slot.ToEpoch() > b.Slot.ToEpoch()
+func IsSurroundVote(a *beacon.AttestationData, b *beacon.AttestationData) bool {
+	return a.JustifiedEpoch < b.JustifiedEpoch && a.Slot.ToEpoch() > b.Slot.ToEpoch()
 }

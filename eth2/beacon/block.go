@@ -7,7 +7,7 @@ import (
 type BeaconBlockHeader struct {
 	Slot              Slot
 	PreviousBlockRoot Root
-	State_root        Root
+	StateRoot         Root
 
 	// Where the body would be, just a root embedded here.
 	BlockBodyRoot Root
@@ -16,22 +16,22 @@ type BeaconBlockHeader struct {
 }
 
 type BeaconBlockBody struct {
-	Randao_reveal BLSSignature
-	Eth1_data     Eth1Data
+	RandaoReveal BLSSignature
+	Eth1Data     Eth1Data
 
-	Proposer_slashings []ProposerSlashing
-	Attester_slashings []AttesterSlashing
-	Attestations       []Attestation
-	Deposits           []Deposit
-	Voluntary_exits    []VoluntaryExit
-	Transfers          []Transfer
+	ProposerSlashings []ProposerSlashing
+	AttesterSlashings []AttesterSlashing
+	Attestations      []Attestation
+	Deposits          []Deposit
+	VoluntaryExits    []VoluntaryExit
+	Transfers         []Transfer
 }
 
 type BeaconBlock struct {
 	// Header
 	Slot              Slot
 	PreviousBlockRoot Root
-	State_root        Root
+	StateRoot         Root
 
 	// Body
 	Body BeaconBlockBody
@@ -52,8 +52,8 @@ func (block *BeaconBlock) GetTemporaryBlockHeader() BeaconBlockHeader {
 	return BeaconBlockHeader{
 		Slot:              block.Slot,
 		PreviousBlockRoot: block.PreviousBlockRoot,
-		State_root:        Root{}, // empty hash, "temporary" part.
-		BlockBodyRoot:     ssz.Hash_tree_root(block.Body),
+		StateRoot:         Root{}, // empty hash, "temporary" part.
+		BlockBodyRoot:     ssz.HashTreeRoot(block.Body),
 		Signature:         block.Signature,
 	}
 }

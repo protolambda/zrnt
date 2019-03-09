@@ -31,7 +31,7 @@ func (e Epoch) GetStartSlot() Slot {
 }
 
 // Return the epoch at which an activation or exit triggered in epoch takes effect.
-func (e Epoch) Get_delayed_activation_exit_epoch() Epoch {
+func (e Epoch) GetDelayedActivationExitEpoch() Epoch {
 	return e + 1 + ACTIVATION_EXIT_DELAY
 }
 
@@ -65,7 +65,7 @@ func Min(a Gwei, b Gwei) Gwei {
 }
 
 // Get the domain number that represents the fork meta and signature domain.
-func Get_domain(fork Fork, epoch Epoch, dom BLSDomain) BLSDomain {
+func GetDomain(fork Fork, epoch Epoch, dom BLSDomain) BLSDomain {
 	// combine fork version with domain.
 	// TODO: spec is unclear about input size expectations.
 	// TODO And is "+" different than packing into 64 bits here? I.e. ((32 bits fork version << 32) | (dom 32 bits))

@@ -11,42 +11,42 @@ func ProcessEpochValidatorRegistry(state *beacon.BeaconState) {
 
 // TODO: updated quickly, review
 func UpdateRegistry(state *beacon.BeaconState) {
-	current_epoch := state.Epoch()
-	next_epoch := current_epoch + 1
-	state.Previous_shuffling_epoch = state.Current_shuffling_epoch
-	state.Previous_shuffling_start_shard = state.Current_shuffling_start_shard
-	state.Previous_shuffling_seed = state.Current_shuffling_seed
+	currentEpoch := state.Epoch()
+	nextEpoch := currentEpoch + 1
+	state.PreviousShufflingEpoch = state.CurrentShufflingEpoch
+	state.PreviousShufflingStartShard = state.CurrentShufflingStartShard
+	state.PreviousShufflingSeed = state.CurrentShufflingSeed
 
-	if state.Finalized_epoch > state.Validator_registry_update_epoch {
+	if state.FinalizedEpoch > state.ValidatorRegistryUpdateEpoch {
 		needsUpdate := true
 		{
-			committee_count := beacon.Get_epoch_committee_count(state.Validator_registry.Get_active_validator_count(current_epoch))
-			for i := uint64(0); i < committee_count; i++ {
-				if shard := (state.Current_shuffling_start_shard + beacon.Shard(i)) % beacon.SHARD_COUNT; state.Latest_crosslinks[shard].Epoch <= state.Validator_registry_update_epoch {
+			committeeCount := beacon.GetEpochCommitteeCount(state.ValidatorRegistry.GetActiveValidatorCount(currentEpoch))
+			for i := uint64(0); i < committeeCount; i++ {
+				if shard := (state.CurrentShufflingStartShard + beacon.Shard(i)) % beacon.SHARD_COUNT; state.LatestCrosslinks[shard].Epoch <= state.ValidatorRegistryUpdateEpoch {
 					needsUpdate = false
 				}
 			}
 		}
 		if needsUpdate {
-			Update_validator_registry(state)
-			state.Current_shuffling_epoch = next_epoch
+			UpdateValidatorRegistry(state)
+			state.CurrentShufflingEpoch = nextEpoch
 			// recompute committee count, some validators may not be active anymore due to the above update.
-			committee_count := beacon.Get_epoch_committee_count(state.Validator_registry.Get_active_validator_count(current_epoch))
-			state.Current_shuffling_start_shard = (state.Current_shuffling_start_shard + beacon.Shard(committee_count)) % beacon.SHARD_COUNT
+			committeeCount := beacon.GetEpochCommitteeCount(state.ValidatorRegistry.GetActiveValidatorCount(currentEpoch))
+			state.CurrentShufflingStartShard = (state.CurrentShufflingStartShard + beacon.Shard(committeeCount)) % beacon.SHARD_COUNT
 			// ignore error, current_shuffling_epoch is a trusted input
-			state.Current_shuffling_seed = state.Generate_seed(state.Current_shuffling_epoch)
+			state.CurrentShufflingSeed = state.GenerateSeed(state.CurrentShufflingEpoch)
 		} else {
 			// If a validator registry update does not happen:
-			epochs_since_last_registry_update := current_epoch - state.Validator_registry_update_epoch
-			if epochs_since_last_registry_update > 1 && math.Is_power_of_two(uint64(epochs_since_last_registry_update)) {
-				state.Current_shuffling_epoch = next_epoch
+			epochsSinceLastRegistryUpdate := currentEpoch - state.ValidatorRegistryUpdateEpoch
+			if epochsSinceLastRegistryUpdate > 1 && math.IsPowerOfTwo(uint64(epochsSinceLastRegistryUpdate)) {
+				state.CurrentShufflingEpoch = nextEpoch
 				// Note that state.Current_shuffling_start_shard is left unchanged
-				state.Current_shuffling_seed = state.Generate_seed(state.Current_shuffling_epoch)
+				state.CurrentShufflingSeed = state.GenerateSeed(state.CurrentShufflingEpoch)
 			}
 		}
 	}
 }
 
-func Update_validator_registry(state *beacon.BeaconState) {
+func UpdateValidatorRegistry(state *beacon.BeaconState) {
 	// TODO
 }

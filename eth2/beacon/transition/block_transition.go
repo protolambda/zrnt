@@ -5,7 +5,7 @@ import (
 	"github.com/protolambda/go-beacon-transition/eth2/beacon/block_processing"
 )
 
-type BlockProcessor func(staten *beacon.BeaconState, block *beacon.BeaconBlock) error
+type BlockProcessor func(state *beacon.BeaconState, block *beacon.BeaconBlock) error
 
 var blockProcessors = []BlockProcessor{
 	block_processing.ProcessBlockHeader,

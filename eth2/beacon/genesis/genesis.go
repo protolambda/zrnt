@@ -16,9 +16,12 @@ func GetGenesisBeaconState(validatorDeposits []beacon.Deposit, time beacon.Times
 			Epoch:            beacon.GENESIS_EPOCH,
 		},
 		// Validator registry
-		// (all default values)
+		Validator_registry_update_epoch: beacon.GENESIS_EPOCH,
 		// Randomness and committees
-		// (all default values)
+		Previous_shuffling_start_shard:beacon.GENESIS_START_SHARD,
+		Current_shuffling_start_shard:beacon.GENESIS_START_SHARD,
+		Current_shuffling_epoch: beacon.GENESIS_EPOCH,
+		Previous_shuffling_epoch:beacon.GENESIS_EPOCH,
 		// Finality
 		Previous_justified_epoch: beacon.GENESIS_EPOCH,
 		Justified_epoch:          beacon.GENESIS_EPOCH,
@@ -27,6 +30,10 @@ func GetGenesisBeaconState(validatorDeposits []beacon.Deposit, time beacon.Times
 		LatestBlockHeader: beacon.GetEmptyBlock().GetTemporaryBlockHeader(),
 		// Ethereum 1.0 chain data
 		Latest_eth1_data: eth1Data,
+	}
+	// Initialize crosslinks
+	for i := beacon.Shard(0); i < beacon.SHARD_COUNT; i++ {
+		state.Latest_crosslinks[i] = beacon.Crosslink{Epoch: beacon.GENESIS_EPOCH}
 	}
 	// Process genesis deposits
 	for _, dep := range validatorDeposits {

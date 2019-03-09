@@ -165,14 +165,19 @@ func (state *BeaconState) Get_randao_mix(epoch Epoch) Bytes32 {
 	return state.Latest_randao_mixes[epoch%LATEST_RANDAO_MIXES_LENGTH]
 }
 
+func (state *BeaconState) Get_active_index_root(epoch Epoch) Root {
+	return state.Latest_active_index_roots[epoch%LATEST_ACTIVE_INDEX_ROOTS_LENGTH]
+}
+
 // Generate a seed for the given epoch
 func (state *BeaconState) Generate_seed(epoch Epoch) Bytes32 {
 	buf := make([]byte, 32*3)
 	mix := state.Get_randao_mix(epoch-MIN_SEED_LOOKAHEAD)
 	copy(buf[0:32], mix[:])
 	// get_active_index_root in spec, but only used once, and the assertion is unnecessary, since epoch input is always trusted
-	copy(buf[32:32*2], state.Latest_active_index_roots[epoch%LATEST_ACTIVE_INDEX_ROOTS_LENGTH][:])
-	binary.LittleEndian.PutUint64(buf[32*3-8:], uint64(epoch))
+	activeIndexRoot := state.Get_active_index_root(epoch)
+	copy(buf[32:64], activeIndexRoot[:])
+	binary.LittleEndian.PutUint64(buf[64:], uint64(epoch))
 	return hash.Hash(buf)
 }
 

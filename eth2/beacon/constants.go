@@ -21,6 +21,7 @@ const EJECTION_BALANCE Gwei = (1 << 4) * 1000000000 // =  16,000,000,000  Gwei
 // Initial values
 const GENESIS_FORK_VERSION uint64 = 0
 const GENESIS_SLOT Slot = 1 << 32
+const GENESIS_START_SHARD = 0
 const GENESIS_EPOCH = Epoch(GENESIS_SLOT / SLOTS_PER_EPOCH)
 
 // unused const GENESIS_START_SHARD Shard = 0

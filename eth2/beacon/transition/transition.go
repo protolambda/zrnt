@@ -2,8 +2,8 @@ package transition
 
 import (
 	"errors"
-	"github.com/protolambda/go-beacon-transition/eth2/beacon"
-	"github.com/protolambda/go-beacon-transition/eth2/util/ssz"
+	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
 func StateTransition(preState *beacon.BeaconState, block *beacon.BeaconBlock) (res *beacon.BeaconState, err error) {

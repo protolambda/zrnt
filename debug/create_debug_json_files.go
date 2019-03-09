@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/protolambda/go-beacon-transition/eth2/beacon"
-	"github.com/protolambda/go-beacon-transition/eth2/beacon/genesis"
-	"github.com/protolambda/go-beacon-transition/eth2/util/debug_json"
+	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/genesis"
+	"github.com/protolambda/zrnt/eth2/util/debug_json"
 	"os"
 )
 

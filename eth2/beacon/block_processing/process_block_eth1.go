@@ -1,6 +1,6 @@
 package block_processing
 
-import "github.com/protolambda/go-beacon-transition/eth2/beacon"
+import "github.com/protolambda/zrnt/eth2/beacon"
 
 func ProcessBlockEth1(state *beacon.BeaconState, block *beacon.BeaconBlock) error {
 	// If there exists an eth1_data_vote in state.Eth1_data_votes for which eth1_data_vote.eth1_data == block.Eth1_data (there will be at most one), set eth1_data_vote.vote_count += 1.

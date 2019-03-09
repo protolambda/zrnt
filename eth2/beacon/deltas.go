@@ -1,6 +1,6 @@
 package beacon
 
-import "github.com/protolambda/go-beacon-transition/eth2/util/math"
+import "github.com/protolambda/zrnt/eth2/util/math"
 
 type Deltas struct {
 	// element for each validator in registry

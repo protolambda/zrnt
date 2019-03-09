@@ -3,7 +3,7 @@ package beacon
 import (
 	"crypto/sha256"
 	"github.com/protolambda/eth2-shuffle"
-	"github.com/protolambda/go-beacon-transition/eth2/util/bitfield"
+	"github.com/protolambda/zrnt/eth2/util/bitfield"
 )
 
 // NOTE: these containers are going to be moved to sub-packages, per-topic.

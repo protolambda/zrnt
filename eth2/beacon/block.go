@@ -1,7 +1,7 @@
 package beacon
 
 import (
-	"github.com/protolambda/go-beacon-transition/eth2/util/ssz"
+	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
 type BeaconBlockHeader struct {

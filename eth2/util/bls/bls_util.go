@@ -1,6 +1,6 @@
 package bls
 
-import "github.com/protolambda/go-beacon-transition/eth2/beacon"
+import "github.com/protolambda/zrnt/eth2/beacon"
 
 func BlsVerify(pubkey beacon.BLSPubkey, messageHash beacon.Root, signature beacon.BLSSignature, domain beacon.BLSDomain) bool {
 	// TODO BLS verify single

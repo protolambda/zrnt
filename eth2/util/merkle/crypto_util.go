@@ -1,8 +1,8 @@
 package merkle
 
 import (
-	"github.com/protolambda/go-beacon-transition/eth2/util/hash"
-	"github.com/protolambda/go-beacon-transition/eth2/util/math"
+	"github.com/protolambda/zrnt/eth2/util/hash"
+	"github.com/protolambda/zrnt/eth2/util/math"
 )
 
 // Merkleize values (where len(values) is a power of two) and return the Merkle root.

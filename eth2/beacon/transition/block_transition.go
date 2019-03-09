@@ -1,8 +1,8 @@
 package transition
 
 import (
-	"github.com/protolambda/go-beacon-transition/eth2/beacon"
-	"github.com/protolambda/go-beacon-transition/eth2/beacon/block_processing"
+	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/block_processing"
 )
 
 type BlockProcessor func(state *beacon.BeaconState, block *beacon.BeaconBlock) error

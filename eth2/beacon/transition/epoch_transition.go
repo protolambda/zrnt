@@ -1,8 +1,8 @@
 package transition
 
 import (
-	"github.com/protolambda/go-beacon-transition/eth2/beacon"
-	"github.com/protolambda/go-beacon-transition/eth2/beacon/epoch_processing"
+	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/epoch_processing"
 )
 
 type EpochProcessor func(state *beacon.BeaconState)

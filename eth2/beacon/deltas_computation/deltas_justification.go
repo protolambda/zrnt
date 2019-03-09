@@ -1,7 +1,7 @@
 package deltas_computation
 
 import (
-	"github.com/protolambda/go-beacon-transition/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon"
 )
 
 func DeltasJustification(state *beacon.BeaconState, v beacon.Valuator) *beacon.Deltas {

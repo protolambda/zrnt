@@ -1,8 +1,8 @@
 package epoch_processing
 
 import (
-	"github.com/protolambda/go-beacon-transition/eth2/beacon"
-	"github.com/protolambda/go-beacon-transition/eth2/util/math"
+	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/util/math"
 )
 
 func ProcessEpochValidatorRegistry(state *beacon.BeaconState) {

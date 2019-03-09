@@ -3,10 +3,10 @@ package block_processing
 import (
 	"errors"
 	"fmt"
-	"github.com/protolambda/go-beacon-transition/eth2/beacon"
-	"github.com/protolambda/go-beacon-transition/eth2/util/bls"
-	"github.com/protolambda/go-beacon-transition/eth2/util/hash"
-	"github.com/protolambda/go-beacon-transition/eth2/util/ssz"
+	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/util/bls"
+	"github.com/protolambda/zrnt/eth2/util/hash"
+	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
 func ProcessBlockTransfers(state *beacon.BeaconState, block *beacon.BeaconBlock) error {

@@ -1,7 +1,7 @@
 package epoch_processing
 
 import (
-	"github.com/protolambda/go-beacon-transition/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon"
 )
 
 func ProcessEpochRandao(state *beacon.BeaconState) {

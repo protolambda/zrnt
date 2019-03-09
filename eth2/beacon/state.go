@@ -4,9 +4,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/protolambda/go-beacon-transition/eth2/util/bitfield"
-	"github.com/protolambda/go-beacon-transition/eth2/util/hash"
-	"github.com/protolambda/go-beacon-transition/eth2/util/math"
+	"github.com/protolambda/zrnt/eth2/util/bitfield"
+	"github.com/protolambda/zrnt/eth2/util/hash"
+	"github.com/protolambda/zrnt/eth2/util/math"
 	"sort"
 )
 

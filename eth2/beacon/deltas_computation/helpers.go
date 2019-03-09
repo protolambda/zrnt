@@ -1,6 +1,6 @@
 package deltas_computation
 
-import "github.com/protolambda/go-beacon-transition/eth2/beacon"
+import "github.com/protolambda/zrnt/eth2/beacon"
 
 // Return the validators from src that are inside the targets list, and those that are outside.
 func FindInAndOutValidators(src []beacon.ValidatorIndex, targets []beacon.ValidatorIndex) (

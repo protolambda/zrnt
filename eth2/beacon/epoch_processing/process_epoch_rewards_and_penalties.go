@@ -1,9 +1,9 @@
 package epoch_processing
 
 import (
-	"github.com/protolambda/go-beacon-transition/eth2/beacon"
-	"github.com/protolambda/go-beacon-transition/eth2/beacon/processes/crosslinks"
-	"github.com/protolambda/go-beacon-transition/eth2/beacon/processes/justification"
+	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/processes/crosslinks"
+	"github.com/protolambda/zrnt/eth2/beacon/processes/justification"
 )
 
 var deltaCalculators = []beacon.DeltasCalculator{

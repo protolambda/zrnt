@@ -1,9 +1,9 @@
 package genesis
 
 import (
-	"github.com/protolambda/go-beacon-transition/eth2/beacon"
-	"github.com/protolambda/go-beacon-transition/eth2/beacon/processes/validator_balances/deposits"
-	"github.com/protolambda/go-beacon-transition/eth2/util/ssz"
+	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/processes/validator_balances/deposits"
+	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
 func GetGenesisBeaconState(validatorDeposits []beacon.Deposit, time beacon.Timestamp, eth1Data beacon.Eth1Data) *beacon.BeaconState {

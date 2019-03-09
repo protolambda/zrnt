@@ -1,5 +1,7 @@
 package beacon
 
+import "github.com/protolambda/go-beacon-transition/eth2/util/math"
+
 type Deltas struct {
 	// element for each validator in registry
 	Rewards []Gwei
@@ -27,4 +29,38 @@ func (deltas *Deltas) Add(other *Deltas) {
 	}
 }
 
-type DeltasCalculator func(state *BeaconState) *Deltas
+type Valuator interface {
+	GetBaseReward(index ValidatorIndex) Gwei
+	GetInactivityPenalty(index ValidatorIndex) Gwei
+}
+
+type DeltasCalculator func(state *BeaconState, v Valuator) *Deltas
+
+type DefaultValuator struct {
+	adjustedQuotient uint64
+	previousTotalBalance Gwei
+	currentTotalBalance Gwei
+	epochsSinceFinality Epoch
+	state *BeaconState
+}
+
+func NewDefaultValuator(state *BeaconState) *Valuator {
+	v := &DefaultValuator{state: state}
+	v.previousTotalBalance = state.ValidatorBalances.GetTotalBalance(
+		state.ValidatorRegistry.GetActiveValidatorIndices(state.Epoch()-1))
+	v.currentTotalBalance = state.ValidatorBalances.GetTotalBalance(
+		state.ValidatorRegistry.GetActiveValidatorIndices(state.Epoch()))
+	v.adjustedQuotient = math.IntegerSquareroot(uint64(v.previousTotalBalance)) / BASE_REWARD_QUOTIENT
+	v.epochsSinceFinality = state.Epoch() + 1 - state.FinalizedEpoch
+	return v
+}
+
+func (v *DefaultValuator) GetBaseReward(index ValidatorIndex) Gwei {
+	return v.state.ValidatorBalances.GetEffectiveBalance(index) / Gwei(v.adjustedQuotient) / 5
+}
+
+func (v *DefaultValuator) GetInactivityPenalty(index ValidatorIndex) Gwei {
+	return v.GetBaseReward(index) + (
+		v.state.ValidatorBalances.GetEffectiveBalance(index) *
+			Gwei(v.epochsSinceFinality) / INACTIVITY_PENALTY_QUOTIENT)
+}

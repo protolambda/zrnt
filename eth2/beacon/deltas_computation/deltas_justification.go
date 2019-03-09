@@ -4,81 +4,190 @@ import (
 	"github.com/protolambda/go-beacon-transition/eth2/beacon"
 )
 
-func DeltasJustification(state *beacon.BeaconState) *beacon.Deltas {
-	return beacon.NewDeltas(uint64(len(state.ValidatorRegistry)))
-	// TODO: implement justification rewards/penalties as deltas
-	//// > Justification and finalization
-	//{
-	//	if epochs_since_finality <= 4 {
-	//		// >> case 1: finality was not too long ago
-	//
-	//		// Slash validators that were supposed to be active, but did not do their work
-	//		{
-	//			//Justification-non-participation R-penalty
-	//			applyRewardOrSlash(previous_active_validator_indices.Minus(previous_epoch_attester_indices), false, base_reward)
-	//
-	//			//Boundary-attestation-non-participation R-penalty
-	//			applyRewardOrSlash(previous_active_validator_indices.Minus(previous_epoch_boundary_attester_indices), false, base_reward)
-	//
-	//			//Non-canonical-participation R-penalty
-	//			applyRewardOrSlash(previous_active_validator_indices.Minus(previous_epoch_head_attester_indices), false, base_reward)
-	//		}
-	//
-	//		// Reward active validators that do their work
-	//		{
-	//			// Justification-participation reward
-	//			applyRewardOrSlash(previous_epoch_attester_indices, true,
-	//				scaled_value(base_reward, previous_epoch_attesting_balance/previous_total_balance))
-	//
-	//			// Boundary-attestation reward
-	//			applyRewardOrSlash(previous_epoch_boundary_attester_indices, true,
-	//				scaled_value(base_reward, previous_epoch_boundary_attesting_balance/previous_total_balance))
-	//
-	//			// Canonical-participation reward
-	//			applyRewardOrSlash(previous_epoch_head_attester_indices, true,
-	//				scaled_value(base_reward, previous_epoch_head_attesting_balance/previous_total_balance))
-	//
-	//			// Attestation-Inclusion-delay reward: quicker = more reward
-	//			applyRewardOrSlash(previous_epoch_attester_indices, true,
-	//				scale_by_inclusion(scaled_value(base_reward, beacon.Gwei(beacon.MIN_ATTESTATION_INCLUSION_DELAY))))
-	//		}
-	//	} else {
-	//		// >> case 2: more than 4 epochs since finality
-	//
-	//		// Slash validators that were supposed to be active, but did not do their work
-	//		{
-	//			// Justification-inactivity penalty
-	//			applyRewardOrSlash(previous_active_validator_indices.Minus(previous_epoch_attester_indices), false, inactivity_penalty)
-	//			// Boundary-attestation-Inactivity penalty
-	//			applyRewardOrSlash(previous_active_validator_indices.Minus(previous_epoch_boundary_attester_indices), false, inactivity_penalty)
-	//			// Non-canonical-participation R-penalty
-	//			applyRewardOrSlash(previous_active_validator_indices.Minus(previous_epoch_head_attester_indices), false, base_reward)
-	//			// Penalization measure: double inactivity penalty + R-penalty
-	//			applyRewardOrSlash(previous_active_validator_indices, false, func(index beacon.ValidatorIndex) beacon.Gwei {
-	//				if state.Validator_registry[index].Slashed {
-	//					return (2 * inactivity_penalty(index)) + base_reward(index)
-	//				}
-	//				return 0
-	//			})
-	//		}
-	//
-	//		// Attestation delay measure
-	//		{
-	//			// Attestation-Inclusion-delay measure: less reward for long delays
-	//			applyRewardOrSlash(previous_epoch_attester_indices, false, func(index beacon.ValidatorIndex) beacon.Gwei {
-	//				return base_reward(index) - scale_by_inclusion(scaled_value(base_reward, beacon.Gwei(beacon.MIN_ATTESTATION_INCLUSION_DELAY)))(index)
-	//			})
-	//		}
-	//	}
-	//}
-	//
-	//// > Attestation inclusion
-	//{
-	//	// Attestations should be included timely.
-	//	// TODO Difference from spec: it is easier (and faster) to iterate through the precomputed map
-	//	for attester_index, att_index := range previous_epoch_earliest_attestations {
-	//		proposer_index := Get_beacon_proposer_index(state, state.Latest_attestations[att_index].Inclusion_slot, false)
-	//		state.Validator_balances[proposer_index] += base_reward(attester_index) / beacon.ATTESTATION_INCLUSION_REWARD_QUOTIENT
-	//	}
-	//}
+func DeltasJustification(state *beacon.BeaconState, v beacon.Valuator) *beacon.Deltas {
+	epochsSinceFinality := state.Epoch() + 1 - state.FinalizedEpoch
+	if epochsSinceFinality <= 4 {
+		return ComputeNormalJustificationAndFinalization(state, v)
+	} else {
+		return ComputeInactivityLeakDeltas(state, v)
+	}
+}
+
+type AttestersJustificationData struct {
+	previousEpochEarliestAttestations map[beacon.ValidatorIndex]*beacon.PendingAttestation
+	prevEpochAttesters []beacon.ValidatorIndex
+	epochBoundaryAttesterIndices []beacon.ValidatorIndex
+	matchingHeadAttesterIndices []beacon.ValidatorIndex
+}
+
+func (attJustData *AttestersJustificationData) inclusionSlot(vIndex beacon.ValidatorIndex) beacon.Slot {
+	return attJustData.previousEpochEarliestAttestations[vIndex].InclusionSlot
+}
+func (attJustData *AttestersJustificationData) inclusionDistance(vIndex beacon.ValidatorIndex) beacon.Slot {
+	a := attJustData.previousEpochEarliestAttestations[vIndex]
+	return a.InclusionSlot - a.Data.Slot
+}
+
+func GetAttestersJustificationData(state *beacon.BeaconState) *AttestersJustificationData {
+	data := new(AttestersJustificationData)
+
+	prevEpochAttestersSet := make(map[beacon.ValidatorIndex]struct{}, 0)
+
+	// attestation-source-index for a given epoch, by validator index.
+	// The earliest attestation (by inclusion_slot) is referenced in this map.
+	data.previousEpochEarliestAttestations = make(map[beacon.ValidatorIndex]*beacon.PendingAttestation)
+
+	previousBoundaryBlockRoot, _ := state.GetBlockRoot(state.PreviousEpoch().GetStartSlot())
+
+	data.epochBoundaryAttesterIndices = make([]beacon.ValidatorIndex, 0)
+	data.matchingHeadAttesterIndices = make([]beacon.ValidatorIndex, 0)
+	for i := 0; i < len(state.PreviousEpochAttestations); i++ {
+		att := &state.PreviousEpochAttestations[i]
+		attBlockRoot, _ := state.GetBlockRoot(att.Data.Slot)
+		participants, _ := state.GetAttestationParticipants(&att.Data, &att.AggregationBitfield)
+		for _, p := range participants {
+
+			// remember the participant as one of the good validators
+			prevEpochAttestersSet[p] = struct{}{}
+
+			// If the attestation is the earliest:
+			if existingAtt, ok := data.previousEpochEarliestAttestations[p];
+				!ok || existingAtt.InclusionSlot < att.InclusionSlot {
+				data.previousEpochEarliestAttestations[p] = att
+			}
+
+			// If the attestation is for the boundary:
+			if att.Data.EpochBoundaryRoot == previousBoundaryBlockRoot {
+				data.epochBoundaryAttesterIndices = append(data.epochBoundaryAttesterIndices, p)
+			}
+			// If the attestation is for the head (att the time of attestation):
+			if att.Data.BeaconBlockRoot == attBlockRoot {
+				data.matchingHeadAttesterIndices = append(data.matchingHeadAttesterIndices, p)
+			}
+		}
+
+	}
+	data.prevEpochAttesters = make([]beacon.ValidatorIndex, len(prevEpochAttestersSet), len(prevEpochAttestersSet))
+	i := 0
+	for vIndex := range prevEpochAttestersSet {
+		data.prevEpochAttesters[i] = vIndex
+		i++
+	}
+	return data
+}
+
+// >> case 1: 4 or less epochs since finality
+func ComputeNormalJustificationAndFinalization(state *beacon.BeaconState, v beacon.Valuator) *beacon.Deltas {
+	deltas := beacon.NewDeltas(uint64(len(state.ValidatorRegistry)))
+
+	data := GetAttestersJustificationData(state)
+	totalAttestingBalance := state.ValidatorBalances.GetTotalBalance(data.prevEpochAttesters)
+	totalBalance := state.ValidatorBalances.GetBalanceSum()
+	epochBoundaryBalance := state.ValidatorBalances.GetTotalBalance(data.epochBoundaryAttesterIndices)
+	matchingHeadBalance := state.ValidatorBalances.GetTotalBalance(data.matchingHeadAttesterIndices)
+
+	prevActiveValidators := state.ValidatorRegistry.GetActiveValidatorIndices(state.PreviousEpoch())
+
+	// Expected FFG source
+	in, out := FindInAndOutValidators(prevActiveValidators, data.prevEpochAttesters)
+	for _, vIndex := range in {
+		// Justification-participation reward
+		deltas.Rewards[vIndex] += v.GetBaseReward(vIndex) * totalAttestingBalance / totalBalance
+
+		// Attestation-Inclusion-delay reward: quicker = more reward
+		deltas.Rewards[vIndex] += v.GetBaseReward(vIndex) *
+			beacon.Gwei(beacon.MIN_ATTESTATION_INCLUSION_DELAY) / beacon.Gwei(data.inclusionDistance(vIndex))
+	}
+	for _, vIndex := range out {
+		//Justification-non-participation R-penalty
+		deltas.Penalties[vIndex] += v.GetBaseReward(vIndex)
+	}
+
+	// Expected FFG target
+	in, out = FindInAndOutValidators(prevActiveValidators, data.epochBoundaryAttesterIndices)
+	for _, vIndex := range in {
+		// Boundary-attestation reward
+		deltas.Rewards[vIndex] += v.GetBaseReward(vIndex) * epochBoundaryBalance / totalBalance
+	}
+	for _, vIndex := range out {
+		//Boundary-attestation-non-participation R-penalty
+		deltas.Penalties[vIndex] += v.GetBaseReward(vIndex)
+	}
+
+	// Expected head
+	in, out = FindInAndOutValidators(prevActiveValidators, data.matchingHeadAttesterIndices)
+	for _, vIndex := range in {
+		// Canonical-participation reward
+		deltas.Rewards[vIndex] += v.GetBaseReward(vIndex) * matchingHeadBalance / totalBalance
+	}
+	for _, vIndex := range out {
+		//Non-canonical-participation R-penalty
+		deltas.Penalties[vIndex] += v.GetBaseReward(vIndex)
+	}
+
+	// Proposer bonus
+	for _, vIndex := range prevActiveValidators {
+		proposerIndex := state.GetBeaconProposerIndex(data.inclusionSlot(vIndex), false)
+		deltas.Rewards[proposerIndex] += v.GetBaseReward(vIndex) / beacon.ATTESTATION_INCLUSION_REWARD_QUOTIENT
+	}
+
+	return deltas
+}
+
+// >> case 2: more than 4 epochs since finality. I.e. when blocks are not finalizing normally...
+func ComputeInactivityLeakDeltas(state *beacon.BeaconState, v beacon.Valuator) *beacon.Deltas {
+	deltas := beacon.NewDeltas(uint64(len(state.ValidatorRegistry)))
+
+	data := GetAttestersJustificationData(state)
+	prevActiveValidators := state.ValidatorRegistry.GetActiveValidatorIndices(state.PreviousEpoch())
+	in, out := FindInAndOutValidators(prevActiveValidators, data.prevEpochAttesters)
+	for _, vIndex := range in {
+		// Attestation delay measure
+		// If a validator did attest, apply a small penalty for getting attestations included late
+		deltas.Rewards[vIndex] += v.GetBaseReward(vIndex) *
+			beacon.Gwei(beacon.MIN_ATTESTATION_INCLUSION_DELAY) / beacon.Gwei(data.inclusionDistance(vIndex))
+		deltas.Penalties[vIndex] += v.GetBaseReward(vIndex)
+	}
+	for _, vIndex := range out {
+		// Justification-inactivity penalty
+		deltas.Penalties[vIndex] += v.GetInactivityPenalty(vIndex)
+	}
+
+	_, out = FindInAndOutValidators(prevActiveValidators, data.epochBoundaryAttesterIndices)
+	for _, vIndex := range out {
+		// Boundary-attestation-Inactivity penalty
+		deltas.Penalties[vIndex] += v.GetInactivityPenalty(vIndex)
+	}
+
+	_, out = FindInAndOutValidators(prevActiveValidators, data.matchingHeadAttesterIndices)
+	for _, vIndex := range out {
+		// Non-canonical-participation R-penalty
+		deltas.Penalties[vIndex] += v.GetBaseReward(vIndex)
+	}
+
+	// Find the validators that are inactive and misbehaving
+	eligible := make([]beacon.ValidatorIndex, len(state.ValidatorRegistry))
+	for i := 0; i < len(state.ValidatorRegistry); i++ {
+		v := &state.ValidatorRegistry[i]
+		// Eligible if slashed and not withdrawn
+		if v.Slashed && state.Epoch() < v.WithdrawableEpoch {
+			eligible[i] = beacon.ValidatorIndex(i)
+		} else {
+			eligible[i] = beacon.ValidatorIndexMarker
+		}
+	}
+	// exclude all indices that are not eligible because of their activity
+	for _, vIndex := range prevActiveValidators {
+		eligible[vIndex] = beacon.ValidatorIndexMarker
+	}
+
+	// Slash all eligible inactive misbehaving validators.
+	for _, vIndex := range eligible {
+		if vIndex != beacon.ValidatorIndexMarker {
+			// Penalization measure: double inactivity penalty + R-penalty
+			deltas.Penalties[vIndex] += 2 * v.GetInactivityPenalty(vIndex) + v.GetBaseReward(vIndex)
+		}
+	}
+
+	return deltas
 }

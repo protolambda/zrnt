@@ -215,6 +215,14 @@ func (balances ValidatorBalances) GetEffectiveBalance(index ValidatorIndex) Gwei
 	return Max(balances[index], MAX_DEPOSIT_AMOUNT)
 }
 
+// Return the total balance sum
+func (balances ValidatorBalances) GetBalanceSum() (sum Gwei) {
+	for i := 0; i < len(balances); i++ {
+		sum += balances.GetEffectiveBalance(ValidatorIndex(i))
+	}
+	return sum
+}
+
 // Return the combined effective balance of an array of validators.
 func (balances ValidatorBalances) GetTotalBalance(indices []ValidatorIndex) (sum Gwei) {
 	for _, vIndex := range indices {

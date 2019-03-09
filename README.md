@@ -16,7 +16,9 @@ The goal of this project is to have a Go version of the Python based spec:
 The beacon-chain consists of 3 transition types:
 
 - **Slot transition** (often, but very minimal change) `eth2/beacon/transition/slot_transition.go`
+
 - **Block transition** (occasional, can fork) `eth2/beacon/transition/block_transition.go`
+
     `eth2/beacon/block_processing`:
     - Header
     - Randao
@@ -27,7 +29,9 @@ The beacon-chain consists of 3 transition types:
     - Deposits
     - VoluntaryExits
     - Transfers
+    
 - **Epoch transition** (every 64 slots, big change) `eth2/beacon/transition/epoch_transition.go`
+
     `eth2/beacon/epoch_processing`:
     - Eth1
     - Crosslinks
@@ -86,7 +90,7 @@ Aside from this bounty, the work is unfunded (as of now), and developed in my sp
 
 [@protolambda on Twitter](https://twitter.com/protolambda)
 
-Website: [https://protolambda.com]
+Website: https://protolambda.com
 
 ## License
 

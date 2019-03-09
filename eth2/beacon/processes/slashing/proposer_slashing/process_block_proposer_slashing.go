@@ -3,7 +3,6 @@ package proposer_slashing
 import (
 	"errors"
 	"github.com/protolambda/go-beacon-transition/eth2/beacon"
-	"github.com/protolambda/go-beacon-transition/eth2/beacon/transition"
 	"github.com/protolambda/go-beacon-transition/eth2/util/bls"
 	"github.com/protolambda/go-beacon-transition/eth2/util/ssz"
 )

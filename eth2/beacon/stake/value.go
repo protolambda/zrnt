@@ -2,20 +2,20 @@ package stake
 
 // TODO: bunch of unused old code, as reference to what needs to be updated to new version
 
-	//// attestation-source-index for a given epoch, by validator index.
-	//// The earliest attestation (by inclusion_slot) is referenced in this map.
-	//previous_epoch_earliest_attestations := make(map[beacon.ValidatorIndex]uint64)
-	//for i, att := range state.Latest_attestations {
-	//	// error ignored, attestation is trusted.
-	//	participants, _ := Get_attestation_participants(state, &att.Data, &att.Aggregation_bitfield)
-	//	for _, participant := range participants {
-	//		if att.Data.Slot.ToEpoch() == previous_epoch {
-	//			if existingIndex, ok := previous_epoch_earliest_attestations[participant]; !ok || state.Latest_attestations[existingIndex].Inclusion_slot < att.Inclusion_slot {
-	//				previous_epoch_earliest_attestations[participant] = uint64(i)
-	//			}
-	//		}
-	//	}
-	//}
+//// attestation-source-index for a given epoch, by validator index.
+//// The earliest attestation (by inclusion_slot) is referenced in this map.
+//previous_epoch_earliest_attestations := make(map[beacon.ValidatorIndex]uint64)
+//for i, att := range state.Latest_attestations {
+//	// error ignored, attestation is trusted.
+//	participants, _ := Get_attestation_participants(state, &att.Data, &att.Aggregation_bitfield)
+//	for _, participant := range participants {
+//		if att.Data.Slot.ToEpoch() == previous_epoch {
+//			if existingIndex, ok := previous_epoch_earliest_attestations[participant]; !ok || state.Latest_attestations[existingIndex].Inclusion_slot < att.Inclusion_slot {
+//				previous_epoch_earliest_attestations[participant] = uint64(i)
+//			}
+//		}
+//	}
+//}
 
 //base_reward_quotient := beacon.Gwei(math.Integer_squareroot(uint64(previous_total_balance))) / beacon.BASE_REWARD_QUOTIENT
 //

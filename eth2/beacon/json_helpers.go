@@ -5,10 +5,10 @@ import (
 )
 
 func encodeHex(v []byte) ([]byte, error) {
-	out := make([]byte, hex.EncodedLen(len(v)) + 2)
+	out := make([]byte, hex.EncodedLen(len(v))+2)
 	out[0] = '"'
 	hex.Encode(out[1:], v)
-	out[len(out) - 1] = '"'
+	out[len(out)-1] = '"'
 	return out, nil
 }
 

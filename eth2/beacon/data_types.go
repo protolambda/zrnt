@@ -22,7 +22,6 @@ type BLSSignature [96]byte
 
 type ValueFunction func(index ValidatorIndex) Gwei
 
-
 func (s Slot) ToEpoch() Epoch {
 	return Epoch(s / SLOTS_PER_EPOCH)
 }
@@ -50,7 +49,6 @@ func (raw ValidatorIndexList) RawIndexSlice() []uint64 {
 	data := *(*[]uint64)(unsafe.Pointer(&header))
 	return data
 }
-
 
 func Max(a Gwei, b Gwei) Gwei {
 	if a > b {

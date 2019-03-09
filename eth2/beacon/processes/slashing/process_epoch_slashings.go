@@ -4,7 +4,6 @@ import (
 	"github.com/protolambda/go-beacon-transition/eth2/beacon"
 )
 
-
 func ProcessEpochSlashings(state *beacon.BeaconState) {
 	current_epoch := state.Epoch()
 	active_validator_indices := state.Validator_registry.Get_active_validator_indices(current_epoch)
@@ -19,11 +18,10 @@ func ProcessEpochSlashings(state *beacon.BeaconState) {
 			balance := state.Validator_balances.Get_effective_balance(beacon.ValidatorIndex(index))
 			state.Validator_balances[index] -= beacon.Max(
 				balance*beacon.Min(
-				(total_at_end-total_at_start)*3,
+					(total_at_end-total_at_start)*3,
 					total_balance,
 				)/total_balance,
 				balance/beacon.MIN_PENALTY_QUOTIENT)
 		}
 	}
 }
-

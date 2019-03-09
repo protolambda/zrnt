@@ -18,10 +18,10 @@ func GetGenesisBeaconState(validatorDeposits []beacon.Deposit, time beacon.Times
 		// Validator registry
 		Validator_registry_update_epoch: beacon.GENESIS_EPOCH,
 		// Randomness and committees
-		Previous_shuffling_start_shard:beacon.GENESIS_START_SHARD,
-		Current_shuffling_start_shard:beacon.GENESIS_START_SHARD,
-		Current_shuffling_epoch: beacon.GENESIS_EPOCH,
-		Previous_shuffling_epoch:beacon.GENESIS_EPOCH,
+		Previous_shuffling_start_shard: beacon.GENESIS_START_SHARD,
+		Current_shuffling_start_shard:  beacon.GENESIS_START_SHARD,
+		Current_shuffling_epoch:        beacon.GENESIS_EPOCH,
+		Previous_shuffling_epoch:       beacon.GENESIS_EPOCH,
 		// Finality
 		Previous_justified_epoch: beacon.GENESIS_EPOCH,
 		Justified_epoch:          beacon.GENESIS_EPOCH,

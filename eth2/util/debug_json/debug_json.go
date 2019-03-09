@@ -32,8 +32,8 @@ func encode(v reflect.Value) interface{} {
 	}
 }
 
-type OrderedMapEntry struct{
-	Key string
+type OrderedMapEntry struct {
+	Key   string
 	Value interface{}
 }
 type OrderedMap []OrderedMapEntry
@@ -57,13 +57,12 @@ func (ordMap OrderedMap) MarshalJSON() ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
-
 var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
-var matchAllCap   = regexp.MustCompile("([a-z0-9])([A-Z])")
+var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
 
 func toSnakeCase(str string) string {
 	snake := matchFirstCap.ReplaceAllString(str, "${1}_${2}")
-	snake  = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
+	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
 	return strings.ToLower(snake)
 }
 
@@ -97,7 +96,7 @@ func encodeToMap(v reflect.Value) OrderedMap {
 		fieldHashTreeRoot := ssz.Hash_tree_root(f.Interface())
 		encodedHashTreeRoot := make([]byte, hex.EncodedLen(len(fieldHashTreeRoot)))
 		hex.Encode(encodedHashTreeRoot, fieldHashTreeRoot[:])
-		out = append(out, OrderedMapEntry{name+"_hash_tree_root", string(encodedHashTreeRoot)})
+		out = append(out, OrderedMapEntry{name + "_hash_tree_root", string(encodedHashTreeRoot)})
 	}
 	return out
 }

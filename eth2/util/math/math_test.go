@@ -5,8 +5,8 @@ import (
 	"testing"
 )
 
-var nextPower2Tests = []struct{
-	in uint64
+var nextPower2Tests = []struct {
+	in  uint64
 	out uint64
 }{
 	{0, 0},

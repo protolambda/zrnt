@@ -9,7 +9,7 @@ type Deltas struct {
 
 func NewDeltas(validatorCount uint64) *Deltas {
 	return &Deltas{
-		Rewards: make([]Gwei, validatorCount, validatorCount),
+		Rewards:   make([]Gwei, validatorCount, validatorCount),
 		Penalties: make([]Gwei, validatorCount, validatorCount),
 	}
 }
@@ -28,4 +28,3 @@ func (deltas *Deltas) Add(other *Deltas) {
 }
 
 type DeltasCalculator func(state *BeaconState) *Deltas
-

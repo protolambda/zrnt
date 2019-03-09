@@ -1,7 +1,6 @@
 package eth1
 
 import (
-	"github.com/protolambda/go-beacon-transition/eth2"
 	"github.com/protolambda/go-beacon-transition/eth2/beacon"
 )
 

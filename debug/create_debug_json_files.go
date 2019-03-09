@@ -14,7 +14,7 @@ func main() {
 
 	data := map[string]DataSrc{
 		"genesis_state": CreateGenesisState,
-		"empty_block": CreateEmptyBlock,
+		"empty_block":   CreateEmptyBlock,
 		// TODO: more data
 	}
 
@@ -33,7 +33,7 @@ func writeDebugJson(name string, data interface{}) error {
 		fmt.Println("Failed to encode for", name)
 		return err
 	}
-	f, err := os.Create(name+".json")
+	f, err := os.Create(name + ".json")
 	defer f.Close()
 	if err != nil {
 		return err

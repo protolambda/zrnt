@@ -27,12 +27,12 @@ func ProcessVoluntaryExit(state *beacon.BeaconState, exit *beacon.VoluntaryExit)
 	validator := &state.Validator_registry[exit.Validator_index]
 	if !(
 		validator.Exit_epoch > current_epoch.Get_delayed_activation_exit_epoch() &&
-		current_epoch > exit.Epoch &&
-		bls.Bls_verify(
-			validator.Pubkey,
-			ssz.Signed_root(exit),
-			exit.Signature,
-			beacon.Get_domain(state.Fork, exit.Epoch, beacon.DOMAIN_VOLUNTARY_EXIT))) {
+			current_epoch > exit.Epoch &&
+			bls.Bls_verify(
+				validator.Pubkey,
+				ssz.Signed_root(exit),
+				exit.Signature,
+				beacon.Get_domain(state.Fork, exit.Epoch, beacon.DOMAIN_VOLUNTARY_EXIT))) {
 		return errors.New("voluntary exit could not be verified")
 	}
 	state.Initiate_validator_exit(exit.Validator_index)

@@ -47,7 +47,6 @@ func UpdateRegistry(state *beacon.BeaconState) {
 	}
 }
 
-
 func Update_validator_registry(state *beacon.BeaconState) {
 	// TODO
 }

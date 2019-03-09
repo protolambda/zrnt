@@ -27,7 +27,6 @@ type BeaconBlockBody struct {
 	Transfers          []Transfer
 }
 
-
 type BeaconBlock struct {
 	// Header
 	Slot              Slot

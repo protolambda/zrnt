@@ -110,7 +110,6 @@ func (state *BeaconState) Activate_validator(index ValidatorIndex, is_genesis bo
 	}
 }
 
-
 func Get_epoch_committee_count(active_validator_count uint64) uint64 {
 	return math.MaxU64(1,
 		math.MinU64(
@@ -123,24 +122,24 @@ func Get_epoch_committee_count(active_validator_count uint64) uint64 {
 func (state *BeaconState) Get_previous_epoch_committee_count() uint64 {
 	return Get_epoch_committee_count(
 		state.Validator_registry.Get_active_validator_count(
-		state.Previous_shuffling_epoch,
-	))
+			state.Previous_shuffling_epoch,
+		))
 }
 
 // Return the number of committees in the current epoch
 func (state *BeaconState) Get_current_epoch_committee_count() uint64 {
 	return Get_epoch_committee_count(
 		state.Validator_registry.Get_active_validator_count(
-		state.Current_shuffling_epoch,
-	))
+			state.Current_shuffling_epoch,
+		))
 }
 
 // Return the number of committees in the next epoch
 func (state *BeaconState) Get_next_epoch_committee_count() uint64 {
 	return Get_epoch_committee_count(
 		state.Validator_registry.Get_active_validator_count(
-		state.Epoch()+1,
-	))
+			state.Epoch() + 1,
+		))
 }
 
 // Return the beacon proposer index for the slot.
@@ -172,7 +171,7 @@ func (state *BeaconState) Get_active_index_root(epoch Epoch) Root {
 // Generate a seed for the given epoch
 func (state *BeaconState) Generate_seed(epoch Epoch) Bytes32 {
 	buf := make([]byte, 32*3)
-	mix := state.Get_randao_mix(epoch-MIN_SEED_LOOKAHEAD)
+	mix := state.Get_randao_mix(epoch - MIN_SEED_LOOKAHEAD)
 	copy(buf[0:32], mix[:])
 	// get_active_index_root in spec, but only used once, and the assertion is unnecessary, since epoch input is always trusted
 	activeIndexRoot := state.Get_active_index_root(epoch)
@@ -183,18 +182,18 @@ func (state *BeaconState) Generate_seed(epoch Epoch) Bytes32 {
 
 // Return the block root at a recent slot
 func (state *BeaconState) Get_block_root(slot Slot) (Root, error) {
-	if slot + SLOTS_PER_HISTORICAL_ROOT < state.Slot || slot > state.Slot {
+	if slot+SLOTS_PER_HISTORICAL_ROOT < state.Slot || slot > state.Slot {
 		return Root{}, errors.New("cannot get block root for given slot")
 	}
-	return state.Latest_block_roots[slot % SLOTS_PER_HISTORICAL_ROOT], nil
+	return state.Latest_block_roots[slot%SLOTS_PER_HISTORICAL_ROOT], nil
 }
 
 // Return the state root at a recent
 func (state *BeaconState) Get_state_root(slot Slot) (Root, error) {
-	if slot + SLOTS_PER_HISTORICAL_ROOT < state.Slot || slot > state.Slot {
+	if slot+SLOTS_PER_HISTORICAL_ROOT < state.Slot || slot > state.Slot {
 		return Root{}, errors.New("cannot get state root for given slot")
 	}
-	return state.Latest_state_roots[slot % SLOTS_PER_HISTORICAL_ROOT], nil
+	return state.Latest_state_roots[slot%SLOTS_PER_HISTORICAL_ROOT], nil
 }
 
 type CrosslinkCommittee struct {
@@ -280,8 +279,8 @@ func (state *BeaconState) Get_winning_root_and_participants(shard Shard) (Root, 
 		updateCrosslinkWeights(&state.CurrentEpochAttestations[i])
 	}
 
-    // handle when no attestations for shard available
-    if len(weightedCrosslinks) == 0 {
+	// handle when no attestations for shard available
+	if len(weightedCrosslinks) == 0 {
 		return Root{}, nil
 	}
 	// Now determine the best root, by total weight (votes, weighted by balance)
@@ -329,7 +328,7 @@ func (state *BeaconState) Get_winning_root_and_participants(shard Shard) (Root, 
 		return winning_attesters[i] < winning_attesters[j]
 	})
 
-    return winning_root, winning_attesters
+	return winning_root, winning_attesters
 }
 
 // Exit the validator of the given index

@@ -247,6 +247,7 @@ func (state *BeaconState) GetCrosslinkCommitteesAtSlot(slot Slot, registryChange
 			shufflingStartShard = state.CurrentShufflingStartShard
 		}
 	}
+	// TODO: this shuffling could be cached
 	shuffling := state.ValidatorRegistry.GetShuffling(seed, shufflingEpoch)
 	offset := slot % SLOTS_PER_EPOCH
 	committeesPerSlot := committeesPerEpoch / uint64(SLOTS_PER_EPOCH)

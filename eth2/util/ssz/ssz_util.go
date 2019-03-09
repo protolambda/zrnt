@@ -75,7 +75,7 @@ func sszSerialize(v reflect.Value, dst *[]byte) (encodedLen uint32) {
 		}
 		return 1
 	case reflect.Array: // "tuple"
-		if isFixedLength(v.Type().Elem()) {
+		if isFixedLength(v.Type().Elem(), false) {
 			for i, size := 0, v.Len(); i < size; i++ {
 				serializedSize := sszSerialize(v.Index(i), dst)
 				encodedLen += serializedSize
@@ -117,26 +117,28 @@ func Hash_tree_root(input interface{}) [32]byte {
 	return sszHashTreeRoot(reflect.ValueOf(input))
 }
 
-// TODO: see specs #679, comment.
-// Implementation here simply assumes fixed-length arrays only have elements of fixed-length.
-
-func isFixedLength(vt reflect.Type) bool {
+func isFixedLength(vt reflect.Type, merkleizing bool) bool {
 	switch vt.Kind() {
 	case reflect.Uint8, reflect.Uint32, reflect.Uint64, reflect.Bool:
 		return true
 	case reflect.Slice:
 		return false
 	case reflect.Array:
-		return isFixedLength(vt.Elem())
+		return isFixedLength(vt.Elem(), merkleizing)
 	case reflect.Struct:
-		// TODO: we could if a struct has a static size, and act accordingly.
-		//for i, length := 0, vt.NumField(); i < length; i++ {
-		//	if !isFixedLength(vt.Field(i).Type) {
-		//		return false
-		//	}
-		//}
-		//return true
-		return false
+		if merkleizing {
+			// We want each element of the struct to have its own root
+			return false
+		} else {
+			// We want to encode the struct in the most minimal way,
+			//  if it can be fixed length, make it fixed length.
+			for i, length := 0, vt.NumField(); i < length; i++ {
+				if !isFixedLength(vt.Field(i).Type, merkleizing) {
+					return false
+				}
+			}
+			return true
+		}
 	default:
 		panic("is-fixed length: unsupported value type: " + vt.String())
 		return false
@@ -174,13 +176,13 @@ func sszHashTreeRoot(v reflect.Value) [32]byte {
 	// "array of var length items? -> take the merkle root of every element
 	// 		(if it aligns in a single chunk, it will just be as-is, not hashed again, see merklezeition)
 	case reflect.Array:
-		if isFixedLength(v.Type().Elem()) {
+		if isFixedLength(v.Type().Elem(), true) {
 			return merkle.Merkle_root(sszPack(v))
 		} else {
 			return varSizeListElementsRoot(v)
 		}
 	case reflect.Slice:
-		if isFixedLength(v.Type().Elem()) {
+		if isFixedLength(v.Type().Elem(), true) {
 			return sszMixInLength(merkle.Merkle_root(sszPack(v)), uint64(v.Len()))
 		} else {
 			return sszMixInLength(varSizeListElementsRoot(v), uint64(v.Len()))

@@ -129,12 +129,14 @@ func isFixedLength(vt reflect.Type) bool {
 	case reflect.Array:
 		return isFixedLength(vt.Elem())
 	case reflect.Struct:
-		for i, length := 0, vt.NumField(); i < length; i++ {
-			if !isFixedLength(vt.Field(i).Type) {
-				return false
-			}
-		}
-		return true
+		// TODO: we could if a struct has a static size, and act accordingly.
+		//for i, length := 0, vt.NumField(); i < length; i++ {
+		//	if !isFixedLength(vt.Field(i).Type) {
+		//		return false
+		//	}
+		//}
+		//return true
+		return false
 	default:
 		panic("is-fixed length: unsupported value type: " + vt.String())
 		return false

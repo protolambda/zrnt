@@ -1,9 +1,6 @@
-# Beacon transition - Go
+# ZRNT
 
-Originally "beacon challenge", put together under a line limit.
-
-This new repo aims to provide a good interface, and a minimal implementation, without code-golfing.
-
+A minimal Go implementation of the ETH 2.0 spec.
 
 ## License
 

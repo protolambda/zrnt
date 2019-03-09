@@ -2,27 +2,20 @@ package transition
 
 import (
 	"github.com/protolambda/go-beacon-transition/eth2/beacon"
-	"github.com/protolambda/go-beacon-transition/eth2/beacon/processes/crosslinks"
-	"github.com/protolambda/go-beacon-transition/eth2/beacon/processes/eth1"
-	"github.com/protolambda/go-beacon-transition/eth2/beacon/processes/exits/exit_queue"
-	"github.com/protolambda/go-beacon-transition/eth2/beacon/processes/finish"
-	"github.com/protolambda/go-beacon-transition/eth2/beacon/processes/justification"
-	"github.com/protolambda/go-beacon-transition/eth2/beacon/processes/slashing"
-	"github.com/protolambda/go-beacon-transition/eth2/beacon/processes/validator_registry"
-	"github.com/protolambda/go-beacon-transition/eth2/beacon/stake"
+	"github.com/protolambda/go-beacon-transition/eth2/beacon/epoch_processing"
 )
 
 type EpochProcessor func(state *beacon.BeaconState)
 
 var epochProcessors = []EpochProcessor{
-	eth1.ProcessEpochEth1,
-	justification.ProcessEpochCrosslinks,
-	crosslinks.ProcessEpochCrosslinks,
-	stake.ProcessEpochRewardsAndPenalties,
-	validator_registry.ProcessEpochValidatorRegistry,
-	slashing.ProcessEpochSlashings,
-	exit_queue.ProcessEpochExitQueue,
-	finish.ProcessEpochFinish,
+	epoch_processing.ProcessEpochEth1,
+	epoch_processing.ProcessEpochCrosslinks,
+	epoch_processing.ProcessEpochCrosslinks,
+	epoch_processing.ProcessEpochRewardsAndPenalties,
+	epoch_processing.ProcessEpochValidatorRegistry,
+	epoch_processing.ProcessEpochSlashings,
+	epoch_processing.ProcessEpochExitQueue,
+	epoch_processing.ProcessEpochFinish,
 }
 
 func EpochTransition(state *beacon.BeaconState) {

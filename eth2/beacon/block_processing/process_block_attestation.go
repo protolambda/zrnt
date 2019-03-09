@@ -1,0 +1,100 @@
+package block_processing
+
+import (
+	"errors"
+	"github.com/protolambda/go-beacon-transition/eth2/beacon"
+	"github.com/protolambda/go-beacon-transition/eth2/util/bls"
+	"github.com/protolambda/go-beacon-transition/eth2/util/ssz"
+)
+
+func ProcessBlockAttestations(state *beacon.BeaconState, block *beacon.BeaconBlock) error {
+	if len(block.Body.Attestations) > beacon.MAX_ATTESTATIONS {
+		return errors.New("too many attestations")
+	}
+	for _, attestation := range block.Body.Attestations {
+		if err := ProcessAttestation(state, &attestation); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func ProcessAttestation(state *beacon.BeaconState, attestation *beacon.Attestation) error {
+	justifiedEpoch := state.PreviousJustifiedEpoch
+	if (attestation.Data.Slot + 1).ToEpoch() >= state.Epoch() {
+		justifiedEpoch = state.JustifiedEpoch
+	}
+	blockRoot, blockRootErr := state.GetBlockRoot(attestation.Data.JustifiedEpoch.GetStartSlot())
+	if !(attestation.Data.Slot >= beacon.GENESIS_SLOT && attestation.Data.Slot+beacon.MIN_ATTESTATION_INCLUSION_DELAY <= state.Slot &&
+		state.Slot < attestation.Data.Slot+beacon.SLOTS_PER_EPOCH && attestation.Data.JustifiedEpoch == justifiedEpoch &&
+		(blockRootErr == nil && attestation.Data.JustifiedBlockRoot == blockRoot) &&
+		(state.LatestCrosslinks[attestation.Data.Shard] == attestation.Data.LatestCrosslink ||
+			state.LatestCrosslinks[attestation.Data.Shard] == beacon.Crosslink{CrosslinkDataRoot: attestation.Data.CrosslinkDataRoot, Epoch: attestation.Data.Slot.ToEpoch()})) {
+		return errors.New("attestation is not valid")
+	}
+	// Verify bitfields and aggregate signature
+	// custody bitfield is phase 0 only:
+	if attestation.AggregationBitfield.IsZero() || !attestation.CustodyBitfield.IsZero() {
+		return errors.New("attestation %d has incorrect bitfield(s)")
+	}
+
+	crosslinkCommittees, err := state.GetCrosslinkCommitteesAtSlot(attestation.Data.Slot, false)
+	if err != nil {
+		return err
+	}
+	crosslinkCommittee := beacon.CrosslinkCommittee{}
+	for _, committee := range crosslinkCommittees {
+		if committee.Shard == attestation.Data.Shard {
+			crosslinkCommittee = committee
+			break
+		}
+	}
+	// TODO spec is weak here: it's not very explicit about length of bitfields.
+	//  Let's just make sure they are the size of the committee
+	if !attestation.AggregationBitfield.VerifySize(uint64(len(crosslinkCommittee.Committee))) ||
+		!attestation.CustodyBitfield.VerifySize(uint64(len(crosslinkCommittee.Committee))) {
+		return errors.New("attestation %d has bitfield(s) with incorrect size")
+	}
+	// phase 0 only
+	if !attestation.AggregationBitfield.IsZero() || !attestation.CustodyBitfield.IsZero() {
+		return errors.New("attestation %d has non-zero bitfield(s)")
+	}
+
+	participants, err := state.GetAttestationParticipants(&attestation.Data, &attestation.AggregationBitfield)
+	if err != nil {
+		return errors.New("participants could not be derived from aggregation_bitfield")
+	}
+	custodyBit1_participants, err := state.GetAttestationParticipants(&attestation.Data, &attestation.CustodyBitfield)
+	if err != nil {
+		return errors.New("participants could not be derived from custody_bitfield")
+	}
+	custodyBit0_participants := participants.Minus(custodyBit1_participants)
+
+	// get lists of pubkeys for both 0 and 1 custody-bits
+	custodyBit0_pubkeys := make([]beacon.BLSPubkey, len(custodyBit0_participants))
+	for i, v := range custodyBit0_participants {
+		custodyBit0_pubkeys[i] = state.ValidatorRegistry[v].Pubkey
+	}
+	custodyBit1_pubkeys := make([]beacon.BLSPubkey, len(custodyBit1_participants))
+	for i, v := range custodyBit1_participants {
+		custodyBit1_pubkeys[i] = state.ValidatorRegistry[v].Pubkey
+	}
+	// aggregate each of the two lists
+	pubKeys := []beacon.BLSPubkey{bls.BlsAggregatePubkeys(custodyBit0_pubkeys), bls.BlsAggregatePubkeys(custodyBit1_pubkeys)}
+	// hash the attestation data with 0 and 1 as bit
+	hashes := []beacon.Root{
+		ssz.HashTreeRoot(beacon.AttestationDataAndCustodyBit{attestation.Data, false}),
+		ssz.HashTreeRoot(beacon.AttestationDataAndCustodyBit{attestation.Data, true}),
+	}
+	// now verify the two
+	if !bls.BlsVerifyMultiple(pubKeys, hashes, attestation.AggregateSignature,
+		beacon.GetDomain(state.Fork, attestation.Data.Slot.ToEpoch(), beacon.DOMAIN_ATTESTATION)) {
+		return errors.New("attestation has invalid aggregated BLS signature")
+	}
+
+	// phase 0 only:
+	if attestation.Data.CrosslinkDataRoot != (beacon.Root{}) {
+		return errors.New("attestation has invalid crosslink: root must be 0 in phase 0")
+	}
+	return nil
+}

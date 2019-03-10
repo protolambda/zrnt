@@ -161,9 +161,6 @@ func varSizeStructElementsRoot(v reflect.Value) [32]byte {
 	for i := 0; i < fields; i++ {
 		data[i] = sszHashTreeRoot(v.Field(i))
 	}
-	if len(data) == 1 {
-		return data[0]
-	}
 	return merkle.MerkleRoot(data)
 
 }

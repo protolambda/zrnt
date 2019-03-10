@@ -6,7 +6,7 @@ import (
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
-func StateTransition(preState *beacon.BeaconState, block *beacon.BeaconBlock) (res *beacon.BeaconState, err error) {
+func StateTransition(preState *beacon.BeaconState, block *beacon.BeaconBlock, verifyStateRoot bool) (res *beacon.BeaconState, err error) {
 	if preState.Slot >= block.Slot {
 		return nil, errors.New("cannot handle block on top of pre-state with equal or higher slot than block")
 	}
@@ -25,7 +25,7 @@ func StateTransition(preState *beacon.BeaconState, block *beacon.BeaconBlock) (r
 		EpochTransition(state)
 	}
 	// State root verification
-	if block.StateRoot != ssz.HashTreeRoot(state) {
+	if verifyStateRoot && block.StateRoot != ssz.HashTreeRoot(state) {
 		return nil, errors.New("block has invalid state root")
 	}
 	return state, nil

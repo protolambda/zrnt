@@ -79,14 +79,19 @@ func main() {
 	genesisState := genesis.GetGenesisBeaconState(deposits, genesisTime, eth1Data)
 
 	preState := genesisState
-	lastBlockHash := ssz.HashTreeRoot(preState.LatestBlockHeader)
-	for i := 0; i < 10; i++ {block := SimulateBlock(preState, rng, lastBlockHash)
+
+	for i := 0; i < 300; i++ {
+
+		block, err := SimulateBlock(preState, rng)
+		if err != nil {
+			panic(err)
+		}
 		name := fmt.Sprintf("block_%d_%s", i, hashHexStr(block))
 		// create the data, encode it, and write it to a file
 		if err := writeDebugJson(name, block); err != nil {
 			panic(err)
 		}
-		state, err := transition.StateTransition(preState, block)
+		state, err := transition.StateTransition(preState, block, true)
 		if err != nil {
 			panic(err)
 		}
@@ -122,11 +127,16 @@ func writeDebugJson(name string, data interface{}) error {
 	return nil
 }
 
-func SimulateBlock(state *beacon.BeaconState, rng *rand.Rand, prevRoot beacon.Root) *beacon.BeaconBlock {
+func SimulateBlock(state *beacon.BeaconState, rng *rand.Rand) (*beacon.BeaconBlock, error) {
+	prevHeader := state.LatestBlockHeader
+	// stub state root
+	prevHeader.StateRoot = ssz.HashTreeRoot(state)
+
+	parentRoot := ssz.HashTreeRoot(prevHeader)
 	block := &beacon.BeaconBlock{
-		Slot: state.Slot + beacon.Slot(rng.Intn(5)),
-		PreviousBlockRoot: prevRoot,
-		StateRoot: ssz.HashTreeRoot(state),
+		Slot: state.Slot + 1 + beacon.Slot(rng.Intn(5)),
+		PreviousBlockRoot: parentRoot,
+		StateRoot: beacon.Root{},
 		Body: beacon.BeaconBlockBody{
 			RandaoReveal: beacon.BLSSignature{4, 2},
 			Eth1Data: beacon.Eth1Data{
@@ -138,6 +148,14 @@ func SimulateBlock(state *beacon.BeaconState, rng *rand.Rand, prevRoot beacon.Ro
 		},
 		Signature: beacon.BLSSignature{1, 2, 3},// TODO implement BLS
 	}
-	return block
+	// TODO: set randao reveal
+	// TODO: include eth1 data
+	// TODO: sign proposal
+	postState, err := transition.StateTransition(state, block, false)
+	if err != nil {
+		return nil, err
+	}
+	block.StateRoot = ssz.HashTreeRoot(postState)
+	return block, nil
 }
 

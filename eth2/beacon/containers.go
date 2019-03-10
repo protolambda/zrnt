@@ -304,3 +304,8 @@ func (vr ValidatorRegistry) GetShuffling(seed Bytes32, epoch Epoch) [][]Validato
 	}
 	return commitees
 }
+
+type HistoricalBatch struct {
+	BlockRoots       [SLOTS_PER_HISTORICAL_ROOT]Root
+	StateRoots       [SLOTS_PER_HISTORICAL_ROOT]Root
+}

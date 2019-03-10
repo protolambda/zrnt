@@ -20,9 +20,17 @@ type AttestersJustificationData struct {
 	matchingHeadAttesterIndices []beacon.ValidatorIndex
 }
 
-func (attJustData *AttestersJustificationData) inclusionSlot(vIndex beacon.ValidatorIndex) beacon.Slot {
-	return attJustData.previousEpochEarliestAttestations[vIndex].InclusionSlot
+// Retrieves the inclusion slot of the earliest attestation in the previous epoch by the given vIndex.
+// Ok == true if there is such attestation, false otherwise.
+func (attJustData *AttestersJustificationData) inclusionSlot(vIndex beacon.ValidatorIndex) (slot beacon.Slot, ok bool) {
+	if att, ok := attJustData.previousEpochEarliestAttestations[vIndex]; ok {
+		return att.InclusionSlot, true
+	} else {
+		return 0, false
+	}
 }
+
+// Note: ONLY safe to call when vIndex is known to be an active validator in the previous epoch
 func (attJustData *AttestersJustificationData) inclusionDistance(vIndex beacon.ValidatorIndex) beacon.Slot {
 	a := attJustData.previousEpochEarliestAttestations[vIndex]
 	return a.InclusionSlot - a.Data.Slot
@@ -127,7 +135,12 @@ func ComputeNormalJustificationAndFinalization(state *beacon.BeaconState, v beac
 
 	// Proposer bonus
 	for _, vIndex := range prevActiveValidators {
-		proposerIndex := state.GetBeaconProposerIndex(data.inclusionSlot(vIndex), false)
+		inclSlot, ok := data.inclusionSlot(vIndex)
+		if !ok {
+			// active validator did not have an attestation included
+			continue
+		}
+		proposerIndex := state.GetBeaconProposerIndex(inclSlot, false)
 		deltas.Rewards[proposerIndex] += v.GetBaseReward(vIndex) / beacon.ATTESTATION_INCLUSION_REWARD_QUOTIENT
 	}
 

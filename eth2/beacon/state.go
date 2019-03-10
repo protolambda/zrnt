@@ -59,17 +59,17 @@ func (state *BeaconState) Copy() *BeaconState {
 	// copy over state
 	stUn := *state
 	res := &stUn
-	// manually copy over slices
+	// manually copy over slices, and efficiently (i.e. explicitly make, but don't initially zero out, just overwrite)
 	// validators
-	copy(res.ValidatorRegistry, state.ValidatorRegistry)
-	copy(res.ValidatorBalances, state.ValidatorBalances)
+	res.ValidatorRegistry = append(make([]Validator, 0, len(state.ValidatorRegistry)), state.ValidatorRegistry...)
+	res.ValidatorBalances = append(make([]Gwei, 0, len(state.ValidatorBalances)), state.ValidatorBalances...)
 	// finality
-	copy(res.PreviousEpochAttestations, state.PreviousEpochAttestations)
-	copy(res.CurrentEpochAttestations, state.CurrentEpochAttestations)
+	res.PreviousEpochAttestations = append(make([]PendingAttestation, 0, len(state.PreviousEpochAttestations)), state.PreviousEpochAttestations...)
+	res.CurrentEpochAttestations = append(make([]PendingAttestation, 0, len(state.CurrentEpochAttestations)), state.CurrentEpochAttestations...)
 	// recent state
-	copy(res.HistoricalRoots, state.HistoricalRoots)
+	res.HistoricalRoots = append(make([]Root, 0, len(state.HistoricalRoots)), state.HistoricalRoots...)
 	// eth1
-	copy(res.Eth1DataVotes, state.Eth1DataVotes)
+	res.Eth1DataVotes = append(make([]Eth1DataVote, 0, len(state.Eth1DataVotes)), state.Eth1DataVotes...)
 	return res
 }
 
@@ -78,14 +78,9 @@ func (state *BeaconState) Epoch() Epoch {
 	return state.Slot.ToEpoch()
 }
 
-// Return previous epoch. Not just current - 1: it's clipped to genesis.
+// Return previous epoch.
 func (state *BeaconState) PreviousEpoch() Epoch {
-	epoch := state.Epoch()
-	if epoch < GENESIS_EPOCH {
-		return GENESIS_EPOCH
-	} else {
-		return epoch
-	}
+	return state.Epoch() - 1
 }
 
 // Set the validator with the given index as withdrawable

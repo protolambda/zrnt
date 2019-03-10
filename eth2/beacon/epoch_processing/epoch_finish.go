@@ -2,7 +2,6 @@ package epoch_processing
 
 import (
 	"github.com/protolambda/zrnt/eth2/beacon"
-	"github.com/protolambda/zrnt/eth2/util/merkle"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
@@ -20,13 +19,13 @@ func ProcessEpochFinish(state *beacon.BeaconState) {
 	state.LatestRandaoMixes[nextEpoch%beacon.LATEST_RANDAO_MIXES_LENGTH] = state.GetRandaoMix(currentEpoch)
 	// Set historical root accumulator
 	if nextEpoch%beacon.SLOTS_PER_HISTORICAL_ROOT.ToEpoch() == 0 {
-		roots := make([][32]byte, beacon.SLOTS_PER_HISTORICAL_ROOT*2)
+		historicalBatch := beacon.HistoricalBatch{}
 		for i := beacon.Slot(0); i < beacon.SLOTS_PER_HISTORICAL_ROOT; i++ {
-			roots[i] = state.LatestBlockRoots[i]
-			roots[i+beacon.SLOTS_PER_HISTORICAL_ROOT] = state.LatestStateRoots[i]
+			historicalBatch.BlockRoots[i] = state.LatestBlockRoots[i]
+			historicalBatch.StateRoots[i] = state.LatestStateRoots[i]
 		}
 		// Merkleleize the roots into one root
-		historicalRoot := merkle.MerkleRoot(roots)
+		historicalRoot := ssz.HashTreeRoot(historicalBatch)
 		state.HistoricalRoots = append(state.HistoricalRoots, historicalRoot)
 	}
 	// Rotate current/previous epoch attestations

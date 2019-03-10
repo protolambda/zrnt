@@ -1,7 +1,6 @@
 package block_processing
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon"
@@ -33,22 +32,12 @@ func ProcessDeposit(state *beacon.BeaconState, dep *beacon.Deposit) error {
 		return errors.New(fmt.Sprintf("deposit has index %d that does not match with state index %d", dep.Index, state.DepositIndex))
 	}
 
-	// Let serialized_deposit_data be the serialized form of deposit.deposit_data.
-	// It should equal 8 bytes for deposit_data.amount +
-	//              8 bytes for deposit_data.timestamp +
-	//              176 bytes for deposit_data.deposit_input
-	// That is, it should match deposit_data in the Ethereum 1.0 deposit contract
-	//  of which the hash was placed into the Merkle tree.
-	depInputBytes := ssz.SSZEncode(dep.DepositData.DepositInput)
-	serializedDepositData := make([]byte, 8+8+len(depInputBytes), 8+8+len(depInputBytes))
-	binary.LittleEndian.PutUint64(serializedDepositData[0:8], uint64(dep.DepositData.Amount))
-	binary.LittleEndian.PutUint64(serializedDepositData[8:16], uint64(dep.DepositData.Timestamp))
-	copy(serializedDepositData[16:], depInputBytes)
+	serializedDepositData := dep.DepositData.Serialized()
 
 	// Verify the Merkle branch
 	if !merkle.VerifyMerkleBranch(
 		hash.Hash(serializedDepositData),
-		dep.Proof,
+		dep.Proof[:],
 		beacon.DEPOSIT_CONTRACT_TREE_DEPTH,
 		uint64(dep.Index),
 		state.LatestEth1Data.DepositRoot) {
@@ -78,14 +67,13 @@ func ProcessDeposit(state *beacon.BeaconState, dep *beacon.Deposit) error {
 		}
 	}
 
-	pubkey := state.ValidatorRegistry[valIndex].Pubkey
 	amount := dep.DepositData.Amount
 	withdrawalCredentials := depositInput.WithdrawalCredentials
 	// Check if it is a known validator that is depositing ("if pubkey not in validator_pubkeys")
 	if valIndex == beacon.ValidatorIndexMarker {
 		// Not a known pubkey, add new validator
 		validator := beacon.Validator{
-			Pubkey:                pubkey,
+			Pubkey:                depositInput.Pubkey,
 			WithdrawalCredentials: withdrawalCredentials,
 			ActivationEpoch:       beacon.FAR_FUTURE_EPOCH, ExitEpoch: beacon.FAR_FUTURE_EPOCH, WithdrawableEpoch: beacon.FAR_FUTURE_EPOCH,
 			InitiatedExit: false, Slashed: false,

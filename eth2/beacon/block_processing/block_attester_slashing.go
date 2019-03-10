@@ -3,7 +3,6 @@ package block_processing
 import (
 	"errors"
 	"github.com/protolambda/zrnt/eth2/beacon"
-	"github.com/protolambda/zrnt/eth2/beacon/processes/slashing"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
@@ -17,6 +16,7 @@ func ProcessBlockAttesterSlashings(state *beacon.BeaconState, block *beacon.Beac
 			return err
 		}
 	}
+	return nil
 }
 
 func ProcessAttesterSlashing(state *beacon.BeaconState, attesterSlashing *beacon.AttesterSlashing) error {
@@ -37,7 +37,7 @@ func ProcessAttesterSlashing(state *beacon.BeaconState, attesterSlashing *beacon
 	for _, v1 := range sa1.ValidatorIndices {
 		for _, v2 := range sa2.ValidatorIndices {
 			if v1 == v2 && !state.ValidatorRegistry[v1].Slashed {
-				if err := slashing.SlashValidator(state, v1); err != nil {
+				if err := state.SlashValidator(v1); err != nil {
 					return err
 				}
 				slashedAny = true
@@ -49,6 +49,7 @@ func ProcessAttesterSlashing(state *beacon.BeaconState, attesterSlashing *beacon
 	if !slashedAny {
 		return errors.New("attester slashing %d is not effective, hence invalid")
 	}
+	return nil
 }
 
 // Verify validity of slashable_attestation fields.

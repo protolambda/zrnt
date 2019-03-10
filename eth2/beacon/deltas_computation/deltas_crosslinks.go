@@ -15,7 +15,7 @@ func DeltasCrosslinks(state *beacon.BeaconState, v beacon.Valuator) *beacon.Delt
 			_, participants := state.GetWinningRootAndParticipants(shardCommittee.Shard)
 			participatingBalance := state.ValidatorBalances.GetTotalBalance(participants)
 			totalBalance := state.ValidatorBalances.GetTotalBalance(shardCommittee.Committee)
-			in, out := FindInAndOutValidators(shardCommittee.Committee, participants)
+			in, out := beacon.FindInAndOutValidators(shardCommittee.Committee, participants)
 			for _, i := range in {
 				deltas.Rewards[i] = v.GetBaseReward(i) * participatingBalance / totalBalance
 			}

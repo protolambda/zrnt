@@ -4,7 +4,7 @@ import (
 	"github.com/protolambda/zrnt/eth2/beacon"
 )
 
-func ProcessEpochCrosslinks(state *beacon.BeaconState) {
+func ProcessEpochJustification(state *beacon.BeaconState) {
 
 	currentEpoch := state.Epoch()
 	// epoch numbers are trusted, no errors

@@ -146,7 +146,7 @@ func (state *BeaconState) GetNextEpochCommitteeCount() uint64 {
 func (state *BeaconState) GetBeaconProposerIndex(slot Slot, registryChange bool) ValidatorIndex {
 	epoch := slot.ToEpoch()
 	currentEpoch := state.Epoch()
-	if currentEpoch-1 <= epoch && epoch <= currentEpoch+1 {
+	if !(currentEpoch-1 <= epoch && epoch <= currentEpoch+1) {
 		panic("epoch of given slot out of range")
 	}
 	committeeData := state.GetCrosslinkCommitteesAtSlot(slot, registryChange)

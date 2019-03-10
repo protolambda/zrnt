@@ -38,12 +38,10 @@ func ProcessAttestation(state *beacon.BeaconState, attestation *beacon.Attestati
 		return errors.New("attestation %d has incorrect bitfield(s)")
 	}
 
-	crosslinkCommittees, err := state.GetCrosslinkCommitteesAtSlot(attestation.Data.Slot, false)
-	if err != nil {
-		return err
-	}
-	crosslinkCommittee := beacon.CrosslinkCommittee{}
-	for _, committee := range crosslinkCommittees {
+	crosslinkCommittees := state.GetCrosslinkCommitteesAtSlot(attestation.Data.Slot, false)
+	var crosslinkCommittee *beacon.CrosslinkCommittee
+	for i := 0; i < len(crosslinkCommittees); i++ {
+		committee := &crosslinkCommittees[i]
 		if committee.Shard == attestation.Data.Shard {
 			crosslinkCommittee = committee
 			break
@@ -68,7 +66,7 @@ func ProcessAttestation(state *beacon.BeaconState, attestation *beacon.Attestati
 	if err != nil {
 		return errors.New("participants could not be derived from custody_bitfield")
 	}
-	custodyBit0_participants := participants.Minus(custodyBit1_participants)
+	_, custodyBit0_participants := beacon.FindInAndOutValidators(participants, custodyBit1_participants)
 
 	// get lists of pubkeys for both 0 and 1 custody-bits
 	custodyBit0_pubkeys := make([]beacon.BLSPubkey, len(custodyBit0_participants))
@@ -95,6 +93,19 @@ func ProcessAttestation(state *beacon.BeaconState, attestation *beacon.Attestati
 	// phase 0 only:
 	if attestation.Data.CrosslinkDataRoot != (beacon.Root{}) {
 		return errors.New("attestation has invalid crosslink: root must be 0 in phase 0")
+	}
+
+	// Apply the attestation
+	pendingAttestation := beacon.PendingAttestation{
+		Data: attestation.Data,
+		AggregationBitfield: attestation.AggregationBitfield,
+		CustodyBitfield: attestation.CustodyBitfield,
+		InclusionSlot: state.Slot,
+	}
+	if attEpoch := attestation.Data.Slot.ToEpoch(); attEpoch == state.Epoch() {
+		state.CurrentEpochAttestations = append(state.CurrentEpochAttestations, pendingAttestation)
+	} else if attEpoch == state.PreviousEpoch() {
+		state.PreviousEpochAttestations = append(state.CurrentEpochAttestations, pendingAttestation)
 	}
 	return nil
 }

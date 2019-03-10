@@ -1,17 +1,14 @@
-package deltas_computation
-
-import "github.com/protolambda/zrnt/eth2/beacon"
+package beacon
 
 // Return the validators from src that are inside the targets list, and those that are outside.
-func FindInAndOutValidators(src []beacon.ValidatorIndex, targets []beacon.ValidatorIndex) (
-	[]beacon.ValidatorIndex, []beacon.ValidatorIndex) {
+func FindInAndOutValidators(src []ValidatorIndex, targets []ValidatorIndex) ([]ValidatorIndex, []ValidatorIndex) {
 
-	indexMap := make(map[beacon.ValidatorIndex]bool)
+	indexMap := make(map[ValidatorIndex]bool)
 	for _, vIndex := range src {
 		indexMap[vIndex] = true
 	}
 	// the good indices from source will be put on the left side, the bad on the right.
-	res := make([]beacon.ValidatorIndex, len(src), len(src))
+	res := make([]ValidatorIndex, len(src), len(src))
 	i := 0
 	j := len(res) - 1
 	for _, e := range targets {

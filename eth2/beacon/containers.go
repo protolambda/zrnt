@@ -2,8 +2,10 @@ package beacon
 
 import (
 	"crypto/sha256"
+	"encoding/binary"
 	"github.com/protolambda/eth2-shuffle"
 	"github.com/protolambda/zrnt/eth2/util/bitfield"
+	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
 // NOTE: these containers are going to be moved to sub-packages, per-topic.
@@ -81,7 +83,7 @@ type Crosslink struct {
 
 type Deposit struct {
 	// Branch in the deposit tree
-	Proof [][32]byte
+	Proof [DEPOSIT_CONTRACT_TREE_DEPTH][32]byte
 	// Index in the deposit tree
 	Index DepositIndex
 	// Data
@@ -95,6 +97,21 @@ type DepositData struct {
 	Timestamp Timestamp
 	// Deposit input
 	DepositInput DepositInput
+}
+
+// Let serialized_deposit_data be the serialized form of deposit.deposit_data.
+// It should equal 8 bytes for deposit_data.amount +
+//              8 bytes for deposit_data.timestamp +
+//              176 bytes for deposit_data.deposit_input
+// That is, it should match deposit_data in the Ethereum 1.0 deposit contract
+//  of which the hash was placed into the Merkle tree.
+func (d *DepositData) Serialized() []byte {
+	depInputBytes := ssz.SSZEncode(d.DepositInput)
+	serializedDepositData := make([]byte, 8+8+len(depInputBytes), 8+8+len(depInputBytes))
+	binary.LittleEndian.PutUint64(serializedDepositData[0:8], uint64(d.Amount))
+	binary.LittleEndian.PutUint64(serializedDepositData[8:16], uint64(d.Timestamp))
+	copy(serializedDepositData[16:], depInputBytes)
+	return serializedDepositData
 }
 
 type DepositInput struct {
@@ -237,7 +254,7 @@ func (vr ValidatorRegistry) IsValidatorIndex(index ValidatorIndex) bool {
 	return index < ValidatorIndex(len(vr))
 }
 
-func (vr ValidatorRegistry) GetActiveValidatorIndices(epoch Epoch) ValidatorIndexList {
+func (vr ValidatorRegistry) GetActiveValidatorIndices(epoch Epoch) []ValidatorIndex {
 	res := make([]ValidatorIndex, 0, len(vr))
 	for i, v := range vr {
 		if v.IsActive(epoch) {
@@ -261,6 +278,9 @@ func (vr ValidatorRegistry) GetActiveValidatorCount(epoch Epoch) (count uint64) 
 func (vr ValidatorRegistry) GetShuffling(seed Bytes32, epoch Epoch) [][]ValidatorIndex {
 	activeValidatorIndices := vr.GetActiveValidatorIndices(epoch)
 	committeeCount := GetEpochCommitteeCount(uint64(len(activeValidatorIndices)))
+	if committeeCount > uint64(len(activeValidatorIndices)) {
+		panic("not enough validators to form committees!")
+	}
 	commitees := make([][]ValidatorIndex, committeeCount, committeeCount)
 	// Active validators, shuffled in-place.
 	hash := sha256.New()
@@ -269,10 +289,18 @@ func (vr ValidatorRegistry) GetShuffling(seed Bytes32, epoch Epoch) [][]Validato
 		hash.Write(in)
 		return hash.Sum(nil)
 	}
-	eth2_shuffle.ShuffleList(hashFn, ValidatorIndexList(activeValidatorIndices).RawIndexSlice(), SHUFFLE_ROUND_COUNT, seed)
-	committeeSize := uint64(len(activeValidatorIndices)) / committeeCount
+	rawIndexList := make([]uint64, len(vr))
+	for i := 0; i < len(activeValidatorIndices); i++ {
+		rawIndexList[i] = uint64(activeValidatorIndices[i])
+	}
+	eth2_shuffle.ShuffleList(hashFn, rawIndexList, SHUFFLE_ROUND_COUNT, seed)
+	committeeSize := uint64(len(rawIndexList)) / committeeCount
 	for i := uint64(0); i < committeeCount; i += committeeSize {
-		commitees[i] = activeValidatorIndices[i : i+committeeSize]
+		committee := make([]ValidatorIndex, committeeSize)
+		for j := uint64(0); j < committeeSize; j++ {
+			committee[j] = ValidatorIndex(rawIndexList[i + j])
+		}
+		commitees[i] = committee
 	}
 	return commitees
 }

@@ -44,7 +44,7 @@ type DefaultValuator struct {
 	state *BeaconState
 }
 
-func NewDefaultValuator(state *BeaconState) *Valuator {
+func NewDefaultValuator(state *BeaconState) *DefaultValuator {
 	v := &DefaultValuator{state: state}
 	v.previousTotalBalance = state.ValidatorBalances.GetTotalBalance(
 		state.ValidatorRegistry.GetActiveValidatorIndices(state.Epoch()-1))

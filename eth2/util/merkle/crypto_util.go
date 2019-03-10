@@ -17,7 +17,7 @@ func MerkleRoot(values [][32]byte) [32]byte {
 	power2 := math.NextPowerOfTwo(uint64(len(values)))
 	o := make([][32]byte, power2<<1)
 	copy(o[power2:], values)
-	for i := int64(power2) - 1; i >= 0; i-- {
+	for i := int64(power2) - 1; i > 0; i-- {
 		o[i] = hash.Hash(append(o[i<<1][:], o[(i<<1)+1][:]...))
 	}
 	return o[1]
@@ -34,4 +34,28 @@ func VerifyMerkleBranch(leaf [32]byte, branch [][32]byte, depth uint64, index ui
 		}
 	}
 	return value == root
+}
+
+func ConstructProof(values [][32]byte, index uint64, depth uint8) (branch [][32]byte) {
+	power2 := math.NextPowerOfTwo(uint64(len(values)))
+	branch = make([][32]byte, depth)
+	if power2 <= 1 {
+		return branch
+	}
+	o := make([][32]byte, power2<<1)
+	copy(o[power2:], values)
+	for i := int64(power2) - 1; i > 0; i-- {
+		o[i] = hash.Hash(append(o[i<<1][:], o[(i<<1)+1][:]...))
+	}
+	depthOffset := power2 << 1
+	for j := uint8(0); j < depth; j++ {
+		depthOffset >>= 1
+		if depthOffset <= 1 {
+			break
+		}
+		indexAtDepth := index >> j
+		branchIndexAtDepth := indexAtDepth ^ 1
+		branch[j] = o[depthOffset + branchIndexAtDepth]
+	}
+	return branch
 }

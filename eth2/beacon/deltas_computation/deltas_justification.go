@@ -89,7 +89,7 @@ func ComputeNormalJustificationAndFinalization(state *beacon.BeaconState, v beac
 	prevActiveValidators := state.ValidatorRegistry.GetActiveValidatorIndices(state.PreviousEpoch())
 
 	// Expected FFG source
-	in, out := FindInAndOutValidators(prevActiveValidators, data.prevEpochAttesters)
+	in, out := beacon.FindInAndOutValidators(prevActiveValidators, data.prevEpochAttesters)
 	for _, vIndex := range in {
 		// Justification-participation reward
 		deltas.Rewards[vIndex] += v.GetBaseReward(vIndex) * totalAttestingBalance / totalBalance
@@ -104,7 +104,7 @@ func ComputeNormalJustificationAndFinalization(state *beacon.BeaconState, v beac
 	}
 
 	// Expected FFG target
-	in, out = FindInAndOutValidators(prevActiveValidators, data.epochBoundaryAttesterIndices)
+	in, out = beacon.FindInAndOutValidators(prevActiveValidators, data.epochBoundaryAttesterIndices)
 	for _, vIndex := range in {
 		// Boundary-attestation reward
 		deltas.Rewards[vIndex] += v.GetBaseReward(vIndex) * epochBoundaryBalance / totalBalance
@@ -115,7 +115,7 @@ func ComputeNormalJustificationAndFinalization(state *beacon.BeaconState, v beac
 	}
 
 	// Expected head
-	in, out = FindInAndOutValidators(prevActiveValidators, data.matchingHeadAttesterIndices)
+	in, out = beacon.FindInAndOutValidators(prevActiveValidators, data.matchingHeadAttesterIndices)
 	for _, vIndex := range in {
 		// Canonical-participation reward
 		deltas.Rewards[vIndex] += v.GetBaseReward(vIndex) * matchingHeadBalance / totalBalance
@@ -140,7 +140,7 @@ func ComputeInactivityLeakDeltas(state *beacon.BeaconState, v beacon.Valuator) *
 
 	data := GetAttestersJustificationData(state)
 	prevActiveValidators := state.ValidatorRegistry.GetActiveValidatorIndices(state.PreviousEpoch())
-	in, out := FindInAndOutValidators(prevActiveValidators, data.prevEpochAttesters)
+	in, out := beacon.FindInAndOutValidators(prevActiveValidators, data.prevEpochAttesters)
 	for _, vIndex := range in {
 		// Attestation delay measure
 		// If a validator did attest, apply a small penalty for getting attestations included late
@@ -153,13 +153,13 @@ func ComputeInactivityLeakDeltas(state *beacon.BeaconState, v beacon.Valuator) *
 		deltas.Penalties[vIndex] += v.GetInactivityPenalty(vIndex)
 	}
 
-	_, out = FindInAndOutValidators(prevActiveValidators, data.epochBoundaryAttesterIndices)
+	_, out = beacon.FindInAndOutValidators(prevActiveValidators, data.epochBoundaryAttesterIndices)
 	for _, vIndex := range out {
 		// Boundary-attestation-Inactivity penalty
 		deltas.Penalties[vIndex] += v.GetInactivityPenalty(vIndex)
 	}
 
-	_, out = FindInAndOutValidators(prevActiveValidators, data.matchingHeadAttesterIndices)
+	_, out = beacon.FindInAndOutValidators(prevActiveValidators, data.matchingHeadAttesterIndices)
 	for _, vIndex := range out {
 		// Non-canonical-participation R-penalty
 		deltas.Penalties[vIndex] += v.GetBaseReward(vIndex)

@@ -1,28 +1,102 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/beacon/genesis"
+	"github.com/protolambda/zrnt/eth2/beacon/transition"
 	"github.com/protolambda/zrnt/eth2/util/debug_json"
+	"github.com/protolambda/zrnt/eth2/util/hash"
+	"github.com/protolambda/zrnt/eth2/util/math"
+	"github.com/protolambda/zrnt/eth2/util/merkle"
+	"github.com/protolambda/zrnt/eth2/util/ssz"
+	"math/rand"
 	"os"
 )
 
-type DataSrc func() interface{}
-
 func main() {
 
-	data := map[string]DataSrc{
-		"genesis_state": CreateGenesisState,
-		"empty_block":   CreateEmptyBlock,
-		// TODO: more data
+	// RNG used to create simulated blocks
+	rng := rand.New(rand.NewSource(0xDEADBEEF))
+
+	hashHexStr := func(value interface{}) string {
+		encoded := ssz.HashTreeRoot(value)
+		out := make([]byte, hex.EncodedLen(len(encoded)))
+		hex.Encode(out, encoded[:])
+		return string(out)
 	}
 
-	for k, v := range data {
+	genesisTime := beacon.Timestamp(1222333444)
+	genesisValidatorCount := 100
+
+	privKeys := make([][32]byte, 0, genesisValidatorCount)
+	deposits := make([]beacon.Deposit, 0, genesisValidatorCount)
+	depRoots := make([][32]byte, 0, genesisValidatorCount)
+	for i := 0; i < genesisValidatorCount; i++ {
+		// create a random 32 byte private key. We're not using real crypto yet.
+		privKey := [32]byte{}
+		rng.Read(privKey[:])
+		privKeys = append(privKeys, privKey)
+		// simply derive pubkey and withdraw creds, not real thing yet
+		pubKey := beacon.BLSPubkey{}
+		h := hash.Hash(privKey[:])
+		copy(pubKey[:], h[:])
+		withdrawCreds := hash.Hash(append(h[:], 1))
+		dep := beacon.Deposit{
+			Proof: [beacon.DEPOSIT_CONTRACT_TREE_DEPTH][32]byte{},
+			Index: beacon.DepositIndex(i),
+			DepositData: beacon.DepositData{
+				Amount: beacon.Gwei(100),
+				Timestamp: genesisTime - 100,
+				DepositInput: beacon.DepositInput{
+					Pubkey: pubKey,
+					WithdrawalCredentials: withdrawCreds,
+					ProofOfPossession: beacon.BLSSignature{1, 2, 3},// BLS not yet implemented
+				},
+			},
+		}
+		depLeafHash := hash.Hash(dep.DepositData.Serialized())
+		deposits = append(deposits, dep)
+		depRoots = append(depRoots, depLeafHash)
+	}
+	for i := 0; i < len(deposits); i++ {
+		copy(deposits[i].Proof[:], merkle.ConstructProof(depRoots, uint64(i), uint8(beacon.DEPOSIT_CONTRACT_TREE_DEPTH)))
+	}
+	power2 := math.NextPowerOfTwo(uint64(len(depRoots)))
+	depositsRoot := merkle.MerkleRoot(depRoots)
+	// Now pad with zero branches to complete depth.
+	buf := [64]byte{}
+	for i := power2; i < (1 << beacon.DEPOSIT_CONTRACT_TREE_DEPTH); i <<= 1 {
+		copy(buf[0:32], depositsRoot[:])
+		depositsRoot = hash.Hash(buf[:])
+	}
+
+	eth1Data := beacon.Eth1Data{
+		DepositRoot: depositsRoot,
+		BlockHash: beacon.Root{42},// TODO eth1 simulation
+	}
+	genesisState := genesis.GetGenesisBeaconState(deposits, genesisTime, eth1Data)
+
+	preState := genesisState
+	lastBlockHash := ssz.HashTreeRoot(preState.LatestBlockHeader)
+	for i := 0; i < 10; i++ {block := SimulateBlock(preState, rng, lastBlockHash)
+		name := fmt.Sprintf("block_%d_%s", i, hashHexStr(block))
 		// create the data, encode it, and write it to a file
-		if err := writeDebugJson(k, v()); err != nil {
+		if err := writeDebugJson(name, block); err != nil {
 			panic(err)
 		}
+		state, err := transition.StateTransition(preState, block)
+		if err != nil {
+			panic(err)
+		}
+		block.StateRoot = ssz.HashTreeRoot(state)
+		name = fmt.Sprintf("state_%d_%s", i, hashHexStr(state))
+		// create the data, encode it, and write it to a file
+		if err := writeDebugJson(name, state); err != nil {
+			panic(err)
+		}
+		preState = state
 	}
 
 }
@@ -48,10 +122,22 @@ func writeDebugJson(name string, data interface{}) error {
 	return nil
 }
 
-func CreateEmptyBlock() interface{} {
-	return beacon.GetEmptyBlock()
+func SimulateBlock(state *beacon.BeaconState, rng *rand.Rand, prevRoot beacon.Root) *beacon.BeaconBlock {
+	block := &beacon.BeaconBlock{
+		Slot: state.Slot + beacon.Slot(rng.Intn(5)),
+		PreviousBlockRoot: prevRoot,
+		StateRoot: ssz.HashTreeRoot(state),
+		Body: beacon.BeaconBlockBody{
+			RandaoReveal: beacon.BLSSignature{4, 2},
+			Eth1Data: beacon.Eth1Data{
+				DepositRoot: beacon.Root{0, 1, 3},
+				BlockHash: beacon.Root{4, 5, 6},
+			},
+			// no transfers
+			// TODO simulate transfers
+		},
+		Signature: beacon.BLSSignature{1, 2, 3},// TODO implement BLS
+	}
+	return block
 }
 
-func CreateGenesisState() interface{} {
-	return genesis.GetGenesisBeaconState([]beacon.Deposit{}, 0, beacon.Eth1Data{})
-}

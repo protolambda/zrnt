@@ -1,10 +1,5 @@
 package beacon
 
-import (
-	"reflect"
-	"unsafe"
-)
-
 type Slot uint64
 type Epoch uint64
 type Shard uint64
@@ -33,21 +28,6 @@ func (e Epoch) GetStartSlot() Slot {
 // Return the epoch at which an activation or exit triggered in epoch takes effect.
 func (e Epoch) GetDelayedActivationExitEpoch() Epoch {
 	return e + 1 + ACTIVATION_EXIT_DELAY
-}
-
-type ValidatorIndexList []ValidatorIndex
-
-func (raw ValidatorIndexList) RawIndexSlice() []uint64 {
-	// Get the slice header
-	header := *(*reflect.SliceHeader)(unsafe.Pointer(&raw))
-
-	// The length and capacity of the slice are different.
-	header.Len /= 8
-	header.Cap /= 8
-
-	// Convert slice header to an []uint64
-	data := *(*[]uint64)(unsafe.Pointer(&header))
-	return data
 }
 
 func Max(a Gwei, b Gwei) Gwei {

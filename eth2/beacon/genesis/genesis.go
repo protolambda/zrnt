@@ -2,7 +2,7 @@ package genesis
 
 import (
 	"github.com/protolambda/zrnt/eth2/beacon"
-	"github.com/protolambda/zrnt/eth2/beacon/processes/validator_balances/deposits"
+	"github.com/protolambda/zrnt/eth2/beacon/block_processing"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
@@ -38,7 +38,7 @@ func GetGenesisBeaconState(validatorDeposits []beacon.Deposit, time beacon.Times
 	// Process genesis deposits
 	for _, dep := range validatorDeposits {
 		// in the rare case someone tries to create a genesis block using invalid data, panic.
-		if err := deposits.ProcessDeposit(state, &dep); err != nil {
+		if err := block_processing.ProcessDeposit(state, &dep); err != nil {
 			panic(err)
 		}
 	}

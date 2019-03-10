@@ -20,10 +20,10 @@ func ProcessEpochFinish(state *beacon.BeaconState) {
 	state.LatestRandaoMixes[nextEpoch%beacon.LATEST_RANDAO_MIXES_LENGTH] = state.GetRandaoMix(currentEpoch)
 	// Set historical root accumulator
 	if nextEpoch%beacon.SLOTS_PER_HISTORICAL_ROOT.ToEpoch() == 0 {
-		roots := make([]beacon.Bytes32, beacon.SLOTS_PER_HISTORICAL_ROOT*2)
+		roots := make([][32]byte, beacon.SLOTS_PER_HISTORICAL_ROOT*2)
 		for i := beacon.Slot(0); i < beacon.SLOTS_PER_HISTORICAL_ROOT; i++ {
-			roots[i] = beacon.Bytes32(state.LatestBlockRoots[i])
-			roots[i+beacon.SLOTS_PER_HISTORICAL_ROOT] = beacon.Bytes32(state.LatestStateRoots[i])
+			roots[i] = state.LatestBlockRoots[i]
+			roots[i+beacon.SLOTS_PER_HISTORICAL_ROOT] = state.LatestStateRoots[i]
 		}
 		// Merkleleize the roots into one root
 		historicalRoot := merkle.MerkleRoot(roots)

@@ -33,4 +33,5 @@ func ProcessProposerSlashing(state *beacon.BeaconState, ps *beacon.ProposerSlash
 	if err := state.SlashValidator(ps.ProposerIndex); err != nil {
 		return err
 	}
+	return nil
 }

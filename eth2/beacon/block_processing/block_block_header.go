@@ -30,5 +30,5 @@ func ProcessBlockHeader(state *beacon.BeaconState, block *beacon.BeaconBlock) er
 		beacon.GetDomain(state.Fork, state.Epoch(), beacon.DOMAIN_BEACON_BLOCK)) {
 		return errors.New("block signature invalid")
 	}
-
+	return nil
 }

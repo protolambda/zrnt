@@ -6,7 +6,7 @@ import (
 	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/beacon/genesis"
 	"github.com/protolambda/zrnt/eth2/beacon/transition"
-	"github.com/protolambda/zrnt/eth2/util/debug_json"
+	"github.com/protolambda/zrnt/eth2/util/debug_format"
 	"github.com/protolambda/zrnt/eth2/util/hash"
 	"github.com/protolambda/zrnt/eth2/util/math"
 	"github.com/protolambda/zrnt/eth2/util/merkle"
@@ -107,7 +107,7 @@ func main() {
 }
 
 func writeDebugJson(name string, data interface{}) error {
-	encodedData, err := debug_json.EncodeToTreeRootJSON(data, "    ")
+	encodedData, err := debug_format.MarshalJSON(data, "    ")
 	if err != nil {
 		fmt.Println("Failed to encode for", name)
 		return err

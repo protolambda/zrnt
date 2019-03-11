@@ -229,7 +229,7 @@ func (balances ValidatorBalances) ApplyStakeDeltas(deltas *Deltas) {
 
 // Return the effective balance (also known as "balance at stake") for a validator with the given index.
 func (balances ValidatorBalances) GetEffectiveBalance(index ValidatorIndex) Gwei {
-	return Max(balances[index], MAX_DEPOSIT_AMOUNT)
+	return Min(balances[index], MAX_DEPOSIT_AMOUNT)
 }
 
 // Return the total balance sum
@@ -281,7 +281,7 @@ func (vr ValidatorRegistry) GetShuffling(seed Bytes32, epoch Epoch) [][]Validato
 	if committeeCount > uint64(len(activeValidatorIndices)) {
 		panic("not enough validators to form committees!")
 	}
-	commitees := make([][]ValidatorIndex, committeeCount, committeeCount)
+	committees := make([][]ValidatorIndex, committeeCount, committeeCount)
 	// Active validators, shuffled in-place.
 	hash := sha256.New()
 	hashFn := func(in []byte) []byte {
@@ -300,9 +300,9 @@ func (vr ValidatorRegistry) GetShuffling(seed Bytes32, epoch Epoch) [][]Validato
 		for j := uint64(0); j < committeeSize; j++ {
 			committee[j] = ValidatorIndex(rawIndexList[i + j])
 		}
-		commitees[i] = committee
+		committees[i] = committee
 	}
-	return commitees
+	return committees
 }
 
 type HistoricalBatch struct {

@@ -97,10 +97,10 @@ func ProcessAttestation(state *beacon.BeaconState, attestation *beacon.Attestati
 
 	// Apply the attestation
 	pendingAttestation := beacon.PendingAttestation{
-		Data: attestation.Data,
+		Data:                attestation.Data,
 		AggregationBitfield: attestation.AggregationBitfield,
-		CustodyBitfield: attestation.CustodyBitfield,
-		InclusionSlot: state.Slot,
+		CustodyBitfield:     attestation.CustodyBitfield,
+		InclusionSlot:       state.Slot,
 	}
 	if attEpoch := attestation.Data.Slot.ToEpoch(); attEpoch == state.Epoch() {
 		state.CurrentEpochAttestations = append(state.CurrentEpochAttestations, pendingAttestation)

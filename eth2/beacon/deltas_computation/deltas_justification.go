@@ -15,9 +15,9 @@ func DeltasJustification(state *beacon.BeaconState, v beacon.Valuator) *beacon.D
 
 type AttestersJustificationData struct {
 	previousEpochEarliestAttestations map[beacon.ValidatorIndex]*beacon.PendingAttestation
-	prevEpochAttesters []beacon.ValidatorIndex
-	epochBoundaryAttesterIndices []beacon.ValidatorIndex
-	matchingHeadAttesterIndices []beacon.ValidatorIndex
+	prevEpochAttesters                []beacon.ValidatorIndex
+	epochBoundaryAttesterIndices      []beacon.ValidatorIndex
+	matchingHeadAttesterIndices       []beacon.ValidatorIndex
 }
 
 // Retrieves the inclusion slot of the earliest attestation in the previous epoch by the given vIndex.
@@ -198,7 +198,7 @@ func ComputeInactivityLeakDeltas(state *beacon.BeaconState, v beacon.Valuator) *
 	for _, vIndex := range eligible {
 		if vIndex != beacon.ValidatorIndexMarker {
 			// Penalization measure: double inactivity penalty + R-penalty
-			deltas.Penalties[vIndex] += 2 * v.GetInactivityPenalty(vIndex) + v.GetBaseReward(vIndex)
+			deltas.Penalties[vIndex] += 2*v.GetInactivityPenalty(vIndex) + v.GetBaseReward(vIndex)
 		}
 	}
 

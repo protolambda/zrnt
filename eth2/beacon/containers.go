@@ -298,7 +298,7 @@ func (vr ValidatorRegistry) GetShuffling(seed Bytes32, epoch Epoch) [][]Validato
 	for i := uint64(0); i < committeeCount; i += committeeSize {
 		committee := make([]ValidatorIndex, committeeSize)
 		for j := uint64(0); j < committeeSize; j++ {
-			committee[j] = ValidatorIndex(rawIndexList[i + j])
+			committee[j] = ValidatorIndex(rawIndexList[i+j])
 		}
 		committees[i] = committee
 	}
@@ -306,6 +306,6 @@ func (vr ValidatorRegistry) GetShuffling(seed Bytes32, epoch Epoch) [][]Validato
 }
 
 type HistoricalBatch struct {
-	BlockRoots       [SLOTS_PER_HISTORICAL_ROOT]Root
-	StateRoots       [SLOTS_PER_HISTORICAL_ROOT]Root
+	BlockRoots [SLOTS_PER_HISTORICAL_ROOT]Root
+	StateRoots [SLOTS_PER_HISTORICAL_ROOT]Root
 }

@@ -55,7 +55,7 @@ func ConstructProof(values [][32]byte, index uint64, depth uint8) (branch [][32]
 		}
 		indexAtDepth := index >> j
 		branchIndexAtDepth := indexAtDepth ^ 1
-		branch[j] = o[depthOffset + branchIndexAtDepth]
+		branch[j] = o[depthOffset+branchIndexAtDepth]
 	}
 	return branch
 }

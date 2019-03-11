@@ -55,7 +55,7 @@ func UpdateValidatorRegistry(state *beacon.BeaconState) {
 	totalBalance := state.ValidatorBalances.GetTotalBalance(activeValidatorIndices)
 	maxBalanceChurn := beacon.Max(
 		beacon.MAX_DEPOSIT_AMOUNT,
-		totalBalance / (2 * beacon.MAX_BALANCE_CHURN_QUOTIENT))
+		totalBalance/(2*beacon.MAX_BALANCE_CHURN_QUOTIENT))
 	// Activate validators within the allowable balance churn
 	balanceChurn := beacon.Gwei(0)
 	for i := 0; i < len(state.ValidatorRegistry); i++ {

@@ -37,17 +37,17 @@ type Valuator interface {
 type DeltasCalculator func(state *BeaconState, v Valuator) *Deltas
 
 type DefaultValuator struct {
-	adjustedQuotient uint64
+	adjustedQuotient     uint64
 	previousTotalBalance Gwei
-	currentTotalBalance Gwei
-	epochsSinceFinality Epoch
-	state *BeaconState
+	currentTotalBalance  Gwei
+	epochsSinceFinality  Epoch
+	state                *BeaconState
 }
 
 func NewDefaultValuator(state *BeaconState) *DefaultValuator {
 	v := &DefaultValuator{state: state}
 	v.previousTotalBalance = state.ValidatorBalances.GetTotalBalance(
-		state.ValidatorRegistry.GetActiveValidatorIndices(state.Epoch()-1))
+		state.ValidatorRegistry.GetActiveValidatorIndices(state.Epoch() - 1))
 	v.currentTotalBalance = state.ValidatorBalances.GetTotalBalance(
 		state.ValidatorRegistry.GetActiveValidatorIndices(state.Epoch()))
 	v.adjustedQuotient = math.IntegerSquareroot(uint64(v.previousTotalBalance)) / BASE_REWARD_QUOTIENT

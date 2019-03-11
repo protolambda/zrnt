@@ -47,12 +47,12 @@ func main() {
 			Proof: [beacon.DEPOSIT_CONTRACT_TREE_DEPTH][32]byte{},
 			Index: beacon.DepositIndex(i),
 			DepositData: beacon.DepositData{
-				Amount: beacon.Gwei(100),
+				Amount:    beacon.Gwei(100),
 				Timestamp: genesisTime - 100,
 				DepositInput: beacon.DepositInput{
-					Pubkey: pubKey,
+					Pubkey:                pubKey,
 					WithdrawalCredentials: withdrawCreds,
-					ProofOfPossession: beacon.BLSSignature{1, 2, 3},// BLS not yet implemented
+					ProofOfPossession:     beacon.BLSSignature{1, 2, 3}, // BLS not yet implemented
 				},
 			},
 		}
@@ -74,7 +74,7 @@ func main() {
 
 	eth1Data := beacon.Eth1Data{
 		DepositRoot: depositsRoot,
-		BlockHash: beacon.Root{42},// TODO eth1 simulation
+		BlockHash:   beacon.Root{42}, // TODO eth1 simulation
 	}
 	genesisState := genesis.GetGenesisBeaconState(deposits, genesisTime, eth1Data)
 
@@ -134,19 +134,19 @@ func SimulateBlock(state *beacon.BeaconState, rng *rand.Rand) (*beacon.BeaconBlo
 
 	parentRoot := ssz.HashTreeRoot(prevHeader)
 	block := &beacon.BeaconBlock{
-		Slot: state.Slot + 1 + beacon.Slot(rng.Intn(5)),
+		Slot:              state.Slot + 1 + beacon.Slot(rng.Intn(5)),
 		PreviousBlockRoot: parentRoot,
-		StateRoot: beacon.Root{},
+		StateRoot:         beacon.Root{},
 		Body: beacon.BeaconBlockBody{
 			RandaoReveal: beacon.BLSSignature{4, 2},
 			Eth1Data: beacon.Eth1Data{
 				DepositRoot: beacon.Root{0, 1, 3},
-				BlockHash: beacon.Root{4, 5, 6},
+				BlockHash:   beacon.Root{4, 5, 6},
 			},
 			// no transfers
 			// TODO simulate transfers
 		},
-		Signature: beacon.BLSSignature{1, 2, 3},// TODO implement BLS
+		Signature: beacon.BLSSignature{1, 2, 3}, // TODO implement BLS
 	}
 	// TODO: set randao reveal
 	// TODO: include eth1 data
@@ -158,4 +158,3 @@ func SimulateBlock(state *beacon.BeaconState, rng *rand.Rand) (*beacon.BeaconBlo
 	block.StateRoot = ssz.HashTreeRoot(postState)
 	return block, nil
 }
-

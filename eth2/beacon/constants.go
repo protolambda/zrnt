@@ -4,7 +4,6 @@ package beacon
 const SHARD_COUNT Shard = 1 << 10         // =  1,024
 const TARGET_COMMITTEE_SIZE = 1 << 7      // =  128
 const MAX_BALANCE_CHURN_QUOTIENT = 1 << 5 // =  32
-const BEACON_CHAIN_SHARD_NUMBER Shard = 1<<64 - 1
 const MAX_INDICES_PER_SLASHABLE_VOTE = 1 << 12 // =  4,096
 const MAX_EXIT_DEQUEUES_PER_EPOCH = 1 << 2     // =  4
 const SHUFFLE_ROUND_COUNT = 90
@@ -24,7 +23,6 @@ const GENESIS_SLOT Slot = 1 << 32
 const GENESIS_START_SHARD = 0
 const GENESIS_EPOCH = Epoch(GENESIS_SLOT / SLOTS_PER_EPOCH)
 
-// unused const GENESIS_START_SHARD Shard = 0
 const FAR_FUTURE_EPOCH Epoch = 1<<64 - 1
 
 const BLS_WITHDRAWAL_PREFIX_BYTE byte = 0

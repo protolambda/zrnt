@@ -141,7 +141,6 @@ func isFixedLength(vt reflect.Type, merkleizing bool) bool {
 		}
 	default:
 		panic("is-fixed length: unsupported value type: " + vt.String())
-		return false
 	}
 }
 

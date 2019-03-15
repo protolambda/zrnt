@@ -168,6 +168,9 @@ func varSizeStructElementsRoot(v reflect.Value) [32]byte {
 func sszHashTreeRoot(v reflect.Value) [32]byte {
 	switch v.Kind() {
 	case reflect.Ptr:
+		if v.IsNil() {
+			return [32]byte{}
+		}
 		return sszHashTreeRoot(v.Elem())
 	// "basic object? -> pack and merkle_root
 	case reflect.Uint8, reflect.Uint32, reflect.Uint64, reflect.Bool:

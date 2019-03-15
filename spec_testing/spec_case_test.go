@@ -1,17 +1,17 @@
-package spec_test
+package spec_testing
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/beacon/transition"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
-	"gopkg.in/yaml.v2"
-	"io/ioutil"
 	"os"
 	"testing"
 )
 
-type SpecTestCase struct {
+type CaseData struct {
 
 	// (constants are ignored, they are handled on compile time of the test)
 	VerifySignatures bool `yaml:"verify_signatures"`
@@ -25,23 +25,24 @@ type SpecTestCase struct {
 	ExpectedStateRoot beacon.Root `yaml:"expected_state_root"`
 }
 
-func BlockProcessTest(t *testing.T) {
+func TestSpecCase(t *testing.T) {
 
-	if len(os.Args) != 0 {
-		t.Errorf("test needs config path argument")
+	// first argument being the code
+	if len(os.Args) <= 1 {
+		t.Errorf("test needs encoded case argument")
 	}
 
-	configPath := os.Args[1]
-
-	fileBytes, err := ioutil.ReadFile(configPath)
+	// last argument is assumed to be the base64 of the JSON encoded case data, with Go names encoding
+	encodedCaseData := os.Args[len(os.Args) - 1]
+	jsonBytes, err := base64.StdEncoding.DecodeString(encodedCaseData)
 	if err != nil {
-		t.Errorf("cannot read config %s %v", configPath, err)
+		t.Fatalf("cannot decode base64 input, %s", encodedCaseData)
 	}
+	data := CaseData{}
 
-	data := SpecTestCase{}
-
-	if err := yaml.Unmarshal(fileBytes, &data); err != nil {
-		t.Errorf("cannot read spec test case yaml: %v", err)
+	t.Log(string(encodedCaseData))
+	if err := json.Unmarshal(jsonBytes, &data); err != nil {
+		t.Fatalf("cannot read spec test case data: %v", err)
 	}
 
 	state := data.InitialState

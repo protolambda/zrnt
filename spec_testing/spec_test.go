@@ -32,6 +32,7 @@ func TestAllCases(t *testing.T)  {
 		for k, v := range configData {
 			config = append(config, fmt.Sprintf("-X github.com/protolambda/zrnt/eth2/beacon.%s=%d", k, v))
 		}
+		// TODO does not work with constants
 		cmd := exec.Command("go", "test", "-run", "^TestSpecCase", "-ldflags=\""+strings.Join(config, " ")+"\"", "-args", suiteFilePath, fmt.Sprintf("%d", i))
 		fmt.Println(strings.Join(cmd.Args, " "))
 		var out bytes.Buffer

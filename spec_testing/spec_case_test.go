@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/transition"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"gopkg.in/d4l3k/messagediff.v1"
 	"gopkg.in/yaml.v2"
@@ -38,16 +39,16 @@ func TestSpecCase(t *testing.T) {
 
 	// Starting state
 	state := data.InitialState
-	//for i, block := range data.Blocks {
-	//	// now run a sub-test: process the block
-	//	t.Run(fmt.Sprintf("process_block_%d", i), func(it *testing.T) {
-	//		var transitionErr error
-	//		state, transitionErr = transition.StateTransition(state, block, false)
-	//		if transitionErr != nil {
-	//			it.Fatalf("failed to do transition, triggered by block: %v", transitionErr)
-	//		}
-	//	})
-	//}
+	for i, block := range data.Blocks {
+		// now run a sub-test: process the block
+		t.Run(fmt.Sprintf("process_block_%d", i), func(it *testing.T) {
+			var transitionErr error
+			state, transitionErr = transition.StateTransition(state, block, false)
+			if transitionErr != nil {
+				it.Fatalf("failed to do transition, triggered by block: %v", transitionErr)
+			}
+		})
+	}
 
 	// We processed every block successfully, now verify the end result
 	t.Run("check_end_state", func(it *testing.T) {

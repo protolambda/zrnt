@@ -13,8 +13,7 @@ func ProcessBlockHeader(state *beacon.BeaconState, block *beacon.BeaconBlock) er
 		return errors.New("slot of block does not match slot of state")
 	}
 	// Verify that the parent matches
-	prevRoot := ssz.HashTreeRoot(state.LatestBlockHeader)
-	if block.PreviousBlockRoot != prevRoot {
+	if block.PreviousBlockRoot != ssz.SignedRoot(state.LatestBlockHeader) {
 		return errors.New("previous block root does not match root from latest state block header")
 	}
 	// Save current block as the new latest block

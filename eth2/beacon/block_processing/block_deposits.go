@@ -50,15 +50,6 @@ func ProcessDeposit(state *beacon.BeaconState, dep *beacon.Deposit) error {
 	// object, and we need to be able to skip over it
 	state.DepositIndex += 1
 
-	if !bls.BlsVerify(
-		depositInput.Pubkey,
-		ssz.SignedRoot(depositInput),
-		depositInput.ProofOfPossession,
-		beacon.GetDomain(state.Fork, state.Epoch(), beacon.DOMAIN_DEPOSIT)) {
-		// simply don't handle the deposit. (TODO: should this be an error (making block invalid)?)
-		return nil
-	}
-
 	valIndex := beacon.ValidatorIndexMarker
 	for i, v := range state.ValidatorRegistry {
 		if v.Pubkey == depositInput.Pubkey {
@@ -71,6 +62,16 @@ func ProcessDeposit(state *beacon.BeaconState, dep *beacon.Deposit) error {
 	withdrawalCredentials := depositInput.WithdrawalCredentials
 	// Check if it is a known validator that is depositing ("if pubkey not in validator_pubkeys")
 	if valIndex == beacon.ValidatorIndexMarker {
+		// only unknown pubkeys need to be verified, others are already trusted
+		if !bls.BlsVerify(
+			depositInput.Pubkey,
+			ssz.SignedRoot(depositInput),
+			depositInput.ProofOfPossession,
+			beacon.GetDomain(state.Fork, state.Epoch(), beacon.DOMAIN_DEPOSIT)) {
+			// simply don't handle the deposit.
+			return nil
+		}
+
 		// Not a known pubkey, add new validator
 		validator := beacon.Validator{
 			Pubkey:                depositInput.Pubkey,
@@ -82,10 +83,6 @@ func ProcessDeposit(state *beacon.BeaconState, dep *beacon.Deposit) error {
 		state.ValidatorRegistry = append(state.ValidatorRegistry, validator)
 		state.ValidatorBalances = append(state.ValidatorBalances, amount)
 	} else {
-		// known pubkey, check withdrawal credentials first, then increase balance.
-		if state.ValidatorRegistry[valIndex].WithdrawalCredentials != withdrawalCredentials {
-			return errors.New("deposit has wrong withdrawal credentials")
-		}
 		// Increase balance by deposit amount
 		state.ValidatorBalances[valIndex] += amount
 	}

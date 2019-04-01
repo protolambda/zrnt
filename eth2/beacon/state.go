@@ -34,9 +34,12 @@ type BeaconState struct {
 	PreviousEpochAttestations []PendingAttestation
 	CurrentEpochAttestations  []PendingAttestation
 	PreviousJustifiedEpoch    Epoch
-	JustifiedEpoch            Epoch
+	CurrentJustifiedEpoch     Epoch
+	PreviousJustifiedRoot     Root
+	CurrentJustifiedRoot      Root
 	JustificationBitfield     uint64
 	FinalizedEpoch            Epoch
+	FinalizedRoot             Root
 
 	// Recent state
 	LatestCrosslinks       [SHARD_COUNT]Crosslink
@@ -146,7 +149,7 @@ func (state *BeaconState) GetBeaconProposerIndex(slot Slot, registryChange bool)
 	}
 	committeeData := state.GetCrosslinkCommitteesAtSlot(slot, registryChange)
 	firstCommitteeData := committeeData[0]
-	return firstCommitteeData.Committee[slot%Slot(len(firstCommitteeData.Committee))]
+	return firstCommitteeData.Committee[epoch%Epoch(len(firstCommitteeData.Committee))]
 }
 
 //  Return the randao mix at a recent epoch
@@ -261,7 +264,7 @@ func (state *BeaconState) GetWinningRootAndParticipants(shard Shard) (Root, []Va
 	weightedCrosslinks := make(map[Root]Gwei)
 
 	updateCrosslinkWeights := func(att *PendingAttestation) {
-		if att.Data.LatestCrosslink == state.LatestCrosslinks[shard] {
+		if att.Data.PreviousCrosslink == state.LatestCrosslinks[shard] {
 			participants, _ := state.GetAttestationParticipants(&att.Data, &att.AggregationBitfield)
 			for _, participant := range participants {
 				weightedCrosslinks[att.Data.CrosslinkDataRoot] += state.ValidatorBalances.GetEffectiveBalance(participant)

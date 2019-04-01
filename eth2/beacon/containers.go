@@ -49,22 +49,20 @@ type Attestation struct {
 }
 
 type AttestationData struct {
-	// Slot number
+	//  LMD GHOST vote
 	Slot Slot
-	// Shard number
-	Shard Shard
 	// Root of the signed beacon block
 	BeaconBlockRoot Root
-	// Root of the ancestor at the epoch boundary
-	EpochBoundaryRoot Root
-	// Data from the shard since the last attestation
+
+	// FFG vote
+	SourceEpoch Epoch
+	SourceRoot  Root
+	TargetRoot  Root
+
+	// Crosslink vote
+	Shard             Shard
+	PreviousCrosslink Crosslink
 	CrosslinkDataRoot Root
-	// Last crosslink
-	LatestCrosslink Crosslink
-	// Last justified epoch in the beacon state
-	JustifiedEpoch Epoch
-	// Hash of the last justified beacon block
-	JustifiedBlockRoot Root
 }
 
 type AttestationDataAndCustodyBit struct {
@@ -181,18 +179,21 @@ type PendingAttestation struct {
 	InclusionSlot Slot
 }
 
+// 32 bits, not strictly an integer, hence represented as 4 bytes
+// (bytes not necessarily corresponding to versions)
+type ForkVersion [4]byte
+
 type Fork struct {
-	// TODO: fork versions are 64 bits, but usage is 32 bits in BLS domain. Spec unclear about it.
 	// Previous fork version
-	PreviousVersion uint64
+	PreviousVersion ForkVersion
 	// Current fork version
-	CurrentVersion uint64
+	CurrentVersion ForkVersion
 	// Fork epoch number
 	Epoch Epoch
 }
 
 // Return the fork version of the given epoch
-func (f Fork) GetVersion(epoch Epoch) uint64 {
+func (f Fork) GetVersion(epoch Epoch) ForkVersion {
 	if epoch < f.Epoch {
 		return f.PreviousVersion
 	}

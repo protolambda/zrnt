@@ -47,7 +47,6 @@ func Min(a Gwei, b Gwei) Gwei {
 // Get the domain number that represents the fork meta and signature domain.
 func GetDomain(fork Fork, epoch Epoch, dom BLSDomain) BLSDomain {
 	// combine fork version with domain.
-	// TODO: spec is unclear about input size expectations.
-	// TODO And is "+" different than packing into 64 bits here? I.e. ((32 bits fork version << 32) | (dom 32 bits))
-	return BLSDomain(fork.GetVersion(epoch)<<32) + dom
+	v := fork.GetVersion(epoch)
+	return BLSDomain(v[0] << 24 | v[1] << 16 | v[2] << 8 | v[3]) + dom
 }

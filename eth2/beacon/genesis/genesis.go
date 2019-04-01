@@ -11,8 +11,9 @@ func GetGenesisBeaconState(validatorDeposits []beacon.Deposit, time beacon.Times
 		Slot:        beacon.GENESIS_SLOT,
 		GenesisTime: time,
 		Fork: beacon.Fork{
-			PreviousVersion: beacon.GENESIS_FORK_VERSION,
-			CurrentVersion:  beacon.GENESIS_FORK_VERSION,
+			// genesis fork versions are 0
+			PreviousVersion: beacon.ForkVersion{},
+			CurrentVersion:  beacon.ForkVersion{},
 			Epoch:           beacon.GENESIS_EPOCH,
 		},
 		// Validator registry
@@ -24,7 +25,7 @@ func GetGenesisBeaconState(validatorDeposits []beacon.Deposit, time beacon.Times
 		PreviousShufflingEpoch:      beacon.GENESIS_EPOCH,
 		// Finality
 		PreviousJustifiedEpoch: beacon.GENESIS_EPOCH,
-		JustifiedEpoch:         beacon.GENESIS_EPOCH,
+		CurrentJustifiedEpoch:  beacon.GENESIS_EPOCH,
 		FinalizedEpoch:         beacon.GENESIS_EPOCH,
 		// Recent state
 		LatestBlockHeader: beacon.GetEmptyBlock().GetTemporaryBlockHeader(),

@@ -109,5 +109,5 @@ func IsDoubleVote(a *beacon.AttestationData, b *beacon.AttestationData) bool {
 
 // Check if a surrounds b, i.E. source(a) < source(b) and target(a) > target(b)
 func IsSurroundVote(a *beacon.AttestationData, b *beacon.AttestationData) bool {
-	return a.JustifiedEpoch < b.JustifiedEpoch && a.Slot.ToEpoch() > b.Slot.ToEpoch()
+	return a.SourceEpoch < b.SourceEpoch && a.Slot.ToEpoch() > b.Slot.ToEpoch()
 }

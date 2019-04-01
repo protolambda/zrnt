@@ -22,13 +22,13 @@ func ProcessBlockAttestations(state *beacon.BeaconState, block *beacon.BeaconBlo
 func ProcessAttestation(state *beacon.BeaconState, attestation *beacon.Attestation) error {
 	justifiedEpoch := state.PreviousJustifiedEpoch
 	if (attestation.Data.Slot + 1).ToEpoch() >= state.Epoch() {
-		justifiedEpoch = state.JustifiedEpoch
+		justifiedEpoch = state.CurrentJustifiedEpoch
 	}
-	blockRoot, blockRootErr := state.GetBlockRoot(attestation.Data.JustifiedEpoch.GetStartSlot())
+	blockRoot, blockRootErr := state.GetBlockRoot(attestation.Data.SourceEpoch.GetStartSlot())
 	if !(attestation.Data.Slot >= beacon.GENESIS_SLOT && attestation.Data.Slot+beacon.MIN_ATTESTATION_INCLUSION_DELAY <= state.Slot &&
-		state.Slot < attestation.Data.Slot+beacon.SLOTS_PER_EPOCH && attestation.Data.JustifiedEpoch == justifiedEpoch &&
-		(blockRootErr == nil && attestation.Data.JustifiedBlockRoot == blockRoot) &&
-		(state.LatestCrosslinks[attestation.Data.Shard] == attestation.Data.LatestCrosslink ||
+		state.Slot < attestation.Data.Slot+beacon.SLOTS_PER_EPOCH && attestation.Data.SourceEpoch == justifiedEpoch &&
+		(blockRootErr == nil && attestation.Data.SourceRoot == blockRoot) &&
+		(state.LatestCrosslinks[attestation.Data.Shard] == attestation.Data.PreviousCrosslink ||
 			state.LatestCrosslinks[attestation.Data.Shard] == beacon.Crosslink{CrosslinkDataRoot: attestation.Data.CrosslinkDataRoot, Epoch: attestation.Data.Slot.ToEpoch()})) {
 		return errors.New("attestation is not valid")
 	}

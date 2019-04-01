@@ -18,8 +18,9 @@ func ProcessEpochValidatorRegistry(state *beacon.BeaconState) {
 		// If we update the registry, update the shuffling data and shards as well
 		state.CurrentShufflingEpoch = nextEpoch
 		commiteeCount := state.GetCurrentEpochCommitteeCount()
-		shard := (state.CurrentShufflingStartShard + beacon.Shard(commiteeCount)) % beacon.SHARD_COUNT
-		state.CurrentShufflingStartShard = shard
+		state.CurrentShufflingStartShard = (
+			state.CurrentShufflingStartShard +
+			beacon.Shard(commiteeCount)) % beacon.SHARD_COUNT
 		state.CurrentShufflingSeed = state.GenerateSeed(state.CurrentShufflingEpoch)
 	} else {
 		// If processing at least one crosslink keeps failing, then reshuffle every power of two,

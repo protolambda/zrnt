@@ -18,7 +18,6 @@ const MAX_DEPOSIT_AMOUNT Gwei = (1 << 5) * 1000000000 // =  32,000,000,000  Gwei
 const EJECTION_BALANCE Gwei = (1 << 4) * 1000000000 // =  16,000,000,000  Gwei
 
 // Initial values
-const GENESIS_FORK_VERSION uint64 = 0
 const GENESIS_SLOT Slot = 1 << 32
 const GENESIS_START_SHARD = 0
 const GENESIS_EPOCH = Epoch(GENESIS_SLOT / SLOTS_PER_EPOCH)
@@ -35,6 +34,7 @@ const MIN_SEED_LOOKAHEAD Epoch = 1 << 0                  // =  1  epochs  6.4 mi
 const ACTIVATION_EXIT_DELAY Epoch = 1 << 2               // =  4  epochs  25.6 minutes
 const EPOCHS_PER_ETH1_VOTING_PERIOD Epoch = 1 << 4       // =  16  epochs  ~1.7 hours
 const MIN_VALIDATOR_WITHDRAWABILITY_DELAY Epoch = 1 << 8 // =  256  epochs  ~27 hours
+const PERSISTENT_COMMITTEE_PERIOD Epoch = 1 << 11        // =  2048  epochs  ~9 days
 
 // State list lengths
 const SLOTS_PER_HISTORICAL_ROOT Slot = 1 << 13         // =  8,192  slots  ~13 hours

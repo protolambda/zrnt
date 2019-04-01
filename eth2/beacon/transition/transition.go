@@ -13,15 +13,16 @@ func StateTransition(preState *beacon.BeaconState, block *beacon.BeaconBlock, ve
 	// We work on a copy of the input state. If the block is invalid, or input is re-used, we don't have to care.
 	state := preState.Copy()
 	// happens at the start of every Slot
-	for i := state.Slot; i < block.Slot; i++ {
-		AdvanceSlot(state)
-		// "happens at the end of the last Slot of every epoch "
+	for ; state.Slot < block.Slot; {
+		CacheState(state)
+		// Per-epoch transition happens at the start of the first slot of every epoch.
 		if (state.Slot+1)%beacon.SLOTS_PER_EPOCH == 0 {
 			EpochTransition(state)
 		}
+		state.Slot++
 	}
 	// happens at every block
-	if err := ApplyBlock(state, block); err != nil {
+	if err := ProcessBlock(state, block); err != nil {
 		return nil, err
 	}
 	// State root verification

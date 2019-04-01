@@ -13,7 +13,7 @@ func ProcessBlockTransfers(state *beacon.BeaconState, block *beacon.BeaconBlock)
 	if len(block.Body.Transfers) > beacon.MAX_TRANSFERS {
 		return errors.New("too many transfers")
 	}
-	// check if all TXs are distinct
+	// check if all transfers are distinct
 	distinctionCheckSet := make(map[beacon.BLSSignature]struct{})
 	for i, v := range block.Body.Transfers {
 		if existing, ok := distinctionCheckSet[v.Signature]; ok {

@@ -25,6 +25,10 @@ func ProcessVoluntaryExit(state *beacon.BeaconState, exit *beacon.VoluntaryExit)
 		return errors.New("invalid exit validator index")
 	}
 	validator := &state.ValidatorRegistry[exit.ValidatorIndex]
+	// Verify that the validator is active
+	if !validator.IsActive(currentEpoch) {
+		return errors.New("validator must be active to be able to voluntarily exit")
+	}
 	// Verify the validator has not yet exited
 	if validator.ExitEpoch == beacon.FAR_FUTURE_EPOCH {
 		return errors.New("validator already exited")
@@ -37,7 +41,7 @@ func ProcessVoluntaryExit(state *beacon.BeaconState, exit *beacon.VoluntaryExit)
 	if currentEpoch > exit.Epoch {
 		return errors.New("invalid exit epoch")
 	}
-	// Must have been in the validator set long enough
+	// Verify the validator has been active long enough
 	if currentEpoch >= validator.ActivationEpoch + beacon.PERSISTENT_COMMITTEE_PERIOD  {
 		return errors.New("exit is too soon")
 	}
@@ -48,7 +52,7 @@ func ProcessVoluntaryExit(state *beacon.BeaconState, exit *beacon.VoluntaryExit)
 				beacon.GetDomain(state.Fork, exit.Epoch, beacon.DOMAIN_VOLUNTARY_EXIT)) {
 		return errors.New("voluntary exit signature could not be verified")
 	}
-	// Run the exit
+	// Initiate exit
 	state.InitiateValidatorExit(exit.ValidatorIndex)
 	return nil
 }

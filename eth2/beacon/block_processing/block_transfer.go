@@ -31,23 +31,43 @@ func ProcessBlockTransfers(state *beacon.BeaconState, block *beacon.BeaconBlock)
 }
 
 func ProcessTransfer(state *beacon.BeaconState, transfer *beacon.Transfer) error {
+	// verify transfer data + signature
+	senderBalance := state.GetBalance(transfer.Sender)
+	// Verify the amount and fee aren't individually too big (for anti-overflow purposes)
+	if !(senderBalance >= transfer.Amount && senderBalance >= transfer.Fee) {
+		return errors.New("transfer value parameter (amount and/or fee) is too big")
+	}
+	// Verify that we have enough ETH to send, and that after the transfer the balance will be either
+	// exactly zero or at least MIN_DEPOSIT_AMOUNT
+	if !(senderBalance == transfer.Amount + transfer.Fee ||
+		senderBalance >= transfer.Amount + transfer.Fee + beacon.MIN_DEPOSIT_AMOUNT) {
+		return errors.New("transfer value is invalid, results in non-zero balance, but insufficient to stake with")
+	}
+	// A transfer is valid in only one slot
+	// (note: combined with unique transfers in a block, this functions as replay protection)
+	if state.Slot != transfer.Slot {
+		return errors.New("transfer is not valid in current slot")
+	}
+	// Only withdrawn or not-yet-deposited accounts can transfer
+	if !(state.Epoch() >= state.ValidatorRegistry[transfer.Sender].WithdrawableEpoch ||
+		state.ValidatorRegistry[transfer.Sender].ActivationEpoch == beacon.FAR_FUTURE_EPOCH) {
+		return errors.New("transfer sender is not eligible to make a transfer, it has to be withdrawn, or yet to be activated")
+	}
+	// Verify that the pubkey is valid
 	withdrawCred := beacon.Root(hash.Hash(transfer.Pubkey[:]))
 	// overwrite first byte, remainder (the [1:] part, is still the hash)
 	withdrawCred[0] = beacon.BLS_WITHDRAWAL_PREFIX_BYTE
-	// verify transfer data + signature
-	// TODO: fix formatting/quality
-	if !(state.Balances[transfer.Sender] >= transfer.Amount && state.Balances[transfer.Sender] >= transfer.Fee &&
-		((state.Balances[transfer.Sender] == transfer.Amount+transfer.Fee) ||
-			(state.Balances[transfer.Sender] >= transfer.Amount+transfer.Fee+beacon.MIN_DEPOSIT_AMOUNT)) &&
-		state.Slot == transfer.Slot &&
-		(state.Epoch() >= state.ValidatorRegistry[transfer.Sender].WithdrawableEpoch || state.ValidatorRegistry[transfer.Sender].ActivationEpoch == beacon.FAR_FUTURE_EPOCH) &&
-		state.ValidatorRegistry[transfer.Sender].WithdrawalCredentials == withdrawCred &&
-		bls.BlsVerify(transfer.Pubkey, ssz.SignedRoot(transfer), transfer.Signature, beacon.GetDomain(state.Fork, transfer.Slot.ToEpoch(), beacon.DOMAIN_TRANSFER))) {
-		return errors.New("transfer is invalid")
+	if state.ValidatorRegistry[transfer.Sender].WithdrawalCredentials != withdrawCred {
+		return errors.New("transfer pubkey is invalid")
 	}
-	state.Balances[transfer.Sender] -= transfer.Amount + transfer.Fee
-	state.Balances[transfer.Recipient] += transfer.Amount
-	propIndex := state.GetBeaconProposerIndex(state.Slot, false)
-	state.Balances[propIndex] += transfer.Fee
+	// Verify that the signature is valid
+	if !bls.BlsVerify(transfer.Pubkey, ssz.SignedRoot(transfer), transfer.Signature,
+		beacon.GetDomain(state.Fork, transfer.Slot.ToEpoch(), beacon.DOMAIN_TRANSFER)) {
+		return errors.New("transfer signature is invalid")
+	}
+	state.DecreaseBalance(transfer.Sender, transfer.Amount + transfer.Fee)
+	state.IncreaseBalance(transfer.Recipient, transfer.Amount)
+	propIndex := state.GetBeaconProposerIndex(state.Slot)
+	state.IncreaseBalance(propIndex, transfer.Fee)
 	return nil
 }

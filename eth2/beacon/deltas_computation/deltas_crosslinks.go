@@ -11,10 +11,10 @@ func DeltasCrosslinks(state *beacon.BeaconState, v beacon.Valuator) *beacon.Delt
 	start := state.PreviousEpoch().GetStartSlot()
 	end := state.Epoch().GetStartSlot()
 	for slot := start; slot < end; slot++ {
-		for _, shardCommittee := range state.GetCrosslinkCommitteesAtSlot(slot, false) {
+		for _, shardCommittee := range state.GetCrosslinkCommitteesAtSlot(slot) {
 			_, participants := state.GetWinningRootAndParticipants(shardCommittee.Shard)
-			participatingBalance := state.Balances.GetTotalBalance(participants)
-			totalBalance := state.Balances.GetTotalBalance(shardCommittee.Committee)
+			participatingBalance := state.GetTotalBalanceOf(participants)
+			totalBalance := state.GetTotalBalanceOf(shardCommittee.Committee)
 			in, out := beacon.FindInAndOutValidators(shardCommittee.Committee, participants)
 			for _, i := range in {
 				deltas.Rewards[i] = v.GetBaseReward(i) * participatingBalance / totalBalance

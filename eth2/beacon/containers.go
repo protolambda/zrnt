@@ -209,7 +209,7 @@ type Eth1Data struct {
 	// Root of the deposit tree
 	DepositRoot Root
 	// Total number of deposits
-	DepositCount uint64
+	DepositCount DepositIndex
 	// Block hash
 	BlockHash Root
 }

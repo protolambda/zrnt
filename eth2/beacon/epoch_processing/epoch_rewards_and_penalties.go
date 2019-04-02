@@ -17,5 +17,5 @@ func ProcessEpochRewardsAndPenalties(state *beacon.BeaconState) {
 	for _, calc := range deltaCalculators {
 		sum.Add(calc(state, valuator))
 	}
-	state.ApplyStakeDeltas(sum)
+	state.ApplyDeltas(sum)
 }

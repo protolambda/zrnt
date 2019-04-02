@@ -11,11 +11,17 @@ import (
 )
 
 func ProcessBlockDeposits(state *beacon.BeaconState, block *beacon.BeaconBlock) error {
-	if len(block.Body.Deposits) > beacon.MAX_DEPOSITS {
-		return errors.New("too many deposits")
+	depositCount := beacon.DepositIndex(len(block.Body.Deposits))
+	expectedCount := state.LatestEth1Data.DepositCount - state.DepositIndex
+	if expectedCount > beacon.MAX_DEPOSITS {
+		expectedCount = beacon.MAX_DEPOSITS
 	}
-	for _, dep := range block.Body.Deposits {
-		if err := ProcessDeposit(state, &dep); err != nil {
+	if depositCount != expectedCount {
+		return errors.New("block does not contain expected deposits amount")
+	}
+	for i := 0; i < len(block.Body.Deposits); i++ {
+		dep := &block.Body.Deposits[i]
+		if err := ProcessDeposit(state, dep); err != nil {
 			return err
 		}
 		state.DepositIndex += 1

@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/util/bitfield"
+	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/hash"
 	"github.com/protolambda/zrnt/eth2/util/math"
+	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"sort"
 )
 
@@ -22,8 +24,8 @@ type BeaconState struct {
 	ValidatorRegistryUpdateEpoch Epoch
 
 	// Randomness and committees
-	LatestRandaoMixes           [LATEST_RANDAO_MIXES_LENGTH]Bytes32
-	LatestStartShard            Shard
+	LatestRandaoMixes [LATEST_RANDAO_MIXES_LENGTH]Bytes32
+	LatestStartShard  Shard
 
 	// Finality
 	PreviousEpochAttestations []PendingAttestation
@@ -127,15 +129,15 @@ func (state *BeaconState) GetBeaconProposerIndex(slot Slot) ValidatorIndex {
 	}
 	firstCommittee := state.GetCrosslinkCommitteesAtSlot(slot)[0].Committee
 	seed := state.GenerateSeed(currentEpoch)
-	buf := make([]byte, 32 + 8, 32 + 8)
+	buf := make([]byte, 32+8, 32+8)
 	copy(buf[0:32], seed[:])
 	for i := uint64(0); true; i++ {
 		binary.LittleEndian.PutUint64(buf[32:], i)
 		h := hash.Hash(buf)
 		for j := uint64(0); j < 32; j++ {
 			randByte := h[j]
-			candidate := firstCommittee[(uint64(currentEpoch) + (i << 5 | j)) % uint64(len(firstCommittee))]
-			if state.GetEffectiveBalance(candidate) << 8 > MAX_DEPOSIT_AMOUNT * Gwei(randByte) {
+			candidate := firstCommittee[(uint64(currentEpoch)+(i<<5|j))%uint64(len(firstCommittee))]
+			if state.GetEffectiveBalance(candidate)<<8 > MAX_DEPOSIT_AMOUNT*Gwei(randByte) {
 				return candidate
 			}
 		}
@@ -236,8 +238,8 @@ func (state *BeaconState) GetCrosslinkCommitteesAtSlot(slot Slot) []CrosslinkCom
 
 		for i := uint64(0); i < committeesPerSlot; i++ {
 			crosslinkCommittees[i] = CrosslinkCommittee{
-				Committee: computeCommittee(committeesPerSlot*offset+i),
-				Shard: (slotStartShard + Shard(i)) % SHARD_COUNT,
+				Committee: computeCommittee(committeesPerSlot*offset + i),
+				Shard:     (slotStartShard + Shard(i)) % SHARD_COUNT,
 			}
 		}
 	}
@@ -370,7 +372,7 @@ func (state *BeaconState) GetCrosslinkCommitteeForAttestation(attestationData *A
 	// Find the committee in the list with the desired shard
 	// TODO: spec committee lookup can be much more efficient here
 	//  by exploiting the (modulo) consecutive shard ordering, see below
-	crosslinkCommittee := crosslinkCommittees[(SHARD_COUNT + attestationData.Shard - startShard) % SHARD_COUNT]
+	crosslinkCommittee := crosslinkCommittees[(SHARD_COUNT+attestationData.Shard-startShard)%SHARD_COUNT]
 	if crosslinkCommittee.Shard != attestationData.Shard {
 		panic("either crosslink committees data is invalid, or supplied attestation has invalid shard")
 	}
@@ -415,8 +417,7 @@ func (state *BeaconState) SlashValidator(index ValidatorIndex) error {
 	return nil
 }
 
-
-func (state *BeaconState) ApplyStakeDeltas(deltas *Deltas) {
+func (state *BeaconState) ApplyDeltas(deltas *Deltas) {
 	if len(deltas.Penalties) != len(state.Balances) || len(deltas.Rewards) != len(state.Balances) {
 		panic("cannot apply deltas to balances list with different length")
 	}
@@ -455,22 +456,97 @@ func (state *BeaconState) GetBalance(index ValidatorIndex) Gwei {
 //  and validator's rounded balance ``high_balance``.
 func (state *BeaconState) SetBalance(index ValidatorIndex, balance Gwei) {
 	validator := state.ValidatorRegistry[index]
-	if validator.HighBalance > balance || validator.HighBalance + 3 * HALF_INCREMENT < balance {
+	if validator.HighBalance > balance || validator.HighBalance+3*HALF_INCREMENT < balance {
 		validator.HighBalance = balance - (balance % HIGH_BALANCE_INCREMENT)
 	}
 	state.Balances[index] = balance
 }
 
 func (state *BeaconState) IncreaseBalance(index ValidatorIndex, delta Gwei) {
-	state.SetBalance(index, state.GetBalance(index) + delta)
+	state.SetBalance(index, state.GetBalance(index)+delta)
 }
 
 func (state *BeaconState) DecreaseBalance(index ValidatorIndex, delta Gwei) {
 	currentBalance := state.GetBalance(index)
 	// prevent underflow, clip to 0
 	if currentBalance >= delta {
-		state.SetBalance(index, currentBalance - delta)
+		state.SetBalance(index, currentBalance-delta)
 	} else {
 		state.SetBalance(index, 0)
 	}
+}
+
+// Convert an attestation to (almost) indexed-verifiable form
+func (state *BeaconState) ConvertToIndexed(attestation *Attestation) (*IndexedAttestation, error) {
+	participants, err := state.GetAttestationParticipants(&attestation.Data, &attestation.AggregationBitfield)
+	if err != nil {
+		return nil, errors.New("participants could not be derived from aggregation_bitfield")
+	}
+	custodyBit1Indices, err := state.GetAttestationParticipants(&attestation.Data, &attestation.CustodyBitfield)
+	if err != nil {
+		return nil, errors.New("participants could not be derived from custody_bitfield")
+	}
+	_, custodyBit0Indices := FindInAndOutValidators(participants, custodyBit1Indices)
+	return &IndexedAttestation{
+		CustodyBit0Indexes: custodyBit0Indices,
+		CustodyBit1Indexes: custodyBit1Indices,
+		Data:               attestation.Data,
+		AggregateSignature: attestation.AggregateSignature,
+	}, nil
+}
+
+// Verify validity of slashable_attestation fields.
+func (state *BeaconState) VerifyIndexedAttestation(indexedAttestation *IndexedAttestation) bool {
+	custodyBit0Indices := indexedAttestation.CustodyBit0Indexes
+	custodyBit1Indices := indexedAttestation.CustodyBit1Indexes
+
+	// [TO BE REMOVED IN PHASE 1]
+	if len(custodyBit1Indices) != 0 {
+		return false
+	}
+
+	totalAttestingIndices := len(custodyBit1Indices) + len(custodyBit0Indices)
+	if !(1 <= totalAttestingIndices && totalAttestingIndices <= MAX_ATTESTATION_PARTICIPANTS) {
+		return false
+	}
+
+	// simple check if the lists are sorted.
+	verifyAttestIndexList := func(indices []ValidatorIndex) bool {
+		end := len(indices) - 1
+		for i := 0; i < end; i++ {
+			if indices[i] >= indices[i+1] {
+				return false
+			}
+		}
+
+		// Check the last item of the sorted list to be a valid index
+		if !state.ValidatorRegistry.IsValidatorIndex(indices[end]) {
+			return false
+		}
+		return true
+	}
+	if !verifyAttestIndexList(custodyBit0Indices) || !verifyAttestIndexList(custodyBit1Indices) {
+		return false
+	}
+
+	custodyBit0Pubkeys := make([]BLSPubkey, 0)
+	for _, i := range custodyBit0Indices {
+		custodyBit0Pubkeys = append(custodyBit0Pubkeys, state.ValidatorRegistry[i].Pubkey)
+	}
+	custodyBit1Pubkeys := make([]BLSPubkey, 0)
+	for _, i := range custodyBit1Indices {
+		custodyBit1Pubkeys = append(custodyBit1Pubkeys, state.ValidatorRegistry[i].Pubkey)
+	}
+
+	// don't trust, verify
+	return bls.BlsVerifyMultiple(
+		[]BLSPubkey{
+			bls.BlsAggregatePubkeys(custodyBit0Pubkeys),
+			bls.BlsAggregatePubkeys(custodyBit1Pubkeys)},
+		[]Root{
+			ssz.HashTreeRoot(AttestationDataAndCustodyBit{Data: indexedAttestation.Data, CustodyBit: false}),
+			ssz.HashTreeRoot(AttestationDataAndCustodyBit{Data: indexedAttestation.Data, CustodyBit: true})},
+		indexedAttestation.AggregateSignature,
+		GetDomain(state.Fork, indexedAttestation.Data.Slot.ToEpoch(), DOMAIN_ATTESTATION),
+	)
 }

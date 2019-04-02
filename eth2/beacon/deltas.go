@@ -32,6 +32,7 @@ func (deltas *Deltas) Add(other *Deltas) {
 type Valuator interface {
 	GetBaseReward(index ValidatorIndex) Gwei
 	GetInactivityPenalty(index ValidatorIndex) Gwei
+	IsNotFinalizing() bool
 }
 
 type DeltasCalculator func(state *BeaconState, v Valuator) *Deltas
@@ -46,9 +47,9 @@ type DefaultValuator struct {
 
 func NewDefaultValuator(state *BeaconState) *DefaultValuator {
 	v := &DefaultValuator{state: state}
-	v.previousTotalBalance = state.ValidatorBalances.GetTotalBalance(
+	v.previousTotalBalance = state.GetTotalBalanceOf(
 		state.ValidatorRegistry.GetActiveValidatorIndices(state.Epoch() - 1))
-	v.currentTotalBalance = state.ValidatorBalances.GetTotalBalance(
+	v.currentTotalBalance = state.GetTotalBalanceOf(
 		state.ValidatorRegistry.GetActiveValidatorIndices(state.Epoch()))
 	v.adjustedQuotient = math.IntegerSquareroot(uint64(v.previousTotalBalance)) / BASE_REWARD_QUOTIENT
 	v.epochsSinceFinality = state.Epoch() + 1 - state.FinalizedEpoch
@@ -56,11 +57,18 @@ func NewDefaultValuator(state *BeaconState) *DefaultValuator {
 }
 
 func (v *DefaultValuator) GetBaseReward(index ValidatorIndex) Gwei {
-	return v.state.ValidatorBalances.GetEffectiveBalance(index) / Gwei(v.adjustedQuotient) / 5
+	// TODO: this could be precomputed for performance
+	return v.state.GetEffectiveBalance(index) / Gwei(v.adjustedQuotient) / 5
 }
 
 func (v *DefaultValuator) GetInactivityPenalty(index ValidatorIndex) Gwei {
-	return v.GetBaseReward(index) + (
-		v.state.ValidatorBalances.GetEffectiveBalance(index) *
-			Gwei(v.epochsSinceFinality) / INACTIVITY_PENALTY_QUOTIENT)
+	extra := Gwei(0)
+	if v.epochsSinceFinality > 4 {
+		extra = v.state.GetEffectiveBalance(index) * Gwei(v.epochsSinceFinality) / INACTIVITY_PENALTY_QUOTIENT / 2
+	}
+	return v.GetBaseReward(index) + extra
+}
+
+func (v *DefaultValuator) IsNotFinalizing() bool {
+	return v.epochsSinceFinality > 4
 }

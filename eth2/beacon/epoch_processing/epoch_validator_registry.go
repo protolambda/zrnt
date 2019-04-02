@@ -53,7 +53,7 @@ func shouldUpdateValidatorRegistry(state *beacon.BeaconState) bool {
 func UpdateValidatorRegistry(state *beacon.BeaconState) {
 	currentEpoch := state.Epoch()
 	activeValidatorIndices := state.ValidatorRegistry.GetActiveValidatorIndices(currentEpoch)
-	totalBalance := state.ValidatorBalances.GetTotalBalance(activeValidatorIndices)
+	totalBalance := state.Balances.GetTotalBalance(activeValidatorIndices)
 	maxBalanceChurn := beacon.Max(
 		beacon.MAX_DEPOSIT_AMOUNT,
 		totalBalance/(2*beacon.MAX_BALANCE_CHURN_QUOTIENT))
@@ -62,9 +62,9 @@ func UpdateValidatorRegistry(state *beacon.BeaconState) {
 	for i := 0; i < len(state.ValidatorRegistry); i++ {
 		v := &state.ValidatorRegistry[i]
 		if v.ActivationEpoch == beacon.FAR_FUTURE_EPOCH &&
-			state.ValidatorBalances[i] >= beacon.MAX_DEPOSIT_AMOUNT {
+			state.Balances[i] >= beacon.MAX_DEPOSIT_AMOUNT {
 			// Check the balance churn would be within the allowance
-			balanceChurn += state.ValidatorBalances.GetEffectiveBalance(beacon.ValidatorIndex(i))
+			balanceChurn += state.Balances.GetEffectiveBalance(beacon.ValidatorIndex(i))
 			if balanceChurn > maxBalanceChurn {
 				break
 			}
@@ -79,7 +79,7 @@ func UpdateValidatorRegistry(state *beacon.BeaconState) {
 		v := &state.ValidatorRegistry[i]
 		if v.ExitEpoch == beacon.FAR_FUTURE_EPOCH && v.InitiatedExit {
 			// Check the balance churn would be within the allowance
-			balanceChurn += state.ValidatorBalances.GetEffectiveBalance(beacon.ValidatorIndex(i))
+			balanceChurn += state.Balances.GetEffectiveBalance(beacon.ValidatorIndex(i))
 			if balanceChurn > maxBalanceChurn {
 				break
 			}

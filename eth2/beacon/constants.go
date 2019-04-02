@@ -1,11 +1,11 @@
 package beacon
 
 // Misc.
-const SHARD_COUNT Shard = 1 << 10         // =  1,024
-const TARGET_COMMITTEE_SIZE = 1 << 7      // =  128
-const MAX_BALANCE_CHURN_QUOTIENT = 1 << 5 // =  32
-const MAX_INDICES_PER_SLASHABLE_VOTE = 1 << 12 // =  4,096
-const MAX_EXIT_DEQUEUES_PER_EPOCH = 1 << 2     // =  4
+const SHARD_COUNT Shard = 1 << 10            // =  1,024
+const TARGET_COMMITTEE_SIZE = 1 << 7         // =  128
+const MAX_BALANCE_CHURN_QUOTIENT = 1 << 5    // =  32
+const MAX_ATTESTATION_PARTICIPANTS = 1 << 12 // =  4,096
+const MAX_EXIT_DEQUEUES_PER_EPOCH = 1 << 2   // =  4
 const SHUFFLE_ROUND_COUNT = 90
 
 // Deposit contract
@@ -17,9 +17,13 @@ const MAX_DEPOSIT_AMOUNT Gwei = (1 << 5) * 1000000000 // =  32,000,000,000  Gwei
 // unused const FORK_CHOICE_BALANCE_INCREMENT Gwei = (1 << 0) * MILLION_GWEI // =  1,000,000,000  Gwei
 const EJECTION_BALANCE Gwei = (1 << 4) * 1000000000 // =  16,000,000,000  Gwei
 
+const HIGH_BALANCE_INCREMENT Gwei = 1000000000 // =  1,000,000,000  Gwei
+const HALF_INCREMENT = HIGH_BALANCE_INCREMENT / 2
+
 // Initial values
 const GENESIS_SLOT Slot = 1 << 32
-const GENESIS_START_SHARD = 0
+const GENESIS_START_SHARD Shard = 0
+const GENESIS_FORK_VERSION uint32 = 0
 const GENESIS_EPOCH = Epoch(GENESIS_SLOT / SLOTS_PER_EPOCH)
 
 const FAR_FUTURE_EPOCH Epoch = 1<<64 - 1
@@ -35,6 +39,7 @@ const ACTIVATION_EXIT_DELAY Epoch = 1 << 2               // =  4  epochs  25.6 m
 const EPOCHS_PER_ETH1_VOTING_PERIOD Epoch = 1 << 4       // =  16  epochs  ~1.7 hours
 const MIN_VALIDATOR_WITHDRAWABILITY_DELAY Epoch = 1 << 8 // =  256  epochs  ~27 hours
 const PERSISTENT_COMMITTEE_PERIOD Epoch = 1 << 11        // =  2048  epochs  ~9 days
+const MAX_CROSSLINKS_EPOCHS Epoch = 1 << 6               // =  64. Should be a small constant times `SHARD_COUNT / SLOTS_PER_EPOCH`
 
 // State list lengths
 const SLOTS_PER_HISTORICAL_ROOT Slot = 1 << 13         // =  8,192  slots  ~13 hours

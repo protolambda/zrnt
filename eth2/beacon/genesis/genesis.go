@@ -12,23 +12,25 @@ func GetGenesisBeaconState(validatorDeposits []beacon.Deposit, time beacon.Times
 		GenesisTime: time,
 		Fork: beacon.Fork{
 			// genesis fork versions are 0
-			PreviousVersion: beacon.ForkVersion{},
-			CurrentVersion:  beacon.ForkVersion{},
+			PreviousVersion: beacon.Int32ToForkVersion(beacon.GENESIS_FORK_VERSION),
+			CurrentVersion:  beacon.Int32ToForkVersion(beacon.GENESIS_FORK_VERSION),
 			Epoch:           beacon.GENESIS_EPOCH,
 		},
 		// Validator registry
+		ValidatorRegistry: make(beacon.ValidatorRegistry, 0),
+		Balances: make([]beacon.Gwei, 0),
 		ValidatorRegistryUpdateEpoch: beacon.GENESIS_EPOCH,
 		// Randomness and committees
-		PreviousShufflingStartShard: beacon.GENESIS_START_SHARD,
-		CurrentShufflingStartShard:  beacon.GENESIS_START_SHARD,
-		CurrentShufflingEpoch:       beacon.GENESIS_EPOCH,
-		PreviousShufflingEpoch:      beacon.GENESIS_EPOCH,
+		LatestStartShard: beacon.GENESIS_START_SHARD,
 		// Finality
-		PreviousJustifiedEpoch: beacon.GENESIS_EPOCH,
+		PreviousEpochAttestations: make([]beacon.PendingAttestation, 0),
+		CurrentEpochAttestations: make([]beacon.PendingAttestation, 0),
+		PreviousJustifiedEpoch: beacon.GENESIS_EPOCH - 1,
 		CurrentJustifiedEpoch:  beacon.GENESIS_EPOCH,
 		FinalizedEpoch:         beacon.GENESIS_EPOCH,
 		// Recent state
 		LatestBlockHeader: beacon.GetEmptyBlock().GetTemporaryBlockHeader(),
+		HistoricalRoots: make([]beacon.Root, 0),
 		// Ethereum 1.0 chain data
 		LatestEth1Data: eth1Data,
 	}
@@ -44,7 +46,7 @@ func GetGenesisBeaconState(validatorDeposits []beacon.Deposit, time beacon.Times
 		}
 	}
 	for i := range state.ValidatorRegistry {
-		if state.ValidatorBalances.GetEffectiveBalance(beacon.ValidatorIndex(i)) >= beacon.MAX_DEPOSIT_AMOUNT {
+		if state.GetEffectiveBalance(beacon.ValidatorIndex(i)) >= beacon.MAX_DEPOSIT_AMOUNT {
 			state.ActivateValidator(beacon.ValidatorIndex(i), true)
 		}
 	}
@@ -53,6 +55,5 @@ func GetGenesisBeaconState(validatorDeposits []beacon.Deposit, time beacon.Times
 	for i := beacon.Epoch(0); i < beacon.LATEST_ACTIVE_INDEX_ROOTS_LENGTH; i++ {
 		state.LatestActiveIndexRoots[i] = genesisActiveIndexRoot
 	}
-	state.CurrentShufflingSeed = state.GenerateSeed(beacon.GENESIS_EPOCH)
 	return state
 }

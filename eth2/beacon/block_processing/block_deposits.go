@@ -25,14 +25,12 @@ func ProcessBlockDeposits(state *beacon.BeaconState, block *beacon.BeaconBlock) 
 
 // Process a deposit from Ethereum 1.0.
 func ProcessDeposit(state *beacon.BeaconState, dep *beacon.Deposit) error {
-	depositInput := &dep.DepositData.DepositInput
-
 	// Deposits must be processed in order
 	if dep.Index != state.DepositIndex {
 		return errors.New(fmt.Sprintf("deposit has index %d that does not match with state index %d", dep.Index, state.DepositIndex))
 	}
 
-	serializedDepositData := dep.DepositData.Serialized()
+	serializedDepositData := dep.Data.Serialized()
 
 	// Verify the Merkle branch
 	if !merkle.VerifyMerkleBranch(
@@ -52,21 +50,19 @@ func ProcessDeposit(state *beacon.BeaconState, dep *beacon.Deposit) error {
 
 	valIndex := beacon.ValidatorIndexMarker
 	for i, v := range state.ValidatorRegistry {
-		if v.Pubkey == depositInput.Pubkey {
+		if v.Pubkey == dep.Data.Pubkey {
 			valIndex = beacon.ValidatorIndex(i)
 			break
 		}
 	}
 
-	amount := dep.DepositData.Amount
-	withdrawalCredentials := depositInput.WithdrawalCredentials
 	// Check if it is a known validator that is depositing ("if pubkey not in validator_pubkeys")
 	if valIndex == beacon.ValidatorIndexMarker {
 		// only unknown pubkeys need to be verified, others are already trusted
 		if !bls.BlsVerify(
-			depositInput.Pubkey,
-			ssz.SignedRoot(depositInput),
-			depositInput.ProofOfPossession,
+			dep.Data.Pubkey,
+			ssz.SignedRoot(dep.Data),
+			dep.Data.ProofOfPossession,
 			beacon.GetDomain(state.Fork, state.Epoch(), beacon.DOMAIN_DEPOSIT)) {
 			// simply don't handle the deposit.
 			return nil
@@ -74,17 +70,23 @@ func ProcessDeposit(state *beacon.BeaconState, dep *beacon.Deposit) error {
 
 		// Not a known pubkey, add new validator
 		validator := beacon.Validator{
-			Pubkey:                depositInput.Pubkey,
-			WithdrawalCredentials: withdrawalCredentials,
-			ActivationEpoch:       beacon.FAR_FUTURE_EPOCH, ExitEpoch: beacon.FAR_FUTURE_EPOCH, WithdrawableEpoch: beacon.FAR_FUTURE_EPOCH,
-			InitiatedExit: false, Slashed: false,
+			Pubkey:                dep.Data.Pubkey,
+			WithdrawalCredentials: dep.Data.WithdrawalCredentials,
+			ActivationEpoch:       beacon.FAR_FUTURE_EPOCH,
+			ExitEpoch:             beacon.FAR_FUTURE_EPOCH,
+			WithdrawableEpoch:     beacon.FAR_FUTURE_EPOCH,
+			InitiatedExit:         false,
+			Slashed:               false,
+			HighBalance:           0,
 		}
 		// Note: In phase 2 registry indices that have been withdrawn for a long time will be recycled.
 		state.ValidatorRegistry = append(state.ValidatorRegistry, validator)
-		state.ValidatorBalances = append(state.ValidatorBalances, amount)
+		state.Balances = append(state.Balances, 0)
+		valIndex = beacon.ValidatorIndex(len(state.ValidatorRegistry) - 1)
+		state.SetBalance(valIndex, dep.Data.Amount)
 	} else {
 		// Increase balance by deposit amount
-		state.ValidatorBalances[valIndex] += amount
+		state.IncreaseBalance(valIndex, dep.Data.Amount)
 	}
 	return nil
 }

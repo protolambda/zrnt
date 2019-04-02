@@ -53,52 +53,58 @@ func ProcessAttesterSlashing(state *beacon.BeaconState, attesterSlashing *beacon
 }
 
 // Verify validity of slashable_attestation fields.
-func VerifySlashableAttestation(state *beacon.BeaconState, slashableAttestation *beacon.SlashableAttestation) bool {
-	if size := len(slashableAttestation.ValidatorIndices); size == 0 || size > beacon.MAX_INDICES_PER_SLASHABLE_VOTE {
-		return false
-	}
+func VerifyIndexedAttestation(state *beacon.BeaconState, indexedAttestation *beacon.IndexedAttestation) bool {
+	custodyBit0Indices := indexedAttestation.CustodyBit0Indexes
+	custodyBit1Indices := indexedAttestation.CustodyBit1Indexes
+
 	// [TO BE REMOVED IN PHASE 1]
-	if !slashableAttestation.CustodyBitfield.IsZero() {
-		return false
-	}
-	// verify the size of the bitfield: it must have exactly enough bits for the given amount of validators.
-	if !slashableAttestation.CustodyBitfield.VerifySize(uint64(len(slashableAttestation.ValidatorIndices))) {
+	if len(custodyBit1Indices) != 0 {
 		return false
 	}
 
-	// simple check if the list is sorted.
-	end := len(slashableAttestation.ValidatorIndices) - 1
-	for i := 0; i < end; i++ {
-		if slashableAttestation.ValidatorIndices[i] >= slashableAttestation.ValidatorIndices[i+1] {
+	totalAttestingIndices := len(custodyBit1Indices) + len(custodyBit0Indices)
+	if !(1 <= totalAttestingIndices && totalAttestingIndices <= beacon.MAX_ATTESTATION_PARTICIPANTS) {
+		return false
+	}
+
+	// simple check if the lists are sorted.
+	verifyAttestIndexList := func (indices []beacon.ValidatorIndex) bool {
+		end := len(indices) - 1
+		for i := 0; i < end; i++ {
+			if indices[i] >= indices[i+1] {
+				return false
+			}
+		}
+
+		// Check the last item of the sorted list to be a valid index
+		if !state.ValidatorRegistry.IsValidatorIndex(indices[end]) {
 			return false
 		}
+		return true
 	}
-	// Check the last item of the sorted list
-	if !state.ValidatorRegistry.IsValidatorIndex(slashableAttestation.ValidatorIndices[end]) {
+	if !verifyAttestIndexList(custodyBit0Indices) || !verifyAttestIndexList(custodyBit1Indices) {
 		return false
 	}
 
 	custodyBit0_pubkeys := make([]beacon.BLSPubkey, 0)
-	custodyBit1_pubkeys := make([]beacon.BLSPubkey, 0)
-
-	for i, validatorIndex := range slashableAttestation.ValidatorIndices {
-		// Update spec, or is this acceptable? (the bitfield verify size doesn't suffice here)
-		if slashableAttestation.CustodyBitfield.GetBit(uint64(i)) == 0 {
-			custodyBit0_pubkeys = append(custodyBit0_pubkeys, state.ValidatorRegistry[validatorIndex].Pubkey)
-		} else {
-			custodyBit1_pubkeys = append(custodyBit1_pubkeys, state.ValidatorRegistry[validatorIndex].Pubkey)
-		}
+	for _, i := range custodyBit0Indices {
+		custodyBit0_pubkeys = append(custodyBit0_pubkeys, state.ValidatorRegistry[i].Pubkey)
 	}
+	custodyBit1_pubkeys := make([]beacon.BLSPubkey, 0)
+	for _, i := range custodyBit1Indices {
+		custodyBit1_pubkeys = append(custodyBit1_pubkeys, state.ValidatorRegistry[i].Pubkey)
+	}
+
 	// don't trust, verify
 	return bls.BlsVerifyMultiple(
 		[]beacon.BLSPubkey{
 			bls.BlsAggregatePubkeys(custodyBit0_pubkeys),
 			bls.BlsAggregatePubkeys(custodyBit1_pubkeys)},
 		[]beacon.Root{
-			ssz.HashTreeRoot(beacon.AttestationDataAndCustodyBit{Data: slashableAttestation.Data, CustodyBit: false}),
-			ssz.HashTreeRoot(beacon.AttestationDataAndCustodyBit{Data: slashableAttestation.Data, CustodyBit: true})},
-		slashableAttestation.AggregateSignature,
-		beacon.GetDomain(state.Fork, slashableAttestation.Data.Slot.ToEpoch(), beacon.DOMAIN_ATTESTATION),
+			ssz.HashTreeRoot(beacon.AttestationDataAndCustodyBit{Data: indexedAttestation.Data, CustodyBit: false}),
+			ssz.HashTreeRoot(beacon.AttestationDataAndCustodyBit{Data: indexedAttestation.Data, CustodyBit: true})},
+		indexedAttestation.AggregateSignature,
+		beacon.GetDomain(state.Fork, indexedAttestation.Data.Slot.ToEpoch(), beacon.DOMAIN_ATTESTATION),
 	)
 }
 

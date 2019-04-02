@@ -18,17 +18,12 @@ type BeaconState struct {
 
 	// Validator registry
 	ValidatorRegistry            ValidatorRegistry
-	ValidatorBalances            ValidatorBalances
+	Balances                     []Gwei
 	ValidatorRegistryUpdateEpoch Epoch
 
 	// Randomness and committees
 	LatestRandaoMixes           [LATEST_RANDAO_MIXES_LENGTH]Bytes32
-	PreviousShufflingStartShard Shard
-	CurrentShufflingStartShard  Shard
-	PreviousShufflingEpoch      Epoch
-	CurrentShufflingEpoch       Epoch
-	PreviousShufflingSeed       Bytes32
-	CurrentShufflingSeed        Bytes32
+	LatestStartShard            Shard
 
 	// Finality
 	PreviousEpochAttestations []PendingAttestation
@@ -65,7 +60,7 @@ func (state *BeaconState) Copy() *BeaconState {
 	// manually copy over slices, and efficiently (i.e. explicitly make, but don't initially zero out, just overwrite)
 	// validators
 	res.ValidatorRegistry = append(make([]Validator, 0, len(state.ValidatorRegistry)), state.ValidatorRegistry...)
-	res.ValidatorBalances = append(make([]Gwei, 0, len(state.ValidatorBalances)), state.ValidatorBalances...)
+	res.Balances = append(make([]Gwei, 0, len(state.Balances)), state.Balances...)
 	// finality
 	res.PreviousEpochAttestations = append(make([]PendingAttestation, 0, len(state.PreviousEpochAttestations)), state.PreviousEpochAttestations...)
 	res.CurrentEpochAttestations = append(make([]PendingAttestation, 0, len(state.CurrentEpochAttestations)), state.CurrentEpochAttestations...)
@@ -116,40 +111,36 @@ func GetEpochCommitteeCount(activeValidatorCount uint64) uint64 {
 		)) * uint64(SLOTS_PER_EPOCH)
 }
 
-// Return the number of committees in the previous epoch
-func (state *BeaconState) GetPreviousEpochCommitteeCount() uint64 {
-	return GetEpochCommitteeCount(
-		state.ValidatorRegistry.GetActiveValidatorCount(
-			state.PreviousShufflingEpoch,
-		))
-}
-
 // Return the number of committees in the current epoch
 func (state *BeaconState) GetCurrentEpochCommitteeCount() uint64 {
 	return GetEpochCommitteeCount(
 		state.ValidatorRegistry.GetActiveValidatorCount(
-			state.CurrentShufflingEpoch,
-		))
-}
-
-// Return the number of committees in the next epoch
-func (state *BeaconState) GetNextEpochCommitteeCount() uint64 {
-	return GetEpochCommitteeCount(
-		state.ValidatorRegistry.GetActiveValidatorCount(
-			state.Epoch() + 1,
+			state.Epoch(),
 		))
 }
 
 // Return the beacon proposer index for the slot.
-func (state *BeaconState) GetBeaconProposerIndex(slot Slot, registryChange bool) ValidatorIndex {
-	epoch := slot.ToEpoch()
+func (state *BeaconState) GetBeaconProposerIndex(slot Slot) ValidatorIndex {
 	currentEpoch := state.Epoch()
-	if !(currentEpoch-1 <= epoch && epoch <= currentEpoch+1) {
-		panic("epoch of given slot out of range")
+	if slot.ToEpoch() != currentEpoch {
+		panic("cannot get proposer index for slot of different epoch")
 	}
-	committeeData := state.GetCrosslinkCommitteesAtSlot(slot, registryChange)
-	firstCommitteeData := committeeData[0]
-	return firstCommitteeData.Committee[epoch%Epoch(len(firstCommitteeData.Committee))]
+	firstCommittee := state.GetCrosslinkCommitteesAtSlot(slot)[0].Committee
+	seed := state.GenerateSeed(currentEpoch)
+	buf := make([]byte, 32 + 8, 32 + 8)
+	copy(buf[0:32], seed[:])
+	for i := uint64(0); true; i++ {
+		binary.LittleEndian.PutUint64(buf[32:], i)
+		h := hash.Hash(buf)
+		for j := uint64(0); j < 32; j++ {
+			randByte := h[j]
+			candidate := firstCommittee[(uint64(currentEpoch) + (i << 5 | j)) % uint64(len(firstCommittee))]
+			if state.GetEffectiveBalance(candidate) << 8 > MAX_DEPOSIT_AMOUNT * Gwei(randByte) {
+				return candidate
+			}
+		}
+	}
+	return 0
 }
 
 //  Return the randao mix at a recent epoch
@@ -199,63 +190,56 @@ type CrosslinkCommittee struct {
 	Shard     Shard
 }
 
+// Returns a value such that for a list L, chunk count k and index i,
+//  split(L, k)[i] == L[get_split_offset(len(L), k, i): get_split_offset(len(L), k, i+1)]
+func getSplitOffset(listSize uint64, chunks uint64, index uint64) uint64 {
+	return (listSize * index) / chunks
+}
+
 // Return the list of (committee, shard) tuples for the slot.
-//
-// Note: There are two possible shufflings for crosslink committees for a
-//  slot in the next epoch -- with and without a registryChange
-func (state *BeaconState) GetCrosslinkCommitteesAtSlot(slot Slot, registryChange bool) []CrosslinkCommittee {
-	epoch, currentEpoch, previousEpoch := slot.ToEpoch(), state.Epoch(), state.PreviousEpoch()
+func (state *BeaconState) GetCrosslinkCommitteesAtSlot(slot Slot) []CrosslinkCommittee {
+	epoch := slot.ToEpoch()
+	currentEpoch := state.Epoch()
+	previousEpoch := state.PreviousEpoch()
 	nextEpoch := currentEpoch + 1
 
 	if !(previousEpoch <= epoch && epoch <= nextEpoch) {
 		panic("could not retrieve crosslink committee for out of range slot")
 	}
 
-	var committeesPerEpoch uint64
-	var seed Bytes32
-	var shufflingEpoch Epoch
-	var shufflingStartShard Shard
+	activeValidatorCount := state.ValidatorRegistry.GetActiveValidatorCount(epoch)
+
+	committeesPerEpoch := GetEpochCommitteeCount(activeValidatorCount)
+	var startShard Shard
 	if epoch == currentEpoch {
-		committeesPerEpoch = state.GetCurrentEpochCommitteeCount()
-		seed = state.CurrentShufflingSeed
-		shufflingEpoch = state.CurrentShufflingEpoch
-		shufflingStartShard = state.CurrentShufflingStartShard
+		startShard = state.LatestStartShard
 	} else if epoch == previousEpoch {
-		committeesPerEpoch = state.GetPreviousEpochCommitteeCount()
-		seed = state.PreviousShufflingSeed
-		shufflingEpoch = state.PreviousShufflingEpoch
-		shufflingStartShard = state.PreviousShufflingStartShard
+		startShard = (state.LatestStartShard - Shard(committeesPerEpoch)) % SHARD_COUNT
 	} else if epoch == nextEpoch {
-		epochsSinceLastRegistryUpdate := currentEpoch - state.ValidatorRegistryUpdateEpoch
-		if registryChange {
-			committeesPerEpoch = state.GetNextEpochCommitteeCount()
-			seed = state.GenerateSeed(nextEpoch)
-			shufflingEpoch = nextEpoch
-			currentCommitteesPerEpoch := state.GetCurrentEpochCommitteeCount()
-			shufflingStartShard = (state.CurrentShufflingStartShard + Shard(currentCommitteesPerEpoch)) % SHARD_COUNT
-		} else if epochsSinceLastRegistryUpdate > 1 && math.IsPowerOfTwo(uint64(epochsSinceLastRegistryUpdate)) {
-			committeesPerEpoch = state.GetNextEpochCommitteeCount()
-			seed = state.GenerateSeed(nextEpoch)
-			shufflingEpoch = nextEpoch
-			shufflingStartShard = state.CurrentShufflingStartShard
-		} else {
-			committeesPerEpoch = state.GetCurrentEpochCommitteeCount()
-			seed = state.CurrentShufflingSeed
-			shufflingEpoch = state.CurrentShufflingEpoch
-			shufflingStartShard = state.CurrentShufflingStartShard
-		}
+		startShard = (state.LatestStartShard + Shard(state.GetCurrentEpochCommitteeCount())) % SHARD_COUNT
 	}
-	// TODO: this shuffling could be cached
-	shuffling := state.ValidatorRegistry.GetShuffling(seed, shufflingEpoch)
-	offset := slot % SLOTS_PER_EPOCH
+	offset := uint64(slot % SLOTS_PER_EPOCH)
 	committeesPerSlot := committeesPerEpoch / uint64(SLOTS_PER_EPOCH)
-	slotStartShard := (shufflingStartShard + Shard(committeesPerSlot)*Shard(offset)) % SHARD_COUNT
+	slotStartShard := (startShard + Shard(committeesPerSlot)*Shard(offset)) % SHARD_COUNT
+	seed := state.GenerateSeed(epoch)
 
 	crosslinkCommittees := make([]CrosslinkCommittee, committeesPerSlot)
-	for i := uint64(0); i < committeesPerSlot; i++ {
-		crosslinkCommittees[i] = CrosslinkCommittee{
-			Committee: shuffling[committeesPerSlot*uint64(offset)+i],
-			Shard:     (slotStartShard + Shard(i)) % SHARD_COUNT}
+	{
+		shuffled := state.ValidatorRegistry.GetShuffled(seed, epoch)
+
+		// Return the index'th shuffled committee out of a total total_committees
+		computeCommittee := func(index uint64) []ValidatorIndex {
+			startOffset := getSplitOffset(activeValidatorCount, committeesPerEpoch, index)
+			endOffset := getSplitOffset(activeValidatorCount, committeesPerEpoch, index)
+			return shuffled[startOffset:endOffset]
+		}
+
+		for i := uint64(0); i < committeesPerSlot; i++ {
+			crosslinkCommittees[i] = CrosslinkCommittee{
+				Committee: computeCommittee(committeesPerSlot*offset+i),
+				Shard: (slotStartShard + Shard(i)) % SHARD_COUNT,
+			}
+		}
 	}
 	return crosslinkCommittees
 }
@@ -267,7 +251,7 @@ func (state *BeaconState) GetWinningRootAndParticipants(shard Shard) (Root, []Va
 		if att.Data.PreviousCrosslink == state.LatestCrosslinks[shard] {
 			participants, _ := state.GetAttestationParticipants(&att.Data, &att.AggregationBitfield)
 			for _, participant := range participants {
-				weightedCrosslinks[att.Data.CrosslinkDataRoot] += state.ValidatorBalances.GetEffectiveBalance(participant)
+				weightedCrosslinks[att.Data.CrosslinkDataRoot] += state.GetEffectiveBalance(participant)
 			}
 		}
 	}
@@ -330,21 +314,19 @@ func (state *BeaconState) GetWinningRootAndParticipants(shard Shard) (Root, []Va
 	return winningRoot, winningAttesters
 }
 
-// Exit the validator of the given index
+// Exit the validator with the given index
 func (state *BeaconState) ExitValidator(index ValidatorIndex) {
 	validator := &state.ValidatorRegistry[index]
-	delayedActivationExitEpoch := state.Epoch().GetDelayedActivationExitEpoch()
-	// The following updates only occur if not previous exited
-	if validator.ExitEpoch > delayedActivationExitEpoch {
-		return
+	// Update validator exit epoch if not previously exited
+	if validator.ExitEpoch == FAR_FUTURE_EPOCH {
+		validator.ExitEpoch = state.Epoch().GetDelayedActivationExitEpoch()
 	}
-	validator.ExitEpoch = delayedActivationExitEpoch
 }
 
 // Update validator registry.
 func (state *BeaconState) UpdateValidatorRegistry() {
 	// The total effective balance of active validators
-	totalBalance := state.ValidatorBalances.GetTotalBalance(state.ValidatorRegistry.GetActiveValidatorIndices(state.Epoch()))
+	totalBalance := state.GetTotalBalanceOf(state.ValidatorRegistry.GetActiveValidatorIndices(state.Epoch()))
 
 	// The maximum balance churn in Gwei (for deposits and exits separately)
 	maxBalanceChurn := Max(MAX_DEPOSIT_AMOUNT, totalBalance/(2*MAX_BALANCE_CHURN_QUOTIENT))
@@ -353,9 +335,9 @@ func (state *BeaconState) UpdateValidatorRegistry() {
 	{
 		balanceChurn := Gwei(0)
 		for index, validator := range state.ValidatorRegistry {
-			if validator.ActivationEpoch == FAR_FUTURE_EPOCH && state.ValidatorBalances[index] >= MAX_DEPOSIT_AMOUNT {
+			if validator.ActivationEpoch == FAR_FUTURE_EPOCH && state.Balances[index] >= MAX_DEPOSIT_AMOUNT {
 				// Check the balance churn would be within the allowance
-				balanceChurn += state.ValidatorBalances.GetEffectiveBalance(ValidatorIndex(index))
+				balanceChurn += state.GetEffectiveBalance(ValidatorIndex(index))
 				if balanceChurn > maxBalanceChurn {
 					break
 				}
@@ -371,7 +353,7 @@ func (state *BeaconState) UpdateValidatorRegistry() {
 		for index, validator := range state.ValidatorRegistry {
 			if validator.ExitEpoch == FAR_FUTURE_EPOCH && validator.InitiatedExit {
 				// Check the balance churn would be within the allowance
-				balanceChurn += state.ValidatorBalances.GetEffectiveBalance(ValidatorIndex(index))
+				balanceChurn += state.GetEffectiveBalance(ValidatorIndex(index))
 				if balanceChurn > maxBalanceChurn {
 					break
 				}
@@ -382,18 +364,24 @@ func (state *BeaconState) UpdateValidatorRegistry() {
 	}
 }
 
+func (state *BeaconState) GetCrosslinkCommitteeForAttestation(attestationData *AttestationData) []ValidatorIndex {
+	crosslinkCommittees := state.GetCrosslinkCommitteesAtSlot(attestationData.Slot)
+	startShard := crosslinkCommittees[0].Shard
+	// Find the committee in the list with the desired shard
+	// TODO: spec committee lookup can be much more efficient here
+	//  by exploiting the (modulo) consecutive shard ordering, see below
+	crosslinkCommittee := crosslinkCommittees[(SHARD_COUNT + attestationData.Shard - startShard) % SHARD_COUNT]
+	if crosslinkCommittee.Shard != attestationData.Shard {
+		panic("either crosslink committees data is invalid, or supplied attestation has invalid shard")
+	}
+	return crosslinkCommittee.Committee
+}
+
 // Return the participant indices at for the attestation_data and bitfield
 func (state *BeaconState) GetAttestationParticipants(attestationData *AttestationData, bitfield *bitfield.Bitfield) ([]ValidatorIndex, error) {
 	// Find the committee in the list with the desired shard
-	crosslinkCommittees := state.GetCrosslinkCommitteesAtSlot(attestationData.Slot, false)
+	crosslinkCommittee := state.GetCrosslinkCommitteeForAttestation(attestationData)
 
-	var crosslinkCommittee []ValidatorIndex
-	for _, crossComm := range crosslinkCommittees {
-		if crossComm.Shard == attestationData.Shard {
-			crosslinkCommittee = crossComm.Committee
-			break
-		}
-	}
 	if len(crosslinkCommittee) == 0 {
 		return nil, errors.New(fmt.Sprintf("cannot find crosslink committee at slot %d for shard %d", attestationData.Slot, attestationData.Shard))
 	}
@@ -408,24 +396,81 @@ func (state *BeaconState) GetAttestationParticipants(attestationData *Attestatio
 			participants = append(participants, vIndex)
 		}
 	}
+	// TODO: spec returns participants in sorted order, not strictly necessary
 	return participants, nil
 }
 
 // Slash the validator with index index.
 func (state *BeaconState) SlashValidator(index ValidatorIndex) error {
 	validator := &state.ValidatorRegistry[index]
-	// [TO BE REMOVED IN PHASE 2] (this is to make phase 0 and phase 1 consistent with behavior in phase 2)
-	if state.Slot >= validator.WithdrawableEpoch.GetStartSlot() {
-		return errors.New("cannot slash validator after withdrawal epoch")
-	}
 	state.ExitValidator(index)
-	state.LatestSlashedBalances[state.Epoch()%LATEST_SLASHED_EXIT_LENGTH] += state.ValidatorBalances.GetEffectiveBalance(index)
+	state.LatestSlashedBalances[state.Epoch()%LATEST_SLASHED_EXIT_LENGTH] += state.GetEffectiveBalance(index)
 
-	whistleblowerReward := state.ValidatorBalances.GetEffectiveBalance(index) / WHISTLEBLOWER_REWARD_QUOTIENT
-	propIndex := state.GetBeaconProposerIndex(state.Slot, false)
-	state.ValidatorBalances[propIndex] += whistleblowerReward
-	state.ValidatorBalances[index] -= whistleblowerReward
+	whistleblowerReward := state.GetEffectiveBalance(index) / WHISTLEBLOWER_REWARD_QUOTIENT
+	propIndex := state.GetBeaconProposerIndex(state.Slot)
+	state.IncreaseBalance(propIndex, whistleblowerReward)
+	state.DecreaseBalance(index, whistleblowerReward)
 	validator.Slashed = true
 	validator.WithdrawableEpoch = state.Epoch() + LATEST_SLASHED_EXIT_LENGTH
 	return nil
+}
+
+
+func (state *BeaconState) ApplyStakeDeltas(deltas *Deltas) {
+	if len(deltas.Penalties) != len(state.Balances) || len(deltas.Rewards) != len(state.Balances) {
+		panic("cannot apply deltas to balances list with different length")
+	}
+	for i := ValidatorIndex(0); i < ValidatorIndex(len(state.Balances)); i++ {
+		state.IncreaseBalance(i, deltas.Rewards[i])
+		state.DecreaseBalance(i, deltas.Penalties[i])
+	}
+}
+
+// Return the effective balance (also known as "balance at stake") for a validator with the given index.
+func (state *BeaconState) GetEffectiveBalance(index ValidatorIndex) Gwei {
+	return Min(state.GetBalance(index), MAX_DEPOSIT_AMOUNT)
+}
+
+// Return the total balance sum
+func (state *BeaconState) GetTotalBalance() (sum Gwei) {
+	for i := 0; i < len(state.Balances); i++ {
+		sum += state.GetEffectiveBalance(ValidatorIndex(i))
+	}
+	return sum
+}
+
+// Return the combined effective balance of an array of validators.
+func (state *BeaconState) GetTotalBalanceOf(indices []ValidatorIndex) (sum Gwei) {
+	for _, vIndex := range indices {
+		sum += state.GetEffectiveBalance(vIndex)
+	}
+	return sum
+}
+
+func (state *BeaconState) GetBalance(index ValidatorIndex) Gwei {
+	return state.Balances[index]
+}
+
+// Set the balance for a validator with the given ``index`` in both ``BeaconState``
+//  and validator's rounded balance ``high_balance``.
+func (state *BeaconState) SetBalance(index ValidatorIndex, balance Gwei) {
+	validator := state.ValidatorRegistry[index]
+	if validator.HighBalance > balance || validator.HighBalance + 3 * HALF_INCREMENT < balance {
+		validator.HighBalance = balance - (balance % HIGH_BALANCE_INCREMENT)
+	}
+	state.Balances[index] = balance
+}
+
+func (state *BeaconState) IncreaseBalance(index ValidatorIndex, delta Gwei) {
+	state.SetBalance(index, state.GetBalance(index) + delta)
+}
+
+func (state *BeaconState) DecreaseBalance(index ValidatorIndex, delta Gwei) {
+	currentBalance := state.GetBalance(index)
+	// prevent underflow, clip to 0
+	if currentBalance >= delta {
+		state.SetBalance(index, currentBalance - delta)
+	} else {
+		state.SetBalance(index, 0)
+	}
 }

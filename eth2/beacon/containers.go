@@ -20,21 +20,10 @@ type ProposerSlashing struct {
 }
 
 type AttesterSlashing struct {
-	// First slashable attestation
-	SlashableAttestation1 SlashableAttestation
-	// Second slashable attestation
-	SlashableAttestation2 SlashableAttestation
-}
-
-type SlashableAttestation struct {
-	// Validator indices
-	ValidatorIndices []ValidatorIndex
-	// Attestation data
-	Data AttestationData
-	// Custody bitfield
-	CustodyBitfield bitfield.Bitfield
-	// Aggregate signature
-	AggregateSignature BLSSignature `ssz:"signature"`
+	// First attestation
+	Attestation1 IndexedAttestation
+	// Second attestation
+	Attestation2 IndexedAttestation
 }
 
 type Attestation struct {
@@ -72,6 +61,16 @@ type AttestationDataAndCustodyBit struct {
 	CustodyBit bool
 }
 
+type IndexedAttestation struct {
+	// Validator Indices
+	CustodyBit0Indexes []ValidatorIndex
+	CustodyBit1Indexes []ValidatorIndex
+	// Attestation data
+	Data AttestationData
+	// BLS aggregate signature
+	AggregateSignature BLSSignature `ssz:"signature"`
+}
+
 type Crosslink struct {
 	// Epoch number
 	Epoch Epoch
@@ -85,40 +84,36 @@ type Deposit struct {
 	// Index in the deposit tree
 	Index DepositIndex
 	// Data
-	DepositData DepositData
+	Data DepositData
 }
 
 type DepositData struct {
-	// Amount in Gwei
-	Amount Gwei
-	// Timestamp from deposit contract
-	Timestamp Timestamp
-	// Deposit input
-	DepositInput DepositInput
-}
-
-// Let serialized_deposit_data be the serialized form of deposit.deposit_data.
-// It should equal 8 bytes for deposit_data.amount +
-//              8 bytes for deposit_data.timestamp +
-//              176 bytes for deposit_data.deposit_input
-// That is, it should match deposit_data in the Ethereum 1.0 deposit contract
-//  of which the hash was placed into the Merkle tree.
-func (d *DepositData) Serialized() []byte {
-	depInputBytes := ssz.SSZEncode(d.DepositInput)
-	serializedDepositData := make([]byte, 8+8+len(depInputBytes), 8+8+len(depInputBytes))
-	binary.LittleEndian.PutUint64(serializedDepositData[0:8], uint64(d.Amount))
-	binary.LittleEndian.PutUint64(serializedDepositData[8:16], uint64(d.Timestamp))
-	copy(serializedDepositData[16:], depInputBytes)
-	return serializedDepositData
-}
-
-type DepositInput struct {
 	// BLS pubkey
 	Pubkey BLSPubkey
 	// Withdrawal credentials
 	WithdrawalCredentials Root
-	// A BLS signature of this `DepositInput`
+	// Amount in Gwei
+	Amount Gwei
+	// Container self-signature
 	ProofOfPossession BLSSignature `ssz:"signature"`
+}
+
+// Let serialized_deposit_data be the serialized form of deposit.deposit_data.
+//
+// It should equal to:
+//  48 bytes for pubkey
+//  32 bytes for withdrawal credentials
+//  8 bytes for amount
+//  96 bytes for proof of possession
+//
+// This should match deposit_data in the Ethereum 1.0 deposit contract
+//  of which the hash was placed into the Merkle tree.
+func (d *DepositData) Serialized() []byte {
+	depInputBytes := ssz.SSZEncode(d)
+	serializedDepositData := make([]byte, 8+8+len(depInputBytes), 8+8+len(depInputBytes))
+	binary.LittleEndian.PutUint64(serializedDepositData[0:8], uint64(d.Amount))
+	copy(serializedDepositData[8:], depInputBytes)
+	return serializedDepositData
 }
 
 type VoluntaryExit struct {
@@ -162,10 +157,16 @@ type Validator struct {
 	InitiatedExit bool
 	// Was the validator slashed
 	Slashed bool
+	// Rounded balance
+	HighBalance Gwei
 }
 
 func (v *Validator) IsActive(epoch Epoch) bool {
 	return v.ActivationEpoch <= epoch && epoch < v.ExitEpoch
+}
+
+func (v *Validator) IsSlashable(epoch Epoch) bool {
+	return v.ActivationEpoch <= epoch && epoch < v.WithdrawableEpoch && !v.Slashed
 }
 
 type PendingAttestation struct {
@@ -182,6 +183,10 @@ type PendingAttestation struct {
 // 32 bits, not strictly an integer, hence represented as 4 bytes
 // (bytes not necessarily corresponding to versions)
 type ForkVersion [4]byte
+
+func Int32ToForkVersion(v uint32) ForkVersion {
+	return [4]byte{byte(v >> 24), byte(v >> 16), byte(v >> 8), byte(v)}
+}
 
 type Fork struct {
 	// Previous fork version
@@ -203,6 +208,8 @@ func (f Fork) GetVersion(epoch Epoch) ForkVersion {
 type Eth1Data struct {
 	// Root of the deposit tree
 	DepositRoot Root
+	// Total number of deposits
+	DepositCount uint64
 	// Block hash
 	BlockHash Root
 }
@@ -212,41 +219,6 @@ type Eth1DataVote struct {
 	Eth1Data Eth1Data
 	// Vote count
 	VoteCount uint64
-}
-
-type ValidatorBalances []Gwei
-
-func (balances ValidatorBalances) ApplyStakeDeltas(deltas *Deltas) {
-	if len(deltas.Penalties) != len(balances) || len(deltas.Rewards) != len(balances) {
-		panic("cannot apply deltas to balances list with different length")
-	}
-	for i := 0; i < len(balances); i++ {
-		balances[i] = Max(
-			0,
-			balances[i]+deltas.Rewards[i]-deltas.Penalties[i],
-		)
-	}
-}
-
-// Return the effective balance (also known as "balance at stake") for a validator with the given index.
-func (balances ValidatorBalances) GetEffectiveBalance(index ValidatorIndex) Gwei {
-	return Min(balances[index], MAX_DEPOSIT_AMOUNT)
-}
-
-// Return the total balance sum
-func (balances ValidatorBalances) GetBalanceSum() (sum Gwei) {
-	for i := 0; i < len(balances); i++ {
-		sum += balances.GetEffectiveBalance(ValidatorIndex(i))
-	}
-	return sum
-}
-
-// Return the combined effective balance of an array of validators.
-func (balances ValidatorBalances) GetTotalBalance(indices []ValidatorIndex) (sum Gwei) {
-	for _, vIndex := range indices {
-		sum += balances.GetEffectiveBalance(vIndex)
-	}
-	return sum
 }
 
 type ValidatorRegistry []Validator
@@ -274,15 +246,13 @@ func (vr ValidatorRegistry) GetActiveValidatorCount(epoch Epoch) (count uint64) 
 	return
 }
 
-// Shuffle active validators and split into crosslink committees.
-// Return a list of committees (each a list of validator indices).
-func (vr ValidatorRegistry) GetShuffling(seed Bytes32, epoch Epoch) [][]ValidatorIndex {
+// Shuffle active validators
+func (vr ValidatorRegistry) GetShuffled(seed Bytes32, epoch Epoch) []ValidatorIndex {
 	activeValidatorIndices := vr.GetActiveValidatorIndices(epoch)
 	committeeCount := GetEpochCommitteeCount(uint64(len(activeValidatorIndices)))
 	if committeeCount > uint64(len(activeValidatorIndices)) {
 		panic("not enough validators to form committees!")
 	}
-	committees := make([][]ValidatorIndex, committeeCount, committeeCount)
 	// Active validators, shuffled in-place.
 	hash := sha256.New()
 	hashFn := func(in []byte) []byte {
@@ -295,15 +265,11 @@ func (vr ValidatorRegistry) GetShuffling(seed Bytes32, epoch Epoch) [][]Validato
 		rawIndexList[i] = uint64(activeValidatorIndices[i])
 	}
 	eth2_shuffle.ShuffleList(hashFn, rawIndexList, SHUFFLE_ROUND_COUNT, seed)
-	committeeSize := uint64(len(rawIndexList)) / committeeCount
-	for i := uint64(0); i < committeeCount; i += committeeSize {
-		committee := make([]ValidatorIndex, committeeSize)
-		for j := uint64(0); j < committeeSize; j++ {
-			committee[j] = ValidatorIndex(rawIndexList[i+j])
-		}
-		committees[i] = committee
+	shuffled := make([]ValidatorIndex, len(vr))
+	for i := 0; i < len(activeValidatorIndices); i++ {
+		shuffled[i] = ValidatorIndex(rawIndexList[i])
 	}
-	return committees
+	return shuffled
 }
 
 type HistoricalBatch struct {

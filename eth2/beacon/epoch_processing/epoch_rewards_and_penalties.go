@@ -6,7 +6,7 @@ import (
 )
 
 var deltaCalculators = []beacon.DeltasCalculator{
-	deltas_computation.DeltasJustification,
+	deltas_computation.DeltasJustificationAndFinalizationDeltas,
 	deltas_computation.DeltasCrosslinks,
 	// TODO: split up the above where possible, and add others where necessary
 }
@@ -17,5 +17,5 @@ func ProcessEpochRewardsAndPenalties(state *beacon.BeaconState) {
 	for _, calc := range deltaCalculators {
 		sum.Add(calc(state, valuator))
 	}
-	state.ValidatorBalances.ApplyStakeDeltas(sum)
+	state.ApplyStakeDeltas(sum)
 }

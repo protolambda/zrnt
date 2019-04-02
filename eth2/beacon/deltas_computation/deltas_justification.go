@@ -4,15 +4,6 @@ import (
 	"github.com/protolambda/zrnt/eth2/beacon"
 )
 
-func DeltasJustification(state *beacon.BeaconState, v beacon.Valuator) *beacon.Deltas {
-	epochsSinceFinality := state.Epoch() + 1 - state.FinalizedEpoch
-	if epochsSinceFinality <= 4 {
-		return ComputeNormalJustificationAndFinalization(state, v)
-	} else {
-		return ComputeInactivityLeakDeltas(state, v)
-	}
-}
-
 type AttestersJustificationData struct {
 	previousEpochEarliestAttestations map[beacon.ValidatorIndex]*beacon.PendingAttestation
 	prevEpochAttesters                []beacon.ValidatorIndex
@@ -65,7 +56,7 @@ func GetAttestersJustificationData(state *beacon.BeaconState) *AttestersJustific
 			}
 
 			// If the attestation is for the boundary:
-			if att.Data.EpochBoundaryRoot == previousBoundaryBlockRoot {
+			if att.Data.TargetRoot == previousBoundaryBlockRoot {
 				data.epochBoundaryAttesterIndices = append(data.epochBoundaryAttesterIndices, p)
 			}
 			// If the attestation is for the head (att the time of attestation):
@@ -84,20 +75,30 @@ func GetAttestersJustificationData(state *beacon.BeaconState) *AttestersJustific
 	return data
 }
 
-// >> case 1: 4 or less epochs since finality
-func ComputeNormalJustificationAndFinalization(state *beacon.BeaconState, v beacon.Valuator) *beacon.Deltas {
+func DeltasJustificationAndFinalizationDeltas(state *beacon.BeaconState, v beacon.Valuator) *beacon.Deltas {
 	deltas := beacon.NewDeltas(uint64(len(state.ValidatorRegistry)))
 
-	data := GetAttestersJustificationData(state)
-	totalAttestingBalance := state.ValidatorBalances.GetTotalBalance(data.prevEpochAttesters)
-	totalBalance := state.ValidatorBalances.GetBalanceSum()
-	epochBoundaryBalance := state.ValidatorBalances.GetTotalBalance(data.epochBoundaryAttesterIndices)
-	matchingHeadBalance := state.ValidatorBalances.GetTotalBalance(data.matchingHeadAttesterIndices)
+	currentEpoch := state.Epoch()
 
-	prevActiveValidators := state.ValidatorRegistry.GetActiveValidatorIndices(state.PreviousEpoch())
+	data := GetAttestersJustificationData(state)
+	totalAttestingBalance := state.GetTotalBalanceOf(data.prevEpochAttesters)
+	totalBalance := state.GetTotalBalance()
+	epochBoundaryBalance := state.GetTotalBalanceOf(data.epochBoundaryAttesterIndices)
+	matchingHeadBalance := state.GetTotalBalanceOf(data.matchingHeadAttesterIndices)
+
+	validatorCount := beacon.ValidatorIndex(len(state.ValidatorRegistry))
+	eligibleValidators := make([]beacon.ValidatorIndex, 0, validatorCount)
+	for i := beacon.ValidatorIndex(0); i < validatorCount; i++ {
+		v := &state.ValidatorRegistry[i]
+		if v.IsActive(currentEpoch) {
+			eligibleValidators = append(eligibleValidators, i)
+		} else if v.Slashed && currentEpoch < v.WithdrawableEpoch {
+			eligibleValidators = append(eligibleValidators, i)
+		}
+	}
 
 	// Expected FFG source
-	in, out := beacon.FindInAndOutValidators(prevActiveValidators, data.prevEpochAttesters)
+	in, out := beacon.FindInAndOutValidators(eligibleValidators, data.prevEpochAttesters)
 	for _, vIndex := range in {
 		// Justification-participation reward
 		deltas.Rewards[vIndex] += v.GetBaseReward(vIndex) * totalAttestingBalance / totalBalance
@@ -112,7 +113,7 @@ func ComputeNormalJustificationAndFinalization(state *beacon.BeaconState, v beac
 	}
 
 	// Expected FFG target
-	in, out = beacon.FindInAndOutValidators(prevActiveValidators, data.epochBoundaryAttesterIndices)
+	in, out = beacon.FindInAndOutValidators(eligibleValidators, data.epochBoundaryAttesterIndices)
 	for _, vIndex := range in {
 		// Boundary-attestation reward
 		deltas.Rewards[vIndex] += v.GetBaseReward(vIndex) * epochBoundaryBalance / totalBalance
@@ -123,82 +124,32 @@ func ComputeNormalJustificationAndFinalization(state *beacon.BeaconState, v beac
 	}
 
 	// Expected head
-	in, out = beacon.FindInAndOutValidators(prevActiveValidators, data.matchingHeadAttesterIndices)
+	in, out = beacon.FindInAndOutValidators(eligibleValidators, data.matchingHeadAttesterIndices)
 	for _, vIndex := range in {
 		// Canonical-participation reward
 		deltas.Rewards[vIndex] += v.GetBaseReward(vIndex) * matchingHeadBalance / totalBalance
 	}
 	for _, vIndex := range out {
-		//Non-canonical-participation R-penalty
+		// Non-canonical-participation R-penalty
 		deltas.Penalties[vIndex] += v.GetBaseReward(vIndex)
 	}
 
 	// Proposer bonus
-	for _, vIndex := range prevActiveValidators {
+	in, _ = beacon.FindInAndOutValidators(eligibleValidators, data.prevEpochAttesters)
+	for _, vIndex := range in {
 		inclSlot, ok := data.inclusionSlot(vIndex)
 		if !ok {
 			// active validator did not have an attestation included
 			continue
 		}
-		proposerIndex := state.GetBeaconProposerIndex(inclSlot, false)
+		proposerIndex := state.GetBeaconProposerIndex(inclSlot)
 		deltas.Rewards[proposerIndex] += v.GetBaseReward(vIndex) / beacon.ATTESTATION_INCLUSION_REWARD_QUOTIENT
 	}
 
-	return deltas
-}
-
-// >> case 2: more than 4 epochs since finality. I.e. when blocks are not finalizing normally...
-func ComputeInactivityLeakDeltas(state *beacon.BeaconState, v beacon.Valuator) *beacon.Deltas {
-	deltas := beacon.NewDeltas(uint64(len(state.ValidatorRegistry)))
-
-	data := GetAttestersJustificationData(state)
-	prevActiveValidators := state.ValidatorRegistry.GetActiveValidatorIndices(state.PreviousEpoch())
-	in, out := beacon.FindInAndOutValidators(prevActiveValidators, data.prevEpochAttesters)
-	for _, vIndex := range in {
-		// Attestation delay measure
-		// If a validator did attest, apply a small penalty for getting attestations included late
-		deltas.Rewards[vIndex] += v.GetBaseReward(vIndex) *
-			beacon.Gwei(beacon.MIN_ATTESTATION_INCLUSION_DELAY) / beacon.Gwei(data.inclusionDistance(vIndex))
-		deltas.Penalties[vIndex] += v.GetBaseReward(vIndex)
-	}
-	for _, vIndex := range out {
-		// Justification-inactivity penalty
-		deltas.Penalties[vIndex] += v.GetInactivityPenalty(vIndex)
-	}
-
-	_, out = beacon.FindInAndOutValidators(prevActiveValidators, data.epochBoundaryAttesterIndices)
-	for _, vIndex := range out {
-		// Boundary-attestation-Inactivity penalty
-		deltas.Penalties[vIndex] += v.GetInactivityPenalty(vIndex)
-	}
-
-	_, out = beacon.FindInAndOutValidators(prevActiveValidators, data.matchingHeadAttesterIndices)
-	for _, vIndex := range out {
-		// Non-canonical-participation R-penalty
-		deltas.Penalties[vIndex] += v.GetBaseReward(vIndex)
-	}
-
-	// Find the validators that are inactive and misbehaving
-	eligible := make([]beacon.ValidatorIndex, len(state.ValidatorRegistry))
-	for i := 0; i < len(state.ValidatorRegistry); i++ {
-		v := &state.ValidatorRegistry[i]
-		// Eligible if slashed and not withdrawn
-		if v.Slashed && state.Epoch() < v.WithdrawableEpoch {
-			eligible[i] = beacon.ValidatorIndex(i)
-		} else {
-			eligible[i] = beacon.ValidatorIndexMarker
-		}
-	}
-	// exclude all indices that are not eligible because of their activity
-	for _, vIndex := range prevActiveValidators {
-		eligible[vIndex] = beacon.ValidatorIndexMarker
-	}
-
-	// Slash all eligible inactive misbehaving validators.
-	for _, vIndex := range eligible {
-		if vIndex != beacon.ValidatorIndexMarker {
-			// Penalization measure: double inactivity penalty + R-penalty
-			deltas.Penalties[vIndex] += 2*v.GetInactivityPenalty(vIndex) + v.GetBaseReward(vIndex)
+	if v.IsNotFinalizing() {
+		// Take away max rewards if we're not finalizing
+		for _, vIndex := range eligibleValidators {
+			deltas.Penalties[vIndex] += v.GetBaseReward(vIndex) * 4
 		}
 	}
 

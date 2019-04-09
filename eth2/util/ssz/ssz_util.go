@@ -50,7 +50,44 @@ func withSize(dst *[]byte, size uint64) (start uint64, end uint64) {
 //  don't forget to change the PutUint32 calls that make put the length in this allocated space.
 const BYTES_PER_LENGTH_PREFIX = 4
 
+func getSerializeCache(v reflect.Value) *SerializeCache {
+	prov, ok := v.Interface().(SSZSerializeCacheProvider)
+	if !ok {
+		// not a cache provider, no cache available
+		return nil
+	} else {
+		return prov.GetSerializeCache()
+	}
+}
+
+func sszSerializeMaybeCached(v reflect.Value, dst *[]byte) uint32 {
+	var serializedSize uint32
+	if cache := getSerializeCache(v); cache != nil {
+		// Cache, try to hit it.
+		if cache.Cached {
+			// use cache! manually place cache contents into destination
+			serializedSize = uint32(len(cache.Serialized))
+			datS, datE := withSize(dst, uint64(serializedSize))
+			copy((*dst)[datS:datE], cache.Serialized)
+		} else {
+			// The start of the data will be the end of the current destination data (optionally incl length prefix)
+			datS := uint32(len(*dst))
+			// serialize like normal
+			serializedSize = sszSerialize(v, dst)
+			// fill cache using data that was placed in the destination
+			cache.Serialized = (*dst)[datS:datS+serializedSize]
+			cache.Cached = true
+		}
+	} else {
+		// no cache available, handle like normal field
+		serializedSize = sszSerialize(v, dst)
+	}
+	return serializedSize
+}
+
 func sszSerialize(v reflect.Value, dst *[]byte) (encodedLen uint32) {
+
+
 	switch v.Kind() {
 	case reflect.Ptr:
 		return sszSerialize(v.Elem(), dst)
@@ -77,14 +114,14 @@ func sszSerialize(v reflect.Value, dst *[]byte) (encodedLen uint32) {
 	case reflect.Array: // "tuple"
 		if isFixedLength(v.Type().Elem(), false) {
 			for i, size := 0, v.Len(); i < size; i++ {
-				serializedSize := sszSerialize(v.Index(i), dst)
+				serializedSize := sszSerializeMaybeCached(v.Index(i), dst)
 				encodedLen += serializedSize
 			}
 		} else {
 			for i, size := 0, v.Len(); i < size; i++ {
 				// allocate size prefix
 				s, e := withSize(dst, BYTES_PER_LENGTH_PREFIX)
-				serializedSize := sszSerialize(v.Index(i), dst)
+				serializedSize := sszSerializeMaybeCached(v.Index(i), dst)
 				binary.LittleEndian.PutUint32((*dst)[s:e], serializedSize)
 				encodedLen += BYTES_PER_LENGTH_PREFIX + serializedSize
 			}
@@ -94,7 +131,7 @@ func sszSerialize(v reflect.Value, dst *[]byte) (encodedLen uint32) {
 		for i, size := 0, v.Len(); i < size; i++ {
 			// allocate size prefix
 			s, e := withSize(dst, BYTES_PER_LENGTH_PREFIX)
-			serializedSize := sszSerialize(v.Index(i), dst)
+			serializedSize := sszSerializeMaybeCached(v.Index(i), dst)
 			binary.LittleEndian.PutUint32((*dst)[s:e], serializedSize)
 			encodedLen += BYTES_PER_LENGTH_PREFIX + serializedSize
 		}
@@ -102,9 +139,9 @@ func sszSerialize(v reflect.Value, dst *[]byte) (encodedLen uint32) {
 	case reflect.Struct: // "container"
 		for i, size := 0, v.NumField(); i < size; i++ {
 			// allocate size prefix
-			s, e := withSize(dst, BYTES_PER_LENGTH_PREFIX)
-			serializedSize := sszSerialize(v.Field(i), dst)
-			binary.LittleEndian.PutUint32((*dst)[s:e], serializedSize)
+			lenS, lenE := withSize(dst, BYTES_PER_LENGTH_PREFIX)
+			serializedSize := sszSerializeMaybeCached(v.Field(i), dst)
+			binary.LittleEndian.PutUint32((*dst)[lenS:lenE], serializedSize)
 			encodedLen += BYTES_PER_LENGTH_PREFIX + serializedSize
 		}
 		return encodedLen
@@ -198,19 +235,33 @@ func sszHashTreeRoot(v reflect.Value) [32]byte {
 }
 
 func sszPack(input reflect.Value) [][32]byte {
-	serialized := make([]byte, 0)
-	switch input.Kind() {
-	case reflect.Array, reflect.Slice:
-		for i, length := 0, input.Len(); i < length; i++ {
-			sszSerialize(input.Index(i), &serialized)
+	var serialized []byte
+	if cache := getSerializeCache(input); cache != nil && cache.Cached {
+		// use cache!
+		serialized = cache.Serialized
+	} else {
+		serialized = make([]byte, 0)
+
+		switch input.Kind() {
+		case reflect.Array, reflect.Slice:
+			for i, length := 0, input.Len(); i < length; i++ {
+				sszSerialize(input.Index(i), &serialized)
+			}
+		case reflect.Struct:
+			for i, length := 0, input.NumField(); i < length; i++ {
+				sszSerialize(input.Field(i), &serialized)
+			}
+		default:
+			sszSerialize(input, &serialized)
 		}
-	case reflect.Struct:
-		for i, length := 0, input.NumField(); i < length; i++ {
-			sszSerialize(input.Field(i), &serialized)
+
+		// check if there was a cache, but it was just empty/invalid. In that case, fill it
+		if cache != nil {
+			cache.Serialized = serialized
+			cache.Cached = true
 		}
-	default:
-		sszSerialize(input, &serialized)
 	}
+
 	// floored: handle all normal chunks first
 	flooredChunkCount := len(serialized) / 32
 	// ceiled: include any partial chunk at end as full chunk (with padding)

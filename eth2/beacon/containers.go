@@ -143,6 +143,8 @@ type Transfer struct {
 }
 
 type Validator struct {
+	// cache for SSZ
+	*ssz.SSZCaching
 	// BLS public key
 	Pubkey BLSPubkey
 	// Withdrawal credentials

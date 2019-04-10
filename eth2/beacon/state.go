@@ -13,9 +13,6 @@ import (
 )
 
 type BeaconState struct {
-	// cache all state fields
-	*ssz.SSZCompoundCache
-
 	// Misc
 	Slot        Slot
 	GenesisTime Timestamp

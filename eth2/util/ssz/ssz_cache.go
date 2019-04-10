@@ -1,7 +1,6 @@
 package ssz
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/util/hash"
 	"github.com/protolambda/zrnt/eth2/util/math"
 	"reflect"
@@ -10,7 +9,6 @@ import (
 type SSZSerializeCacheProvider interface {
 	GetSerializeCache() *SerializeCache
 }
-
 
 type SerializeCache struct {
 
@@ -36,39 +34,9 @@ func (c *SerializationCacher) GetSerializeCache() *SerializeCache {
 }
 
 
-type SSZTreeRootCacheProvider interface {
-	GetTreeRootCache() *TreeRootCache
+type SSZCompoundCacheProvider interface {
+	GetSSZCompoundCache() *SSZCompoundCache
 }
-
-type TreeRootCache struct {
-
-	Root beacon.Root
-
-	// inverse dirty flag. False = cache needs to be filled/refreshed. True = cache is ready to use
-	Cached bool
-}
-
-type TreeRootCacher struct {
-
-	TreeRootCache *TreeRootCache
-}
-
-// returns itself, used to recognize caches from general interfaces.
-// Can be inherited to provide cache through embedding.
-func (c *TreeRootCacher) GetTreeRootCache() *TreeRootCache {
-	// lazy initialize cache
-	if c.TreeRootCache == nil {
-		c.TreeRootCache = new(TreeRootCache)
-	}
-	return c.TreeRootCache
-}
-
-// composition of both cache types
-type SSZCaching struct {
-	SerializeCache
-	TreeRootCacher
-}
-
 
 type SSZCompoundCache struct {
 	WorkSheet [][32]byte
@@ -126,7 +94,8 @@ func (cache *SSZCompoundCache) SetChanged(index uint64) {
 	}
 
 	if chunkIndex >= cache.ElemCount {
-		panic("changing out of SSZ cache bounds")
+		// just allocate based on changes
+		cache.SetLength(index + 1)
 	}
 
 	// now propagate the change to all pair combinations in the worksheet
@@ -202,6 +171,10 @@ func (cache *SSZCompoundCache) UpdateAndMerkleize(serializeIndex SSZIndexedSeria
 		a := i << 1
 		b := a + 1
 		cache.CacheSheet[i] = cache.CacheSheet[a] && cache.CacheSheet[b]
+	}
+	// did the root not change? Great, free lunch
+	if cache.CacheSheet[1] {
+		return cache.WorkSheet[1]
 	}
 	// Now, for the changed elements, start
 	if cache.ElemSize > 32 {

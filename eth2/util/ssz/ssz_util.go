@@ -247,10 +247,17 @@ func structRoot(v reflect.Value, ignoreFlag string) [32]byte {
 	for i := 0; i < fields; i++ {
 		structField := vType.Field(i)
 		if !hasSSZFlag(structField, ignoreFlag) && !hasSSZFlag(structField, OMIT_FLAG) {
-			elemCacheV := v.FieldByName(structField.Name + "Cache")
-			elemCache := elemCacheV.Interface().(*SSZCompoundCache)
-			// cache may be nil
-			data = append(data, sszHashTreeRoot(v.Field(i), elemCache, ignoreFlag))
+			cacheFieldName := structField.Name + "SSZCache"
+			_, ok := vType.FieldByName(cacheFieldName)
+			fieldV := v.Field(i)
+			if ok {
+				cacheV := v.FieldByName(cacheFieldName)
+				elemCache := cacheV.Interface().(SSZCompoundCache)
+				// cache may be nil
+				data = append(data, sszHashTreeRoot(fieldV, &elemCache, ignoreFlag))
+			} else {
+				data = append(data, sszHashTreeRoot(fieldV, nil, ignoreFlag))
+			}
 		}
 	}
 	return merkle.MerkleRoot(data)

@@ -116,25 +116,25 @@ func (cache *SSZCompoundCache) SetChanged(index uint64) {
 	if cache.ElemSize == 0 {
 		panic("ssz cache element size is not initialized with item type")
 	}
+	var chunkIndex uint64
 	if cache.ElemSize > 32 {
 		panic("elements cannot be larger than a chunk! (hash them to embed them in the tree)")
 	} else if cache.ElemSize < 32 {
-		chunkIndex := cache.elemIndexToChunkIndex(index)
-		if chunkIndex >= cache.ElemCount {
-			panic("changing out of SSZ cache bounds")
-		}
-		for chunkIndex != 0 {
-			cache.CacheSheet[chunkIndex] = false
-			chunkIndex >>= 1
-		}
+		chunkIndex = cache.elemIndexToChunkIndex(index)
 	} else {
-		if index >= cache.ElemCount {
-			panic("changing out of SSZ cache bounds")
-		}
-		for index != 0 {
-			cache.CacheSheet[index] = false
-			index >>= 1
-		}
+		chunkIndex = index
+	}
+
+	if chunkIndex >= cache.ElemCount {
+		panic("changing out of SSZ cache bounds")
+	}
+
+	// now propagate the change to all pair combinations in the worksheet
+	power2 := math.NextPowerOfTwo(cache.ElemCount)
+	for power2 != 0 {
+		cache.CacheSheet[chunkIndex] = false
+		chunkIndex >>= 1
+		power2 >>= 1
 	}
 }
 

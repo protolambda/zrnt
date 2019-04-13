@@ -1,19 +1,21 @@
 package beacon
 
+import "github.com/protolambda/zrnt/eth2/constant_presets"
+
 // Misc.
-const SHARD_COUNT Shard = 1 << 10            // =  1,024
-const TARGET_COMMITTEE_SIZE = 1 << 7         // =  128
-const MAX_BALANCE_CHURN_QUOTIENT = 1 << 5    // =  32
-const MAX_ATTESTATION_PARTICIPANTS = 1 << 12 // =  4,096
-const MAX_EXIT_DEQUEUES_PER_EPOCH = 1 << 2   // =  4
+const SHARD_COUNT Shard = constant_presets.SHARD_COUNT
+const TARGET_COMMITTEE_SIZE = 1 << 7
+const MAX_BALANCE_CHURN_QUOTIENT = 1 << 5
+const MAX_ATTESTATION_PARTICIPANTS = 1 << 12
+const MAX_EXIT_DEQUEUES_PER_EPOCH = 1 << 2
 const SHUFFLE_ROUND_COUNT = 90
 
 // Deposit contract
-const DEPOSIT_CONTRACT_TREE_DEPTH = 1 << 5 // =  32
+const DEPOSIT_CONTRACT_TREE_DEPTH = 1 << 5
 
 // Gwei values
-const MIN_DEPOSIT_AMOUNT Gwei = (1 << 0) * 1000000000 // =  1,000,000,000  Gwei
-const MAX_DEPOSIT_AMOUNT Gwei = (1 << 5) * 1000000000 // =  32,000,000,000  Gwei
+const MIN_DEPOSIT_AMOUNT Gwei = (1 << 0) * 1000000000
+const MAX_DEPOSIT_AMOUNT Gwei = (1 << 5) * 1000000000
 // unused const FORK_CHOICE_BALANCE_INCREMENT Gwei = (1 << 0) * MILLION_GWEI // =  1,000,000,000  Gwei
 const EJECTION_BALANCE Gwei = (1 << 4) * 1000000000 // =  16,000,000,000  Gwei
 

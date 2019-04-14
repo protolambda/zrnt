@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/protolambda/zrnt/debug/util/debug_format"
 	"github.com/protolambda/zrnt/eth2/beacon"
-	"github.com/protolambda/zrnt/eth2/beacon/genesis"
 	"github.com/protolambda/zrnt/eth2/beacon/transition"
 	"github.com/protolambda/zrnt/eth2/util/hash"
 	"github.com/protolambda/zrnt/eth2/util/math"
@@ -73,7 +72,7 @@ func main() {
 		DepositRoot: depositsRoot,
 		BlockHash:   beacon.Root{42}, // TODO eth1 simulation
 	}
-	genesisState := genesis.GetGenesisBeaconState(deposits, genesisTime, eth1Data)
+	genesisState := beacon.GetGenesisBeaconState(deposits, genesisTime, eth1Data)
 
 	preState := genesisState
 

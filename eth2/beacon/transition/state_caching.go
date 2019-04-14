@@ -2,6 +2,7 @@ package transition
 
 import (
 	"github.com/protolambda/zrnt/eth2/beacon"
+	. "github.com/protolambda/zrnt/eth2/util/data_types"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
@@ -11,7 +12,7 @@ func CacheState(state *beacon.BeaconState) {
 	state.LatestStateRoots[state.Slot%beacon.SLOTS_PER_HISTORICAL_ROOT] = prevSlotStateRoot
 
 	// cache state root in stored latest_block_header if empty
-	if state.LatestBlockHeader.StateRoot == (beacon.Root{}) {
+	if state.LatestBlockHeader.StateRoot == (Root{}) {
 		state.LatestBlockHeader.StateRoot = prevSlotStateRoot
 	}
 

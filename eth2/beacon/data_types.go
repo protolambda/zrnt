@@ -1,6 +1,8 @@
 package beacon
 
-import "github.com/protolambda/zrnt/eth2/util/hex"
+import (
+	"github.com/protolambda/zrnt/eth2/util/bls"
+)
 
 // Beacon misc.
 // ----------------------
@@ -50,41 +52,8 @@ func Min(a Gwei, b Gwei) Gwei {
 	return b
 }
 
-// BLS specific
-// ----------------------
-type BLSDomain uint64
-
-// Get the domain number that represents the fork meta and signature domain.
-func GetDomain(fork Fork, epoch Epoch, dom BLSDomain) BLSDomain {
-	// combine fork version with domain.
-	v := fork.GetVersion(epoch)
-	return BLSDomain(v[0]<<24|v[1]<<16|v[2]<<8|v[3]) + dom
-}
-
-
 // byte arrays
 // ----------------------
-
-type Root [32]byte
-type Bytes32 [32]byte
-type BLSPubkey [48]byte
-type BLSSignature [96]byte
-
-func (v Root) MarshalJSON() ([]byte, error)         { return hex.EncodeHex(v[:]) }
-func (v Bytes32) MarshalJSON() ([]byte, error)      { return hex.EncodeHex(v[:]) }
-func (v BLSPubkey) MarshalJSON() ([]byte, error)    { return hex.EncodeHex(v[:]) }
-func (v BLSSignature) MarshalJSON() ([]byte, error) { return hex.EncodeHex(v[:]) }
-
-func (v Root) UnmarshalJSON(data []byte) error         { return hex.DecodeHex(data[1:len(data)-1], v[:]) }
-func (v Bytes32) UnmarshalJSON(data []byte) error      { return hex.DecodeHex(data[1:len(data)-1], v[:]) }
-func (v BLSPubkey) UnmarshalJSON(data []byte) error    { return hex.DecodeHex(data[1:len(data)-1], v[:]) }
-func (v BLSSignature) UnmarshalJSON(data []byte) error { return hex.DecodeHex(data[1:len(data)-1], v[:]) }
-
-func (v Root) String() string         { return hex.EncodeHexStr(v[:]) }
-func (v Bytes32) String() string      { return hex.EncodeHexStr(v[:]) }
-func (v BLSPubkey) String() string    { return hex.EncodeHexStr(v[:]) }
-func (v BLSSignature) String() string { return hex.EncodeHexStr(v[:]) }
-
 
 // Collection of validators, should always be sorted.
 type ValidatorSet []ValidatorIndex
@@ -157,4 +126,13 @@ func (vs ValidatorSet) ZigZagJoin(target ValidatorSet, onIn func(i ValidatorInde
 			updateJ()
 		}
 	}
+}
+
+// Misc.
+
+// Get the domain number that represents the fork meta and signature domain.
+func GetDomain(fork Fork, epoch Epoch, dom bls.BLSDomain) bls.BLSDomain {
+	// combine fork version with domain.
+	v := fork.GetVersion(epoch)
+	return bls.BLSDomain(v[0]<<24|v[1]<<16|v[2]<<8|v[3]) + dom
 }

@@ -4,6 +4,7 @@ package beacon
 
 import (
 	"github.com/protolambda/zrnt/constant_presets"
+	"github.com/protolambda/zrnt/eth2/util/bls"
 )
 
 // Misc.
@@ -70,7 +71,7 @@ const MAX_TRANSFERS = constant_presets.MAX_TRANSFERS
 
 // Signature domains
 const (
-	DOMAIN_BEACON_BLOCK BLSDomain = constant_presets.DOMAIN_BEACON_BLOCK
+	DOMAIN_BEACON_BLOCK bls.BLSDomain = constant_presets.DOMAIN_BEACON_BLOCK
 	DOMAIN_RANDAO
 	DOMAIN_ATTESTATION
 	DOMAIN_DEPOSIT

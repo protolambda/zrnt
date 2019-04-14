@@ -5,6 +5,9 @@ import (
 	"encoding/binary"
 	"github.com/protolambda/eth2-shuffle"
 	"github.com/protolambda/zrnt/eth2/util/bitfield"
+	"github.com/protolambda/zrnt/eth2/util/bls"
+	. "github.com/protolambda/zrnt/eth2/util/data_types"
+	"github.com/protolambda/zrnt/eth2/util/hex"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
@@ -34,7 +37,7 @@ type Attestation struct {
 	// Custody bitfield
 	CustodyBitfield bitfield.Bitfield
 	// BLS aggregate signature
-	AggregateSignature BLSSignature `ssz:"signature"`
+	AggregateSignature bls.BLSSignature `ssz:"signature"`
 }
 
 type AttestationData struct {
@@ -68,7 +71,7 @@ type IndexedAttestation struct {
 	// Attestation data
 	Data AttestationData
 	// BLS aggregate signature
-	AggregateSignature BLSSignature `ssz:"signature"`
+	AggregateSignature bls.BLSSignature `ssz:"signature"`
 }
 
 type Crosslink struct {
@@ -80,7 +83,7 @@ type Crosslink struct {
 
 type Deposit struct {
 	// Branch in the deposit tree
-	Proof [DEPOSIT_CONTRACT_TREE_DEPTH][32]byte
+	Proof [DEPOSIT_CONTRACT_TREE_DEPTH]Root
 	// Index in the deposit tree
 	Index DepositIndex
 	// Data
@@ -89,13 +92,13 @@ type Deposit struct {
 
 type DepositData struct {
 	// BLS pubkey
-	Pubkey BLSPubkey
+	Pubkey bls.BLSPubkey
 	// Withdrawal credentials
 	WithdrawalCredentials Root
 	// Amount in Gwei
 	Amount Gwei
 	// Container self-signature
-	ProofOfPossession BLSSignature `ssz:"signature"`
+	ProofOfPossession bls.BLSSignature `ssz:"signature"`
 }
 
 // Let serialized_deposit_data be the serialized form of deposit.deposit_data.
@@ -122,7 +125,7 @@ type VoluntaryExit struct {
 	// Index of the exiting validator
 	ValidatorIndex ValidatorIndex
 	// Validator signature
-	Signature BLSSignature `ssz:"signature"`
+	Signature bls.BLSSignature `ssz:"signature"`
 }
 
 type Transfer struct {
@@ -137,14 +140,14 @@ type Transfer struct {
 	// Inclusion slot
 	Slot Slot
 	// Sender withdrawal pubkey
-	Pubkey BLSPubkey
+	Pubkey bls.BLSPubkey
 	// Sender signature
-	Signature BLSSignature `ssz:"signature"`
+	Signature bls.BLSSignature `ssz:"signature"`
 }
 
 type Validator struct {
 	// BLS public key
-	Pubkey BLSPubkey
+	Pubkey bls.BLSPubkey
 	// Withdrawal credentials
 	WithdrawalCredentials Root
 	// Epoch when validator activated
@@ -183,6 +186,10 @@ type PendingAttestation struct {
 // 32 bits, not strictly an integer, hence represented as 4 bytes
 // (bytes not necessarily corresponding to versions)
 type ForkVersion [4]byte
+
+func (v ForkVersion) MarshalJSON() ([]byte, error)    { return hex.EncodeHex(v[:]) }
+func (v ForkVersion) UnmarshalJSON(data []byte) error { return hex.DecodeHex(data[1:len(data)-1], v[:]) }
+func (v ForkVersion) String() string                  { return hex.EncodeHexStr(v[:]) }
 
 func Int32ToForkVersion(v uint32) ForkVersion {
 	return [4]byte{byte(v >> 24), byte(v >> 16), byte(v >> 8), byte(v)}
@@ -247,7 +254,7 @@ func (vr ValidatorRegistry) GetActiveValidatorCount(epoch Epoch) (count uint64) 
 }
 
 // Shuffle active validators
-func (vr ValidatorRegistry) GetShuffled(seed Bytes32, epoch Epoch) []ValidatorIndex {
+func (vr ValidatorRegistry) GetShuffled(seed Root, epoch Epoch) []ValidatorIndex {
 	activeValidatorIndices := vr.GetActiveValidatorIndices(epoch)
 	committeeCount := GetEpochCommitteeCount(uint64(len(activeValidatorIndices)))
 	if committeeCount > uint64(len(activeValidatorIndices)) {

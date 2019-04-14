@@ -1,20 +1,18 @@
 package bls
 
-import "github.com/protolambda/zrnt/eth2/beacon"
-
-func BlsVerify(pubkey beacon.BLSPubkey, messageHash beacon.Root, signature beacon.BLSSignature, domain beacon.BLSDomain) bool {
+func BlsVerify(pubkey BLSPubkey, messageHash [32]byte, signature BLSSignature, domain BLSDomain) bool {
 	// TODO BLS verify single
 	// Temporary: just allow it.
 	return true
 }
 
-func BlsAggregatePubkeys(pubkeys []beacon.BLSPubkey) beacon.BLSPubkey {
+func BlsAggregatePubkeys(pubkeys []BLSPubkey) BLSPubkey {
 	// TODO aggregate pubkeys with BLS
 	// Temporary: just return an empty key (TODO: or is XOR better temporarily?)
-	return beacon.BLSPubkey{}
+	return BLSPubkey{}
 }
 
-func BlsVerifyMultiple(pubkeys []beacon.BLSPubkey, messageHashes []beacon.Root, signature beacon.BLSSignature, domain beacon.BLSDomain) bool {
+func BlsVerifyMultiple(pubkeys []BLSPubkey, messageHashes [][32]byte, signature BLSSignature, domain BLSDomain) bool {
 	// TODO BLS verify multiple
 	// Temporary: just allow it.
 	return true

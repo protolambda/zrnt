@@ -1,6 +1,8 @@
 package beacon
 
 import (
+	"github.com/protolambda/zrnt/eth2/util/bls"
+	. "github.com/protolambda/zrnt/eth2/util/data_types"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
@@ -12,11 +14,11 @@ type BeaconBlockHeader struct {
 	// Where the body would be, just a root embedded here.
 	BlockBodyRoot Root
 	// Signature
-	Signature BLSSignature `ssz:"signature"`
+	Signature bls.BLSSignature `ssz:"signature"`
 }
 
 type BeaconBlockBody struct {
-	RandaoReveal BLSSignature
+	RandaoReveal bls.BLSSignature
 	Eth1Data     Eth1Data
 
 	ProposerSlashings []ProposerSlashing
@@ -36,7 +38,7 @@ type BeaconBlock struct {
 	// Body
 	Body BeaconBlockBody
 	// Signature
-	Signature BLSSignature `ssz:"signature"`
+	Signature bls.BLSSignature `ssz:"signature"`
 }
 
 // Returns a template for a genesis block
@@ -53,8 +55,8 @@ func (block *BeaconBlock) GetTemporaryBlockHeader() BeaconBlockHeader {
 		Slot:              block.Slot,
 		PreviousBlockRoot: block.PreviousBlockRoot,
 		StateRoot:         Root{}, // empty hash, "temporary" part.
-		BlockBodyRoot:     ssz.HashTreeRoot(block.Body),
+		BlockBodyRoot:     Root(ssz.HashTreeRoot(block.Body)),
 		// signed_root(block) is used for block id purposes so signature is a stub
-		Signature:         BLSSignature{},
+		Signature:         bls.BLSSignature{},
 	}
 }

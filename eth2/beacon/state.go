@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/util/bitfield"
 	"github.com/protolambda/zrnt/eth2/util/bls"
+	. "github.com/protolambda/zrnt/eth2/util/data_types"
 	"github.com/protolambda/zrnt/eth2/util/hash"
 	"github.com/protolambda/zrnt/eth2/util/math"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
@@ -24,7 +25,7 @@ type BeaconState struct {
 	ValidatorRegistryUpdateEpoch Epoch
 
 	// Randomness and committees
-	LatestRandaoMixes [LATEST_RANDAO_MIXES_LENGTH]Bytes32
+	LatestRandaoMixes [LATEST_RANDAO_MIXES_LENGTH]Root
 	LatestStartShard  Shard
 
 	// Finality
@@ -146,7 +147,7 @@ func (state *BeaconState) GetBeaconProposerIndex(slot Slot) ValidatorIndex {
 }
 
 //  Return the randao mix at a recent epoch
-func (state *BeaconState) GetRandaoMix(epoch Epoch) Bytes32 {
+func (state *BeaconState) GetRandaoMix(epoch Epoch) Root {
 	// Every usage is a trusted input (i.e. state is already up to date to handle the requested epoch number).
 	// If something is wrong due to unforeseen usage, panic to catch it during development.
 	if !(state.Epoch()-LATEST_RANDAO_MIXES_LENGTH < epoch && epoch <= state.Epoch()) {
@@ -160,7 +161,7 @@ func (state *BeaconState) GetActiveIndexRoot(epoch Epoch) Root {
 }
 
 // Generate a seed for the given epoch
-func (state *BeaconState) GenerateSeed(epoch Epoch) Bytes32 {
+func (state *BeaconState) GenerateSeed(epoch Epoch) Root {
 	buf := make([]byte, 32*3)
 	mix := state.GetRandaoMix(epoch - MIN_SEED_LOOKAHEAD)
 	copy(buf[0:32], mix[:])
@@ -530,21 +531,21 @@ func (state *BeaconState) VerifyIndexedAttestation(indexedAttestation *IndexedAt
 		return false
 	}
 
-	custodyBit0Pubkeys := make([]BLSPubkey, 0)
+	custodyBit0Pubkeys := make([]bls.BLSPubkey, 0)
 	for _, i := range custodyBit0Indices {
 		custodyBit0Pubkeys = append(custodyBit0Pubkeys, state.ValidatorRegistry[i].Pubkey)
 	}
-	custodyBit1Pubkeys := make([]BLSPubkey, 0)
+	custodyBit1Pubkeys := make([]bls.BLSPubkey, 0)
 	for _, i := range custodyBit1Indices {
 		custodyBit1Pubkeys = append(custodyBit1Pubkeys, state.ValidatorRegistry[i].Pubkey)
 	}
 
 	// don't trust, verify
 	return bls.BlsVerifyMultiple(
-		[]BLSPubkey{
+		[]bls.BLSPubkey{
 			bls.BlsAggregatePubkeys(custodyBit0Pubkeys),
 			bls.BlsAggregatePubkeys(custodyBit1Pubkeys)},
-		[]Root{
+		[][32]byte{
 			ssz.HashTreeRoot(AttestationDataAndCustodyBit{Data: indexedAttestation.Data, CustodyBit: false}),
 			ssz.HashTreeRoot(AttestationDataAndCustodyBit{Data: indexedAttestation.Data, CustodyBit: true})},
 		indexedAttestation.AggregateSignature,

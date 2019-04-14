@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"github.com/protolambda/zrnt/debug/util/debug_format"
 	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/genesis"
 	"github.com/protolambda/zrnt/eth2/beacon/transition"
+	"github.com/protolambda/zrnt/eth2/util/bls"
+	. "github.com/protolambda/zrnt/eth2/util/data_types"
 	"github.com/protolambda/zrnt/eth2/util/hash"
 	"github.com/protolambda/zrnt/eth2/util/math"
 	"github.com/protolambda/zrnt/eth2/util/merkle"
@@ -21,7 +24,7 @@ func main() {
 
 	hashHexStr := func(value interface{}) string {
 		encoded := ssz.HashTreeRoot(value)
-		out := make([]byte, hex.EncodedLen(len(encoded)))
+		out := make([]byte, hex.EncodedLen(32))
 		hex.Encode(out, encoded[:])
 		return string(out)
 	}
@@ -38,18 +41,18 @@ func main() {
 		rng.Read(privKey[:])
 		privKeys = append(privKeys, privKey)
 		// simply derive pubkey and withdraw creds, not real thing yet
-		pubKey := beacon.BLSPubkey{}
+		pubKey := bls.BLSPubkey{}
 		h := hash.Hash(privKey[:])
 		copy(pubKey[:], h[:])
 		withdrawCreds := hash.Hash(append(h[:], 1))
 		dep := beacon.Deposit{
-			Proof: [beacon.DEPOSIT_CONTRACT_TREE_DEPTH][32]byte{},
+			Proof: [beacon.DEPOSIT_CONTRACT_TREE_DEPTH]Root,
 			Index: beacon.DepositIndex(i),
 			Data: beacon.DepositData{
 				Pubkey:                pubKey,
 				WithdrawalCredentials: withdrawCreds,
 				Amount:    beacon.Gwei(100),
-				ProofOfPossession:     beacon.BLSSignature{1, 2, 3}, // BLS not yet implemented
+				ProofOfPossession:     bls.BLSSignature{1, 2, 3}, // BLS not yet implemented
 			},
 		}
 		depLeafHash := hash.Hash(dep.Data.Serialized())
@@ -70,9 +73,9 @@ func main() {
 
 	eth1Data := beacon.Eth1Data{
 		DepositRoot: depositsRoot,
-		BlockHash:   beacon.Root{42}, // TODO eth1 simulation
+		BlockHash:   Root{42}, // TODO eth1 simulation
 	}
-	genesisState := beacon.GetGenesisBeaconState(deposits, genesisTime, eth1Data)
+	genesisState := genesis.GetGenesisBeaconState(deposits, genesisTime, eth1Data)
 
 	preState := genesisState
 
@@ -132,17 +135,17 @@ func SimulateBlock(state *beacon.BeaconState, rng *rand.Rand) (*beacon.BeaconBlo
 	block := &beacon.BeaconBlock{
 		Slot:              state.Slot + 1 + beacon.Slot(rng.Intn(5)),
 		PreviousBlockRoot: parentRoot,
-		StateRoot:         beacon.Root{},
+		StateRoot:         Root{},
 		Body: beacon.BeaconBlockBody{
-			RandaoReveal: beacon.BLSSignature{4, 2},
+			RandaoReveal: bls.BLSSignature{4, 2},
 			Eth1Data: beacon.Eth1Data{
-				DepositRoot: beacon.Root{0, 1, 3},
-				BlockHash:   beacon.Root{4, 5, 6},
+				DepositRoot: Root{0, 1, 3},
+				BlockHash:   Root{4, 5, 6},
 			},
 			// no transfers
 			// TODO simulate transfers
 		},
-		Signature: beacon.BLSSignature{1, 2, 3}, // TODO implement BLS
+		Signature: bls.BLSSignature{1, 2, 3}, // TODO implement BLS
 	}
 	// TODO: set randao reveal
 	// TODO: include eth1 data

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/util/bls"
+	. "github.com/protolambda/zrnt/eth2/util/data_types"
 	"github.com/protolambda/zrnt/eth2/util/hash"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
@@ -14,7 +15,7 @@ func ProcessBlockTransfers(state *beacon.BeaconState, block *beacon.BeaconBlock)
 		return errors.New("too many transfers")
 	}
 	// check if all transfers are distinct
-	distinctionCheckSet := make(map[beacon.BLSSignature]struct{})
+	distinctionCheckSet := make(map[bls.BLSSignature]struct{})
 	for i, v := range block.Body.Transfers {
 		if existing, ok := distinctionCheckSet[v.Signature]; ok {
 			return errors.New(fmt.Sprintf("transfer %d is the same as transfer %d, aborting", i, existing))
@@ -57,7 +58,7 @@ func ProcessTransfer(state *beacon.BeaconState, transfer *beacon.Transfer) error
 		return errors.New("transfer sender is not eligible to make a transfer, it has to be withdrawn, or yet to be activated")
 	}
 	// Verify that the pubkey is valid
-	withdrawCred := beacon.Root(hash.Hash(transfer.Pubkey[:]))
+	withdrawCred := Root(hash.Hash(transfer.Pubkey[:]))
 	// overwrite first byte, remainder (the [1:] part, is still the hash)
 	withdrawCred[0] = beacon.BLS_WITHDRAWAL_PREFIX_BYTE
 	if state.ValidatorRegistry[transfer.Sender].WithdrawalCredentials != withdrawCred {

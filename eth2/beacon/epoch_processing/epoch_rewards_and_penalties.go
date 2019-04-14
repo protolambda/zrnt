@@ -13,9 +13,8 @@ var deltaCalculators = []beacon.DeltasCalculator{
 
 func ProcessEpochRewardsAndPenalties(state *beacon.BeaconState) {
 	sum := beacon.NewDeltas(uint64(len(state.ValidatorRegistry)))
-	valuator := beacon.NewDefaultValuator(state)
 	for _, calc := range deltaCalculators {
-		sum.Add(calc(state, valuator))
+		sum.Add(calc(state))
 	}
 	state.ApplyDeltas(sum)
 }

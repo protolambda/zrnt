@@ -5,11 +5,6 @@ import (
 	"strings"
 )
 
-// Decodes a native map/slice structure into a Go version: names are formatted, and map keys are ensured to be strings.
-func DecodeSpecFormat(v interface{}) interface{} {
-	return decodeValue(v)
-}
-
 func decodeValue(v interface{}) interface{} {
 	switch tv := v.(type) {
 	case map[interface{}]interface{}:

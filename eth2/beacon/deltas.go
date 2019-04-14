@@ -26,3 +26,5 @@ func (deltas *Deltas) Add(other *Deltas) {
 		deltas.Penalties[i] += other.Penalties[i]
 	}
 }
+
+type DeltasCalculator func(state *BeaconState) *Deltas

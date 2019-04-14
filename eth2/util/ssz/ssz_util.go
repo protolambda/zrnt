@@ -2,13 +2,14 @@ package ssz
 
 import (
 	"encoding/binary"
+	. "github.com/protolambda/zrnt/eth2/util/data_types"
 	"github.com/protolambda/zrnt/eth2/util/merkle"
 	"reflect"
 )
 
 // constructs a merkle_root of the given struct (panics if it's not a struct, or a pointer to one),
 // but ignores any fields that are tagged with `ssz:"signature"`
-func SignedRoot(input interface{}) [32]byte {
+func SignedRoot(input interface{}) Root {
 	subRoots := make([][32]byte, 0)
 	v := reflect.ValueOf(input)
 	if v.Kind() == reflect.Ptr {
@@ -113,7 +114,7 @@ func sszSerialize(v reflect.Value, dst *[]byte) (encodedLen uint32) {
 	}
 }
 
-func HashTreeRoot(input interface{}) [32]byte {
+func HashTreeRoot(input interface{}) Root {
 	return sszHashTreeRoot(reflect.ValueOf(input))
 }
 
@@ -145,7 +146,7 @@ func isFixedLength(vt reflect.Type, merkleizing bool) bool {
 }
 
 // only call this for slices and arrays, not structs
-func varSizeListElementsRoot(v reflect.Value) [32]byte {
+func varSizeListElementsRoot(v reflect.Value) Root {
 	items := v.Len()
 	data := make([][32]byte, items)
 	for i := 0; i < items; i++ {
@@ -154,7 +155,7 @@ func varSizeListElementsRoot(v reflect.Value) [32]byte {
 	return merkle.MerkleRoot(data)
 }
 
-func varSizeStructElementsRoot(v reflect.Value) [32]byte {
+func varSizeStructElementsRoot(v reflect.Value) Root {
 	fields := v.NumField()
 	data := make([][32]byte, fields)
 	for i := 0; i < fields; i++ {
@@ -165,11 +166,11 @@ func varSizeStructElementsRoot(v reflect.Value) [32]byte {
 }
 
 // Compute hash tree root for a value
-func sszHashTreeRoot(v reflect.Value) [32]byte {
+func sszHashTreeRoot(v reflect.Value) Root {
 	switch v.Kind() {
 	case reflect.Ptr:
 		if v.IsNil() {
-			return [32]byte{}
+			return Root{}
 		}
 		return sszHashTreeRoot(v.Elem())
 	// "basic object? -> pack and merkle_root
@@ -225,7 +226,7 @@ func sszPack(input reflect.Value) [][32]byte {
 	return out
 }
 
-func sszMixInLength(data [32]byte, length uint64) [32]byte {
+func sszMixInLength(data [32]byte, length uint64) Root {
 	lengthInput := [32]byte{}
 	binary.LittleEndian.PutUint64(lengthInput[:], length)
 	return merkle.MerkleRoot([][32]byte{data, lengthInput})

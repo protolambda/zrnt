@@ -3,6 +3,7 @@ package block_processing
 import (
 	"errors"
 	"github.com/protolambda/zrnt/eth2/beacon"
+	. "github.com/protolambda/zrnt/eth2/util/data_types"
 )
 
 func ProcessBlockAttestations(state *beacon.BeaconState, block *beacon.BeaconBlock) error {
@@ -36,7 +37,7 @@ func ProcessAttestation(state *beacon.BeaconState, attestation *beacon.Attestati
 	}
 
 	// Check crosslink data
-	if attestation.Data.CrosslinkDataRoot == (beacon.Root{}) { //  # [to be removed in phase 1]
+	if attestation.Data.CrosslinkDataRoot == (Root{}) { //  # [to be removed in phase 1]
 		return errors.New("attestation cannot reference a crosslink root yet, processing as phase 0")
 	}
 	if !(

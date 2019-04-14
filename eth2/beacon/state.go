@@ -246,7 +246,7 @@ func (state *BeaconState) GetCrosslinkCommitteesAtSlot(slot Slot) []CrosslinkCom
 	return crosslinkCommittees
 }
 
-func (state *BeaconState) GetWinningRootAndParticipants(shard Shard) (Root, []ValidatorIndex) {
+func (state *BeaconState) GetWinningRootAndParticipants(shard Shard) (Root, ValidatorSet) {
 	weightedCrosslinks := make(map[Root]Gwei)
 
 	updateCrosslinkWeights := func(att *PendingAttestation) {
@@ -302,16 +302,14 @@ func (state *BeaconState) GetWinningRootAndParticipants(shard Shard) (Root, []Va
 	for i := 0; i < len(state.CurrentEpochAttestations); i++ {
 		findWinners(&state.CurrentEpochAttestations[i])
 	}
-	winningAttesters := make([]ValidatorIndex, len(winningAttestersSet))
+	winningAttesters := make(ValidatorSet, len(winningAttestersSet))
 	i := 0
 	for attester := range winningAttestersSet {
 		winningAttesters[i] = attester
 		i++
 	}
-	// Spec returns it in sorted order, although not strictly necessary (TODO)
-	sort.Slice(winningAttesters, func(i int, j int) bool {
-		return winningAttesters[i] < winningAttesters[j]
-	})
+	// Needs to be sorted, for efficiency and consistency
+	sort.Sort(winningAttesters)
 
 	return winningRoot, winningAttesters
 }
@@ -380,7 +378,7 @@ func (state *BeaconState) GetCrosslinkCommitteeForAttestation(attestationData *A
 }
 
 // Return the participant indices at for the attestation_data and bitfield
-func (state *BeaconState) GetAttestationParticipants(attestationData *AttestationData, bitfield *bitfield.Bitfield) ([]ValidatorIndex, error) {
+func (state *BeaconState) GetAttestationParticipants(attestationData *AttestationData, bitfield *bitfield.Bitfield) (ValidatorSet, error) {
 	// Find the committee in the list with the desired shard
 	crosslinkCommittee := state.GetCrosslinkCommitteeForAttestation(attestationData)
 
@@ -392,13 +390,13 @@ func (state *BeaconState) GetAttestationParticipants(attestationData *Attestatio
 	}
 
 	// Find the participating attesters in the committee
-	participants := make([]ValidatorIndex, 0)
+	participants := make(ValidatorSet, 0)
 	for i, vIndex := range crosslinkCommittee {
 		if bitfield.GetBit(uint64(i)) == 1 {
 			participants = append(participants, vIndex)
 		}
 	}
-	// TODO: spec returns participants in sorted order, not strictly necessary
+	sort.Sort(participants)
 	return participants, nil
 }
 
@@ -486,7 +484,10 @@ func (state *BeaconState) ConvertToIndexed(attestation *Attestation) (*IndexedAt
 	if err != nil {
 		return nil, errors.New("participants could not be derived from custody_bitfield")
 	}
-	_, custodyBit0Indices := FindInAndOutValidators(participants, custodyBit1Indices)
+	custodyBit0Indices := make([]ValidatorIndex, 0, len(participants) - len(custodyBit1Indices))
+	participants.ZigZagJoin(custodyBit1Indices, nil, func(i ValidatorIndex) {
+		custodyBit0Indices = append(custodyBit0Indices, i)
+	})
 	return &IndexedAttestation{
 		CustodyBit0Indexes: custodyBit0Indices,
 		CustodyBit1Indexes: custodyBit1Indices,

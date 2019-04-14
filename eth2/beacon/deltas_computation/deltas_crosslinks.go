@@ -2,10 +2,17 @@ package deltas_computation
 
 import (
 	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/util/math"
+	"sort"
 )
 
-func DeltasCrosslinks(state *beacon.BeaconState, v beacon.Valuator) *beacon.Deltas {
+func DeltasCrosslinks(state *beacon.BeaconState) *beacon.Deltas {
 	deltas := beacon.NewDeltas(uint64(len(state.ValidatorRegistry)))
+
+	previousTotalBalance := state.GetTotalBalanceOf(
+		state.ValidatorRegistry.GetActiveValidatorIndices(state.Epoch() - 1))
+
+	adjustedQuotient := math.IntegerSquareroot(uint64(previousTotalBalance)) / beacon.BASE_REWARD_QUOTIENT
 
 	// From previous epoch start, to current epoch start
 	start := state.PreviousEpoch().GetStartSlot()
@@ -15,13 +22,27 @@ func DeltasCrosslinks(state *beacon.BeaconState, v beacon.Valuator) *beacon.Delt
 			_, participants := state.GetWinningRootAndParticipants(shardCommittee.Shard)
 			participatingBalance := state.GetTotalBalanceOf(participants)
 			totalBalance := state.GetTotalBalanceOf(shardCommittee.Committee)
-			in, out := beacon.FindInAndOutValidators(shardCommittee.Committee, participants)
-			for _, i := range in {
-				deltas.Rewards[i] = v.GetBaseReward(i) * participatingBalance / totalBalance
-			}
-			for _, i := range out {
-				deltas.Rewards[i] = v.GetBaseReward(i)
-			}
+
+			committee := make(beacon.ValidatorSet, 0, len(shardCommittee.Committee))
+			committee = append(committee, shardCommittee.Committee...)
+			sort.Sort(committee)
+
+			// reward/penalize using a zig-zag merge join.
+			// ----------------------------------------------------
+			committee.ZigZagJoin(participants,
+				func(i beacon.ValidatorIndex) {
+					// Committee member participated, reward them
+					effectiveBalance := state.GetEffectiveBalance(i)
+					baseReward := effectiveBalance / beacon.Gwei(adjustedQuotient) / 5
+
+					deltas.Rewards[i] += baseReward * participatingBalance / totalBalance
+				}, func(i beacon.ValidatorIndex) {
+					// Committee member did not participate, penalize them
+					effectiveBalance := state.GetEffectiveBalance(i)
+					baseReward := effectiveBalance / beacon.Gwei(adjustedQuotient) / 5
+
+					deltas.Penalties[i] += baseReward
+				})
 		}
 	}
 	return deltas

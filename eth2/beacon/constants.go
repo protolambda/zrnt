@@ -78,5 +78,6 @@ const (
 	DOMAIN_TRANSFER
 )
 
-// Custom constant, not in spec: An impossible validator index used to mark special internal cases. (all 1s binary)
+// Custom constant, not in spec:
+// An impossible high validator index used to mark special internal cases. (all 1s binary)
 const ValidatorIndexMarker = ValidatorIndex(^uint64(0))

@@ -41,23 +41,25 @@ func ProcessAttesterSlashing(state *beacon.BeaconState, attesterSlashing *beacon
 	slashedAny := false
 
 	// indices are trusted (valid range), they have been verified by verify_slashable_attestation(...)
-	indices1 := make([]beacon.ValidatorIndex, 0, len(sa1.CustodyBit0Indexes) + len(sa1.CustodyBit1Indexes))
+	indices1 := make(beacon.ValidatorSet, 0, len(sa1.CustodyBit0Indexes) + len(sa1.CustodyBit1Indexes))
 	indices1 = append(indices1, sa1.CustodyBit0Indexes...)
 	indices1 = append(indices1, sa1.CustodyBit1Indexes...)
-	indices2 := make([]beacon.ValidatorIndex, 0, len(sa2.CustodyBit0Indexes) + len(sa2.CustodyBit1Indexes))
+	indices2 := make(beacon.ValidatorSet, 0, len(sa2.CustodyBit0Indexes) + len(sa2.CustodyBit1Indexes))
 	indices2 = append(indices1, sa2.CustodyBit0Indexes...)
 	indices2 = append(indices1, sa2.CustodyBit1Indexes...)
 
 	// run slashings where applicable
-	intersection, _ := beacon.FindInAndOutValidators(indices1, indices2)
-	for _, v := range intersection {
-		if !state.ValidatorRegistry[v].Slashed {
-			if err := state.SlashValidator(v); err != nil {
-				return err
+	var anyErr error
+	indices1.ZigZagJoin(indices2, func(i beacon.ValidatorIndex) {
+		if !state.ValidatorRegistry[i].Slashed {
+			if err := state.SlashValidator(i); err != nil {
+				anyErr = err
 			}
 			slashedAny = true
-			continue
 		}
+	}, nil)
+	if anyErr != nil {
+		return anyErr
 	}
 	// "Verify that len(slashable_indices) >= 1."
 	if !slashedAny {

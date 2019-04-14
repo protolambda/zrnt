@@ -20,7 +20,7 @@ func ProcessEpochCrosslinks(state *beacon.BeaconState) {
 			totalBalance := state.GetTotalBalanceOf(shardCommittee.Committee)
 			if 3*participatingBalance >= 2*totalBalance {
 				epoch := slot.ToEpoch()
-				if alt := state.LatestCrosslinks[shardCommittee.Shard].Epoch + beacon.MAX_CROSSLINKS_EPOCHS; alt < epoch {
+				if alt := state.LatestCrosslinks[shardCommittee.Shard].Epoch + beacon.MAX_CROSSLINK_EPOCHS; alt < epoch {
 					epoch = alt
 				}
 				state.LatestCrosslinks[shardCommittee.Shard] = beacon.Crosslink{

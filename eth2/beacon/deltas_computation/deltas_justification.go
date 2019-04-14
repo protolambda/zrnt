@@ -143,7 +143,7 @@ func DeltasJustificationAndFinalizationDeltas(state *beacon.BeaconState, v beaco
 			continue
 		}
 		proposerIndex := state.GetBeaconProposerIndex(inclSlot)
-		deltas.Rewards[proposerIndex] += v.GetBaseReward(vIndex) / beacon.ATTESTATION_INCLUSION_REWARD_QUOTIENT
+		deltas.Rewards[proposerIndex] += v.GetBaseReward(vIndex) / beacon.PROPOSER_REWARD_QUOTIENT
 	}
 
 	if v.IsNotFinalizing() {

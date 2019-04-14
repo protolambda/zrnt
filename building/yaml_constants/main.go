@@ -14,19 +14,15 @@ import (
 	"text/template"
 )
 
-type PresetEntry struct {
-	Key string
-	Value string
-}
-
 type ContstantsPreset struct {
 	Name string
-	Entries []PresetEntry
+	Entries []string
 }
 
 func main() {
-	var presetsDirPath string
-	flag.StringVar(&presetsDirPath, "path", "", "The file path to the directory containing yaml constant presets")
+	var presetsDirPath, outputDirPath string
+	flag.StringVar(&presetsDirPath, "presets-dir", "", "The file path to the directory containing yaml constant presets")
+	flag.StringVar(&outputDirPath, "output-dir", "", "The file path to the directory to output generated Go code to")
 	flag.Parse()
 
 	templ := template.Must(template.New("constants_file").Parse(constantsFileTemplate))
@@ -36,28 +32,33 @@ func main() {
 			log.Fatal(err)
 		}
 
+		fmt.Println("processing preset file", path)
+
 		extension := filepath.Ext(path)
 		if extension != ".yaml" {
-			return filepath.SkipDir
+			return nil
 		}
 
 		presetName := filepath.Base(path)
 		presetName = presetName[:len(presetName)-len(".yaml")]
 
+		fmt.Println("processing preset", presetName)
+
 		yamlBytes, err := ioutil.ReadFile(path)
 		rawPreset := make(map[string]interface{})
-		if err := yaml.Unmarshal(yamlBytes, yamlBytes); err != nil {
+		if err := yaml.Unmarshal(yamlBytes, &rawPreset); err != nil {
 			return err
 		}
 
 		preset := ContstantsPreset{
 			Name: presetName,
-			Entries: make([]PresetEntry, 0, len(rawPreset)),
+			Entries: make([]string, 0, len(rawPreset)),
 		}
 		for k, v := range rawPreset {
 			formattedValue := ""
+			formattedStart := "const " + k + " = "
 			if strV, ok := v.(string); ok {
-				if intV, err := strconv.ParseInt(strV, 0, 64); err != nil {
+				if intV, err := strconv.ParseInt(strV, 0, 64); err == nil {
 					formattedValue = fmt.Sprintf("%d", intV)
 				} else if strings.HasPrefix(strV, "0x") {
 					strNibbles := strV[2:]
@@ -73,6 +74,8 @@ func main() {
 						}
 					}
 					formattedValue += "}"
+					// arrays cannot be constants
+					formattedStart = "var " + k + " = "
 				} else {
 					return errors.New(fmt.Sprintf("could not convert string formatted value in %s, key: %s, value: %s", presetName, k, strV))
 				}
@@ -86,14 +89,12 @@ func main() {
 				}
 			}
 
-			preset.Entries = append(preset.Entries, PresetEntry{
-				Key: k,
-				Value: formattedValue,
-			})
+			preset.Entries = append(preset.Entries, formattedStart + formattedValue)
 		}
 
-		// TODO
-		f, err := os.Create(filepath.Join("todo", presetName + ".go"))
+		outPath := filepath.Join(outputDirPath, presetName + ".go")
+		fmt.Printf("writing constants preset %s to %s\n", presetName, outPath)
+		f, err := os.Create(outPath)
 		if err != nil {
 			return err
 		}
@@ -108,13 +109,11 @@ func main() {
 
 }
 
-var constantsFileTemplate = `
-// +build preset_{{.Name}}
+var constantsFileTemplate = `// +build preset_{{.Name}}
 
 package constant_presets
 
-// TODO iterate entries
-
-const {{.Key}} = {{.Value}}
-
+{{ range .Entries }}
+{{.}}
+{{ end }}
 `

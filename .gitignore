@@ -13,3 +13,5 @@
 *.out
 
 debug_out
+
+yaml_constants/*.go

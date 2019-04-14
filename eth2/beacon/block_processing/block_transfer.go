@@ -43,6 +43,9 @@ func ProcessTransfer(state *beacon.BeaconState, transfer *beacon.Transfer) error
 		senderBalance >= transfer.Amount + transfer.Fee + beacon.MIN_DEPOSIT_AMOUNT) {
 		return errors.New("transfer value is invalid, results in non-zero balance, but insufficient to stake with")
 	}
+	if transfer.Sender == transfer.Recipient {
+		return errors.New("no self-transfers (to enforce >= MIN_DEPOSIT_AMOUNT or zero balance invariant)")
+	}
 	// A transfer is valid in only one slot
 	// (note: combined with unique transfers in a block, this functions as replay protection)
 	if state.Slot != transfer.Slot {

@@ -3,10 +3,10 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/protolambda/zrnt/debug/util/debug_format"
 	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/beacon/genesis"
 	"github.com/protolambda/zrnt/eth2/beacon/transition"
-	"github.com/protolambda/zrnt/eth2/util/debug_format"
 	"github.com/protolambda/zrnt/eth2/util/hash"
 	"github.com/protolambda/zrnt/eth2/util/math"
 	"github.com/protolambda/zrnt/eth2/util/merkle"
@@ -46,17 +46,14 @@ func main() {
 		dep := beacon.Deposit{
 			Proof: [beacon.DEPOSIT_CONTRACT_TREE_DEPTH][32]byte{},
 			Index: beacon.DepositIndex(i),
-			DepositData: beacon.DepositData{
+			Data: beacon.DepositData{
+				Pubkey:                pubKey,
+				WithdrawalCredentials: withdrawCreds,
 				Amount:    beacon.Gwei(100),
-				Timestamp: genesisTime - 100,
-				DepositInput: beacon.DepositInput{
-					Pubkey:                pubKey,
-					WithdrawalCredentials: withdrawCreds,
-					ProofOfPossession:     beacon.BLSSignature{1, 2, 3}, // BLS not yet implemented
-				},
+				ProofOfPossession:     beacon.BLSSignature{1, 2, 3}, // BLS not yet implemented
 			},
 		}
-		depLeafHash := hash.Hash(dep.DepositData.Serialized())
+		depLeafHash := hash.Hash(dep.Data.Serialized())
 		deposits = append(deposits, dep)
 		depRoots = append(depRoots, depLeafHash)
 	}

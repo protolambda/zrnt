@@ -41,9 +41,9 @@ func ProcessAttestation(state *beacon.BeaconState, attestation *beacon.Attestati
 	}
 	if !(
 	// Case 1: latest crosslink matches previous crosslink
-		state.LatestCrosslinks[attestation.Data.Shard] == attestation.Data.PreviousCrosslink ||
+	state.LatestCrosslinks[attestation.Data.Shard] == attestation.Data.PreviousCrosslink ||
 		// Case 2: latest crosslink matches current crosslink
-			state.LatestCrosslinks[attestation.Data.Shard] == beacon.Crosslink{CrosslinkDataRoot: attestation.Data.CrosslinkDataRoot, Epoch: attestation.Data.Slot.ToEpoch()}) {
+		state.LatestCrosslinks[attestation.Data.Shard] == beacon.Crosslink{CrosslinkDataRoot: attestation.Data.CrosslinkDataRoot, Epoch: attestation.Data.Slot.ToEpoch()}) {
 		return errors.New("attestation crosslinking invalid")
 	}
 
@@ -64,7 +64,7 @@ func ProcessAttestation(state *beacon.BeaconState, attestation *beacon.Attestati
 	if targetEpoch == state.Epoch() {
 		state.CurrentEpochAttestations = append(state.CurrentEpochAttestations, pendingAttestation)
 	} else {
-		state.PreviousEpochAttestations = append(state.CurrentEpochAttestations, pendingAttestation)
+		state.PreviousEpochAttestations = append(state.PreviousEpochAttestations, pendingAttestation)
 	}
 	return nil
 }

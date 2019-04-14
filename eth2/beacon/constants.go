@@ -1,9 +1,9 @@
-//go:generate go run ../../building/yaml_constants/main.go --presets-dir=../../../eth2.0-specs/configs/constant_presets --output-dir=../../yaml_constants/
+//go:generate go run ../../building/yaml_constants/main.go --presets-dir=../../../eth2.0-specs/configs/constant_presets --output-dir=../../constant_presets/
 
 package beacon
 
 import (
-	"github.com/protolambda/zrnt/yaml_constants"
+	"github.com/protolambda/zrnt/constant_presets"
 )
 
 // Misc.

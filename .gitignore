@@ -14,4 +14,4 @@
 
 debug_out
 
-yaml_constants/*.go
+constant_presets/*.go

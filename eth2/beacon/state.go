@@ -408,7 +408,7 @@ func (state *BeaconState) SlashValidator(index ValidatorIndex) error {
 	state.ExitValidator(index)
 	state.LatestSlashedBalances[state.Epoch()%LATEST_SLASHED_EXIT_LENGTH] += state.GetEffectiveBalance(index)
 
-	whistleblowerReward := state.GetEffectiveBalance(index) / WHISTLEBLOWER_REWARD_QUOTIENT
+	whistleblowerReward := state.GetEffectiveBalance(index) / WHISTLEBLOWING_REWARD_QUOTIENT
 	propIndex := state.GetBeaconProposerIndex(state.Slot)
 	state.IncreaseBalance(propIndex, whistleblowerReward)
 	state.DecreaseBalance(index, whistleblowerReward)

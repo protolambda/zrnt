@@ -1,70 +1,76 @@
+//go:generate go run ../../building/yaml_constants/main.go --presets-dir=../../../eth2.0-specs/configs/constant_presets --output-dir=../../constant_presets/
+
 package beacon
 
+import (
+	"github.com/protolambda/zrnt/constant_presets"
+)
+
 // Misc.
-const SHARD_COUNT Shard = 1 << 10            // =  1,024
-const TARGET_COMMITTEE_SIZE = 1 << 7         // =  128
-const MAX_BALANCE_CHURN_QUOTIENT = 1 << 5    // =  32
-const MAX_ATTESTATION_PARTICIPANTS = 1 << 12 // =  4,096
-const MAX_EXIT_DEQUEUES_PER_EPOCH = 1 << 2   // =  4
-const SHUFFLE_ROUND_COUNT = 90
+const SHARD_COUNT Shard = constant_presets.SHARD_COUNT
+const TARGET_COMMITTEE_SIZE = constant_presets.TARGET_COMMITTEE_SIZE
+const MAX_BALANCE_CHURN_QUOTIENT = constant_presets.MAX_BALANCE_CHURN_QUOTIENT
+const MAX_ATTESTATION_PARTICIPANTS = constant_presets.MAX_ATTESTATION_PARTICIPANTS
+const MAX_EXIT_DEQUEUES_PER_EPOCH = constant_presets.MAX_EXIT_DEQUEUES_PER_EPOCH
+const SHUFFLE_ROUND_COUNT = constant_presets.SHUFFLE_ROUND_COUNT
 
 // Deposit contract
-const DEPOSIT_CONTRACT_TREE_DEPTH = 1 << 5 // =  32
+const DEPOSIT_CONTRACT_TREE_DEPTH = constant_presets.DEPOSIT_CONTRACT_TREE_DEPTH
 
 // Gwei values
-const MIN_DEPOSIT_AMOUNT Gwei = (1 << 0) * 1000000000 // =  1,000,000,000  Gwei
-const MAX_DEPOSIT_AMOUNT Gwei = (1 << 5) * 1000000000 // =  32,000,000,000  Gwei
-// unused const FORK_CHOICE_BALANCE_INCREMENT Gwei = (1 << 0) * MILLION_GWEI // =  1,000,000,000  Gwei
-const EJECTION_BALANCE Gwei = (1 << 4) * 1000000000 // =  16,000,000,000  Gwei
+const MIN_DEPOSIT_AMOUNT Gwei = constant_presets.MIN_DEPOSIT_AMOUNT
+const MAX_DEPOSIT_AMOUNT Gwei = constant_presets.MAX_DEPOSIT_AMOUNT
+// unused const FORK_CHOICE_BALANCE_INCREMENT Gwei = constant_presets.FORK_CHOICE_BALANCE_INCREMENT
+const EJECTION_BALANCE Gwei = constant_presets.EJECTION_BALANCE
 
-const HIGH_BALANCE_INCREMENT Gwei = 1000000000 // =  1,000,000,000  Gwei
-const HALF_INCREMENT = HIGH_BALANCE_INCREMENT / 2
+const HIGH_BALANCE_INCREMENT Gwei = constant_presets.HIGH_BALANCE_INCREMENT
+const HALF_INCREMENT = constant_presets.HIGH_BALANCE_INCREMENT / 2
 
 // Initial values
-const GENESIS_SLOT Slot = 1 << 32
-const GENESIS_START_SHARD Shard = 0
-const GENESIS_FORK_VERSION uint32 = 0
+const GENESIS_SLOT Slot = constant_presets.GENESIS_SLOT
+const GENESIS_START_SHARD Shard = constant_presets.GENESIS_START_SHARD
+const GENESIS_FORK_VERSION uint32 = constant_presets.GENESIS_FORK_VERSION
 const GENESIS_EPOCH = Epoch(GENESIS_SLOT / SLOTS_PER_EPOCH)
 
-const FAR_FUTURE_EPOCH Epoch = 1<<64 - 1
+const FAR_FUTURE_EPOCH Epoch = constant_presets.FAR_FUTURE_EPOCH
 
-const BLS_WITHDRAWAL_PREFIX_BYTE byte = 0
+const BLS_WITHDRAWAL_PREFIX_BYTE byte = constant_presets.BLS_WITHDRAWAL_PREFIX_BYTE
 
 // Time parameters
-// unused const SECONDS_PER_SLOT Seconds = 6                       //  seconds  6 seconds
-const MIN_ATTESTATION_INCLUSION_DELAY Slot = 1 << 2      // =  4  slots  24 seconds
-const SLOTS_PER_EPOCH Slot = 1 << 6                      // =  64  slots  6.4 minutes
-const MIN_SEED_LOOKAHEAD Epoch = 1 << 0                  // =  1  epochs  6.4 minutes
-const ACTIVATION_EXIT_DELAY Epoch = 1 << 2               // =  4  epochs  25.6 minutes
-const EPOCHS_PER_ETH1_VOTING_PERIOD Epoch = 1 << 4       // =  16  epochs  ~1.7 hours
-const MIN_VALIDATOR_WITHDRAWABILITY_DELAY Epoch = 1 << 8 // =  256  epochs  ~27 hours
-const PERSISTENT_COMMITTEE_PERIOD Epoch = 1 << 11        // =  2048  epochs  ~9 days
-const MAX_CROSSLINKS_EPOCHS Epoch = 1 << 6               // =  64. Should be a small constant times `SHARD_COUNT / SLOTS_PER_EPOCH`
+// unused const SECONDS_PER_SLOT Seconds = constant_presets.SECONDS_PER_SLOT
+const MIN_ATTESTATION_INCLUSION_DELAY Slot = constant_presets.MIN_ATTESTATION_INCLUSION_DELAY
+const SLOTS_PER_EPOCH Slot = constant_presets.SLOTS_PER_EPOCH
+const MIN_SEED_LOOKAHEAD Epoch = constant_presets.MIN_SEED_LOOKAHEAD
+const ACTIVATION_EXIT_DELAY Epoch = constant_presets.ACTIVATION_EXIT_DELAY
+const EPOCHS_PER_ETH1_VOTING_PERIOD Epoch = constant_presets.EPOCHS_PER_ETH1_VOTING_PERIOD
+const MIN_VALIDATOR_WITHDRAWABILITY_DELAY Epoch = constant_presets.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
+const PERSISTENT_COMMITTEE_PERIOD Epoch = constant_presets.PERSISTENT_COMMITTEE_PERIOD
+const MAX_CROSSLINK_EPOCHS Epoch = constant_presets.MAX_CROSSLINK_EPOCHS
 
 // State list lengths
-const SLOTS_PER_HISTORICAL_ROOT Slot = 1 << 13         // =  8,192  slots  ~13 hours
-const LATEST_RANDAO_MIXES_LENGTH Epoch = 1 << 13       // =  8,192  epochs  ~36 days
-const LATEST_ACTIVE_INDEX_ROOTS_LENGTH Epoch = 1 << 13 // =  8,192  epochs  ~36 days
-const LATEST_SLASHED_EXIT_LENGTH Epoch = 1 << 13       // =  8,192  epochs  ~36 days
+const SLOTS_PER_HISTORICAL_ROOT Slot = constant_presets.SLOTS_PER_HISTORICAL_ROOT
+const LATEST_RANDAO_MIXES_LENGTH Epoch = constant_presets.LATEST_RANDAO_MIXES_LENGTH
+const LATEST_ACTIVE_INDEX_ROOTS_LENGTH Epoch = constant_presets.LATEST_ACTIVE_INDEX_ROOTS_LENGTH
+const LATEST_SLASHED_EXIT_LENGTH Epoch = constant_presets.LATEST_SLASHED_EXIT_LENGTH
 
 // Reward and penalty quotients
-const BASE_REWARD_QUOTIENT = 1 << 5                  // =  32
-const WHISTLEBLOWER_REWARD_QUOTIENT = 1 << 9         // =  512
-const ATTESTATION_INCLUSION_REWARD_QUOTIENT = 1 << 3 // =  8
-const INACTIVITY_PENALTY_QUOTIENT = 1 << 24          // =  16,777,216
-const MIN_PENALTY_QUOTIENT = 1 << 5                  // =  32
+const BASE_REWARD_QUOTIENT = constant_presets.BASE_REWARD_QUOTIENT
+const WHISTLEBLOWING_REWARD_QUOTIENT = constant_presets.WHISTLEBLOWING_REWARD_QUOTIENT
+const PROPOSER_REWARD_QUOTIENT = constant_presets.PROPOSER_REWARD_QUOTIENT
+const INACTIVITY_PENALTY_QUOTIENT = constant_presets.INACTIVITY_PENALTY_QUOTIENT
+const MIN_PENALTY_QUOTIENT = constant_presets.MIN_PENALTY_QUOTIENT
 
 // Max transactions per block
-const MAX_PROPOSER_SLASHINGS = 1 << 4 // =  16
-const MAX_ATTESTER_SLASHINGS = 1 << 0 // =  1
-const MAX_ATTESTATIONS = 1 << 7       // =  128
-const MAX_DEPOSITS = 1 << 4           // =  16
-const MAX_VOLUNTARY_EXITS = 1 << 4    // =  16
-const MAX_TRANSFERS = 1 << 4          // =  16
+const MAX_PROPOSER_SLASHINGS = constant_presets.MAX_PROPOSER_SLASHINGS
+const MAX_ATTESTER_SLASHINGS = constant_presets.MAX_ATTESTER_SLASHINGS
+const MAX_ATTESTATIONS = constant_presets.MAX_ATTESTATIONS
+const MAX_DEPOSITS = constant_presets.MAX_DEPOSITS
+const MAX_VOLUNTARY_EXITS = constant_presets.MAX_VOLUNTARY_EXITS
+const MAX_TRANSFERS = constant_presets.MAX_TRANSFERS
 
 // Signature domains
 const (
-	DOMAIN_BEACON_BLOCK BLSDomain = iota
+	DOMAIN_BEACON_BLOCK BLSDomain = constant_presets.DOMAIN_BEACON_BLOCK
 	DOMAIN_RANDAO
 	DOMAIN_ATTESTATION
 	DOMAIN_DEPOSIT

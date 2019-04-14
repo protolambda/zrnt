@@ -13,3 +13,5 @@
 *.out
 
 debug_out
+
+constant_presets/*.go

@@ -2,7 +2,6 @@ package beacon
 
 import (
 	"crypto/sha256"
-	"encoding/binary"
 	"github.com/protolambda/eth2-shuffle"
 	"github.com/protolambda/zrnt/eth2/util/bitfield"
 	"github.com/protolambda/zrnt/eth2/util/bls"
@@ -112,11 +111,7 @@ type DepositData struct {
 // This should match deposit_data in the Ethereum 1.0 deposit contract
 //  of which the hash was placed into the Merkle tree.
 func (d *DepositData) Serialized() []byte {
-	depInputBytes := ssz.SSZEncode(d)
-	serializedDepositData := make([]byte, 8+8+len(depInputBytes), 8+8+len(depInputBytes))
-	binary.LittleEndian.PutUint64(serializedDepositData[0:8], uint64(d.Amount))
-	copy(serializedDepositData[8:], depInputBytes)
-	return serializedDepositData
+	return ssz.SSZEncode(d)
 }
 
 type VoluntaryExit struct {
@@ -187,9 +182,9 @@ type PendingAttestation struct {
 // (bytes not necessarily corresponding to versions)
 type ForkVersion [4]byte
 
-func (v ForkVersion) MarshalJSON() ([]byte, error)    { return hex.EncodeHex(v[:]) }
-func (v ForkVersion) UnmarshalJSON(data []byte) error { return hex.DecodeHex(data[1:len(data)-1], v[:]) }
-func (v ForkVersion) String() string                  { return hex.EncodeHexStr(v[:]) }
+func (v *ForkVersion) MarshalJSON() ([]byte, error)    { return hex.EncodeHex((*v)[:]) }
+func (v *ForkVersion) UnmarshalJSON(data []byte) error { return hex.DecodeHex(data[1:len(data)-1], (*v)[:]) }
+func (v *ForkVersion) String() string                  { return hex.EncodeHexStr((*v)[:]) }
 
 func Int32ToForkVersion(v uint32) ForkVersion {
 	return [4]byte{byte(v >> 24), byte(v >> 16), byte(v >> 8), byte(v)}

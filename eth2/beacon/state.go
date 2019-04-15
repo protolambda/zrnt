@@ -454,7 +454,7 @@ func (state *BeaconState) GetBalance(index ValidatorIndex) Gwei {
 // Set the balance for a validator with the given ``index`` in both ``BeaconState``
 //  and validator's rounded balance ``high_balance``.
 func (state *BeaconState) SetBalance(index ValidatorIndex, balance Gwei) {
-	validator := state.ValidatorRegistry[index]
+	validator := &state.ValidatorRegistry[index]
 	if validator.HighBalance > balance || validator.HighBalance+3*HALF_INCREMENT < balance {
 		validator.HighBalance = balance - (balance % HIGH_BALANCE_INCREMENT)
 	}

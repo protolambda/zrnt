@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"github.com/protolambda/zrnt/eth2/util/bls"
+	"strconv"
 )
 
 // Beacon misc.
@@ -9,6 +10,11 @@ import (
 
 type Shard uint64
 type ValidatorIndex uint64
+
+func (i ValidatorIndex) String() string {
+	return strconv.FormatInt(int64(i), 10)
+}
+
 type DepositIndex uint64
 
 // Beacon timing

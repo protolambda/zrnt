@@ -20,7 +20,8 @@ func (testCase *DepositTestCase) Run(t *testing.T) {
 	err := block_processing.ProcessDeposit(testCase.Pre, testCase.Deposit)
 	if testCase.Post == nil {
 		if err != nil {
-			t.Logf("deposit expectedly errored: %s, err: %v", testCase.Description, err)
+			// expected error, test passes
+			return
 		} else {
 			t.Fatalf("deposit should have thrown an error: %s", testCase.Description)
 		}

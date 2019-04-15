@@ -70,8 +70,7 @@ func ProcessDeposit(state *beacon.BeaconState, dep *beacon.Deposit) error {
 			ssz.SignedRoot(dep.Data),
 			dep.Data.ProofOfPossession,
 			beacon.GetDomain(state.Fork, state.Epoch(), beacon.DOMAIN_DEPOSIT)) {
-			// simply don't handle the deposit.
-			return nil
+			return errors.New("could not verify BLS signature")
 		}
 
 		// Not a known pubkey, add new validator
@@ -88,8 +87,10 @@ func ProcessDeposit(state *beacon.BeaconState, dep *beacon.Deposit) error {
 		// Note: In phase 2 registry indices that have been withdrawn for a long time will be recycled.
 		state.ValidatorRegistry = append(state.ValidatorRegistry, validator)
 		state.Balances = append(state.Balances, 0)
-		valIndex = beacon.ValidatorIndex(len(state.ValidatorRegistry) - 1)
-		state.SetBalance(valIndex, dep.Data.Amount)
+		x := beacon.ValidatorIndex(len(state.ValidatorRegistry) - 1)
+		xStr := x.String()
+		fmt.Println(xStr)
+		state.SetBalance(x, dep.Data.Amount)
 	} else {
 		// Increase balance by deposit amount
 		state.IncreaseBalance(valIndex, dep.Data.Amount)

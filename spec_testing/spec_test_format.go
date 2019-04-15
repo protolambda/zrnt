@@ -7,6 +7,8 @@ import (
 
 func decodeValue(v interface{}) interface{} {
 	switch tv := v.(type) {
+	case map[string]interface{}:
+		return decodeStrKeyMap(tv)
 	case map[interface{}]interface{}:
 		return decodeMap(tv)
 	case []interface{}:
@@ -36,6 +38,14 @@ func decodeList(v []interface{}) []interface{} {
 	out := make([]interface{}, 0, items)
 	for i := 0; i < items; i++ {
 		out = append(out, decodeValue(v[i]))
+	}
+	return out
+}
+
+func decodeStrKeyMap(v map[string]interface{}) map[string]interface{} {
+	out := make(map[string]interface{})
+	for k, v := range v {
+		out[toPascalCase(k)] = decodeValue(v)
 	}
 	return out
 }

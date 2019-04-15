@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/protolambda/zrnt/constant_presets"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"log"
@@ -46,7 +47,7 @@ type TestCasesHolder struct {
 }
 
 func (holder *TestCasesHolder) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var rawCases []interface{}
+	rawCases := make([]interface{}, 0)
 	// read raw YAML into parsed but untyped structure
 	if err := unmarshal(&rawCases); err != nil {
 		return err
@@ -90,11 +91,9 @@ func LoadSuite(path string, caseAlloc CaseAllocator) (*TestSuite, error) {
 }
 
 func (suite *TestSuite) Run(t *testing.T) {
-	testRunTitle := fmt.Sprintf("%s > %s ~ %s [%d cases]",
-		suite.Runner, suite.Handler, suite.Title, len(suite.TestCases.Cases))
-	t.Run(testRunTitle, func(t *testing.T) {
+	t.Run(suite.Title, func(t *testing.T) {
 		for i, testCase := range suite.TestCases.Cases {
-			t.Run(testRunTitle + fmt.Sprintf(" case #%d", i), func(t *testing.T) {
+			t.Run(fmt.Sprintf("case #%d", i), func(t *testing.T) {
 				testCase.Run(t)
 			})
 		}
@@ -126,6 +125,10 @@ func RunSuitesInPath(path string, caseAlloc CaseAllocator, t *testing.T) {
 
 	for _, path := range suitePaths {
 		suite, err := LoadSuite(path, caseAlloc)
+		// skip test-suites with different configurations
+		if suite.Config != constant_presets.CONFIG {
+			continue
+		}
 		if err != nil {
 			t.Error(err)
 		}

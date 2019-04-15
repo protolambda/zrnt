@@ -8,12 +8,11 @@ import (
 	"testing"
 )
 
-
 type DepositTestCase struct {
 	Description string
-	Pre *beacon.BeaconState
-	Deposit *beacon.Deposit
-	Post *beacon.BeaconState
+	Pre         *beacon.BeaconState
+	Deposit     *beacon.Deposit
+	Post        *beacon.BeaconState
 }
 
 func (testCase *DepositTestCase) Run(t *testing.T) {
@@ -38,8 +37,6 @@ func (testCase *DepositTestCase) Run(t *testing.T) {
 }
 
 func TestDeposits(t *testing.T) {
-	spec_testing.RunSuitesInPath("../../../eth2.0-specs/yaml_tests/operations/deposits/", func() interface{} {
-		dep := new(DepositTestCase)
-		return dep
-	}, t)
+	spec_testing.RunSuitesInPath("../../../eth2.0-specs/yaml_tests/operations/deposits/",
+		func() interface{} { return new(DepositTestCase) }, t)
 }

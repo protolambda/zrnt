@@ -2,31 +2,39 @@ package ssz
 
 import (
 	"encoding/binary"
-	. "github.com/protolambda/zrnt/eth2/util/data_types"
 	"github.com/protolambda/zrnt/eth2/util/merkle"
 	"reflect"
+	"strings"
 )
 
-// constructs a merkle_root of the given struct (panics if it's not a struct, or a pointer to one),
-// but ignores any fields that are tagged with `ssz:"signature"`
-func SignedRoot(input interface{}) Root {
-	subRoots := make([][32]byte, 0)
-	v := reflect.ValueOf(input)
-	if v.Kind() == reflect.Ptr {
-		v = v.Elem()
+const OMIT_FLAG = "omit"
+
+func hasSSZFlag(vt reflect.StructField, flag string) bool {
+	if flag == "" {
+		return false
 	}
-	if v.Kind() != reflect.Struct {
-		panic("cannot get partial root for signing, input is not a struct")
+	tag, ok := vt.Tag.Lookup("ssz")
+	if !ok {
+		return false
 	}
-	vType := v.Type()
-	for i, fields := 0, v.NumField(); i < fields; i++ {
-		// ignore all fields with a signatures
-		if tag, ok := vType.Field(i).Tag.Lookup("ssz"); ok && tag == "signature" {
-			break
+	if len(tag) == 0 {
+		return false
+	}
+
+	// look through the tag to find a flag (comma separated)
+	for tag != "" {
+		var next string
+		i := strings.Index(tag, ",")
+		if i >= 0 {
+			tag, next = tag[:i], tag[i+1:]
 		}
-		subRoots = append(subRoots, sszHashTreeRoot(v.Field(i)))
+		if tag == flag {
+			return true
+		}
+		tag = next
 	}
-	return merkle.MerkleRoot(subRoots)
+
+	return false
 }
 
 func SSZEncode(input interface{}) []byte {
@@ -50,6 +58,41 @@ func withSize(dst *[]byte, size uint64) (start uint64, end uint64) {
 // Note: when this is changed,
 //  don't forget to change the PutUint32 calls that make put the length in this allocated space.
 const BYTES_PER_LENGTH_PREFIX = 4
+
+func getSerializeCache(v reflect.Value) *SerializeCache {
+	prov, ok := v.Interface().(SSZSerializeCacheProvider)
+	if !ok {
+		// not a cache provider, no cache available
+		return nil
+	} else {
+		return prov.GetSerializeCache()
+	}
+}
+
+func sszSerializeMaybeCached(v reflect.Value, dst *[]byte) uint32 {
+	var serializedSize uint32
+	if cache := getSerializeCache(v); cache != nil {
+		// Cache, try to hit it.
+		if cache.Cached {
+			// use cache! manually place cache contents into destination
+			serializedSize = uint32(len(cache.Serialized))
+			datS, datE := withSize(dst, uint64(serializedSize))
+			copy((*dst)[datS:datE], cache.Serialized)
+		} else {
+			// The start of the data will be the end of the current destination data (optionally incl length prefix)
+			datS := uint32(len(*dst))
+			// serialize like normal
+			serializedSize = sszSerialize(v, dst)
+			// fill cache using data that was placed in the destination
+			cache.Serialized = (*dst)[datS:datS+serializedSize]
+			cache.Cached = true
+		}
+	} else {
+		// no cache available, handle like normal field
+		serializedSize = sszSerialize(v, dst)
+	}
+	return serializedSize
+}
 
 func sszSerialize(v reflect.Value, dst *[]byte) (encodedLen uint32) {
 	switch v.Kind() {
@@ -75,38 +118,49 @@ func sszSerialize(v reflect.Value, dst *[]byte) (encodedLen uint32) {
 			(*dst)[s] = 0
 		}
 		return 1
-	case reflect.Array: // "tuple"
-		if isFixedLength(v.Type().Elem(), false) {
+	case reflect.Array: // "vector"
+		if isFixedSize(v.Type()) {
 			for i, size := 0, v.Len(); i < size; i++ {
-				serializedSize := sszSerialize(v.Index(i), dst)
-				encodedLen += serializedSize
+				encodedLen += sszSerializeMaybeCached(v.Index(i), dst)
 			}
 		} else {
+			// allocate size prefix
+			s, e := withSize(dst, BYTES_PER_LENGTH_PREFIX)
 			for i, size := 0, v.Len(); i < size; i++ {
-				// allocate size prefix
-				s, e := withSize(dst, BYTES_PER_LENGTH_PREFIX)
-				serializedSize := sszSerialize(v.Index(i), dst)
-				binary.LittleEndian.PutUint32((*dst)[s:e], serializedSize)
-				encodedLen += BYTES_PER_LENGTH_PREFIX + serializedSize
+				encodedLen += sszSerializeMaybeCached(v.Index(i), dst)
 			}
+			binary.LittleEndian.PutUint32((*dst)[s:e], encodedLen)
+			encodedLen += BYTES_PER_LENGTH_PREFIX + encodedLen
 		}
 		return encodedLen
 	case reflect.Slice: // "list"
+		// allocate size prefix
+		s, e := withSize(dst, BYTES_PER_LENGTH_PREFIX)
 		for i, size := 0, v.Len(); i < size; i++ {
-			// allocate size prefix
-			s, e := withSize(dst, BYTES_PER_LENGTH_PREFIX)
-			serializedSize := sszSerialize(v.Index(i), dst)
-			binary.LittleEndian.PutUint32((*dst)[s:e], serializedSize)
-			encodedLen += BYTES_PER_LENGTH_PREFIX + serializedSize
+			encodedLen += sszSerializeMaybeCached(v.Index(i), dst)
 		}
+		binary.LittleEndian.PutUint32((*dst)[s:e], encodedLen)
+		encodedLen += BYTES_PER_LENGTH_PREFIX + encodedLen
 		return encodedLen
 	case reflect.Struct: // "container"
-		for i, size := 0, v.NumField(); i < size; i++ {
+		vType := v.Type()
+		if isFixedSize(vType) {
+			for i, size := 0, v.NumField(); i < size; i++ {
+				if hasSSZFlag(vType.Field(i), OMIT_FLAG) {
+					continue
+				}
+				encodedLen += sszSerializeMaybeCached(v.Field(i), dst)
+			}
+		} else {
 			// allocate size prefix
-			s, e := withSize(dst, BYTES_PER_LENGTH_PREFIX)
-			serializedSize := sszSerialize(v.Field(i), dst)
-			binary.LittleEndian.PutUint32((*dst)[s:e], serializedSize)
-			encodedLen += BYTES_PER_LENGTH_PREFIX + serializedSize
+			lenS, lenE := withSize(dst, BYTES_PER_LENGTH_PREFIX)
+			for i, size := 0, v.NumField(); i < size; i++ {
+				if hasSSZFlag(vType.Field(i), OMIT_FLAG) {
+					continue
+				}
+				encodedLen += sszSerializeMaybeCached(v.Field(i), dst)
+			}
+			binary.LittleEndian.PutUint32((*dst)[lenS:lenE], encodedLen)
 		}
 		return encodedLen
 	default:
@@ -114,104 +168,172 @@ func sszSerialize(v reflect.Value, dst *[]byte) (encodedLen uint32) {
 	}
 }
 
-func HashTreeRoot(input interface{}) Root {
-	return sszHashTreeRoot(reflect.ValueOf(input))
+// constructs a merkle_root of the given data
+// but ignores any fields in structs that are tagged with `ssz:"signature"`
+func SignedRoot(input interface{}) [32]byte {
+	return sszHashTreeRoot(reflect.ValueOf(input), nil, "signature")
 }
 
-func isFixedLength(vt reflect.Type, merkleizing bool) bool {
+// constructs a merkle_root of the given data
+func HashTreeRoot(input interface{}) [32]byte {
+	return sszHashTreeRoot(reflect.ValueOf(input), nil, "")
+}
+
+func isFixedSize(vt reflect.Type) bool {
 	switch vt.Kind() {
 	case reflect.Uint8, reflect.Uint32, reflect.Uint64, reflect.Bool:
 		return true
 	case reflect.Slice:
 		return false
 	case reflect.Array:
-		return isFixedLength(vt.Elem(), merkleizing)
+		return isFixedSize(vt.Elem())
 	case reflect.Struct:
-		if merkleizing {
-			// We want each element of the struct to have its own root
-			return false
-		} else {
-			// We want to encode the struct in the most minimal way,
-			//  if it can be fixed length, make it fixed length.
-			for i, length := 0, vt.NumField(); i < length; i++ {
-				if !isFixedLength(vt.Field(i).Type, merkleizing) {
-					return false
-				}
+		// We want to encode the struct in the most minimal way,
+		//  if it can be fixed length, make it fixed length.
+		for i, length := 0, vt.NumField(); i < length; i++ {
+			if hasSSZFlag(vt.Field(i), OMIT_FLAG) {
+				continue
 			}
-			return true
+			if !isFixedSize(vt.Field(i).Type) {
+				return false
+			}
 		}
+		return true
+
 	default:
 		panic("is-fixed length: unsupported value type: " + vt.String())
 	}
 }
 
-// only call this for slices and arrays, not structs
-func varSizeListElementsRoot(v reflect.Value) Root {
-	items := v.Len()
-	data := make([][32]byte, items)
-	for i := 0; i < items; i++ {
-		data[i] = sszHashTreeRoot(v.Index(i))
+func isBasicType(vt reflect.Type) bool {
+	switch vt.Kind() {
+	case reflect.Uint8, reflect.Uint32, reflect.Uint16, reflect.Uint64: // No uint128 and uint256 used
+		return true
+	case reflect.Bool:
+		return true
+	default:
+		return false
 	}
-	return merkle.MerkleRoot(data)
 }
 
-func varSizeStructElementsRoot(v reflect.Value) Root {
+func basicListRoot(v reflect.Value, compoundCache *SSZCompoundCache) [32]byte {
+	if compoundCache != nil {
+		serializeFn := func(dst []byte, index uint64) {
+			sszSerialize(v.Index(int(index)), &dst)
+		}
+		// update and use cache for merkleization
+		return compoundCache.UpdateAndMerkleize(serializeFn)
+	} else {
+		return merkle.MerkleRoot(sszPack(v))
+	}
+}
+
+// only call this for slices and arrays, not structs
+func nonBasicListRoot(v reflect.Value, compoundCache *SSZCompoundCache, ignoreFlag string) [32]byte {
+	if compoundCache != nil {
+		serializeFn := func(dst []byte, index uint64) {
+			hash := sszHashTreeRoot(v.Index(int(index)), nil, ignoreFlag)
+			copy(dst, hash[:])
+		}
+		// update and use cache for merkleization
+		return compoundCache.UpdateAndMerkleize(serializeFn)
+	} else {
+		items := v.Len()
+		data := make([][32]byte, items)
+		for i := 0; i < items; i++ {
+			data[i] = sszHashTreeRoot(v.Index(i), nil, ignoreFlag)
+		}
+		return merkle.MerkleRoot(data)
+	}
+}
+
+func structRoot(v reflect.Value, ignoreFlag string) [32]byte {
 	fields := v.NumField()
-	data := make([][32]byte, fields)
+	data := make([][32]byte, 0, fields)
+	vType := v.Type()
 	for i := 0; i < fields; i++ {
-		data[i] = sszHashTreeRoot(v.Field(i))
+		structField := vType.Field(i)
+		if !hasSSZFlag(structField, ignoreFlag) && !hasSSZFlag(structField, OMIT_FLAG) {
+			cacheFieldName := structField.Name + "SSZCache"
+			_, ok := vType.FieldByName(cacheFieldName)
+			fieldV := v.Field(i)
+			if ok {
+				cacheV := v.FieldByName(cacheFieldName)
+				elemCache := cacheV.Interface().(SSZCompoundCache)
+				// cache may be nil
+				data = append(data, sszHashTreeRoot(fieldV, &elemCache, ignoreFlag))
+			} else {
+				data = append(data, sszHashTreeRoot(fieldV, nil, ignoreFlag))
+			}
+		}
 	}
 	return merkle.MerkleRoot(data)
-
 }
 
 // Compute hash tree root for a value
-func sszHashTreeRoot(v reflect.Value) Root {
+func sszHashTreeRoot(v reflect.Value, compoundCache *SSZCompoundCache, ignoreFlag string) [32]byte {
 	switch v.Kind() {
 	case reflect.Ptr:
 		if v.IsNil() {
-			return Root{}
+			return [32]byte{}
 		}
-		return sszHashTreeRoot(v.Elem())
+		return sszHashTreeRoot(v.Elem(), compoundCache, ignoreFlag)
 	// "basic object? -> pack and merkle_root
 	case reflect.Uint8, reflect.Uint32, reflect.Uint64, reflect.Bool:
 		return merkle.MerkleRoot(sszPack(v))
-	// "array of fixed length items? -> pack and merkle_root
-	// "array of var length items? -> take the merkle root of every element
+	// "array of basic items? -> pack and merkle_root
+	// "array of non basic items? -> take the merkle root of every element
 	// 		(if it aligns in a single chunk, it will just be as-is, not hashed again, see merklezeition)
 	case reflect.Array:
-		if isFixedLength(v.Type().Elem(), true) {
-			return merkle.MerkleRoot(sszPack(v))
+		if isBasicType(v.Type().Elem()) {
+			return basicListRoot(v, compoundCache)
 		} else {
-			return varSizeListElementsRoot(v)
+			return nonBasicListRoot(v, compoundCache, ignoreFlag)
 		}
 	case reflect.Slice:
-		if isFixedLength(v.Type().Elem(), true) {
-			return sszMixInLength(merkle.MerkleRoot(sszPack(v)), uint64(v.Len()))
+		if isBasicType(v.Type().Elem()) {
+			return sszMixInLength(basicListRoot(v, compoundCache), uint64(v.Len()))
 		} else {
-			return sszMixInLength(varSizeListElementsRoot(v), uint64(v.Len()))
+			return sszMixInLength(nonBasicListRoot(v, compoundCache, ignoreFlag), uint64(v.Len()))
 		}
 	case reflect.Struct:
-		return varSizeStructElementsRoot(v)
+		return structRoot(v, ignoreFlag)
 	default:
 		panic("tree-hash: unsupported value kind: " + v.Kind().String())
 	}
 }
 
 func sszPack(input reflect.Value) [][32]byte {
-	serialized := make([]byte, 0)
-	switch input.Kind() {
-	case reflect.Array, reflect.Slice:
-		for i, length := 0, input.Len(); i < length; i++ {
-			sszSerialize(input.Index(i), &serialized)
+	var serialized []byte
+	if cache := getSerializeCache(input); cache != nil && cache.Cached {
+		// use cache!
+		serialized = cache.Serialized
+	} else {
+		serialized = make([]byte, 0)
+
+		switch input.Kind() {
+		case reflect.Array, reflect.Slice:
+			for i, length := 0, input.Len(); i < length; i++ {
+				sszSerialize(input.Index(i), &serialized)
+			}
+		case reflect.Struct:
+			vType := input.Type()
+			for i, length := 0, input.NumField(); i < length; i++ {
+				if !hasSSZFlag(vType.Field(i), OMIT_FLAG) {
+					sszSerialize(input.Field(i), &serialized)
+				}
+			}
+		default:
+			sszSerialize(input, &serialized)
 		}
-	case reflect.Struct:
-		for i, length := 0, input.NumField(); i < length; i++ {
-			sszSerialize(input.Field(i), &serialized)
+
+		// check if there was a cache, but it was just empty/invalid. In that case, fill it
+		if cache != nil {
+			cache.Serialized = serialized
+			cache.Cached = true
 		}
-	default:
-		sszSerialize(input, &serialized)
 	}
+
 	// floored: handle all normal chunks first
 	flooredChunkCount := len(serialized) / 32
 	// ceiled: include any partial chunk at end as full chunk (with padding)
@@ -226,7 +348,7 @@ func sszPack(input reflect.Value) [][32]byte {
 	return out
 }
 
-func sszMixInLength(data [32]byte, length uint64) Root {
+func sszMixInLength(data [32]byte, length uint64) [32]byte {
 	lengthInput := [32]byte{}
 	binary.LittleEndian.PutUint64(lengthInput[:], length)
 	return merkle.MerkleRoot([][32]byte{data, lengthInput})

@@ -52,16 +52,17 @@ func ProcessTransfer(state *beacon.BeaconState, transfer *beacon.Transfer) error
 	if state.Slot != transfer.Slot {
 		return errors.New("transfer is not valid in current slot")
 	}
+	sender := state.ValidatorRegistry[transfer.Sender]
 	// Only withdrawn or not-yet-deposited accounts can transfer
-	if !(state.Epoch() >= state.ValidatorRegistry[transfer.Sender].WithdrawableEpoch ||
-		state.ValidatorRegistry[transfer.Sender].ActivationEpoch == beacon.FAR_FUTURE_EPOCH) {
+	if !(state.Epoch() >= sender.WithdrawableEpoch ||
+		sender.ActivationEpoch == beacon.FAR_FUTURE_EPOCH) {
 		return errors.New("transfer sender is not eligible to make a transfer, it has to be withdrawn, or yet to be activated")
 	}
 	// Verify that the pubkey is valid
 	withdrawCred := Root(hash.Hash(transfer.Pubkey[:]))
 	// overwrite first byte, remainder (the [1:] part, is still the hash)
 	withdrawCred[0] = beacon.BLS_WITHDRAWAL_PREFIX_BYTE
-	if state.ValidatorRegistry[transfer.Sender].WithdrawalCredentials != withdrawCred {
+	if sender.WithdrawalCredentials != withdrawCred {
 		return errors.New("transfer pubkey is invalid")
 	}
 	// Verify that the signature is valid

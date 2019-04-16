@@ -23,7 +23,7 @@ func ProcessProposerSlashing(state *beacon.BeaconState, ps *beacon.ProposerSlash
 	if !state.ValidatorRegistry.IsValidatorIndex(ps.ProposerIndex) {
 		return errors.New("invalid proposer index")
 	}
-	proposer := &state.ValidatorRegistry[ps.ProposerIndex]
+	proposer := state.ValidatorRegistry[ps.ProposerIndex]
 	// Verify that the epoch is the same
 	if ps.Header1.Slot.ToEpoch() != ps.Header2.Slot.ToEpoch() {
 		return errors.New("proposer slashing requires slashing headers to be in same epoch")

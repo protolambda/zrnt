@@ -24,7 +24,7 @@ func ProcessVoluntaryExit(state *beacon.BeaconState, exit *beacon.VoluntaryExit)
 	if !state.ValidatorRegistry.IsValidatorIndex(exit.ValidatorIndex) {
 		return errors.New("invalid exit validator index")
 	}
-	validator := &state.ValidatorRegistry[exit.ValidatorIndex]
+	validator := state.ValidatorRegistry[exit.ValidatorIndex]
 	// Verify that the validator is active
 	if !validator.IsActive(currentEpoch) {
 		return errors.New("validator must be active to be able to voluntarily exit")

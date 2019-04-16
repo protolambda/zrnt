@@ -159,6 +159,11 @@ type Validator struct {
 	HighBalance Gwei
 }
 
+func (v *Validator) Copy() *Validator {
+	copyV := *v
+	return &copyV
+}
+
 func (v *Validator) IsActive(epoch Epoch) bool {
 	return v.ActivationEpoch <= epoch && epoch < v.ExitEpoch
 }
@@ -223,7 +228,7 @@ type Eth1DataVote struct {
 	VoteCount uint64
 }
 
-type ValidatorRegistry []Validator
+type ValidatorRegistry []*Validator
 
 func (vr ValidatorRegistry) IsValidatorIndex(index ValidatorIndex) bool {
 	return index < ValidatorIndex(len(vr))

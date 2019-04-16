@@ -74,7 +74,7 @@ func ProcessDeposit(state *beacon.BeaconState, dep *beacon.Deposit) error {
 		}
 
 		// Not a known pubkey, add new validator
-		validator := beacon.Validator{
+		validator := &beacon.Validator{
 			Pubkey:                dep.Data.Pubkey,
 			WithdrawalCredentials: dep.Data.WithdrawalCredentials,
 			ActivationEpoch:       beacon.FAR_FUTURE_EPOCH,

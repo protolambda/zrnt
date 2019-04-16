@@ -95,7 +95,7 @@ func DeltasJustificationAndFinalizationDeltas(state *beacon.BeaconState,) *beaco
 		if status.Flags & matchingHeadAttester != 0 {
 			matchingHeadBalance += b
 		}
-		v := &state.ValidatorRegistry[i]
+		v := state.ValidatorRegistry[i]
 		if v.IsActive(currentEpoch) || (v.Slashed && currentEpoch < v.WithdrawableEpoch) {
 			status.Flags |= eligibleAttester
 		}

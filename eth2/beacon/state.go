@@ -62,7 +62,10 @@ func (state *BeaconState) Copy() *BeaconState {
 	res := &stUn
 	// manually copy over slices, and efficiently (i.e. explicitly make, but don't initially zero out, just overwrite)
 	// validators
-	res.ValidatorRegistry = append(make([]Validator, 0, len(state.ValidatorRegistry)), state.ValidatorRegistry...)
+	res.ValidatorRegistry = make([]*Validator, 0, len(state.ValidatorRegistry))
+	for i, v := range state.ValidatorRegistry {
+		res.ValidatorRegistry[i] = v.Copy()
+	}
 	res.Balances = append(make([]Gwei, 0, len(state.Balances)), state.Balances...)
 	// finality
 	res.PreviousEpochAttestations = append(make([]PendingAttestation, 0, len(state.PreviousEpochAttestations)), state.PreviousEpochAttestations...)
@@ -97,7 +100,7 @@ func (state *BeaconState) InitiateValidatorExit(index ValidatorIndex) {
 
 // Activate the validator of the given index
 func (state *BeaconState) ActivateValidator(index ValidatorIndex, isGenesis bool) {
-	validator := &state.ValidatorRegistry[index]
+	validator := state.ValidatorRegistry[index]
 
 	if isGenesis {
 		validator.ActivationEpoch = GENESIS_EPOCH
@@ -317,7 +320,7 @@ func (state *BeaconState) GetWinningRootAndParticipants(shard Shard) (Root, Vali
 
 // Exit the validator with the given index
 func (state *BeaconState) ExitValidator(index ValidatorIndex) {
-	validator := &state.ValidatorRegistry[index]
+	validator := state.ValidatorRegistry[index]
 	// Update validator exit epoch if not previously exited
 	if validator.ExitEpoch == FAR_FUTURE_EPOCH {
 		validator.ExitEpoch = state.Epoch().GetDelayedActivationExitEpoch()
@@ -403,7 +406,7 @@ func (state *BeaconState) GetAttestationParticipants(attestationData *Attestatio
 
 // Slash the validator with index index.
 func (state *BeaconState) SlashValidator(index ValidatorIndex) error {
-	validator := &state.ValidatorRegistry[index]
+	validator := state.ValidatorRegistry[index]
 	state.ExitValidator(index)
 	state.LatestSlashedBalances[state.Epoch()%LATEST_SLASHED_EXIT_LENGTH] += state.GetEffectiveBalance(index)
 
@@ -454,7 +457,7 @@ func (state *BeaconState) GetBalance(index ValidatorIndex) Gwei {
 // Set the balance for a validator with the given ``index`` in both ``BeaconState``
 //  and validator's rounded balance ``high_balance``.
 func (state *BeaconState) SetBalance(index ValidatorIndex, balance Gwei) {
-	validator := &state.ValidatorRegistry[index]
+	validator := state.ValidatorRegistry[index]
 	if validator.HighBalance > balance || validator.HighBalance+3*HALF_INCREMENT < balance {
 		validator.HighBalance = balance - (balance % HIGH_BALANCE_INCREMENT)
 	}

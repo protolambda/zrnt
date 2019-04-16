@@ -9,9 +9,7 @@ func ProcessEpochSlashings(state *beacon.BeaconState) {
 	activeValidatorIndices := state.ValidatorRegistry.GetActiveValidatorIndices(currentEpoch)
 	totalBalance := state.GetTotalBalanceOf(activeValidatorIndices)
 
-	validatorCount := beacon.ValidatorIndex(len(state.ValidatorRegistry))
-	for i := beacon.ValidatorIndex(0); i < validatorCount; i++ {
-		v := &state.ValidatorRegistry[i]
+	for i, v := range state.ValidatorRegistry {
 		if v.Slashed &&
 			currentEpoch == v.WithdrawableEpoch-(beacon.LATEST_SLASHED_EXIT_LENGTH/2) {
 			epochIndex := currentEpoch % beacon.LATEST_SLASHED_EXIT_LENGTH
@@ -24,7 +22,7 @@ func ProcessEpochSlashings(state *beacon.BeaconState) {
 					totalBalance,
 				)/totalBalance,
 				balance/beacon.MIN_PENALTY_QUOTIENT)
-			state.DecreaseBalance(i, penalty)
+			state.DecreaseBalance(beacon.ValidatorIndex(i), penalty)
 		}
 	}
 }

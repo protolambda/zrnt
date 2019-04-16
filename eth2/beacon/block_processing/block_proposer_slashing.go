@@ -28,14 +28,15 @@ func ProcessProposerSlashing(state *beacon.BeaconState, ps *beacon.ProposerSlash
 	if ps.Header1.Slot.ToEpoch() != ps.Header2.Slot.ToEpoch() {
 		return errors.New("proposer slashing requires slashing headers to be in same epoch")
 	}
+	// But the headers are different
+	if ps.Header1 == ps.Header2 {
+		return errors.New("proposer slashing requires two different headers")
+	}
 	// Check proposer is slashable
 	if !proposer.IsSlashable(state.Epoch()) {
 		return errors.New("proposer slashing requires proposer to be slashable")
 	}
-	// But the headers are different
-	if ps.Header1.BlockBodyRoot == ps.Header2.BlockBodyRoot {
-		return errors.New("proposer slashing requires two different headers")
-	}
+	// Signatures are valid
 	if !(
 		bls.BlsVerify(proposer.Pubkey, ssz.SignedRoot(ps.Header1), ps.Header1.Signature, beacon.GetDomain(state.Fork, ps.Header1.Slot.ToEpoch(), beacon.DOMAIN_BEACON_BLOCK)) &&
 		bls.BlsVerify(proposer.Pubkey, ssz.SignedRoot(ps.Header2), ps.Header2.Signature, beacon.GetDomain(state.Fork, ps.Header2.Slot.ToEpoch(), beacon.DOMAIN_BEACON_BLOCK))) {

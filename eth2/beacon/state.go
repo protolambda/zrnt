@@ -1,9 +1,11 @@
 package beacon
 
 import (
+	"crypto/sha256"
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/protolambda/eth2-shuffle"
 	"github.com/protolambda/zrnt/eth2/util/bitfield"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	. "github.com/protolambda/zrnt/eth2/util/data_types"
@@ -22,7 +24,6 @@ type BeaconState struct {
 	// Validator registry
 	ValidatorRegistry            ValidatorRegistry
 	Balances                     []Gwei
-	ValidatorRegistryUpdateEpoch Epoch
 
 	// Randomness and committees
 	LatestRandaoMixes [LATEST_RANDAO_MIXES_LENGTH]Root
@@ -87,15 +88,38 @@ func (state *BeaconState) PreviousEpoch() Epoch {
 	return state.Epoch() - 1
 }
 
-// Set the validator with the given index as withdrawable
-// MIN_VALIDATOR_WITHDRAWABILITY_DELAY after the current epoch.
-func (state *BeaconState) PrepareValidatorForWithdrawal(index ValidatorIndex) {
-	state.ValidatorRegistry[index].WithdrawableEpoch = state.Epoch() + MIN_VALIDATOR_WITHDRAWABILITY_DELAY
+func (state *BeaconState) GetChurnLimit() uint64 {
+	return math.MaxU64(MIN_PER_EPOCH_CHURN_LIMIT,
+		state.ValidatorRegistry.GetActiveValidatorCount(state.Epoch()) / CHURN_LIMIT_QUOTIENT)
 }
 
 // Initiate the validator of the given index
 func (state *BeaconState) InitiateValidatorExit(index ValidatorIndex) {
-	state.ValidatorRegistry[index].InitiatedExit = true
+	validator := state.ValidatorRegistry[index]
+	// Return if validator already initiated exit
+	if validator.ExitEpoch != FAR_FUTURE_EPOCH {
+		return
+	}
+	// Compute exit queue epoch
+	exitQueueEnd := state.Epoch().GetDelayedActivationExitEpoch()
+	for _, v := range state.ValidatorRegistry {
+		if v.ExitEpoch != FAR_FUTURE_EPOCH && v.ExitEpoch > exitQueueEnd {
+			exitQueueEnd = v.ExitEpoch
+		}
+	}
+	exitQueueChurn := uint64(0)
+	for _, v := range state.ValidatorRegistry {
+		if v.ExitEpoch == exitQueueEnd {
+			exitQueueChurn++
+		}
+	}
+	if exitQueueChurn >= state.GetChurnLimit() {
+		exitQueueEnd++
+	}
+
+	// Set validator exit epoch and withdrawable epoch
+	validator.ExitEpoch = exitQueueEnd
+	validator.WithdrawableEpoch = validator.ExitEpoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY
 }
 
 // Activate the validator of the given index
@@ -103,13 +127,16 @@ func (state *BeaconState) ActivateValidator(index ValidatorIndex, isGenesis bool
 	validator := state.ValidatorRegistry[index]
 
 	if isGenesis {
+		validator.ActivationEligibilityEpoch = GENESIS_EPOCH
 		validator.ActivationEpoch = GENESIS_EPOCH
 	} else {
 		validator.ActivationEpoch = state.Epoch().GetDelayedActivationExitEpoch()
 	}
 }
 
-func GetEpochCommitteeCount(activeValidatorCount uint64) uint64 {
+// Return the number of committees in one epoch.
+func (state *BeaconState) GetEpochCommitteeCount(epoch Epoch) uint64 {
+	activeValidatorCount := state.ValidatorRegistry.GetActiveValidatorCount(epoch)
 	return math.MaxU64(1,
 		math.MinU64(
 			uint64(SHARD_COUNT)/uint64(SLOTS_PER_EPOCH),
@@ -117,12 +144,10 @@ func GetEpochCommitteeCount(activeValidatorCount uint64) uint64 {
 		)) * uint64(SLOTS_PER_EPOCH)
 }
 
-// Return the number of committees in the current epoch
-func (state *BeaconState) GetCurrentEpochCommitteeCount() uint64 {
-	return GetEpochCommitteeCount(
-		state.ValidatorRegistry.GetActiveValidatorCount(
-			state.Epoch(),
-		))
+func (state *BeaconState) GetShardDelta(epoch Epoch) Shard {
+	return Shard(math.MinU64(
+		state.GetEpochCommitteeCount(epoch),
+		uint64(SHARD_COUNT - (SHARD_COUNT / Shard(SLOTS_PER_EPOCH)))))
 }
 
 // Return the beacon proposer index for the slot.
@@ -213,25 +238,27 @@ func (state *BeaconState) GetCrosslinkCommitteesAtSlot(slot Slot) []CrosslinkCom
 		panic("could not retrieve crosslink committee for out of range slot")
 	}
 
-	activeValidatorCount := state.ValidatorRegistry.GetActiveValidatorCount(epoch)
-
-	committeesPerEpoch := GetEpochCommitteeCount(activeValidatorCount)
 	var startShard Shard
 	if epoch == currentEpoch {
 		startShard = state.LatestStartShard
 	} else if epoch == previousEpoch {
-		startShard = (state.LatestStartShard - Shard(committeesPerEpoch)) % SHARD_COUNT
+		previousShardDelta := state.GetShardDelta(previousEpoch)
+		startShard = (state.LatestStartShard - previousShardDelta) % SHARD_COUNT
 	} else if epoch == nextEpoch {
-		startShard = (state.LatestStartShard + Shard(state.GetCurrentEpochCommitteeCount())) % SHARD_COUNT
+		currentShardDelta := state.GetShardDelta(currentEpoch)
+		startShard = (state.LatestStartShard + currentShardDelta) % SHARD_COUNT
 	}
-	offset := uint64(slot % SLOTS_PER_EPOCH)
+
+	committeesPerEpoch := state.GetEpochCommitteeCount(epoch)
 	committeesPerSlot := committeesPerEpoch / uint64(SLOTS_PER_EPOCH)
+	offset := uint64(slot % SLOTS_PER_EPOCH)
 	slotStartShard := (startShard + Shard(committeesPerSlot)*Shard(offset)) % SHARD_COUNT
 	seed := state.GenerateSeed(epoch)
 
 	crosslinkCommittees := make([]CrosslinkCommittee, committeesPerSlot)
 	{
-		shuffled := state.ValidatorRegistry.GetShuffled(seed, epoch)
+		shuffled := state.GetShuffled(seed, epoch)
+		activeValidatorCount := state.ValidatorRegistry.GetActiveValidatorCount(epoch)
 
 		// Return the index'th shuffled committee out of a total total_committees
 		computeCommittee := func(index uint64) []ValidatorIndex {
@@ -327,47 +354,7 @@ func (state *BeaconState) ExitValidator(index ValidatorIndex) {
 	}
 }
 
-// Update validator registry.
-func (state *BeaconState) UpdateValidatorRegistry() {
-	// The total effective balance of active validators
-	totalBalance := state.GetTotalBalanceOf(state.ValidatorRegistry.GetActiveValidatorIndices(state.Epoch()))
-
-	// The maximum balance churn in Gwei (for deposits and exits separately)
-	maxBalanceChurn := Max(MAX_DEPOSIT_AMOUNT, totalBalance/(2*MAX_BALANCE_CHURN_QUOTIENT))
-
-	// Activate validators within the allowable balance churn
-	{
-		balanceChurn := Gwei(0)
-		for index, validator := range state.ValidatorRegistry {
-			if validator.ActivationEpoch == FAR_FUTURE_EPOCH && state.Balances[index] >= MAX_DEPOSIT_AMOUNT {
-				// Check the balance churn would be within the allowance
-				balanceChurn += state.GetEffectiveBalance(ValidatorIndex(index))
-				if balanceChurn > maxBalanceChurn {
-					break
-				}
-				//  Activate validator
-				validator.ActivationEpoch = state.Epoch().GetDelayedActivationExitEpoch()
-			}
-		}
-	}
-
-	// Exit validators within the allowable balance churn
-	{
-		balanceChurn := Gwei(0)
-		for index, validator := range state.ValidatorRegistry {
-			if validator.ExitEpoch == FAR_FUTURE_EPOCH && validator.InitiatedExit {
-				// Check the balance churn would be within the allowance
-				balanceChurn += state.GetEffectiveBalance(ValidatorIndex(index))
-				if balanceChurn > maxBalanceChurn {
-					break
-				}
-				// Exit validator
-				state.ExitValidator(ValidatorIndex(index))
-			}
-		}
-	}
-}
-
+// Return the crosslink committee corresponding to the given attestationData
 func (state *BeaconState) GetCrosslinkCommitteeForAttestation(attestationData *AttestationData) []ValidatorIndex {
 	crosslinkCommittees := state.GetCrosslinkCommitteesAtSlot(attestationData.Slot)
 	startShard := crosslinkCommittees[0].Shard
@@ -407,7 +394,7 @@ func (state *BeaconState) GetAttestationParticipants(attestationData *Attestatio
 // Slash the validator with index index.
 func (state *BeaconState) SlashValidator(index ValidatorIndex) error {
 	validator := state.ValidatorRegistry[index]
-	state.ExitValidator(index)
+	state.InitiateValidatorExit(index)
 	state.LatestSlashedBalances[state.Epoch()%LATEST_SLASHED_EXIT_LENGTH] += state.GetEffectiveBalance(index)
 
 	whistleblowerReward := state.GetEffectiveBalance(index) / WHISTLEBLOWING_REWARD_QUOTIENT
@@ -478,7 +465,7 @@ func (state *BeaconState) DecreaseBalance(index ValidatorIndex, delta Gwei) {
 	}
 }
 
-// Convert an attestation to (almost) indexed-verifiable form
+// Convert attestation to (almost) indexed-verifiable form
 func (state *BeaconState) ConvertToIndexed(attestation *Attestation) (*IndexedAttestation, error) {
 	participants, err := state.GetAttestationParticipants(&attestation.Data, &attestation.AggregationBitfield)
 	if err != nil {
@@ -555,3 +542,30 @@ func (state *BeaconState) VerifyIndexedAttestation(indexedAttestation *IndexedAt
 		GetDomain(state.Fork, indexedAttestation.Data.Slot.ToEpoch(), DOMAIN_ATTESTATION),
 	)
 }
+
+// Shuffle active validators
+func (state *BeaconState) GetShuffled(seed Root, epoch Epoch) []ValidatorIndex {
+	activeValidatorIndices := state.ValidatorRegistry.GetActiveValidatorIndices(epoch)
+	committeeCount := state.GetEpochCommitteeCount(epoch)
+	if committeeCount > uint64(len(activeValidatorIndices)) {
+		panic("not enough validators to form committees!")
+	}
+	// Active validators, shuffled in-place.
+	hFnObj := sha256.New()
+	hashFn := func(in []byte) []byte {
+		hFnObj.Reset()
+		hFnObj.Write(in)
+		return hFnObj.Sum(nil)
+	}
+	rawIndexList := make([]uint64, len(state.ValidatorRegistry))
+	for i := 0; i < len(activeValidatorIndices); i++ {
+		rawIndexList[i] = uint64(activeValidatorIndices[i])
+	}
+	eth2_shuffle.ShuffleList(hashFn, rawIndexList, SHUFFLE_ROUND_COUNT, seed)
+	shuffled := make([]ValidatorIndex, len(state.ValidatorRegistry))
+	for i := 0; i < len(activeValidatorIndices); i++ {
+		shuffled[i] = ValidatorIndex(rawIndexList[i])
+	}
+	return shuffled
+}
+

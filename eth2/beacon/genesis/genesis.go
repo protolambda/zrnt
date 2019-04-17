@@ -20,7 +20,6 @@ func GetGenesisBeaconState(validatorDeposits []beacon.Deposit, time beacon.Times
 		// Validator registry
 		ValidatorRegistry: make(beacon.ValidatorRegistry, 0),
 		Balances: make([]beacon.Gwei, 0),
-		ValidatorRegistryUpdateEpoch: beacon.GENESIS_EPOCH,
 		// Randomness and committees
 		LatestStartShard: beacon.GENESIS_START_SHARD,
 		// Finality

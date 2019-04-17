@@ -56,7 +56,7 @@ func (block *BeaconBlock) GetTemporaryBlockHeader() BeaconBlockHeader {
 		PreviousBlockRoot: block.PreviousBlockRoot,
 		StateRoot:         Root{}, // empty hash, "temporary" part.
 		BlockBodyRoot:     Root(ssz.HashTreeRoot(block.Body)),
-		// signed_root(block) is used for block id purposes so signature is a stub
+		// signing_root(block) is used for block id purposes so signature is a stub
 		Signature:         bls.BLSSignature{},
 	}
 }

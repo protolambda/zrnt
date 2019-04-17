@@ -12,10 +12,9 @@ var epochProcessors = []EpochProcessor{
 	epoch_processing.ProcessEpochJustification,
 	epoch_processing.ProcessEpochCrosslinks,
 	epoch_processing.ProcessEpochRewardsAndPenalties,
-	epoch_processing.ProcessEpochEjections,
+	epoch_processing.ProcessBalanceDrivenStatusTransitions,
 	epoch_processing.ProcessEpochValidatorRegistry,
 	epoch_processing.ProcessEpochSlashings,
-	epoch_processing.ProcessEpochExitQueue,
 	epoch_processing.ProcessEpochFinish,
 }
 

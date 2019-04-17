@@ -32,17 +32,9 @@ func ProcessBlockTransfers(state *beacon.BeaconState, block *beacon.BeaconBlock)
 }
 
 func ProcessTransfer(state *beacon.BeaconState, transfer *beacon.Transfer) error {
-	// verify transfer data + signature
-	senderBalance := state.GetBalance(transfer.Sender)
 	// Verify the amount and fee aren't individually too big (for anti-overflow purposes)
-	if !(senderBalance >= transfer.Amount && senderBalance >= transfer.Fee) {
+	if senderBalance := state.GetBalance(transfer.Sender); !(senderBalance >= transfer.Amount && senderBalance >= transfer.Fee) {
 		return errors.New("transfer value parameter (amount and/or fee) is too big")
-	}
-	// Verify that we have enough ETH to send, and that after the transfer the balance will be either
-	// exactly zero or at least MIN_DEPOSIT_AMOUNT
-	if !(senderBalance == transfer.Amount + transfer.Fee ||
-		senderBalance >= transfer.Amount + transfer.Fee + beacon.MIN_DEPOSIT_AMOUNT) {
-		return errors.New("transfer value is invalid, results in non-zero balance, but insufficient to stake with")
 	}
 	if transfer.Sender == transfer.Recipient {
 		return errors.New("no self-transfers (to enforce >= MIN_DEPOSIT_AMOUNT or zero balance invariant)")
@@ -66,7 +58,7 @@ func ProcessTransfer(state *beacon.BeaconState, transfer *beacon.Transfer) error
 		return errors.New("transfer pubkey is invalid")
 	}
 	// Verify that the signature is valid
-	if !bls.BlsVerify(transfer.Pubkey, ssz.SignedRoot(transfer), transfer.Signature,
+	if !bls.BlsVerify(transfer.Pubkey, ssz.SigningRoot(transfer), transfer.Signature,
 		beacon.GetDomain(state.Fork, transfer.Slot.ToEpoch(), beacon.DOMAIN_TRANSFER)) {
 		return errors.New("transfer signature is invalid")
 	}
@@ -74,5 +66,12 @@ func ProcessTransfer(state *beacon.BeaconState, transfer *beacon.Transfer) error
 	state.IncreaseBalance(transfer.Recipient, transfer.Amount)
 	propIndex := state.GetBeaconProposerIndex(state.Slot)
 	state.IncreaseBalance(propIndex, transfer.Fee)
+	// Verify balances are not dust
+	if b := state.GetBalance(transfer.Sender); !(0 < b && b < beacon.MIN_DEPOSIT_AMOUNT) {
+		return errors.New("transfer is invalid: results in dust on sender address")
+	}
+	if b := state.GetBalance(transfer.Recipient); !(0 < b && b < beacon.MIN_DEPOSIT_AMOUNT) {
+		return errors.New("transfer is invalid: results in dust on recipient address")
+	}
 	return nil
 }

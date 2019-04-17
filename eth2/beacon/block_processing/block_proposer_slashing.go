@@ -38,8 +38,8 @@ func ProcessProposerSlashing(state *beacon.BeaconState, ps *beacon.ProposerSlash
 	}
 	// Signatures are valid
 	if !(
-		bls.BlsVerify(proposer.Pubkey, ssz.SignedRoot(ps.Header1), ps.Header1.Signature, beacon.GetDomain(state.Fork, ps.Header1.Slot.ToEpoch(), beacon.DOMAIN_BEACON_BLOCK)) &&
-		bls.BlsVerify(proposer.Pubkey, ssz.SignedRoot(ps.Header2), ps.Header2.Signature, beacon.GetDomain(state.Fork, ps.Header2.Slot.ToEpoch(), beacon.DOMAIN_BEACON_BLOCK))) {
+		bls.BlsVerify(proposer.Pubkey, ssz.SigningRoot(ps.Header1), ps.Header1.Signature, beacon.GetDomain(state.Fork, ps.Header1.Slot.ToEpoch(), beacon.DOMAIN_BEACON_BLOCK)) &&
+		bls.BlsVerify(proposer.Pubkey, ssz.SigningRoot(ps.Header2), ps.Header2.Signature, beacon.GetDomain(state.Fork, ps.Header2.Slot.ToEpoch(), beacon.DOMAIN_BEACON_BLOCK))) {
 		return errors.New("proposer slashing has header with invalid BLS signature")
 	}
 	return state.SlashValidator(ps.ProposerIndex)

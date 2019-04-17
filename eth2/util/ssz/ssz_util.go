@@ -170,7 +170,7 @@ func sszSerialize(v reflect.Value, dst *[]byte) (encodedLen uint32) {
 
 // constructs a merkle_root of the given data
 // but ignores any fields in structs that are tagged with `ssz:"signature"`
-func SignedRoot(input interface{}) [32]byte {
+func SigningRoot(input interface{}) [32]byte {
 	return sszHashTreeRoot(reflect.ValueOf(input), nil, "signature")
 }
 

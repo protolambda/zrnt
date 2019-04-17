@@ -1,8 +1,6 @@
 package beacon
 
 import (
-	"crypto/sha256"
-	"github.com/protolambda/eth2-shuffle"
 	"github.com/protolambda/zrnt/eth2/util/bitfield"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	. "github.com/protolambda/zrnt/eth2/util/data_types"
@@ -145,14 +143,14 @@ type Validator struct {
 	Pubkey bls.BLSPubkey
 	// Withdrawal credentials
 	WithdrawalCredentials Root
+	// Epoch when became eligible for activation
+	ActivationEligibilityEpoch Epoch
 	// Epoch when validator activated
 	ActivationEpoch Epoch
 	// Epoch when validator exited
 	ExitEpoch Epoch
 	// Epoch when validator is eligible to withdraw
 	WithdrawableEpoch Epoch
-	// Did the validator initiate an exit
-	InitiatedExit bool
 	// Was the validator slashed
 	Slashed bool
 	// Rounded balance
@@ -251,32 +249,6 @@ func (vr ValidatorRegistry) GetActiveValidatorCount(epoch Epoch) (count uint64) 
 		}
 	}
 	return
-}
-
-// Shuffle active validators
-func (vr ValidatorRegistry) GetShuffled(seed Root, epoch Epoch) []ValidatorIndex {
-	activeValidatorIndices := vr.GetActiveValidatorIndices(epoch)
-	committeeCount := GetEpochCommitteeCount(uint64(len(activeValidatorIndices)))
-	if committeeCount > uint64(len(activeValidatorIndices)) {
-		panic("not enough validators to form committees!")
-	}
-	// Active validators, shuffled in-place.
-	hash := sha256.New()
-	hashFn := func(in []byte) []byte {
-		hash.Reset()
-		hash.Write(in)
-		return hash.Sum(nil)
-	}
-	rawIndexList := make([]uint64, len(vr))
-	for i := 0; i < len(activeValidatorIndices); i++ {
-		rawIndexList[i] = uint64(activeValidatorIndices[i])
-	}
-	eth2_shuffle.ShuffleList(hashFn, rawIndexList, SHUFFLE_ROUND_COUNT, seed)
-	shuffled := make([]ValidatorIndex, len(vr))
-	for i := 0; i < len(activeValidatorIndices); i++ {
-		shuffled[i] = ValidatorIndex(rawIndexList[i])
-	}
-	return shuffled
 }
 
 type HistoricalBatch struct {

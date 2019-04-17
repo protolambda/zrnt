@@ -7,10 +7,15 @@ import (
 
 type ValidatorStatusFlag uint64
 
+func (flags ValidatorStatusFlag) hasMarkers(markers ValidatorStatusFlag) bool {
+	return flags & markers == markers
+}
+
 const (
 	prevEpochAttester ValidatorStatusFlag = 1 << iota
 	matchingHeadAttester
 	epochBoundaryAttester
+	unslashed
 	eligibleAttester
 )
 
@@ -66,6 +71,10 @@ func DeltasJustificationAndFinalizationDeltas(state *beacon.BeaconState,) *beaco
 
 				}
 
+				if !state.ValidatorRegistry[p].Slashed {
+					status.Flags |= unslashed
+				}
+
 				// remember the participant as one of the good validators
 				status.Flags |= prevEpochAttester
 
@@ -86,13 +95,13 @@ func DeltasJustificationAndFinalizationDeltas(state *beacon.BeaconState,) *beaco
 		status := &data[i]
 		b := state.GetEffectiveBalance(i)
 		totalBalance += b
-		if status.Flags & prevEpochAttester != 0 {
+		if status.Flags.hasMarkers(prevEpochAttester | unslashed) {
 			totalAttestingBalance += b
 		}
-		if status.Flags & epochBoundaryAttester != 0 {
+		if status.Flags.hasMarkers(epochBoundaryAttester | unslashed) {
 			epochBoundaryBalance += b
 		}
-		if status.Flags & matchingHeadAttester != 0 {
+		if status.Flags.hasMarkers(matchingHeadAttester | unslashed) {
 			matchingHeadBalance += b
 		}
 		v := state.ValidatorRegistry[i]
@@ -118,7 +127,7 @@ func DeltasJustificationAndFinalizationDeltas(state *beacon.BeaconState,) *beaco
 			}
 
 			// Expected FFG source
-			if status.Flags & prevEpochAttester != 0 {
+			if status.Flags.hasMarkers(prevEpochAttester | unslashed) {
 				// Justification-participation reward
 				deltas.Rewards[i] += baseReward * totalAttestingBalance / totalBalance
 
@@ -132,7 +141,7 @@ func DeltasJustificationAndFinalizationDeltas(state *beacon.BeaconState,) *beaco
 
 
 			// Expected FFG target
-			if status.Flags & epochBoundaryAttester != 0 {
+			if status.Flags.hasMarkers(epochBoundaryAttester | unslashed) {
 				// Boundary-attestation reward
 				deltas.Rewards[i] += baseReward * epochBoundaryBalance / totalBalance
 			} else {
@@ -141,7 +150,7 @@ func DeltasJustificationAndFinalizationDeltas(state *beacon.BeaconState,) *beaco
 			}
 
 			// Expected head
-			if status.Flags & matchingHeadAttester != 0 {
+			if status.Flags.hasMarkers(matchingHeadAttester | unslashed) {
 				// Canonical-participation reward
 				deltas.Rewards[i] += baseReward * matchingHeadBalance / totalBalance
 			} else {
@@ -150,7 +159,7 @@ func DeltasJustificationAndFinalizationDeltas(state *beacon.BeaconState,) *beaco
 			}
 
 			// Proposer bonus
-			if status.Flags & prevEpochAttester != 0 {
+			if status.Flags.hasMarkers(prevEpochAttester | unslashed) {
 				inclSlot, ok := status.inclusionSlot()
 				if !ok {
 					// active validator did not have an attestation included

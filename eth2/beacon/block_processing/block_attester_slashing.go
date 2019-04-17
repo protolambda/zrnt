@@ -48,10 +48,11 @@ func ProcessAttesterSlashing(state *beacon.BeaconState, attesterSlashing *beacon
 	indices2 = append(indices1, sa2.CustodyBit0Indexes...)
 	indices2 = append(indices1, sa2.CustodyBit1Indexes...)
 
+	currentEpoch := state.Epoch()
 	// run slashings where applicable
 	var anyErr error
 	indices1.ZigZagJoin(indices2, func(i beacon.ValidatorIndex) {
-		if !state.ValidatorRegistry[i].Slashed {
+		if state.ValidatorRegistry[i].IsSlashable(currentEpoch) {
 			if err := state.SlashValidator(i); err != nil {
 				anyErr = err
 			}

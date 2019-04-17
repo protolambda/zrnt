@@ -30,6 +30,7 @@ func ProcessBlockDeposits(state *beacon.BeaconState, block *beacon.BeaconBlock) 
 }
 
 // Process a deposit from Ethereum 1.0.
+// Used to add a validator or top up an existing validator's balance by some deposit amount.
 func ProcessDeposit(state *beacon.BeaconState, dep *beacon.Deposit) error {
 	// Deposits must be processed in order
 	if dep.Index != state.DepositIndex {
@@ -67,7 +68,7 @@ func ProcessDeposit(state *beacon.BeaconState, dep *beacon.Deposit) error {
 		// only unknown pubkeys need to be verified, others are already trusted
 		if !bls.BlsVerify(
 			dep.Data.Pubkey,
-			ssz.SignedRoot(dep.Data),
+			ssz.SigningRoot(dep.Data),
 			dep.Data.ProofOfPossession,
 			beacon.GetDomain(state.Fork, state.Epoch(), beacon.DOMAIN_DEPOSIT)) {
 			return errors.New("could not verify BLS signature")
@@ -77,10 +78,10 @@ func ProcessDeposit(state *beacon.BeaconState, dep *beacon.Deposit) error {
 		validator := &beacon.Validator{
 			Pubkey:                dep.Data.Pubkey,
 			WithdrawalCredentials: dep.Data.WithdrawalCredentials,
+			ActivationEligibilityEpoch: beacon.FAR_FUTURE_EPOCH,
 			ActivationEpoch:       beacon.FAR_FUTURE_EPOCH,
 			ExitEpoch:             beacon.FAR_FUTURE_EPOCH,
 			WithdrawableEpoch:     beacon.FAR_FUTURE_EPOCH,
-			InitiatedExit:         false,
 			Slashed:               false,
 			HighBalance:           0,
 		}

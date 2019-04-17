@@ -17,5 +17,5 @@ func CacheState(state *beacon.BeaconState) {
 	}
 
 	// store latest known block for previous slot
-	state.LatestBlockRoots[state.Slot%beacon.SLOTS_PER_HISTORICAL_ROOT] = ssz.SignedRoot(state.LatestBlockHeader)
+	state.LatestBlockRoots[state.Slot%beacon.SLOTS_PER_HISTORICAL_ROOT] = ssz.SigningRoot(state.LatestBlockHeader)
 }

@@ -23,8 +23,8 @@ func GetGenesisBeaconState(validatorDeposits []beacon.Deposit, time beacon.Times
 		// Randomness and committees
 		LatestStartShard: beacon.GENESIS_START_SHARD,
 		// Finality
-		PreviousEpochAttestations: make([]beacon.PendingAttestation, 0),
-		CurrentEpochAttestations: make([]beacon.PendingAttestation, 0),
+		PreviousEpochAttestations: make([]*beacon.PendingAttestation, 0),
+		CurrentEpochAttestations: make([]*beacon.PendingAttestation, 0),
 		PreviousJustifiedEpoch: beacon.GENESIS_EPOCH - 1,
 		CurrentJustifiedEpoch:  beacon.GENESIS_EPOCH,
 		FinalizedEpoch:         beacon.GENESIS_EPOCH,

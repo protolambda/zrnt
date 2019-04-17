@@ -219,13 +219,6 @@ type Eth1Data struct {
 	BlockHash Root
 }
 
-type Eth1DataVote struct {
-	// Data being voted for
-	Eth1Data Eth1Data
-	// Vote count
-	VoteCount uint64
-}
-
 type ValidatorRegistry []*Validator
 
 func (vr ValidatorRegistry) IsValidatorIndex(index ValidatorIndex) bool {

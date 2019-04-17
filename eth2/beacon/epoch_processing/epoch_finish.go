@@ -8,6 +8,12 @@ import (
 func ProcessEpochFinish(state *beacon.BeaconState) {
 	currentEpoch := state.Epoch()
 	nextEpoch := currentEpoch + 1
+
+	// Reset eth1 data votes
+	if state.Slot % beacon.SLOTS_PER_ETH1_VOTING_PERIOD == 0 {
+		state.Eth1DataVotes = make([]beacon.Eth1Data, 0)
+	}
+
 	// Set active index root
 	indexRootPosition := (nextEpoch + beacon.ACTIVATION_EXIT_DELAY) % beacon.LATEST_ACTIVE_INDEX_ROOTS_LENGTH
 	state.LatestActiveIndexRoots[indexRootPosition] =
@@ -28,5 +34,5 @@ func ProcessEpochFinish(state *beacon.BeaconState) {
 	}
 	// Rotate current/previous epoch attestations
 	state.PreviousEpochAttestations = state.CurrentEpochAttestations
-	state.CurrentEpochAttestations = make([]beacon.PendingAttestation, 0)
+	state.CurrentEpochAttestations = make([]*beacon.PendingAttestation, 0)
 }

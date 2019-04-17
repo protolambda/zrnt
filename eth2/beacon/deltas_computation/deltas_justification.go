@@ -56,8 +56,7 @@ func DeltasJustificationAndFinalizationDeltas(state *beacon.BeaconState,) *beaco
 	{
 		previousBoundaryBlockRoot, _ := state.GetBlockRoot(state.PreviousEpoch().GetStartSlot())
 
-		for i := 0; i < len(state.PreviousEpochAttestations); i++ {
-			att := &state.PreviousEpochAttestations[i]
+		for _, att := range state.PreviousEpochAttestations {
 			attBlockRoot, _ := state.GetBlockRoot(att.Data.Slot)
 			participants, _ := state.GetAttestationParticipants(&att.Data, &att.AggregationBitfield)
 			for _, p := range participants {
@@ -68,7 +67,6 @@ func DeltasJustificationAndFinalizationDeltas(state *beacon.BeaconState,) *beaco
 				if status.InclusionSlot > att.InclusionSlot {
 					status.InclusionSlot = att.InclusionSlot
 					status.DataSlot = att.Data.Slot
-
 				}
 
 				if !state.ValidatorRegistry[p].Slashed {
@@ -110,7 +108,7 @@ func DeltasJustificationAndFinalizationDeltas(state *beacon.BeaconState,) *beaco
 		}
 	}
 	previousTotalBalance := state.GetTotalBalanceOf(
-		state.ValidatorRegistry.GetActiveValidatorIndices(state.Epoch() - 1))
+		state.ValidatorRegistry.GetActiveValidatorIndices(state.PreviousEpoch()))
 
 	adjustedQuotient := math.IntegerSquareroot(uint64(previousTotalBalance)) / beacon.BASE_REWARD_QUOTIENT
 	epochsSinceFinality := currentEpoch + 1 - state.FinalizedEpoch
@@ -120,7 +118,10 @@ func DeltasJustificationAndFinalizationDeltas(state *beacon.BeaconState,) *beaco
 		if status.Flags & eligibleAttester != 0 {
 
 			effectiveBalance := state.GetEffectiveBalance(i)
-			baseReward := effectiveBalance / beacon.Gwei(adjustedQuotient) / 5
+			baseReward := beacon.Gwei(0)
+			if adjustedQuotient != 0 {
+				baseReward = effectiveBalance / beacon.Gwei(adjustedQuotient) / 5
+			}
 			inactivityPenalty := baseReward
 			if epochsSinceFinality > 4 {
 				inactivityPenalty += effectiveBalance * beacon.Gwei(epochsSinceFinality) / beacon.INACTIVITY_PENALTY_QUOTIENT / 2
@@ -131,9 +132,9 @@ func DeltasJustificationAndFinalizationDeltas(state *beacon.BeaconState,) *beaco
 				// Justification-participation reward
 				deltas.Rewards[i] += baseReward * totalAttestingBalance / totalBalance
 
-				// Attestation-Inclusion-delay reward: quicker = more reward
-				deltas.Rewards[i] += baseReward *
-					beacon.Gwei(beacon.MIN_ATTESTATION_INCLUSION_DELAY) / beacon.Gwei(status.inclusionDistance())
+				// Inclusion speed bonus
+				inclusionDelay := status.inclusionDistance()
+				deltas.Rewards[i] += baseReward * beacon.Gwei(beacon.MIN_ATTESTATION_INCLUSION_DELAY) / beacon.Gwei(inclusionDelay)
 			} else {
 				//Justification-non-participation R-penalty
 				deltas.Penalties[i] += baseReward
@@ -156,17 +157,6 @@ func DeltasJustificationAndFinalizationDeltas(state *beacon.BeaconState,) *beaco
 			} else {
 				// Non-canonical-participation R-penalty
 				deltas.Penalties[i] += baseReward
-			}
-
-			// Proposer bonus
-			if status.Flags.hasMarkers(prevEpochAttester | unslashed) {
-				inclSlot, ok := status.inclusionSlot()
-				if !ok {
-					// active validator did not have an attestation included
-					continue
-				}
-				proposerIndex := state.GetBeaconProposerIndex(inclSlot)
-				deltas.Rewards[proposerIndex] += baseReward / beacon.PROPOSER_REWARD_QUOTIENT
 			}
 
 			// Take away max rewards if we're not finalizing

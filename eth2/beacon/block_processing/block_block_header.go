@@ -19,8 +19,7 @@ func ProcessBlockHeader(state *beacon.BeaconState, block *beacon.BeaconBlock) er
 	// Save current block as the new latest block
 	state.LatestBlockHeader = block.GetTemporaryBlockHeader()
 
-	propIndex := state.GetBeaconProposerIndex(state.Slot)
-	proposer := state.ValidatorRegistry[propIndex]
+	proposer := state.ValidatorRegistry[state.GetBeaconProposerIndex()]
 	// Verify proposer is not slashed
 	if proposer.Slashed {
 		return errors.New("cannot accept block header from slashed proposer")

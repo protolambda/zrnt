@@ -9,7 +9,7 @@ import (
 )
 
 func ProcessBlockRandao(state *beacon.BeaconState, block *beacon.BeaconBlock) error {
-	propIndex := state.GetBeaconProposerIndex(state.Slot)
+	propIndex := state.GetBeaconProposerIndex()
 	proposer := state.ValidatorRegistry[propIndex]
 	if !bls.BlsVerify(
 		proposer.Pubkey,

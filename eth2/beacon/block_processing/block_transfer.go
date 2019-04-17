@@ -64,7 +64,7 @@ func ProcessTransfer(state *beacon.BeaconState, transfer *beacon.Transfer) error
 	}
 	state.DecreaseBalance(transfer.Sender, transfer.Amount + transfer.Fee)
 	state.IncreaseBalance(transfer.Recipient, transfer.Amount)
-	propIndex := state.GetBeaconProposerIndex(state.Slot)
+	propIndex := state.GetBeaconProposerIndex()
 	state.IncreaseBalance(propIndex, transfer.Fee)
 	// Verify balances are not dust
 	if b := state.GetBalance(transfer.Sender); !(0 < b && b < beacon.MIN_DEPOSIT_AMOUNT) {

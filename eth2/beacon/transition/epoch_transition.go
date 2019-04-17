@@ -8,7 +8,6 @@ import (
 type EpochProcessor func(state *beacon.BeaconState)
 
 var epochProcessors = []EpochProcessor{
-	epoch_processing.ProcessEpochEth1,
 	epoch_processing.ProcessEpochJustification,
 	epoch_processing.ProcessEpochCrosslinks,
 	epoch_processing.ProcessEpochRewardsAndPenalties,

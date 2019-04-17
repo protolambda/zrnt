@@ -30,8 +30,8 @@ type BeaconState struct {
 	LatestStartShard  Shard
 
 	// Finality
-	PreviousEpochAttestations []PendingAttestation
-	CurrentEpochAttestations  []PendingAttestation
+	PreviousEpochAttestations []*PendingAttestation
+	CurrentEpochAttestations  []*PendingAttestation
 	PreviousJustifiedEpoch    Epoch
 	CurrentJustifiedEpoch     Epoch
 	PreviousJustifiedRoot     Root
@@ -52,7 +52,7 @@ type BeaconState struct {
 
 	// Ethereum 1.0 chain data
 	LatestEth1Data Eth1Data
-	Eth1DataVotes  []Eth1DataVote
+	Eth1DataVotes  []Eth1Data
 	DepositIndex   DepositIndex
 }
 
@@ -69,12 +69,12 @@ func (state *BeaconState) Copy() *BeaconState {
 	}
 	res.Balances = append(make([]Gwei, 0, len(state.Balances)), state.Balances...)
 	// finality
-	res.PreviousEpochAttestations = append(make([]PendingAttestation, 0, len(state.PreviousEpochAttestations)), state.PreviousEpochAttestations...)
-	res.CurrentEpochAttestations = append(make([]PendingAttestation, 0, len(state.CurrentEpochAttestations)), state.CurrentEpochAttestations...)
+	res.PreviousEpochAttestations = append(make([]*PendingAttestation, 0, len(state.PreviousEpochAttestations)), state.PreviousEpochAttestations...)
+	res.CurrentEpochAttestations = append(make([]*PendingAttestation, 0, len(state.CurrentEpochAttestations)), state.CurrentEpochAttestations...)
 	// recent state
 	res.HistoricalRoots = append(make([]Root, 0, len(state.HistoricalRoots)), state.HistoricalRoots...)
 	// eth1
-	res.Eth1DataVotes = append(make([]Eth1DataVote, 0, len(state.Eth1DataVotes)), state.Eth1DataVotes...)
+	res.Eth1DataVotes = append(make([]Eth1Data, 0, len(state.Eth1DataVotes)), state.Eth1DataVotes...)
 	return res
 }
 
@@ -150,13 +150,10 @@ func (state *BeaconState) GetShardDelta(epoch Epoch) Shard {
 		uint64(SHARD_COUNT - (SHARD_COUNT / Shard(SLOTS_PER_EPOCH)))))
 }
 
-// Return the beacon proposer index for the slot.
-func (state *BeaconState) GetBeaconProposerIndex(slot Slot) ValidatorIndex {
+// Return the beacon proposer index for the current slot
+func (state *BeaconState) GetBeaconProposerIndex() ValidatorIndex {
 	currentEpoch := state.Epoch()
-	if slot.ToEpoch() != currentEpoch {
-		panic("cannot get proposer index for slot of different epoch")
-	}
-	firstCommittee := state.GetCrosslinkCommitteesAtSlot(slot)[0].Committee
+	firstCommittee := state.GetCrosslinkCommitteesAtSlot(state.Slot)[0].Committee
 	seed := state.GenerateSeed(currentEpoch)
 	buf := make([]byte, 32+8, 32+8)
 	copy(buf[0:32], seed[:])
@@ -164,9 +161,9 @@ func (state *BeaconState) GetBeaconProposerIndex(slot Slot) ValidatorIndex {
 		binary.LittleEndian.PutUint64(buf[32:], i)
 		h := hash.Hash(buf)
 		for j := uint64(0); j < 32; j++ {
-			randByte := h[j]
+			randomByte := h[j]
 			candidate := firstCommittee[(uint64(currentEpoch)+(i<<5|j))%uint64(len(firstCommittee))]
-			if state.GetEffectiveBalance(candidate)<<8 > MAX_DEPOSIT_AMOUNT*Gwei(randByte) {
+			if state.GetEffectiveBalance(candidate)<<8 > MAX_DEPOSIT_AMOUNT*Gwei(randomByte) {
 				return candidate
 			}
 		}
@@ -288,11 +285,11 @@ func (state *BeaconState) GetWinningRootAndParticipants(shard Shard) (Root, Vali
 			}
 		}
 	}
-	for i := 0; i < len(state.PreviousEpochAttestations); i++ {
-		updateCrosslinkWeights(&state.PreviousEpochAttestations[i])
+	for _, att := range state.PreviousEpochAttestations {
+		updateCrosslinkWeights(att)
 	}
-	for i := 0; i < len(state.CurrentEpochAttestations); i++ {
-		updateCrosslinkWeights(&state.CurrentEpochAttestations[i])
+	for _, att := range state.CurrentEpochAttestations {
+		updateCrosslinkWeights(att)
 	}
 
 	// handle when no attestations for shard available
@@ -327,11 +324,11 @@ func (state *BeaconState) GetWinningRootAndParticipants(shard Shard) (Root, Vali
 			}
 		}
 	}
-	for i := 0; i < len(state.PreviousEpochAttestations); i++ {
-		findWinners(&state.PreviousEpochAttestations[i])
+	for _, att := range state.PreviousEpochAttestations {
+		findWinners(att)
 	}
-	for i := 0; i < len(state.CurrentEpochAttestations); i++ {
-		findWinners(&state.CurrentEpochAttestations[i])
+	for _, att := range state.CurrentEpochAttestations {
+		findWinners(att)
 	}
 	winningAttesters := make(ValidatorSet, len(winningAttestersSet))
 	i := 0
@@ -398,7 +395,7 @@ func (state *BeaconState) SlashValidator(index ValidatorIndex) error {
 	state.LatestSlashedBalances[state.Epoch()%LATEST_SLASHED_EXIT_LENGTH] += state.GetEffectiveBalance(index)
 
 	whistleblowerReward := state.GetEffectiveBalance(index) / WHISTLEBLOWING_REWARD_QUOTIENT
-	propIndex := state.GetBeaconProposerIndex(state.Slot)
+	propIndex := state.GetBeaconProposerIndex()
 	state.IncreaseBalance(propIndex, whistleblowerReward)
 	state.DecreaseBalance(index, whistleblowerReward)
 	validator.Slashed = true

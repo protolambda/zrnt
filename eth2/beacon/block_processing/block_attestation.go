@@ -56,7 +56,7 @@ func ProcessAttestation(state *beacon.BeaconState, attestation *beacon.Attestati
 	}
 
 	// Cache pending attestation
-	pendingAttestation := beacon.PendingAttestation{
+	pendingAttestation := &beacon.PendingAttestation{
 		Data:                attestation.Data,
 		AggregationBitfield: attestation.AggregationBitfield,
 		CustodyBitfield:     attestation.CustodyBitfield,

@@ -168,15 +168,24 @@ func sszSerialize(v reflect.Value, dst *[]byte) (encodedLen uint32) {
 	}
 }
 
-// constructs a merkle_root of the given data
-// but ignores any fields in structs that are tagged with `ssz:"signature"`
+// constructs a merkle_root of the given data, but truncates last element (i.e. ignored, not part of the root)
 func SigningRoot(input interface{}) [32]byte {
-	return sszHashTreeRoot(reflect.ValueOf(input), nil, "signature")
+	v := reflect.ValueOf(input)
+	switch v.Kind() {
+	case reflect.Struct:
+		data := composeStructRootData(v)
+		if len(data) <= 1 {
+			panic("taking signing-root of single/non-field struct")
+		}
+		return merkle.MerkleRoot(data[:len(data)-1])
+	default:
+		panic("input of signing root is not a struct")
+	}
 }
 
 // constructs a merkle_root of the given data
 func HashTreeRoot(input interface{}) [32]byte {
-	return sszHashTreeRoot(reflect.ValueOf(input), nil, "")
+	return sszHashTreeRoot(reflect.ValueOf(input), nil)
 }
 
 func isFixedSize(vt reflect.Type) bool {
@@ -229,10 +238,10 @@ func basicListRoot(v reflect.Value, compoundCache *SSZCompoundCache) [32]byte {
 }
 
 // only call this for slices and arrays, not structs
-func nonBasicListRoot(v reflect.Value, compoundCache *SSZCompoundCache, ignoreFlag string) [32]byte {
+func nonBasicListRoot(v reflect.Value, compoundCache *SSZCompoundCache) [32]byte {
 	if compoundCache != nil {
 		serializeFn := func(dst []byte, index uint64) {
-			hash := sszHashTreeRoot(v.Index(int(index)), nil, ignoreFlag)
+			hash := sszHashTreeRoot(v.Index(int(index)), nil)
 			copy(dst, hash[:])
 		}
 		// update and use cache for merkleization
@@ -241,19 +250,19 @@ func nonBasicListRoot(v reflect.Value, compoundCache *SSZCompoundCache, ignoreFl
 		items := v.Len()
 		data := make([][32]byte, items)
 		for i := 0; i < items; i++ {
-			data[i] = sszHashTreeRoot(v.Index(i), nil, ignoreFlag)
+			data[i] = sszHashTreeRoot(v.Index(i), nil)
 		}
 		return merkle.MerkleRoot(data)
 	}
 }
 
-func structRoot(v reflect.Value, ignoreFlag string) [32]byte {
+func composeStructRootData(v reflect.Value) [][32]byte {
 	fields := v.NumField()
 	data := make([][32]byte, 0, fields)
 	vType := v.Type()
 	for i := 0; i < fields; i++ {
 		structField := vType.Field(i)
-		if !hasSSZFlag(structField, ignoreFlag) && !hasSSZFlag(structField, OMIT_FLAG) {
+		if !hasSSZFlag(structField, OMIT_FLAG) {
 			cacheFieldName := structField.Name + "SSZCache"
 			_, ok := vType.FieldByName(cacheFieldName)
 			fieldV := v.Field(i)
@@ -261,23 +270,27 @@ func structRoot(v reflect.Value, ignoreFlag string) [32]byte {
 				cacheV := v.FieldByName(cacheFieldName)
 				elemCache := cacheV.Interface().(SSZCompoundCache)
 				// cache may be nil
-				data = append(data, sszHashTreeRoot(fieldV, &elemCache, ignoreFlag))
+				data = append(data, sszHashTreeRoot(fieldV, &elemCache))
 			} else {
-				data = append(data, sszHashTreeRoot(fieldV, nil, ignoreFlag))
+				data = append(data, sszHashTreeRoot(fieldV, nil))
 			}
 		}
 	}
-	return merkle.MerkleRoot(data)
+	return data
+}
+
+func structRoot(v reflect.Value) [32]byte {
+	return merkle.MerkleRoot(composeStructRootData(v))
 }
 
 // Compute hash tree root for a value
-func sszHashTreeRoot(v reflect.Value, compoundCache *SSZCompoundCache, ignoreFlag string) [32]byte {
+func sszHashTreeRoot(v reflect.Value, compoundCache *SSZCompoundCache) [32]byte {
 	switch v.Kind() {
 	case reflect.Ptr:
 		if v.IsNil() {
 			return [32]byte{}
 		}
-		return sszHashTreeRoot(v.Elem(), compoundCache, ignoreFlag)
+		return sszHashTreeRoot(v.Elem(), compoundCache)
 	// "basic object? -> pack and merkle_root
 	case reflect.Uint8, reflect.Uint32, reflect.Uint64, reflect.Bool:
 		return merkle.MerkleRoot(sszPack(v))
@@ -288,16 +301,16 @@ func sszHashTreeRoot(v reflect.Value, compoundCache *SSZCompoundCache, ignoreFla
 		if isBasicType(v.Type().Elem()) {
 			return basicListRoot(v, compoundCache)
 		} else {
-			return nonBasicListRoot(v, compoundCache, ignoreFlag)
+			return nonBasicListRoot(v, compoundCache)
 		}
 	case reflect.Slice:
 		if isBasicType(v.Type().Elem()) {
 			return sszMixInLength(basicListRoot(v, compoundCache), uint64(v.Len()))
 		} else {
-			return sszMixInLength(nonBasicListRoot(v, compoundCache, ignoreFlag), uint64(v.Len()))
+			return sszMixInLength(nonBasicListRoot(v, compoundCache), uint64(v.Len()))
 		}
 	case reflect.Struct:
-		return structRoot(v, ignoreFlag)
+		return structRoot(v)
 	default:
 		panic("tree-hash: unsupported value kind: " + v.Kind().String())
 	}

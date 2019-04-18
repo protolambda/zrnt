@@ -4,7 +4,6 @@ import (
 	"github.com/protolambda/zrnt/eth2/util/bitfield"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	. "github.com/protolambda/zrnt/eth2/util/data_types"
-	"github.com/protolambda/zrnt/eth2/util/hex"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
@@ -175,8 +174,6 @@ type PendingAttestation struct {
 	AggregationBitfield bitfield.Bitfield
 	// Attestation data
 	Data AttestationData
-	// Custody bitfield
-	CustodyBitfield bitfield.Bitfield
 	// Inclusion slot
 	InclusionSlot Slot
 }
@@ -184,10 +181,6 @@ type PendingAttestation struct {
 // 32 bits, not strictly an integer, hence represented as 4 bytes
 // (bytes not necessarily corresponding to versions)
 type ForkVersion [4]byte
-
-func (v *ForkVersion) MarshalJSON() ([]byte, error)    { return hex.EncodeHex((*v)[:]) }
-func (v *ForkVersion) UnmarshalJSON(data []byte) error { return hex.DecodeHex(data[1:len(data)-1], (*v)[:]) }
-func (v *ForkVersion) String() string                  { return hex.EncodeHexStr((*v)[:]) }
 
 func Int32ToForkVersion(v uint32) ForkVersion {
 	return [4]byte{byte(v >> 24), byte(v >> 16), byte(v >> 8), byte(v)}

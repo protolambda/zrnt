@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -63,6 +64,9 @@ type TestCasesHolder struct {
 }
 
 func decodeHook(s reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
+	if t.Kind() == reflect.Slice && t.Elem().Kind() != reflect.Uint8 {
+		return data, nil
+	}
 	if s.Kind() != reflect.String {
 		return data, nil
 	}
@@ -86,7 +90,6 @@ func decodeHook(s reflect.Type, t reflect.Type, data interface{}) (interface{}, 
 	return data, nil
 }
 
-
 func (holder *TestCasesHolder) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	rawCases := make([]interface{}, 0)
 	// read raw YAML into parsed but untyped structure
@@ -102,8 +105,10 @@ func (holder *TestCasesHolder) UnmarshalYAML(unmarshal func(interface{}) error) 
 	for _, transformedCase := range transformed {
 		caseTyped := holder.CaseAlloc(transformedCase)
 
+		var md Metadata
 		config := &DecoderConfig{
 			DecodeHook: decodeHook,
+			Metadata: &md,
 			WeaklyTypedInput: false,
 			Result:           caseTyped,
 		}
@@ -115,6 +120,9 @@ func (holder *TestCasesHolder) UnmarshalYAML(unmarshal func(interface{}) error) 
 
 		if err := decoder.Decode(transformedCase); err != nil {
 			return errors.New(fmt.Sprintf("cannot decode test-case: %v", err))
+		}
+		if len(md.Unused) > 0 {
+			return errors.New(fmt.Sprintf("unused keys: %s", strings.Join(md.Unused, ", ")))
 		}
 		asTestCase, ok := caseTyped.(TestCase)
 		if !ok {

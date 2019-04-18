@@ -130,7 +130,7 @@ func sszSerialize(v reflect.Value, dst *[]byte) (encodedLen uint32) {
 				encodedLen += sszSerializeMaybeCached(v.Index(i), dst)
 			}
 			binary.LittleEndian.PutUint32((*dst)[s:e], encodedLen)
-			encodedLen += BYTES_PER_LENGTH_PREFIX + encodedLen
+			encodedLen += BYTES_PER_LENGTH_PREFIX
 		}
 		return encodedLen
 	case reflect.Slice: // "list"
@@ -140,7 +140,7 @@ func sszSerialize(v reflect.Value, dst *[]byte) (encodedLen uint32) {
 			encodedLen += sszSerializeMaybeCached(v.Index(i), dst)
 		}
 		binary.LittleEndian.PutUint32((*dst)[s:e], encodedLen)
-		encodedLen += BYTES_PER_LENGTH_PREFIX + encodedLen
+		encodedLen += BYTES_PER_LENGTH_PREFIX
 		return encodedLen
 	case reflect.Struct: // "container"
 		vType := v.Type()
@@ -161,6 +161,7 @@ func sszSerialize(v reflect.Value, dst *[]byte) (encodedLen uint32) {
 				encodedLen += sszSerializeMaybeCached(v.Field(i), dst)
 			}
 			binary.LittleEndian.PutUint32((*dst)[lenS:lenE], encodedLen)
+			encodedLen += BYTES_PER_LENGTH_PREFIX
 		}
 		return encodedLen
 	default:

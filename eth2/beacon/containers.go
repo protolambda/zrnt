@@ -63,8 +63,8 @@ type AttestationDataAndCustodyBit struct {
 
 type IndexedAttestation struct {
 	// Validator Indices
-	CustodyBit0Indexes []ValidatorIndex
-	CustodyBit1Indexes []ValidatorIndex
+	CustodyBit0Indices []ValidatorIndex
+	CustodyBit1Indices []ValidatorIndex
 	// Attestation data
 	Data AttestationData
 	// BLS aggregate signature

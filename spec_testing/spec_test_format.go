@@ -18,12 +18,11 @@ func decodeValue(v interface{}) interface{} {
 	}
 }
 
-var matchSnake = regexp.MustCompile("([a-z0-9])_([a-z0-9])")
+var matchSnake = regexp.MustCompile("_([a-z0-9])")
 
 func toPascalCase(str string) string {
 	snake := []byte(matchSnake.ReplaceAllStringFunc(str, func(v string) string {
-		// ignore the "_" at v[1]
-		return string(v[0]) + strings.ToUpper(string(v[2]))
+		return strings.ToUpper(string(v[1]))
 	}))
 	snake[0] = strings.ToUpper(string(snake[0]))[0]
 	return string(snake)

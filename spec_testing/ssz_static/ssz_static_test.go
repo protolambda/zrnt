@@ -1,4 +1,4 @@
-package operations
+package ssz_static
 
 import (
 	"github.com/protolambda/zrnt/eth2/beacon"
@@ -16,22 +16,26 @@ type SSZStaticTestCase struct {
 }
 
 func (testCase *SSZStaticTestCase) Run(t *testing.T) {
-	t.Run("serialization", func(t *testing.T) {
-		encoded := ssz.SSZEncode(testCase.Value)
-		if len(encoded) != len(testCase.Serialized) {
-			t.Fatalf("encoded data has different length: %d (spec) <-> %d (zrnt)", len(testCase.Serialized), len(encoded))
-		}
-		for i := 0; i < len(encoded); i++ {
-			if encoded[i] != testCase.Serialized[i] {
-				t.Fatalf("byte i: %d differs: %d (spec) <-> %d (zrnt)", i, testCase.Serialized[i], encoded[i])
+	t.Run(testCase.TypeName, func(t *testing.T) {
+		t.Run("serialization", func(t *testing.T) {
+			encoded := ssz.SSZEncode(testCase.Value)
+			if len(encoded) != len(testCase.Serialized) {
+				encodedBytes := data_types.Bytes(encoded)
+				t.Fatalf("encoded data has different length: %d (spec) <-> %d (zrnt)\nspec: %s\nzrnt: %s", len(testCase.Serialized), len(encoded), testCase.Serialized.String(), encodedBytes.String())
 			}
-		}
-	})
-	t.Run("hash_tree_root", func(t *testing.T) {
-		root := data_types.Root(ssz.HashTreeRoot(testCase.Value))
-		if root != testCase.Root {
-			t.Fatalf("hash-tree-roots differ: %s (spec) <-> %x (zrnt)", testCase.Root.String(), root.String())
-		}
+			for i := 0; i < len(encoded); i++ {
+				if encoded[i] != testCase.Serialized[i] {
+					encodedBytes := data_types.Bytes(encoded)
+					t.Fatalf("byte i: %d differs: %d (spec) <-> %d (zrnt)\nspec: %s\nzrnt: %s", i, testCase.Serialized[i], encoded[i], testCase.Serialized.String(), encodedBytes.String())
+				}
+			}
+		})
+		t.Run("hash_tree_root", func(t *testing.T) {
+			root := data_types.Root(ssz.HashTreeRoot(testCase.Value))
+			if root != testCase.Root {
+				t.Fatalf("hash-tree-roots differ: %s (spec) <-> %s (zrnt)", testCase.Root.String(), root.String())
+			}
+		})
 	})
 }
 

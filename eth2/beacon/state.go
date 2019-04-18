@@ -477,8 +477,8 @@ func (state *BeaconState) ConvertToIndexed(attestation *Attestation) (*IndexedAt
 		custodyBit0Indices = append(custodyBit0Indices, i)
 	})
 	return &IndexedAttestation{
-		CustodyBit0Indexes: custodyBit0Indices,
-		CustodyBit1Indexes: custodyBit1Indices,
+		CustodyBit0Indices: custodyBit0Indices,
+		CustodyBit1Indices: custodyBit1Indices,
 		Data:               attestation.Data,
 		AggregateSignature: attestation.AggregateSignature,
 	}, nil
@@ -486,8 +486,8 @@ func (state *BeaconState) ConvertToIndexed(attestation *Attestation) (*IndexedAt
 
 // Verify validity of slashable_attestation fields.
 func (state *BeaconState) VerifyIndexedAttestation(indexedAttestation *IndexedAttestation) bool {
-	custodyBit0Indices := indexedAttestation.CustodyBit0Indexes
-	custodyBit1Indices := indexedAttestation.CustodyBit1Indexes
+	custodyBit0Indices := indexedAttestation.CustodyBit0Indices
+	custodyBit1Indices := indexedAttestation.CustodyBit1Indices
 
 	// [TO BE REMOVED IN PHASE 1]
 	if len(custodyBit1Indices) != 0 {

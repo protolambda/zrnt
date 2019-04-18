@@ -32,11 +32,11 @@ func (testCase *DepositTestCase) Run(t *testing.T) {
 
 	// in case hashes are incorrectly correct (e.g. new SSZ behavior), we still have diffs
 	if diff, equal := messagediff.PrettyDiff(testCase.Pre, testCase.Post); !equal {
-		t.Errorf("end result does not match expectation!\n%s", diff)
+		t.Fatalf("end result does not match expectation!\n%s", diff)
 	}
 }
 
 func TestDeposits(t *testing.T) {
 	spec_testing.RunSuitesInPath("../../../eth2.0-specs/yaml_tests/operations/deposits/",
-		func() interface{} { return new(DepositTestCase) }, t)
+		func(raw interface{}) interface{} { return new(DepositTestCase) }, t)
 }

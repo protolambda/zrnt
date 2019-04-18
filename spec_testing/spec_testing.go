@@ -1,15 +1,18 @@
 package spec_testing
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
+	. "github.com/mitchellh/mapstructure"
 	"github.com/protolambda/zrnt/constant_presets"
+	"github.com/protolambda/zrnt/eth2/util/hex"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+	"reflect"
+	"strconv"
 	"testing"
 )
 
@@ -35,16 +38,54 @@ type TestSuite struct {
 	TestCases TestCasesHolder `yaml:"test_cases"`
 }
 
+type ConfigMismatchError struct {
+	Config string
+}
+
+func (confErr ConfigMismatchError) Error() string {
+	return fmt.Sprintf("cannot load suite for config: %s, current config is: %s", confErr.Config, constant_presets.CONFIG)
+}
+
+type TestSuiteLoader struct {
+	Config  string `yaml:"config"`
+}
+
+
 type TestCase interface {
 	Run(t *testing.T)
 }
 
-type CaseAllocator func() interface{}
+type CaseAllocator func(raw interface{}) interface{}
 
 type TestCasesHolder struct {
 	CaseAlloc CaseAllocator
 	Cases []TestCase
 }
+
+func decodeHook(s reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
+	if s.Kind() != reflect.String {
+		return data, nil
+	}
+	strData := data.(string)
+	if t.Kind() == reflect.Array && t.Elem().Kind() == reflect.Uint8 {
+		res := reflect.New(t).Elem()
+		sliceRes := res.Slice(0, t.Len()).Interface()
+		err := hex.DecodeHex([]byte(strData), sliceRes.([]byte))
+		return res.Interface(), err
+	}
+	if t.Kind() == reflect.Uint64 {
+		return strconv.ParseUint(strData, 10, 64)
+	}
+	if t.Kind() == reflect.Slice && t.Elem().Kind() == reflect.Uint8 {
+		inBytes := []byte(strData)
+		_, byteCount := hex.DecodeHexOffsetAndLen(inBytes)
+		res := make([]byte, byteCount, byteCount)
+		err := hex.DecodeHex([]byte(strData), res)
+		return res, err
+	}
+	return data, nil
+}
+
 
 func (holder *TestCasesHolder) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	rawCases := make([]interface{}, 0)
@@ -59,13 +100,20 @@ func (holder *TestCasesHolder) UnmarshalYAML(unmarshal func(interface{}) error) 
 	holder.Cases = make([]TestCase, 0, len(transformed))
 
 	for _, transformedCase := range transformed {
-		// Hack: encode, and decode. Bit slow, but makes it easy to load the data into a fully typed struct
-		encodedCase, err := json.Marshal(transformedCase)
-		if err != nil {
-			return errors.New(fmt.Sprintf("cannot parse spec data: %v", err))
+		caseTyped := holder.CaseAlloc(transformedCase)
+
+		config := &DecoderConfig{
+			DecodeHook: decodeHook,
+			WeaklyTypedInput: false,
+			Result:           caseTyped,
 		}
-		caseTyped := holder.CaseAlloc()
-		if err := json.Unmarshal(encodedCase, caseTyped); err != nil {
+
+		decoder, err := NewDecoder(config)
+		if err != nil {
+			return err
+		}
+
+		if err := decoder.Decode(transformedCase); err != nil {
 			return errors.New(fmt.Sprintf("cannot decode test-case: %v", err))
 		}
 		asTestCase, ok := caseTyped.(TestCase)
@@ -83,6 +131,14 @@ func LoadSuite(path string, caseAlloc CaseAllocator) (*TestSuite, error) {
 	yamlBytes, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("cannot read test cases file %s %v", path, err))
+	}
+	suiteLoader := new(TestSuiteLoader)
+	if err := yaml.Unmarshal(yamlBytes, suiteLoader); err != nil {
+		return nil, err
+	}
+	// skip test-suites with different configurations
+	if suiteLoader.Config != constant_presets.CONFIG {
+		return nil, ConfigMismatchError{suiteLoader.Config}
 	}
 	if err := yaml.Unmarshal(yamlBytes, suite); err != nil {
 		return nil, err
@@ -120,17 +176,17 @@ func RunSuitesInPath(path string, caseAlloc CaseAllocator, t *testing.T) {
 
 		return nil
 	}); err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	for _, path := range suitePaths {
 		suite, err := LoadSuite(path, caseAlloc)
-		// skip test-suites with different configurations
-		if suite.Config != constant_presets.CONFIG {
+		if confErr, ok := err.(ConfigMismatchError); ok {
+			t.Logf("Config %s of test-suite does not match current config %s, skipping suite %s", confErr.Config, constant_presets.CONFIG, path)
 			continue
 		}
 		if err != nil {
-			t.Error(err)
+			t.Fatal(err)
 		}
 		suite.Run(t)
 	}

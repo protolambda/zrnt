@@ -88,10 +88,7 @@ func ProcessDeposit(state *beacon.BeaconState, dep *beacon.Deposit) error {
 		// Note: In phase 2 registry indices that have been withdrawn for a long time will be recycled.
 		state.ValidatorRegistry = append(state.ValidatorRegistry, validator)
 		state.Balances = append(state.Balances, 0)
-		x := beacon.ValidatorIndex(len(state.ValidatorRegistry) - 1)
-		xStr := x.String()
-		fmt.Println(xStr)
-		state.SetBalance(x, dep.Data.Amount)
+		state.SetBalance(beacon.ValidatorIndex(len(state.ValidatorRegistry) - 1), dep.Data.Amount)
 	} else {
 		// Increase balance by deposit amount
 		state.IncreaseBalance(valIndex, dep.Data.Amount)

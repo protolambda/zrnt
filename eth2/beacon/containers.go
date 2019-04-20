@@ -1,9 +1,8 @@
 package beacon
 
 import (
+	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/bitfield"
-	"github.com/protolambda/zrnt/eth2/util/bls"
-	. "github.com/protolambda/zrnt/eth2/util/data_types"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
@@ -33,7 +32,7 @@ type Attestation struct {
 	// Custody bitfield
 	CustodyBitfield bitfield.Bitfield
 	// BLS aggregate signature
-	AggregateSignature bls.BLSSignature `ssz:"signature"`
+	AggregateSignature BLSSignature
 }
 
 type AttestationData struct {
@@ -67,7 +66,7 @@ type IndexedAttestation struct {
 	// Attestation data
 	Data AttestationData
 	// BLS aggregate signature
-	AggregateSignature bls.BLSSignature `ssz:"signature"`
+	AggregateSignature BLSSignature
 }
 
 type Crosslink struct {
@@ -88,13 +87,13 @@ type Deposit struct {
 
 type DepositData struct {
 	// BLS pubkey
-	Pubkey bls.BLSPubkey
+	Pubkey BLSPubkey
 	// Withdrawal credentials
 	WithdrawalCredentials Root
 	// Amount in Gwei
 	Amount Gwei
 	// Container self-signature
-	ProofOfPossession bls.BLSSignature `ssz:"signature"`
+	ProofOfPossession BLSSignature
 }
 
 // Let serialized_deposit_data be the serialized form of deposit.deposit_data.
@@ -117,7 +116,7 @@ type VoluntaryExit struct {
 	// Index of the exiting validator
 	ValidatorIndex ValidatorIndex
 	// Validator signature
-	Signature bls.BLSSignature `ssz:"signature"`
+	Signature BLSSignature
 }
 
 type Transfer struct {
@@ -132,14 +131,14 @@ type Transfer struct {
 	// Inclusion slot
 	Slot Slot
 	// Sender withdrawal pubkey
-	Pubkey bls.BLSPubkey
+	Pubkey BLSPubkey
 	// Sender signature
-	Signature bls.BLSSignature `ssz:"signature"`
+	Signature BLSSignature
 }
 
 type Validator struct {
 	// BLS public key
-	Pubkey bls.BLSPubkey
+	Pubkey BLSPubkey
 	// Withdrawal credentials
 	WithdrawalCredentials Root
 	// Epoch when became eligible for activation
@@ -178,14 +177,6 @@ type PendingAttestation struct {
 	InclusionSlot Slot
 }
 
-// 32 bits, not strictly an integer, hence represented as 4 bytes
-// (bytes not necessarily corresponding to versions)
-type ForkVersion [4]byte
-
-func Int32ToForkVersion(v uint32) ForkVersion {
-	return [4]byte{byte(v >> 24), byte(v >> 16), byte(v >> 8), byte(v)}
-}
-
 type Fork struct {
 	// Previous fork version
 	PreviousVersion ForkVersion
@@ -201,6 +192,13 @@ func (f Fork) GetVersion(epoch Epoch) ForkVersion {
 		return f.PreviousVersion
 	}
 	return f.CurrentVersion
+}
+
+// Get the domain number that represents the fork meta and signature domain.
+func GetDomain(fork Fork, epoch Epoch, dom BLSDomainType) BLSDomain {
+	// combine fork version with domain.
+	v := fork.GetVersion(epoch)
+	return BLSDomain((uint64(v.ToUint32()) << 32) | uint64(dom))
 }
 
 type Eth1Data struct {

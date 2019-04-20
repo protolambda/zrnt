@@ -24,9 +24,9 @@ TODO: this is a work in progress, integration pattern (Embed vs interface vs ref
 
 You can choose to ignore any struct field during serialization and hash-tree-root by tagging it with `ssz:"omit"`
 
-## Ignore fields ("signed root")
+## Ignore last field ("signed root")
 
-`SignedRoot()` computes the hash-tree-root, ignoring any struct field that is tagged with `ssz:"signature"`
+`SignedRoot()` computes the hash-tree-root, ignoring the last field of the struct.
 
 ## TODO
 

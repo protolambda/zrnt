@@ -1,5 +1,7 @@
 package beacon
 
+import . "github.com/protolambda/zrnt/eth2/core"
+
 type Deltas struct {
 	// element for each validator in registry
 	Rewards []Gwei

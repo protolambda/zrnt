@@ -1,65 +1,12 @@
-package beacon
+package core
 
-import (
-	"github.com/protolambda/zrnt/eth2/util/bls"
-	"strconv"
-)
-
-// Beacon misc.
-// ----------------------
-
-type Shard uint64
+// Index of a validator, pointing to a validator registry location
 type ValidatorIndex uint64
 
-func (i ValidatorIndex) String() string {
-	return strconv.FormatInt(int64(i), 10)
-}
+// Custom constant, not in spec:
+// An impossible high validator index used to mark special internal cases. (all 1s binary)
+const ValidatorIndexMarker = ValidatorIndex(^uint64(0))
 
-type DepositIndex uint64
-
-// Beacon timing
-// ----------------------
-
-type Timestamp uint64
-
-type Slot uint64
-
-func (s Slot) ToEpoch() Epoch {
-	return Epoch(s / SLOTS_PER_EPOCH)
-}
-
-type Epoch uint64
-
-func (e Epoch) GetStartSlot() Slot {
-	return Slot(e) * SLOTS_PER_EPOCH
-}
-
-// Return the epoch at which an activation or exit triggered in epoch takes effect.
-func (e Epoch) GetDelayedActivationExitEpoch() Epoch {
-	return e + 1 + ACTIVATION_EXIT_DELAY
-}
-
-// Value
-// ----------------------
-
-type Gwei uint64
-
-func Max(a Gwei, b Gwei) Gwei {
-	if a > b {
-		return a
-	}
-	return b
-}
-
-func Min(a Gwei, b Gwei) Gwei {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-// byte arrays
-// ----------------------
 
 // Collection of validators, should always be sorted.
 type ValidatorSet []ValidatorIndex
@@ -132,13 +79,4 @@ func (vs ValidatorSet) ZigZagJoin(target ValidatorSet, onIn func(i ValidatorInde
 			updateJ()
 		}
 	}
-}
-
-// Misc.
-
-// Get the domain number that represents the fork meta and signature domain.
-func GetDomain(fork Fork, epoch Epoch, dom bls.BLSDomain) bls.BLSDomain {
-	// combine fork version with domain.
-	v := fork.GetVersion(epoch)
-	return bls.BLSDomain(v[0]<<24|v[1]<<16|v[2]<<8|v[3]) + dom
 }

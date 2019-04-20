@@ -2,6 +2,7 @@ package block_processing
 
 import (
 	. "github.com/protolambda/zrnt/eth2/beacon"
+	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/math"
 )
 

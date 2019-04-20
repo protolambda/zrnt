@@ -1,10 +1,9 @@
 //go:generate go run ../../building/yaml_constants/main.go --presets-dir=../../../eth2.0-specs/configs/constant_presets --output-dir=../../constant_presets/
 
-package beacon
+package core
 
 import (
 	"github.com/protolambda/zrnt/constant_presets"
-	"github.com/protolambda/zrnt/eth2/util/bls"
 )
 
 // Misc.
@@ -38,7 +37,7 @@ const FAR_FUTURE_EPOCH Epoch = constant_presets.FAR_FUTURE_EPOCH
 const BLS_WITHDRAWAL_PREFIX_BYTE byte = constant_presets.BLS_WITHDRAWAL_PREFIX_BYTE
 
 // Time parameters
-// unused const SECONDS_PER_SLOT Seconds = constant_presets.SECONDS_PER_SLOT
+const SECONDS_PER_SLOT Timestamp = constant_presets.SECONDS_PER_SLOT
 const MIN_ATTESTATION_INCLUSION_DELAY Slot = constant_presets.MIN_ATTESTATION_INCLUSION_DELAY
 const SLOTS_PER_EPOCH Slot = constant_presets.SLOTS_PER_EPOCH
 const MIN_SEED_LOOKAHEAD Epoch = constant_presets.MIN_SEED_LOOKAHEAD
@@ -71,14 +70,10 @@ const MAX_TRANSFERS = constant_presets.MAX_TRANSFERS
 
 // Signature domains
 const (
-	DOMAIN_BEACON_BLOCK bls.BLSDomain = constant_presets.DOMAIN_BEACON_BLOCK
-	DOMAIN_RANDAO
-	DOMAIN_ATTESTATION
-	DOMAIN_DEPOSIT
-	DOMAIN_VOLUNTARY_EXIT
-	DOMAIN_TRANSFER
+	DOMAIN_BEACON_BLOCK BLSDomainType = constant_presets.DOMAIN_BEACON_BLOCK
+	DOMAIN_RANDAO BLSDomainType = constant_presets.DOMAIN_RANDAO
+	DOMAIN_ATTESTATION BLSDomainType = constant_presets.DOMAIN_ATTESTATION
+	DOMAIN_DEPOSIT BLSDomainType = constant_presets.DOMAIN_DEPOSIT
+	DOMAIN_VOLUNTARY_EXIT BLSDomainType = constant_presets.DOMAIN_VOLUNTARY_EXIT
+	DOMAIN_TRANSFER BLSDomainType = constant_presets.DOMAIN_TRANSFER
 )
-
-// Custom constant, not in spec:
-// An impossible high validator index used to mark special internal cases. (all 1s binary)
-const ValidatorIndexMarker = ValidatorIndex(^uint64(0))

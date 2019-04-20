@@ -3,6 +3,7 @@ package block_processing
 import (
 	"errors"
 	. "github.com/protolambda/zrnt/eth2/beacon"
+	. "github.com/protolambda/zrnt/eth2/core"
 )
 
 func ProcessBlockAttesterSlashings(state *BeaconState, block *BeaconBlock) error {

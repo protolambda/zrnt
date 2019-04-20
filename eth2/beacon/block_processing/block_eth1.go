@@ -1,6 +1,9 @@
 package block_processing
 
-import . "github.com/protolambda/zrnt/eth2/beacon"
+import (
+	. "github.com/protolambda/zrnt/eth2/beacon"
+	. "github.com/protolambda/zrnt/eth2/core"
+)
 
 func ProcessBlockEth1(state *BeaconState, block *BeaconBlock) error {
 	state.Eth1DataVotes = append(state.Eth1DataVotes, block.Body.Eth1Data)
@@ -10,7 +13,7 @@ func ProcessBlockEth1(state *BeaconState, block *BeaconBlock) error {
 			count++
 		}
 	}
-	if count * 2 > SLOTS_PER_ETH1_VOTING_PERIOD {
+	if count*2 > SLOTS_PER_ETH1_VOTING_PERIOD {
 		state.LatestEth1Data = block.Body.Eth1Data
 	}
 	return nil

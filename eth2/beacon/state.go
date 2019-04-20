@@ -6,9 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/protolambda/eth2-shuffle"
+	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/bitfield"
 	"github.com/protolambda/zrnt/eth2/util/bls"
-	. "github.com/protolambda/zrnt/eth2/util/data_types"
 	"github.com/protolambda/zrnt/eth2/util/hash"
 	"github.com/protolambda/zrnt/eth2/util/math"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
@@ -518,18 +518,18 @@ func (state *BeaconState) VerifyIndexedAttestation(indexedAttestation *IndexedAt
 		return false
 	}
 
-	custodyBit0Pubkeys := make([]bls.BLSPubkey, 0)
+	custodyBit0Pubkeys := make([]BLSPubkey, 0)
 	for _, i := range custodyBit0Indices {
 		custodyBit0Pubkeys = append(custodyBit0Pubkeys, state.ValidatorRegistry[i].Pubkey)
 	}
-	custodyBit1Pubkeys := make([]bls.BLSPubkey, 0)
+	custodyBit1Pubkeys := make([]BLSPubkey, 0)
 	for _, i := range custodyBit1Indices {
 		custodyBit1Pubkeys = append(custodyBit1Pubkeys, state.ValidatorRegistry[i].Pubkey)
 	}
 
 	// don't trust, verify
 	return bls.BlsVerifyMultiple(
-		[]bls.BLSPubkey{
+		[]BLSPubkey{
 			bls.BlsAggregatePubkeys(custodyBit0Pubkeys),
 			bls.BlsAggregatePubkeys(custodyBit1Pubkeys)},
 		[][32]byte{

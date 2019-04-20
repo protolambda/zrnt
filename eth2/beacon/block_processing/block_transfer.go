@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 	. "github.com/protolambda/zrnt/eth2/beacon"
+	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/bls"
-	. "github.com/protolambda/zrnt/eth2/util/data_types"
 	"github.com/protolambda/zrnt/eth2/util/hash"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
@@ -15,7 +15,7 @@ func ProcessBlockTransfers(state *BeaconState, block *BeaconBlock) error {
 		return errors.New("too many transfers")
 	}
 	// check if all transfers are distinct
-	distinctionCheckSet := make(map[bls.BLSSignature]struct{})
+	distinctionCheckSet := make(map[BLSSignature]struct{})
 	for i, v := range block.Body.Transfers {
 		if existing, ok := distinctionCheckSet[v.Signature]; ok {
 			return errors.New(fmt.Sprintf("transfer %d is the same as transfer %d, aborting", i, existing))

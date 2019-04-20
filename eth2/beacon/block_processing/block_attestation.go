@@ -3,7 +3,7 @@ package block_processing
 import (
 	"errors"
 	. "github.com/protolambda/zrnt/eth2/beacon"
-	. "github.com/protolambda/zrnt/eth2/util/data_types"
+	. "github.com/protolambda/zrnt/eth2/core"
 )
 
 func ProcessBlockAttestations(state *BeaconState, block *BeaconBlock) error {

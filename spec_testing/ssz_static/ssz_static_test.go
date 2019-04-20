@@ -1,8 +1,8 @@
 package ssz_static
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon"
-	"github.com/protolambda/zrnt/eth2/util/data_types"
+	. "github.com/protolambda/zrnt/eth2/beacon"
+	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/protolambda/zrnt/spec_testing"
 	"testing"
@@ -11,8 +11,8 @@ import (
 type SSZStaticTestCase struct {
 	TypeName   string
 	Value      interface{}
-	Serialized data_types.Bytes
-	Root       data_types.Root
+	Serialized Bytes
+	Root       Root
 }
 
 func (testCase *SSZStaticTestCase) Run(t *testing.T) {
@@ -20,18 +20,18 @@ func (testCase *SSZStaticTestCase) Run(t *testing.T) {
 		t.Run("serialization", func(t *testing.T) {
 			encoded := ssz.SSZEncode(testCase.Value)
 			if len(encoded) != len(testCase.Serialized) {
-				encodedBytes := data_types.Bytes(encoded)
+				encodedBytes := Bytes(encoded)
 				t.Fatalf("encoded data has different length: %d (spec) <-> %d (zrnt)\nspec: %s\nzrnt: %s", len(testCase.Serialized), len(encoded), testCase.Serialized.String(), encodedBytes.String())
 			}
 			for i := 0; i < len(encoded); i++ {
 				if encoded[i] != testCase.Serialized[i] {
-					encodedBytes := data_types.Bytes(encoded)
+					encodedBytes := Bytes(encoded)
 					t.Fatalf("byte i: %d differs: %d (spec) <-> %d (zrnt)\nspec: %s\nzrnt: %s", i, testCase.Serialized[i], encoded[i], testCase.Serialized.String(), encodedBytes.String())
 				}
 			}
 		})
 		t.Run("hash_tree_root", func(t *testing.T) {
-			root := data_types.Root(ssz.HashTreeRoot(testCase.Value))
+			root := ssz.HashTreeRoot(testCase.Value)
 			if root != testCase.Root {
 				t.Fatalf("hash-tree-roots differ: %s (spec) <-> %s (zrnt)", testCase.Root.String(), root.String())
 			}
@@ -42,26 +42,26 @@ func (testCase *SSZStaticTestCase) Run(t *testing.T) {
 type ObjAllocator func() interface{}
 
 var allocators = map[string]ObjAllocator{
-	"Fork": func() interface{} { return new(beacon.Fork)},
-	"Crosslink": func() interface{} { return new(beacon.Crosslink)},
-	"Eth1Data": func() interface{} { return new(beacon.Eth1Data)},
-	"AttestationData": func() interface{} { return new(beacon.AttestationData)},
-	"AttestationDataAndCustodyBit": func() interface{} { return new(beacon.AttestationDataAndCustodyBit)},
-	"IndexedAttestation": func() interface{} { return new(beacon.IndexedAttestation)},
-	"DepositData": func() interface{} { return new(beacon.DepositData)},
-	"BeaconBlockHeader": func() interface{} { return new(beacon.BeaconBlockHeader)},
-	"Validator": func() interface{} { return new(beacon.Validator)},
-	"PendingAttestation": func() interface{} { return new(beacon.PendingAttestation)},
-	"HistoricalBatch": func() interface{} { return new(beacon.HistoricalBatch)},
-	"ProposerSlashing": func() interface{} { return new(beacon.ProposerSlashing)},
-	"AttesterSlashing": func() interface{} { return new(beacon.AttesterSlashing)},
-	"Attestation": func() interface{} { return new(beacon.Attestation)},
-	"Deposit": func() interface{} { return new(beacon.Deposit)},
-	"VoluntaryExit": func() interface{} { return new(beacon.VoluntaryExit)},
-	"Transfer": func() interface{} { return new(beacon.Transfer)},
-	"BeaconBlockBody": func() interface{} { return new(beacon.BeaconBlockBody)},
-	"BeaconBlock": func() interface{} { return new(beacon.BeaconBlock)},
-	"BeaconState": func() interface{} { return new(beacon.BeaconState)},
+	"Fork": func() interface{} { return new(Fork)},
+	"Crosslink": func() interface{} { return new(Crosslink)},
+	"Eth1Data": func() interface{} { return new(Eth1Data)},
+	"AttestationData": func() interface{} { return new(AttestationData)},
+	"AttestationDataAndCustodyBit": func() interface{} { return new(AttestationDataAndCustodyBit)},
+	"IndexedAttestation": func() interface{} { return new(IndexedAttestation)},
+	"DepositData": func() interface{} { return new(DepositData)},
+	"BeaconBlockHeader": func() interface{} { return new(BeaconBlockHeader)},
+	"Validator": func() interface{} { return new(Validator)},
+	"PendingAttestation": func() interface{} { return new(PendingAttestation)},
+	"HistoricalBatch": func() interface{} { return new(HistoricalBatch)},
+	"ProposerSlashing": func() interface{} { return new(ProposerSlashing)},
+	"AttesterSlashing": func() interface{} { return new(AttesterSlashing)},
+	"Attestation": func() interface{} { return new(Attestation)},
+	"Deposit": func() interface{} { return new(Deposit)},
+	"VoluntaryExit": func() interface{} { return new(VoluntaryExit)},
+	"Transfer": func() interface{} { return new(Transfer)},
+	"BeaconBlockBody": func() interface{} { return new(BeaconBlockBody)},
+	"BeaconBlock": func() interface{} { return new(BeaconBlock)},
+	"BeaconState": func() interface{} { return new(BeaconState)},
 }
 
 func TestSSZStatic(t *testing.T) {

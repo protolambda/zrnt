@@ -42,7 +42,7 @@ func ProcessDeposit(state *BeaconState, dep *Deposit) error {
 
 	// Verify the Merkle branch
 	if !merkle.VerifyMerkleBranch(
-		hash.Hash(serializedDepositData),
+		hash.HashRoot(serializedDepositData),
 		dep.Proof[:],
 		DEPOSIT_CONTRACT_TREE_DEPTH,
 		uint64(dep.Index),

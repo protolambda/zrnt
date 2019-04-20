@@ -51,7 +51,7 @@ func ProcessTransfer(state *BeaconState, transfer *Transfer) error {
 		return errors.New("transfer sender is not eligible to make a transfer, it has to be withdrawn, or yet to be activated")
 	}
 	// Verify that the pubkey is valid
-	withdrawCred := Root(hash.Hash(transfer.Pubkey[:]))
+	withdrawCred := hash.HashRoot(transfer.Pubkey[:])
 	// overwrite first byte, remainder (the [1:] part, is still the hash)
 	withdrawCred[0] = BLS_WITHDRAWAL_PREFIX_BYTE
 	if sender.WithdrawalCredentials != withdrawCred {

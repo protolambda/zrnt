@@ -20,8 +20,8 @@ func ProcessBlockRandao(state *BeaconState, block *BeaconBlock) error {
 	) {
 		return errors.New("randao invalid")
 	}
-	state.LatestRandaoMixes[state.Epoch()%LATEST_RANDAO_MIXES_LENGTH] = hash.XorBytes32(
+	state.LatestRandaoMixes[state.Epoch()%LATEST_RANDAO_MIXES_LENGTH] = hash.XorRoots(
 		state.GetRandaoMix(state.Epoch()),
-		hash.Hash(block.Body.RandaoReveal[:]))
+		hash.HashRoot(block.Body.RandaoReveal[:]))
 	return nil
 }

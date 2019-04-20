@@ -1,16 +1,15 @@
 package beacon
 
 import (
-	"crypto/sha256"
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/protolambda/eth2-shuffle"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/bitfield"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/hash"
 	"github.com/protolambda/zrnt/eth2/util/math"
+	"github.com/protolambda/zrnt/eth2/util/shuffling"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"sort"
 )
@@ -194,7 +193,7 @@ func (state *BeaconState) GenerateSeed(epoch Epoch) Root {
 	activeIndexRoot := state.GetActiveIndexRoot(epoch)
 	copy(buf[32:64], activeIndexRoot[:])
 	binary.LittleEndian.PutUint64(buf[64:], uint64(epoch))
-	return hash.Hash(buf)
+	return hash.HashRoot(buf)
 }
 
 // Return the block root at a recent slot
@@ -532,7 +531,7 @@ func (state *BeaconState) VerifyIndexedAttestation(indexedAttestation *IndexedAt
 		[]BLSPubkey{
 			bls.BlsAggregatePubkeys(custodyBit0Pubkeys),
 			bls.BlsAggregatePubkeys(custodyBit1Pubkeys)},
-		[][32]byte{
+		[]Root{
 			ssz.HashTreeRoot(AttestationDataAndCustodyBit{Data: indexedAttestation.Data, CustodyBit: false}),
 			ssz.HashTreeRoot(AttestationDataAndCustodyBit{Data: indexedAttestation.Data, CustodyBit: true})},
 		indexedAttestation.AggregateSignature,
@@ -547,22 +546,12 @@ func (state *BeaconState) GetShuffled(seed Root, epoch Epoch) []ValidatorIndex {
 	if committeeCount > uint64(len(activeValidatorIndices)) {
 		panic("not enough validators to form committees!")
 	}
+	indexList := make([]ValidatorIndex, len(state.ValidatorRegistry))
+	for i := 0; i < len(activeValidatorIndices); i++ {
+		indexList[i] = activeValidatorIndices[i]
+	}
 	// Active validators, shuffled in-place.
-	hFnObj := sha256.New()
-	hashFn := func(in []byte) []byte {
-		hFnObj.Reset()
-		hFnObj.Write(in)
-		return hFnObj.Sum(nil)
-	}
-	rawIndexList := make([]uint64, len(state.ValidatorRegistry))
-	for i := 0; i < len(activeValidatorIndices); i++ {
-		rawIndexList[i] = uint64(activeValidatorIndices[i])
-	}
-	eth2_shuffle.ShuffleList(hashFn, rawIndexList, SHUFFLE_ROUND_COUNT, seed)
-	shuffled := make([]ValidatorIndex, len(state.ValidatorRegistry))
-	for i := 0; i < len(activeValidatorIndices); i++ {
-		shuffled[i] = ValidatorIndex(rawIndexList[i])
-	}
-	return shuffled
+	shuffling.ShuffleList(indexList, seed)
+	return indexList
 }
 

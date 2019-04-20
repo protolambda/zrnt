@@ -206,7 +206,7 @@ func (cache *SSZCompoundCache) UpdateAndMerkleize(serializeIndex SSZIndexedSeria
 		a := i << 1
 		b := a + 1
 		if !cache.CacheSheet[i] {
-			cache.WorkSheet[i] = hash.Hash(append(cache.WorkSheet[a][:], cache.WorkSheet[b][:]...))
+			cache.WorkSheet[i] = hash.HashRoot(append(cache.WorkSheet[a][:], cache.WorkSheet[b][:]...))
 		}
 	}
 	return cache.WorkSheet[1]

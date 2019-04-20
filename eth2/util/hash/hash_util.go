@@ -2,20 +2,41 @@ package hash
 
 import (
 	"crypto/sha256"
+	. "github.com/protolambda/zrnt/eth2/core"
 )
 
-func Hash(input []byte) (out [32]byte) {
-	// TODO this could be optimized,
-	//  in reality you don't want to re-init the hashing function every time you call this
+// hashes, and returns the hash as a root
+func HashRoot(input []byte) (out Root) {
+	copy(out[:], Hash(input))
+	return
+}
+
+// Hash the given input. Use a new hashing object, and ditch it after hashing.
+// See GetHashFn for a more efficient approach for repeated hashing.
+func Hash(input []byte) (out []byte) {
 	hash := sha256.New()
 	hash.Write(input)
 	copy(out[:], hash.Sum(nil))
 	return out
 }
 
-func XorBytes32(a [32]byte, b [32]byte) (out [32]byte) {
+// Hashes the input, and returns the hash as a byte slice
+type HashFn func(input []byte) []byte
+
+// Get a hash-function that re-uses the hashing working-variables
+func GetHashFn() HashFn {
+	hash := sha256.New()
+	hashFn := func(in []byte) []byte {
+		hash.Reset()
+		hash.Write(in)
+		return hash.Sum(nil)
+	}
+	return hashFn
+}
+
+func XorRoots(a Root, b Root) (out Root) {
 	for i := 0; i < 32; i++ {
 		out[i] = a[i] ^ b[i]
 	}
-	return out
+	return
 }

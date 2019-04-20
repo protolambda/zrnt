@@ -2,6 +2,7 @@ package ssz
 
 import (
 	"encoding/binary"
+	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/merkle"
 	"reflect"
 	"strings"
@@ -170,7 +171,7 @@ func sszSerialize(v reflect.Value, dst *[]byte) (encodedLen uint32) {
 }
 
 // constructs a merkle_root of the given data, but truncates last element (i.e. ignored, not part of the root)
-func SigningRoot(input interface{}) [32]byte {
+func SigningRoot(input interface{}) Root {
 	v := reflect.ValueOf(input)
 	switch v.Kind() {
 	case reflect.Struct:
@@ -185,7 +186,7 @@ func SigningRoot(input interface{}) [32]byte {
 }
 
 // constructs a merkle_root of the given data
-func HashTreeRoot(input interface{}) [32]byte {
+func HashTreeRoot(input interface{}) Root {
 	return sszHashTreeRoot(reflect.ValueOf(input), nil)
 }
 
@@ -226,7 +227,7 @@ func isBasicType(vt reflect.Type) bool {
 	}
 }
 
-func basicListRoot(v reflect.Value, compoundCache *SSZCompoundCache) [32]byte {
+func basicListRoot(v reflect.Value, compoundCache *SSZCompoundCache) Root {
 	if compoundCache != nil {
 		serializeFn := func(dst []byte, index uint64) {
 			sszSerialize(v.Index(int(index)), &dst)
@@ -239,7 +240,7 @@ func basicListRoot(v reflect.Value, compoundCache *SSZCompoundCache) [32]byte {
 }
 
 // only call this for slices and arrays, not structs
-func nonBasicListRoot(v reflect.Value, compoundCache *SSZCompoundCache) [32]byte {
+func nonBasicListRoot(v reflect.Value, compoundCache *SSZCompoundCache) Root {
 	if compoundCache != nil {
 		serializeFn := func(dst []byte, index uint64) {
 			hash := sszHashTreeRoot(v.Index(int(index)), nil)
@@ -249,7 +250,7 @@ func nonBasicListRoot(v reflect.Value, compoundCache *SSZCompoundCache) [32]byte
 		return compoundCache.UpdateAndMerkleize(serializeFn)
 	} else {
 		items := v.Len()
-		data := make([][32]byte, items)
+		data := make([]Root, items)
 		for i := 0; i < items; i++ {
 			data[i] = sszHashTreeRoot(v.Index(i), nil)
 		}
@@ -257,9 +258,9 @@ func nonBasicListRoot(v reflect.Value, compoundCache *SSZCompoundCache) [32]byte
 	}
 }
 
-func composeStructRootData(v reflect.Value) [][32]byte {
+func composeStructRootData(v reflect.Value) []Root {
 	fields := v.NumField()
-	data := make([][32]byte, 0, fields)
+	data := make([]Root, 0, fields)
 	vType := v.Type()
 	for i := 0; i < fields; i++ {
 		structField := vType.Field(i)
@@ -280,16 +281,16 @@ func composeStructRootData(v reflect.Value) [][32]byte {
 	return data
 }
 
-func structRoot(v reflect.Value) [32]byte {
+func structRoot(v reflect.Value) Root {
 	return merkle.MerkleRoot(composeStructRootData(v))
 }
 
 // Compute hash tree root for a value
-func sszHashTreeRoot(v reflect.Value, compoundCache *SSZCompoundCache) [32]byte {
+func sszHashTreeRoot(v reflect.Value, compoundCache *SSZCompoundCache) Root {
 	switch v.Kind() {
 	case reflect.Ptr:
 		if v.IsNil() {
-			return [32]byte{}
+			return Root{}
 		}
 		return sszHashTreeRoot(v.Elem(), compoundCache)
 	// "basic object? -> pack and merkle_root
@@ -317,7 +318,7 @@ func sszHashTreeRoot(v reflect.Value, compoundCache *SSZCompoundCache) [32]byte 
 	}
 }
 
-func sszPack(input reflect.Value) [][32]byte {
+func sszPack(input reflect.Value) []Root {
 	var serialized []byte
 	if cache := getSerializeCache(input); cache != nil && cache.Cached {
 		// use cache!
@@ -351,7 +352,7 @@ func sszPack(input reflect.Value) [][32]byte {
 	// floored: handle all normal chunks first
 	flooredChunkCount := len(serialized) / 32
 	// ceiled: include any partial chunk at end as full chunk (with padding)
-	out := make([][32]byte, (len(serialized)+31)/32)
+	out := make([]Root, (len(serialized)+31)/32)
 	for i := 0; i < flooredChunkCount; i++ {
 		copy(out[i][:], serialized[i<<5:(i+1)<<5])
 	}
@@ -362,8 +363,8 @@ func sszPack(input reflect.Value) [][32]byte {
 	return out
 }
 
-func sszMixInLength(data [32]byte, length uint64) [32]byte {
-	lengthInput := [32]byte{}
+func sszMixInLength(data Root, length uint64) Root {
+	lengthInput := Root{}
 	binary.LittleEndian.PutUint64(lengthInput[:], length)
-	return merkle.MerkleRoot([][32]byte{data, lengthInput})
+	return merkle.MerkleRoot([]Root{data, lengthInput})
 }

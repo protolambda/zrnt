@@ -1,6 +1,8 @@
 package bls
 
-func BlsVerify(pubkey BLSPubkey, messageHash [32]byte, signature BLSSignature, domain BLSDomain) bool {
+import . "github.com/protolambda/zrnt/eth2/core"
+
+func BlsVerify(pubkey BLSPubkey, messageHash Root, signature BLSSignature, domain BLSDomain) bool {
 	// TODO BLS verify single
 	// Temporary: just allow it.
 	return true
@@ -12,7 +14,7 @@ func BlsAggregatePubkeys(pubkeys []BLSPubkey) BLSPubkey {
 	return BLSPubkey{}
 }
 
-func BlsVerifyMultiple(pubkeys []BLSPubkey, messageHashes [][32]byte, signature BLSSignature, domain BLSDomain) bool {
+func BlsVerifyMultiple(pubkeys []BLSPubkey, messageHashes []Root, signature BLSSignature, domain BLSDomain) bool {
 	// TODO BLS verify multiple
 	// Temporary: just allow it.
 	return true

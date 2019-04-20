@@ -1,7 +1,7 @@
 package deltas_computation
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon"
+	. "github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/util/math"
 )
 
@@ -19,17 +19,17 @@ const (
 	eligibleAttester
 )
 
-const noInclusionMarker = ^beacon.Slot(0)
+const noInclusionMarker = ^Slot(0)
 
 type ValidatorStatus struct {
-	InclusionSlot beacon.Slot
-	DataSlot beacon.Slot
+	InclusionSlot Slot
+	DataSlot Slot
 	Flags ValidatorStatusFlag
 }
 
 // Retrieves the inclusion slot of the earliest attestation in the previous epoch.
 // Ok == true if there is such attestation, false otherwise.
-func (status *ValidatorStatus) inclusionSlot() (slot beacon.Slot, ok bool) {
+func (status *ValidatorStatus) inclusionSlot() (slot Slot, ok bool) {
 	if status.InclusionSlot == noInclusionMarker {
 		return 0, false
 	} else {
@@ -38,13 +38,13 @@ func (status *ValidatorStatus) inclusionSlot() (slot beacon.Slot, ok bool) {
 }
 
 // Note: ONLY safe to call when vIndex is known to be an active validator in the previous epoch
-func (status *ValidatorStatus) inclusionDistance() beacon.Slot {
+func (status *ValidatorStatus) inclusionDistance() Slot {
 	return status.InclusionSlot - status.DataSlot
 }
 
-func DeltasJustificationAndFinalizationDeltas(state *beacon.BeaconState,) *beacon.Deltas {
-	validatorCount := beacon.ValidatorIndex(len(state.ValidatorRegistry))
-	deltas := beacon.NewDeltas(uint64(validatorCount))
+func DeltasJustificationAndFinalizationDeltas(state *BeaconState,) *Deltas {
+	validatorCount := ValidatorIndex(len(state.ValidatorRegistry))
+	deltas := NewDeltas(uint64(validatorCount))
 
 	currentEpoch := state.Epoch()
 
@@ -88,8 +88,8 @@ func DeltasJustificationAndFinalizationDeltas(state *beacon.BeaconState,) *beaco
 		}
 	}
 
-	var totalBalance, totalAttestingBalance, epochBoundaryBalance, matchingHeadBalance beacon.Gwei
-	for i := beacon.ValidatorIndex(0); i < validatorCount; i++ {
+	var totalBalance, totalAttestingBalance, epochBoundaryBalance, matchingHeadBalance Gwei
+	for i := ValidatorIndex(0); i < validatorCount; i++ {
 		status := &data[i]
 		b := state.GetEffectiveBalance(i)
 		totalBalance += b
@@ -110,21 +110,21 @@ func DeltasJustificationAndFinalizationDeltas(state *beacon.BeaconState,) *beaco
 	previousTotalBalance := state.GetTotalBalanceOf(
 		state.ValidatorRegistry.GetActiveValidatorIndices(state.PreviousEpoch()))
 
-	adjustedQuotient := math.IntegerSquareroot(uint64(previousTotalBalance)) / beacon.BASE_REWARD_QUOTIENT
+	adjustedQuotient := math.IntegerSquareroot(uint64(previousTotalBalance)) / BASE_REWARD_QUOTIENT
 	epochsSinceFinality := currentEpoch + 1 - state.FinalizedEpoch
 
-	for i := beacon.ValidatorIndex(0); i < validatorCount; i++ {
+	for i := ValidatorIndex(0); i < validatorCount; i++ {
 		status := &data[i]
 		if status.Flags & eligibleAttester != 0 {
 
 			effectiveBalance := state.GetEffectiveBalance(i)
-			baseReward := beacon.Gwei(0)
+			baseReward := Gwei(0)
 			if adjustedQuotient != 0 {
-				baseReward = effectiveBalance / beacon.Gwei(adjustedQuotient) / 5
+				baseReward = effectiveBalance / Gwei(adjustedQuotient) / 5
 			}
 			inactivityPenalty := baseReward
 			if epochsSinceFinality > 4 {
-				inactivityPenalty += effectiveBalance * beacon.Gwei(epochsSinceFinality) / beacon.INACTIVITY_PENALTY_QUOTIENT / 2
+				inactivityPenalty += effectiveBalance * Gwei(epochsSinceFinality) / INACTIVITY_PENALTY_QUOTIENT / 2
 			}
 
 			// Expected FFG source
@@ -134,7 +134,7 @@ func DeltasJustificationAndFinalizationDeltas(state *beacon.BeaconState,) *beaco
 
 				// Inclusion speed bonus
 				inclusionDelay := status.inclusionDistance()
-				deltas.Rewards[i] += baseReward * beacon.Gwei(beacon.MIN_ATTESTATION_INCLUSION_DELAY) / beacon.Gwei(inclusionDelay)
+				deltas.Rewards[i] += baseReward * Gwei(MIN_ATTESTATION_INCLUSION_DELAY) / Gwei(inclusionDelay)
 			} else {
 				//Justification-non-participation R-penalty
 				deltas.Penalties[i] += baseReward

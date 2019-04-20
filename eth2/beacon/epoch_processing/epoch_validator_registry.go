@@ -1,16 +1,16 @@
 package epoch_processing
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon"
+	. "github.com/protolambda/zrnt/eth2/beacon"
 	"sort"
 )
 
-func ProcessEpochValidatorRegistry(state *beacon.BeaconState) {
-	activationQueue := make([]beacon.ValidatorIndex, 0)
+func ProcessEpochValidatorRegistry(state *BeaconState) {
+	activationQueue := make([]ValidatorIndex, 0)
 	for i, v := range state.ValidatorRegistry {
-		if v.ActivationEligibilityEpoch != beacon.FAR_FUTURE_EPOCH &&
+		if v.ActivationEligibilityEpoch != FAR_FUTURE_EPOCH &&
 			v.ActivationEpoch >= state.FinalizedEpoch.GetDelayedActivationExitEpoch() {
-			activationQueue = append(activationQueue, beacon.ValidatorIndex(i))
+			activationQueue = append(activationQueue, ValidatorIndex(i))
 		}
 	}
 	sort.Slice(activationQueue, func(i int, j int) bool {
@@ -22,5 +22,5 @@ func ProcessEpochValidatorRegistry(state *beacon.BeaconState) {
 	}
 	state.LatestStartShard = (
 		state.LatestStartShard +
-		beacon.Shard(state.GetShardDelta(state.Epoch()))) % beacon.SHARD_COUNT
+		Shard(state.GetShardDelta(state.Epoch()))) % SHARD_COUNT
 }

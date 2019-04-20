@@ -1,11 +1,11 @@
 package transition
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon"
+	. "github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/beacon/block_processing"
 )
 
-type BlockProcessor func(state *beacon.BeaconState, block *beacon.BeaconBlock) error
+type BlockProcessor func(state *BeaconState, block *BeaconBlock) error
 
 var blockProcessors = []BlockProcessor{
 	block_processing.ProcessBlockHeader,
@@ -24,7 +24,7 @@ var blockProcessors = []BlockProcessor{
 
 // Applies all block-processing functions to the state, for the given block.
 // Stops applying at first error.
-func ProcessBlock(state *beacon.BeaconState, block *beacon.BeaconBlock) error {
+func ProcessBlock(state *BeaconState, block *BeaconBlock) error {
 	for _, p := range blockProcessors {
 		if err := p(state, block); err != nil {
 			return err

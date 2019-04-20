@@ -2,11 +2,11 @@ package block_processing
 
 import (
 	"errors"
-	"github.com/protolambda/zrnt/eth2/beacon"
+	. "github.com/protolambda/zrnt/eth2/beacon"
 )
 
-func ProcessBlockAttesterSlashings(state *beacon.BeaconState, block *beacon.BeaconBlock) error {
-	if len(block.Body.AttesterSlashings) > beacon.MAX_ATTESTER_SLASHINGS {
+func ProcessBlockAttesterSlashings(state *BeaconState, block *BeaconBlock) error {
+	if len(block.Body.AttesterSlashings) > MAX_ATTESTER_SLASHINGS {
 		return errors.New("too many attester slashings")
 	}
 	for _, attesterSlashing := range block.Body.AttesterSlashings {
@@ -17,7 +17,7 @@ func ProcessBlockAttesterSlashings(state *beacon.BeaconState, block *beacon.Beac
 	return nil
 }
 
-func ProcessAttesterSlashing(state *beacon.BeaconState, attesterSlashing *beacon.AttesterSlashing) error {
+func ProcessAttesterSlashing(state *BeaconState, attesterSlashing *AttesterSlashing) error {
 	sa1 := &attesterSlashing.Attestation1
 	sa2 := &attesterSlashing.Attestation2
 
@@ -41,17 +41,17 @@ func ProcessAttesterSlashing(state *beacon.BeaconState, attesterSlashing *beacon
 	slashedAny := false
 
 	// indices are trusted (valid range), they have been verified by verify_slashable_attestation(...)
-	indices1 := make(beacon.ValidatorSet, 0, len(sa1.CustodyBit0Indices) + len(sa1.CustodyBit1Indices))
+	indices1 := make(ValidatorSet, 0, len(sa1.CustodyBit0Indices) + len(sa1.CustodyBit1Indices))
 	indices1 = append(indices1, sa1.CustodyBit0Indices...)
 	indices1 = append(indices1, sa1.CustodyBit1Indices...)
-	indices2 := make(beacon.ValidatorSet, 0, len(sa2.CustodyBit0Indices) + len(sa2.CustodyBit1Indices))
+	indices2 := make(ValidatorSet, 0, len(sa2.CustodyBit0Indices) + len(sa2.CustodyBit1Indices))
 	indices2 = append(indices1, sa2.CustodyBit0Indices...)
 	indices2 = append(indices1, sa2.CustodyBit1Indices...)
 
 	currentEpoch := state.Epoch()
 	// run slashings where applicable
 	var anyErr error
-	indices1.ZigZagJoin(indices2, func(i beacon.ValidatorIndex) {
+	indices1.ZigZagJoin(indices2, func(i ValidatorIndex) {
 		if state.ValidatorRegistry[i].IsSlashable(currentEpoch) {
 			if err := state.SlashValidator(i); err != nil {
 				anyErr = err
@@ -70,11 +70,11 @@ func ProcessAttesterSlashing(state *beacon.BeaconState, attesterSlashing *beacon
 }
 
 // Check if a and b have the same target epoch.
-func IsDoubleVote(a *beacon.AttestationData, b *beacon.AttestationData) bool {
+func IsDoubleVote(a *AttestationData, b *AttestationData) bool {
 	return a.Slot.ToEpoch() == b.Slot.ToEpoch()
 }
 
 // Check if a surrounds b, i.E. source(a) < source(b) and target(a) > target(b)
-func IsSurroundVote(a *beacon.AttestationData, b *beacon.AttestationData) bool {
+func IsSurroundVote(a *AttestationData, b *AttestationData) bool {
 	return a.SourceEpoch < b.SourceEpoch && a.Slot.ToEpoch() > b.Slot.ToEpoch()
 }

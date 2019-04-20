@@ -1,14 +1,14 @@
 package epoch_processing
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon"
+	. "github.com/protolambda/zrnt/eth2/beacon"
 )
 
-func ProcessEpochCrosslinks(state *beacon.BeaconState) {
+func ProcessEpochCrosslinks(state *BeaconState) {
 	currentEpoch := state.Epoch()
 	previousEpoch := currentEpoch - 1
-	if previousEpoch < beacon.GENESIS_EPOCH {
-		previousEpoch = beacon.GENESIS_EPOCH
+	if previousEpoch < GENESIS_EPOCH {
+		previousEpoch = GENESIS_EPOCH
 	}
 	nextEpoch := currentEpoch + 1
 	start := previousEpoch.GetStartSlot()
@@ -20,10 +20,10 @@ func ProcessEpochCrosslinks(state *beacon.BeaconState) {
 			totalBalance := state.GetTotalBalanceOf(shardCommittee.Committee)
 			if 3*participatingBalance >= 2*totalBalance {
 				epoch := slot.ToEpoch()
-				if alt := state.LatestCrosslinks[shardCommittee.Shard].Epoch + beacon.MAX_CROSSLINK_EPOCHS; alt < epoch {
+				if alt := state.LatestCrosslinks[shardCommittee.Shard].Epoch + MAX_CROSSLINK_EPOCHS; alt < epoch {
 					epoch = alt
 				}
-				state.LatestCrosslinks[shardCommittee.Shard] = beacon.Crosslink{
+				state.LatestCrosslinks[shardCommittee.Shard] = Crosslink{
 					Epoch:             epoch,
 					CrosslinkDataRoot: winningRoot,
 				}

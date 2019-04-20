@@ -2,13 +2,13 @@ package block_processing
 
 import (
 	"errors"
-	"github.com/protolambda/zrnt/eth2/beacon"
+	. "github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
-func ProcessBlockVoluntaryExits(state *beacon.BeaconState, block *beacon.BeaconBlock) error {
-	if len(block.Body.VoluntaryExits) > beacon.MAX_VOLUNTARY_EXITS {
+func ProcessBlockVoluntaryExits(state *BeaconState, block *BeaconBlock) error {
+	if len(block.Body.VoluntaryExits) > MAX_VOLUNTARY_EXITS {
 		return errors.New("too many voluntary exits")
 	}
 	for _, exit := range block.Body.VoluntaryExits {
@@ -19,7 +19,7 @@ func ProcessBlockVoluntaryExits(state *beacon.BeaconState, block *beacon.BeaconB
 	return nil
 }
 
-func ProcessVoluntaryExit(state *beacon.BeaconState, exit *beacon.VoluntaryExit) error {
+func ProcessVoluntaryExit(state *BeaconState, exit *VoluntaryExit) error {
 	currentEpoch := state.Epoch()
 	if !state.ValidatorRegistry.IsValidatorIndex(exit.ValidatorIndex) {
 		return errors.New("invalid exit validator index")
@@ -30,7 +30,7 @@ func ProcessVoluntaryExit(state *beacon.BeaconState, exit *beacon.VoluntaryExit)
 		return errors.New("validator must be active to be able to voluntarily exit")
 	}
 	// Verify the validator has not yet exited
-	if validator.ExitEpoch == beacon.FAR_FUTURE_EPOCH {
+	if validator.ExitEpoch == FAR_FUTURE_EPOCH {
 		return errors.New("validator already exited")
 	}
 	// Exits must specify an epoch when they become valid; they are not valid before then
@@ -38,14 +38,14 @@ func ProcessVoluntaryExit(state *beacon.BeaconState, exit *beacon.VoluntaryExit)
 		return errors.New("invalid exit epoch")
 	}
 	// Verify the validator has been active long enough
-	if currentEpoch >= validator.ActivationEpoch + beacon.PERSISTENT_COMMITTEE_PERIOD  {
+	if currentEpoch >= validator.ActivationEpoch + PERSISTENT_COMMITTEE_PERIOD  {
 		return errors.New("exit is too soon")
 	}
 	if !bls.BlsVerify(
 				validator.Pubkey,
 				ssz.SigningRoot(exit),
 				exit.Signature,
-				beacon.GetDomain(state.Fork, exit.Epoch, beacon.DOMAIN_VOLUNTARY_EXIT)) {
+				GetDomain(state.Fork, exit.Epoch, DOMAIN_VOLUNTARY_EXIT)) {
 		return errors.New("voluntary exit signature could not be verified")
 	}
 	// Initiate exit

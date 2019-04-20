@@ -2,12 +2,12 @@ package block_processing
 
 import (
 	"errors"
-	"github.com/protolambda/zrnt/eth2/beacon"
+	. "github.com/protolambda/zrnt/eth2/beacon"
 	. "github.com/protolambda/zrnt/eth2/util/data_types"
 )
 
-func ProcessBlockAttestations(state *beacon.BeaconState, block *beacon.BeaconBlock) error {
-	if len(block.Body.Attestations) > beacon.MAX_ATTESTATIONS {
+func ProcessBlockAttestations(state *BeaconState, block *BeaconBlock) error {
+	if len(block.Body.Attestations) > MAX_ATTESTATIONS {
 		return errors.New("too many attestations")
 	}
 	for _, attestation := range block.Body.Attestations {
@@ -18,13 +18,13 @@ func ProcessBlockAttestations(state *beacon.BeaconState, block *beacon.BeaconBlo
 	return nil
 }
 
-func ProcessAttestation(state *beacon.BeaconState, attestation *beacon.Attestation) error {
+func ProcessAttestation(state *BeaconState, attestation *Attestation) error {
 
-	if !(beacon.GENESIS_SLOT <= attestation.Data.Slot &&
-		state.Slot-beacon.SLOTS_PER_EPOCH <= attestation.Data.Slot) {
+	if !(GENESIS_SLOT <= attestation.Data.Slot &&
+		state.Slot-SLOTS_PER_EPOCH <= attestation.Data.Slot) {
 		return errors.New("attestation slot is too old")
 	}
-	if !(attestation.Data.Slot <= state.Slot-beacon.MIN_ATTESTATION_INCLUSION_DELAY) {
+	if !(attestation.Data.Slot <= state.Slot-MIN_ATTESTATION_INCLUSION_DELAY) {
 		return errors.New("attestation is too new")
 	}
 	// Check target epoch, source epoch, and source root
@@ -44,7 +44,7 @@ func ProcessAttestation(state *beacon.BeaconState, attestation *beacon.Attestati
 	// Case 1: latest crosslink matches previous crosslink
 	state.LatestCrosslinks[attestation.Data.Shard] == attestation.Data.PreviousCrosslink ||
 		// Case 2: latest crosslink matches current crosslink
-		state.LatestCrosslinks[attestation.Data.Shard] == beacon.Crosslink{CrosslinkDataRoot: attestation.Data.CrosslinkDataRoot, Epoch: attestation.Data.Slot.ToEpoch()}) {
+		state.LatestCrosslinks[attestation.Data.Shard] == Crosslink{CrosslinkDataRoot: attestation.Data.CrosslinkDataRoot, Epoch: attestation.Data.Slot.ToEpoch()}) {
 		return errors.New("attestation crosslinking invalid")
 	}
 
@@ -56,7 +56,7 @@ func ProcessAttestation(state *beacon.BeaconState, attestation *beacon.Attestati
 	}
 
 	// Cache pending attestation
-	pendingAttestation := &beacon.PendingAttestation{
+	pendingAttestation := &PendingAttestation{
 		Data:                attestation.Data,
 		AggregationBitfield: attestation.AggregationBitfield,
 		InclusionSlot:       state.Slot,

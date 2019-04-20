@@ -1,18 +1,18 @@
 package epoch_processing
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon"
+	. "github.com/protolambda/zrnt/eth2/beacon"
 )
 
-func ProcessEpochJustification(state *beacon.BeaconState) {
+func ProcessEpochJustification(state *BeaconState) {
 
 	currentEpoch := state.Epoch()
 	// epoch numbers are trusted, no errors
 	previousBoundaryBlockRoot, _ := state.GetBlockRoot((currentEpoch - 1).GetStartSlot())
 	currentBoundaryBlockRoot, _ := state.GetBlockRoot(currentEpoch.GetStartSlot())
 
-	previousEpochBoundaryAttesterIndices := make([]beacon.ValidatorIndex, 0)
-	currentEpochBoundaryAttesterIndices := make([]beacon.ValidatorIndex, 0)
+	previousEpochBoundaryAttesterIndices := make([]ValidatorIndex, 0)
+	currentEpochBoundaryAttesterIndices := make([]ValidatorIndex, 0)
 	for _, att := range state.PreviousEpochAttestations {
 		// If the attestation is for the boundary:
 		if att.Data.TargetRoot == previousBoundaryBlockRoot {

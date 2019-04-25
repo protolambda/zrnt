@@ -2,39 +2,34 @@ package epoch_processing
 
 import (
 	. "github.com/protolambda/zrnt/eth2/beacon"
-	. "github.com/protolambda/zrnt/eth2/core"
 )
 
 func ProcessEpochJustification(state *BeaconState) {
 
+	previousEpoch := state.PreviousEpoch()
 	currentEpoch := state.Epoch()
 	// epoch numbers are trusted, no errors
-	previousBoundaryBlockRoot, _ := state.GetBlockRoot((currentEpoch - 1).GetStartSlot())
+	previousBoundaryBlockRoot, _ := state.GetBlockRoot(previousEpoch.GetStartSlot())
 	currentBoundaryBlockRoot, _ := state.GetBlockRoot(currentEpoch.GetStartSlot())
 
-	previousEpochBoundaryAttesterIndices := make([]ValidatorIndex, 0)
-	currentEpochBoundaryAttesterIndices := make([]ValidatorIndex, 0)
-	for _, att := range state.PreviousEpochAttestations {
-		// If the attestation is for the boundary:
-		if att.Data.TargetRoot == previousBoundaryBlockRoot {
-			participants, _ := state.GetAttestingIndicesUnsorted(&att.Data, &att.AggregationBitfield)
-			for _, vIndex := range participants {
-				previousEpochBoundaryAttesterIndices = append(previousEpochBoundaryAttesterIndices, vIndex)
-			}
-		}
-	}
-	for _, att := range state.CurrentEpochAttestations {
-		// If the attestation is for the boundary:
-		if att.Data.TargetRoot == currentBoundaryBlockRoot {
-			participants, _ := state.GetAttestingIndicesUnsorted(&att.Data, &att.AggregationBitfield)
-			for _, vIndex := range participants {
-				currentEpochBoundaryAttesterIndices = append(currentEpochBoundaryAttesterIndices, vIndex)
-			}
-		}
-	}
+	oldPreviousJustifiedEpoch := state.PreviousJustifiedEpoch
+	oldCurrentJustifiedEpoch := state.CurrentJustifiedEpoch
 
-	newJustifiedEpoch := state.CurrentJustifiedEpoch
-	newFinalizedEpoch := state.FinalizedEpoch
+	previousEpochBoundaryAttesterIndices := state.FilterUnslashed(state.GetAttesters(
+		state.PreviousEpochAttestations,
+		func(att *AttestationData) bool {
+			return att.TargetRoot == previousBoundaryBlockRoot
+		}))
+
+	currentEpochBoundaryAttesterIndices := state.FilterUnslashed(state.GetAttesters(
+		state.CurrentEpochAttestations,
+		func(att *AttestationData) bool {
+			return att.TargetRoot == currentBoundaryBlockRoot
+		}))
+
+	// Rotate current into previous
+	state.PreviousJustifiedEpoch = state.CurrentJustifiedEpoch
+	state.PreviousJustifiedRoot = state.CurrentJustifiedRoot
 	// Rotate the justification bitfield up one epoch to make room for the current epoch
 	state.JustificationBitfield <<= 1
 
@@ -46,52 +41,35 @@ func ProcessEpochJustification(state *BeaconState) {
 
 	// > Justification
 	// If the previous epoch gets justified, fill the second last bit
-	if 3*previousEpochBoundaryAttestingBalance >= 2*previousTotalBalance {
-		state.JustificationBitfield |= 2
-		newJustifiedEpoch = currentEpoch - 1
+	if previousEpochBoundaryAttestingBalance*3 >= previousTotalBalance*2 {
+		state.CurrentJustifiedEpoch = previousEpoch
+		state.CurrentJustifiedRoot = previousBoundaryBlockRoot
+		state.JustificationBitfield |= 1 << 1
 	}
 	// If the current epoch gets justified, fill the last bit
-	if 3*currentEpochBoundaryAttestingBalance >= 2*currentTotalBalance {
-		state.JustificationBitfield |= 1
-		newJustifiedEpoch = currentEpoch
+	if currentEpochBoundaryAttestingBalance*3 >= currentTotalBalance*2 {
+		state.CurrentJustifiedEpoch = currentEpoch
+		state.CurrentJustifiedRoot = currentBoundaryBlockRoot
+		state.JustificationBitfield |= 1 << 0
 	}
 	// > Finalization
+	bitf := state.JustificationBitfield
 	// The 2nd/3rd/4th most recent epochs are all justified, the 2nd using the 4th as source
-	if (state.JustificationBitfield>>1)&7 == 7 && state.PreviousJustifiedEpoch == currentEpoch-3 {
-		newFinalizedEpoch = state.PreviousJustifiedEpoch
+	if (bitf>>1)&7 == 7 && state.PreviousJustifiedEpoch == currentEpoch-3 {
+		state.FinalizedEpoch = oldPreviousJustifiedEpoch
 	}
 	// The 2nd/3rd most recent epochs are both justified, the 2nd using the 3rd as source
-	if (state.JustificationBitfield>>1)&3 == 3 && state.PreviousJustifiedEpoch == currentEpoch-2 {
-		newFinalizedEpoch = state.PreviousJustifiedEpoch
+	if (bitf>>1)&3 == 3 && state.PreviousJustifiedEpoch == currentEpoch-2 {
+		state.FinalizedEpoch = oldPreviousJustifiedEpoch
 	}
 	// The 1st/2nd/3rd most recent epochs are all justified, the 1st using the 3rd as source
-	if (state.JustificationBitfield>>0)&7 == 7 && state.CurrentJustifiedEpoch == currentEpoch-2 {
-		newFinalizedEpoch = state.CurrentJustifiedEpoch
+	if (bitf>>0)&7 == 7 && state.CurrentJustifiedEpoch == currentEpoch-2 {
+		state.FinalizedEpoch = oldCurrentJustifiedEpoch
 	}
 	// The 1st/2nd most recent epochs are both justified, the 1st using the 2nd as source
-	if (state.JustificationBitfield>>0)&3 == 3 && state.CurrentJustifiedEpoch == currentEpoch-1 {
-		newFinalizedEpoch = state.CurrentJustifiedEpoch
+	if (bitf>>0)&3 == 3 && state.CurrentJustifiedEpoch == currentEpoch-1 {
+		state.FinalizedEpoch = oldCurrentJustifiedEpoch
 	}
-	// Rotate justified epochs
-	state.PreviousJustifiedEpoch = state.CurrentJustifiedEpoch
-	state.PreviousJustifiedRoot = state.CurrentJustifiedRoot
-	// Update current state justification/finality fields
-	if newJustifiedEpoch != state.CurrentJustifiedEpoch {
-		state.CurrentJustifiedEpoch = newJustifiedEpoch
-		root, err := state.GetBlockRoot(newJustifiedEpoch.GetStartSlot())
-		if err != nil {
-			panic(err)
-		}
-		state.CurrentJustifiedRoot = root
-	}
-	if newFinalizedEpoch != state.FinalizedEpoch {
-		state.FinalizedEpoch = newFinalizedEpoch
-		root, err := state.GetBlockRoot(newFinalizedEpoch.GetStartSlot())
-		if err != nil {
-			panic(err)
-		}
-		state.FinalizedRoot = root
-	}
-
-	state.CurrentJustifiedEpoch = newJustifiedEpoch
+	root, _ := state.GetBlockRoot(state.FinalizedEpoch.GetStartSlot())
+	state.FinalizedRoot = root
 }

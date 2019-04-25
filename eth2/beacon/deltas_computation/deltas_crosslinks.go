@@ -20,8 +20,8 @@ func DeltasCrosslinks(state *BeaconState) *Deltas {
 	end := state.Epoch().GetStartSlot()
 	for slot := start; slot < end; slot++ {
 		for _, shardCommittee := range state.GetCrosslinkCommitteesAtSlot(slot) {
-			_, participants := state.GetWinningRootAndParticipants(shardCommittee.Shard)
-			participatingBalance := state.GetTotalBalanceOf(participants)
+			_, attestingIndices := state.GetWinningCrosslinkAndAttestingIndices(shardCommittee.Shard, slot.ToEpoch())
+			attestingBalance := state.GetTotalBalanceOf(attestingIndices)
 			totalBalance := state.GetTotalBalanceOf(shardCommittee.Committee)
 
 			committee := make(ValidatorSet, 0, len(shardCommittee.Committee))
@@ -30,13 +30,13 @@ func DeltasCrosslinks(state *BeaconState) *Deltas {
 
 			// reward/penalize using a zig-zag merge join.
 			// ----------------------------------------------------
-			committee.ZigZagJoin(participants,
+			committee.ZigZagJoin(attestingIndices,
 				func(i ValidatorIndex) {
 					// Committee member participated, reward them
 					effectiveBalance := state.GetEffectiveBalance(i)
 					baseReward := effectiveBalance / Gwei(adjustedQuotient) / 5
 
-					deltas.Rewards[i] += baseReward * participatingBalance / totalBalance
+					deltas.Rewards[i] += baseReward * attestingBalance / totalBalance
 				}, func(i ValidatorIndex) {
 					// Committee member did not participate, penalize them
 					effectiveBalance := state.GetEffectiveBalance(i)

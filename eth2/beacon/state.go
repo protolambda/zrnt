@@ -280,50 +280,62 @@ func (state *BeaconState) GetCrosslinkCommitteesAtSlot(slot Slot) []CrosslinkCom
 	return crosslinkCommittees
 }
 
-func (state *BeaconState) GetWinningRootAndAttestingIndices(shard Shard, epoch Epoch) (Root, ValidatorSet) {
+func (state *BeaconState) GetAttesters(attestations []*PendingAttestation, filter func (att *AttestationData) bool) ValidatorSet {
+	out := make(ValidatorSet, 0)
+	for _, att := range attestations {
+		// If the attestation is for the boundary:
+		if filter(&att.Data) {
+			participants, _ := state.GetAttestingIndicesUnsorted(&att.Data, &att.AggregationBitfield)
+			out = append(out, participants...)
+		}
+	}
+	out.Dedup()
+	return out
+}
+
+func (state *BeaconState) GetWinningCrosslinkAndAttestingIndices(shard Shard, epoch Epoch) (Crosslink, ValidatorSet) {
 	pendingAttestations := state.PreviousEpochAttestations
 	if epoch == state.Epoch() {
 		pendingAttestations = state.CurrentEpochAttestations
 	}
 
-	weightedCandidateCrosslinks := make(map[Root]Gwei)
-
 	latestCrosslinkRoot := ssz.HashTreeRoot(state.CurrentCrosslinks[shard])
 
-	getEffectiveParticipants := func(att *PendingAttestation) []ValidatorIndex {
-		// is the attestation for this shard?
+	// keyed by raw crosslink object. Not too big, and simplifies reduction to unique crosslinks
+	crosslinkAttesters := make(map[Crosslink]ValidatorSet)
+	for _, att := range pendingAttestations {
 		if att.Data.Shard == shard {
-			crosslink := state.GetCrosslinkFromAttestationData(&att.Data)
-			if crosslink.PreviousCrosslinkRoot == latestCrosslinkRoot || latestCrosslinkRoot == ssz.HashTreeRoot(crosslink) {
-				participants, _ := state.GetAttestingIndicesUnsorted(&att.Data, &att.AggregationBitfield)
-				return state.FilterUnslashed(participants)
+			c := state.GetCrosslinkFromAttestationData(&att.Data)
+			if c.PreviousCrosslinkRoot == latestCrosslinkRoot ||
+				latestCrosslinkRoot == ssz.HashTreeRoot(c) {
+				participants, _ := state.GetAttestingIndices(&att.Data, &att.AggregationBitfield)
+				crosslinkAttesters[*c] = append(crosslinkAttesters[*c], participants...)
 			}
 		}
-		return nil
 	}
-	for _, att := range pendingAttestations {
-		participants := getEffectiveParticipants(att)
-		if participants != nil {
-			weightedCandidateCrosslinks[att.Data.CrosslinkDataRoot] += state.GetTotalBalanceOf(participants)
-		}
+	// handle when no attestations for shard available
+	if len(crosslinkAttesters) == 0 {
+		return Crosslink{Epoch: GENESIS_EPOCH}, nil
+	}
+	for k, v := range crosslinkAttesters {
+		v.Dedup()
+		crosslinkAttesters[k] = state.FilterUnslashed(v)
 	}
 
-	// handle when no attestations for shard available
-	if len(weightedCandidateCrosslinks) == 0 {
-		return Root{}, nil
-	}
-	// Now determine the best root, by total weight (votes, weighted by balance)
-	var winningRoot Root
+	// Now determine the best crosslink, by total weight (votes, weighted by balance)
+	winningLink := Crosslink{}
 	winningWeight := Gwei(0)
-	for root, weight := range weightedCandidateCrosslinks {
+	for crosslink, attesters := range crosslinkAttesters {
+		// effectively "get_attesting_balance": attesters consists of only de-duplicated unslashed validators.
+		weight := state.GetTotalBalanceOf(attesters)
 		if weight > winningWeight {
-			winningRoot = root
+			winningLink = crosslink
 		}
 		if weight == winningWeight {
 			// break tie lexicographically
 			for i := 0; i < 32; i++ {
-				if root[i] > winningRoot[i] {
-					winningRoot = root
+				if crosslink.CrosslinkDataRoot[i] > winningLink.CrosslinkDataRoot[i] {
+					winningLink = crosslink
 					break
 				}
 			}
@@ -331,13 +343,9 @@ func (state *BeaconState) GetWinningRootAndAttestingIndices(shard Shard, epoch E
 	}
 
 	// now retrieve all the attesters of this winning root
-	winners := make(ValidatorSet, 0)
-	for _, att := range pendingAttestations {
-		winners = append(winners, getEffectiveParticipants(att)...)
-	}
-	winners.Dedup()
+	winners := crosslinkAttesters[winningLink]
 
-	return winningRoot, winners
+	return winningLink, winners
 }
 
 // Exit the validator with the given index

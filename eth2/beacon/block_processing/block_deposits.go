@@ -70,7 +70,7 @@ func ProcessDeposit(state *BeaconState, dep *Deposit) error {
 		if !bls.BlsVerify(
 			dep.Data.Pubkey,
 			ssz.SigningRoot(dep.Data),
-			dep.Data.ProofOfPossession,
+			dep.Data.Signature,
 			GetDomain(state.Fork, state.Epoch(), DOMAIN_DEPOSIT)) {
 			return errors.New("could not verify BLS signature")
 		}

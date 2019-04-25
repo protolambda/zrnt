@@ -32,7 +32,7 @@ type Attestation struct {
 	// Custody bitfield
 	CustodyBitfield bitfield.Bitfield
 	// BLS aggregate signature
-	AggregateSignature BLSSignature
+	Signature BLSSignature
 }
 
 type AttestationData struct {
@@ -48,7 +48,7 @@ type AttestationData struct {
 
 	// Crosslink vote
 	Shard             Shard
-	PreviousCrosslink Crosslink
+	PreviousCrosslinkRoot Root
 	CrosslinkDataRoot Root
 }
 
@@ -66,13 +66,15 @@ type IndexedAttestation struct {
 	// Attestation data
 	Data AttestationData
 	// BLS aggregate signature
-	AggregateSignature BLSSignature
+	Signature BLSSignature
 }
 
 type Crosslink struct {
 	// Epoch number
 	Epoch Epoch
-	// Shard data since the previous crosslink
+	// Root of the previous crosslink
+	PreviousCrosslinkRoot Root
+	// Root of the crosslinked shard data since the previous crosslink
 	CrosslinkDataRoot Root
 }
 
@@ -93,7 +95,7 @@ type DepositData struct {
 	// Amount in Gwei
 	Amount Gwei
 	// Container self-signature
-	ProofOfPossession BLSSignature
+	Signature BLSSignature
 }
 
 // Let serialized_deposit_data be the serialized form of deposit.deposit_data.
@@ -184,21 +186,6 @@ type Fork struct {
 	CurrentVersion ForkVersion
 	// Fork epoch number
 	Epoch Epoch
-}
-
-// Return the fork version of the given epoch
-func (f Fork) GetVersion(epoch Epoch) ForkVersion {
-	if epoch < f.Epoch {
-		return f.PreviousVersion
-	}
-	return f.CurrentVersion
-}
-
-// Get the domain number that represents the fork meta and signature domain.
-func GetDomain(fork Fork, epoch Epoch, dom BLSDomainType) BLSDomain {
-	// combine fork version with domain.
-	v := fork.GetVersion(epoch)
-	return BLSDomain((uint64(v.ToUint32()) << 32) | uint64(dom))
 }
 
 type Eth1Data struct {

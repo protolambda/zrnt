@@ -9,34 +9,9 @@ import (
 
 func GetGenesisBeaconState(validatorDeposits []Deposit, time Timestamp, eth1Data Eth1Data) *BeaconState {
 	state := &BeaconState{
-		Slot:        GENESIS_SLOT,
 		GenesisTime: time,
-		Fork: Fork{
-			// genesis fork versions are 0
-			PreviousVersion: Int32ToForkVersion(GENESIS_FORK_VERSION),
-			CurrentVersion:  Int32ToForkVersion(GENESIS_FORK_VERSION),
-			Epoch:           GENESIS_EPOCH,
-		},
-		// Validator registry
-		ValidatorRegistry: make(ValidatorRegistry, 0),
-		Balances: make([]Gwei, 0),
-		// Randomness and committees
-		LatestStartShard: GENESIS_START_SHARD,
-		// Finality
-		PreviousEpochAttestations: make([]*PendingAttestation, 0),
-		CurrentEpochAttestations: make([]*PendingAttestation, 0),
-		PreviousJustifiedEpoch: GENESIS_EPOCH - 1,
-		CurrentJustifiedEpoch:  GENESIS_EPOCH,
-		FinalizedEpoch:         GENESIS_EPOCH,
-		// Recent state
-		LatestBlockHeader: GetEmptyBlock().GetTemporaryBlockHeader(),
-		HistoricalRoots: make([]Root, 0),
 		// Ethereum 1.0 chain data
 		LatestEth1Data: eth1Data,
-	}
-	// Initialize crosslinks
-	for i := Shard(0); i < SHARD_COUNT; i++ {
-		state.LatestCrosslinks[i] = Crosslink{Epoch: GENESIS_EPOCH}
 	}
 	// Process genesis deposits
 	for _, dep := range validatorDeposits {
@@ -45,9 +20,11 @@ func GetGenesisBeaconState(validatorDeposits []Deposit, time Timestamp, eth1Data
 			panic(err)
 		}
 	}
-	for i := range state.ValidatorRegistry {
-		if state.GetEffectiveBalance(ValidatorIndex(i)) >= MAX_DEPOSIT_AMOUNT {
-			state.ActivateValidator(ValidatorIndex(i), true)
+	// Process genesis activations
+	for i, v := range state.ValidatorRegistry {
+		if state.GetEffectiveBalance(ValidatorIndex(i)) >= MAX_EFFECTIVE_BALANCE {
+			v.ActivationEligibilityEpoch = GENESIS_EPOCH
+			v.ActivationEpoch = GENESIS_EPOCH
 		}
 	}
 	genesisActiveIndexRoot := ssz.HashTreeRoot(

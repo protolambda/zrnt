@@ -17,7 +17,7 @@ func ProcessEpochJustification(state *BeaconState) {
 	for _, att := range state.PreviousEpochAttestations {
 		// If the attestation is for the boundary:
 		if att.Data.TargetRoot == previousBoundaryBlockRoot {
-			participants, _ := state.GetAttestationParticipants(&att.Data, &att.AggregationBitfield)
+			participants, _ := state.GetAttestingIndicesUnsorted(&att.Data, &att.AggregationBitfield)
 			for _, vIndex := range participants {
 				previousEpochBoundaryAttesterIndices = append(previousEpochBoundaryAttesterIndices, vIndex)
 			}
@@ -26,7 +26,7 @@ func ProcessEpochJustification(state *BeaconState) {
 	for _, att := range state.CurrentEpochAttestations {
 		// If the attestation is for the boundary:
 		if att.Data.TargetRoot == currentBoundaryBlockRoot {
-			participants, _ := state.GetAttestationParticipants(&att.Data, &att.AggregationBitfield)
+			participants, _ := state.GetAttestingIndicesUnsorted(&att.Data, &att.AggregationBitfield)
 			for _, vIndex := range participants {
 				currentEpochBoundaryAttesterIndices = append(currentEpochBoundaryAttesterIndices, vIndex)
 			}

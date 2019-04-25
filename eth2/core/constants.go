@@ -9,7 +9,7 @@ import (
 // Misc.
 const SHARD_COUNT Shard = constant_presets.SHARD_COUNT
 const TARGET_COMMITTEE_SIZE = constant_presets.TARGET_COMMITTEE_SIZE
-const MAX_ATTESTATION_PARTICIPANTS = constant_presets.MAX_ATTESTATION_PARTICIPANTS
+const MAX_INDICES_PER_ATTESTATION = constant_presets.MAX_INDICES_PER_ATTESTATION
 const MIN_PER_EPOCH_CHURN_LIMIT = constant_presets.MIN_PER_EPOCH_CHURN_LIMIT
 const CHURN_LIMIT_QUOTIENT = constant_presets.CHURN_LIMIT_QUOTIENT
 const SHUFFLE_ROUND_COUNT uint8 = constant_presets.SHUFFLE_ROUND_COUNT
@@ -19,17 +19,15 @@ const DEPOSIT_CONTRACT_TREE_DEPTH = constant_presets.DEPOSIT_CONTRACT_TREE_DEPTH
 
 // Gwei values
 const MIN_DEPOSIT_AMOUNT Gwei = constant_presets.MIN_DEPOSIT_AMOUNT
-const MAX_DEPOSIT_AMOUNT Gwei = constant_presets.MAX_DEPOSIT_AMOUNT
+const MAX_EFFECTIVE_BALANCE Gwei = constant_presets.MAX_EFFECTIVE_BALANCE
 // unused const FORK_CHOICE_BALANCE_INCREMENT Gwei = constant_presets.FORK_CHOICE_BALANCE_INCREMENT
 const EJECTION_BALANCE Gwei = constant_presets.EJECTION_BALANCE
 
 const HIGH_BALANCE_INCREMENT Gwei = constant_presets.HIGH_BALANCE_INCREMENT
 const HALF_INCREMENT = constant_presets.HIGH_BALANCE_INCREMENT / 2
 
-// Initial values
+// Initial values: TODO: assumed to be 0 in a lot of initializations, may just remove completely.
 const GENESIS_SLOT Slot = constant_presets.GENESIS_SLOT
-const GENESIS_START_SHARD Shard = constant_presets.GENESIS_START_SHARD
-const GENESIS_FORK_VERSION uint32 = constant_presets.GENESIS_FORK_VERSION
 const GENESIS_EPOCH = Epoch(GENESIS_SLOT / SLOTS_PER_EPOCH)
 
 const FAR_FUTURE_EPOCH Epoch = constant_presets.FAR_FUTURE_EPOCH
@@ -70,7 +68,7 @@ const MAX_TRANSFERS = constant_presets.MAX_TRANSFERS
 
 // Signature domains
 const (
-	DOMAIN_BEACON_BLOCK BLSDomainType = constant_presets.DOMAIN_BEACON_BLOCK
+	DOMAIN_BEACON_PROPOSER BLSDomainType = constant_presets.DOMAIN_BEACON_PROPOSER
 	DOMAIN_RANDAO BLSDomainType = constant_presets.DOMAIN_RANDAO
 	DOMAIN_ATTESTATION BLSDomainType = constant_presets.DOMAIN_ATTESTATION
 	DOMAIN_DEPOSIT BLSDomainType = constant_presets.DOMAIN_DEPOSIT

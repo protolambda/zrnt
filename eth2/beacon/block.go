@@ -2,7 +2,6 @@ package beacon
 
 import (
 	. "github.com/protolambda/zrnt/eth2/core"
-	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
 type BeaconBlockHeader struct {
@@ -38,24 +37,4 @@ type BeaconBlock struct {
 	Body BeaconBlockBody
 	// Signature
 	Signature BLSSignature
-}
-
-// Returns a template for a genesis block
-// (really just all default 0 data, but with genesis slot initialized)
-func GetEmptyBlock() *BeaconBlock {
-	return &BeaconBlock{
-		Slot: GENESIS_SLOT,
-	}
-}
-
-// Return the block header corresponding to a block with ``state_root`` set to ``ZERO_HASH``.
-func (block *BeaconBlock) GetTemporaryBlockHeader() BeaconBlockHeader {
-	return BeaconBlockHeader{
-		Slot:              block.Slot,
-		PreviousBlockRoot: block.PreviousBlockRoot,
-		StateRoot:         Root{}, // empty hash, "temporary" part.
-		BlockBodyRoot:     Root(ssz.HashTreeRoot(block.Body)),
-		// signing_root(block) is used for block id purposes so signature is a stub
-		Signature:         BLSSignature{},
-	}
 }

@@ -59,7 +59,7 @@ func DeltasJustificationAndFinalizationDeltas(state *BeaconState,) *Deltas {
 
 		for _, att := range state.PreviousEpochAttestations {
 			attBlockRoot, _ := state.GetBlockRoot(att.Data.Slot)
-			participants, _ := state.GetAttestationParticipants(&att.Data, &att.AggregationBitfield)
+			participants, _ := state.GetAttestingIndicesUnsorted(&att.Data, &att.AggregationBitfield)
 			for _, p := range participants {
 
 				status := &data[p]

@@ -31,10 +31,10 @@ func ProcessAttesterSlashing(state *BeaconState, attesterSlashing *AttesterSlash
 	if !(IsDoubleVote(&sa1.Data, &sa2.Data) || IsSurroundVote(&sa1.Data, &sa2.Data)) {
 		return errors.New("attester slashing is has no valid reasoning")
 	}
-	if !state.VerifyIndexedAttestation(sa1) {
+	if err := state.VerifyIndexedAttestation(sa1); err != nil {
 		return errors.New("attestation 1 of attester slashing cannot be verified")
 	}
-	if !state.VerifyIndexedAttestation(sa2) {
+	if err := state.VerifyIndexedAttestation(sa2); err != nil {
 		return errors.New("attestation 2 of attester slashing cannot be verified")
 	}
 
@@ -54,7 +54,7 @@ func ProcessAttesterSlashing(state *BeaconState, attesterSlashing *AttesterSlash
 	var anyErr error
 	indices1.ZigZagJoin(indices2, func(i ValidatorIndex) {
 		if state.ValidatorRegistry[i].IsSlashable(currentEpoch) {
-			if err := state.SlashValidator(i); err != nil {
+			if err := state.SlashValidator(i, nil); err != nil {
 				anyErr = err
 			}
 			slashedAny = true

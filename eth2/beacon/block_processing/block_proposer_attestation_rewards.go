@@ -15,12 +15,11 @@ func ProcessProposerAttestationRewards(state *BeaconState, _ *BeaconBlock) error
 	}
 	findEarliest := func(att *PendingAttestation) {
 		participants, _ := state.GetAttestingIndicesUnsorted(&att.Data, &att.AggregationBitfield)
+		participants = state.FilterUnslashed(participants)
 		for _, p := range participants {
-			if !state.ValidatorRegistry[p].Slashed {
-				// If the attestation is the earliest:
-				if earliestAttestations[p] > att.InclusionSlot {
-					earliestAttestations[p] = att.InclusionSlot
-				}
+			// If the attestation is the earliest:
+			if earliestAttestations[p] > att.InclusionSlot {
+				earliestAttestations[p] = att.InclusionSlot
 			}
 		}
 	}

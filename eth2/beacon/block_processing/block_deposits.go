@@ -6,7 +6,6 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/bls"
-	"github.com/protolambda/zrnt/eth2/util/hash"
 	"github.com/protolambda/zrnt/eth2/util/merkle"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
@@ -38,11 +37,9 @@ func ProcessDeposit(state *BeaconState, dep *Deposit) error {
 		return errors.New(fmt.Sprintf("deposit has index %d that does not match with state index %d", dep.Index, state.DepositIndex))
 	}
 
-	serializedDepositData := dep.Data.Serialized()
-
 	// Verify the Merkle branch
 	if !merkle.VerifyMerkleBranch(
-		hash.HashRoot(serializedDepositData),
+		ssz.HashTreeRoot(dep.Data),
 		dep.Proof[:],
 		DEPOSIT_CONTRACT_TREE_DEPTH,
 		uint64(dep.Index),
@@ -71,7 +68,7 @@ func ProcessDeposit(state *BeaconState, dep *Deposit) error {
 			dep.Data.Pubkey,
 			ssz.SigningRoot(dep.Data),
 			dep.Data.Signature,
-			GetDomain(state.Fork, state.Epoch(), DOMAIN_DEPOSIT)) {
+			state.GetDomain(DOMAIN_DEPOSIT, state.Epoch())) {
 			return errors.New("could not verify BLS signature")
 		}
 
@@ -83,8 +80,6 @@ func ProcessDeposit(state *BeaconState, dep *Deposit) error {
 			ActivationEpoch:       FAR_FUTURE_EPOCH,
 			ExitEpoch:             FAR_FUTURE_EPOCH,
 			WithdrawableEpoch:     FAR_FUTURE_EPOCH,
-			Slashed:               false,
-			HighBalance:           0,
 		}
 		// Note: In phase 2 registry indices that have been withdrawn for a long time will be recycled.
 		state.ValidatorRegistry = append(state.ValidatorRegistry, validator)

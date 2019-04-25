@@ -16,7 +16,7 @@ func ProcessBlockRandao(state *BeaconState, block *BeaconBlock) error {
 		proposer.Pubkey,
 		ssz.HashTreeRoot(state.Epoch()),
 		block.Body.RandaoReveal,
-		GetDomain(state.Fork, state.Epoch(), DOMAIN_RANDAO),
+		state.GetDomain(DOMAIN_RANDAO, state.Epoch()),
 	) {
 		return errors.New("randao invalid")
 	}

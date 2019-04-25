@@ -6,7 +6,7 @@ import (
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
-func ProcessEpochFinish(state *BeaconState) {
+func ProcessEpochFinalUpdates(state *BeaconState) {
 	currentEpoch := state.Epoch()
 	nextEpoch := currentEpoch + 1
 
@@ -14,6 +14,7 @@ func ProcessEpochFinish(state *BeaconState) {
 	if state.Slot % SLOTS_PER_ETH1_VOTING_PERIOD == 0 {
 		state.Eth1DataVotes = make([]Eth1Data, 0)
 	}
+	state.LatestStartShard = (state.LatestStartShard + state.GetShardDelta(currentEpoch)) % SHARD_COUNT
 
 	// Set active index root
 	indexRootPosition := (nextEpoch + ACTIVATION_EXIT_DELAY) % LATEST_ACTIVE_INDEX_ROOTS_LENGTH

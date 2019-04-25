@@ -46,7 +46,7 @@ func ProcessVoluntaryExit(state *BeaconState, exit *VoluntaryExit) error {
 				validator.Pubkey,
 				ssz.SigningRoot(exit),
 				exit.Signature,
-				GetDomain(state.Fork, exit.Epoch, DOMAIN_VOLUNTARY_EXIT)) {
+				state.GetDomain(DOMAIN_VOLUNTARY_EXIT, exit.Epoch)) {
 		return errors.New("voluntary exit signature could not be verified")
 	}
 	// Initiate exit

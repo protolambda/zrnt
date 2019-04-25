@@ -4,6 +4,7 @@ import (
 	"errors"
 	. "github.com/protolambda/zrnt/eth2/beacon"
 	. "github.com/protolambda/zrnt/eth2/core"
+	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
 func ProcessBlockAttestations(state *BeaconState, block *BeaconBlock) error {
@@ -20,19 +21,31 @@ func ProcessBlockAttestations(state *BeaconState, block *BeaconBlock) error {
 
 func ProcessAttestation(state *BeaconState, attestation *Attestation) error {
 
-	if !(GENESIS_SLOT <= attestation.Data.Slot &&
-		state.Slot-SLOTS_PER_EPOCH <= attestation.Data.Slot) {
+	data := &attestation.Data
+	minSlot := GENESIS_SLOT
+	if state.Epoch() > GENESIS_EPOCH {
+		minSlot = state.Slot - SLOTS_PER_EPOCH
+	}
+	if !(minSlot <= data.Slot) {
 		return errors.New("attestation slot is too old")
 	}
-	if !(attestation.Data.Slot <= state.Slot-MIN_ATTESTATION_INCLUSION_DELAY) {
+	if !(data.Slot <= state.Slot-MIN_ATTESTATION_INCLUSION_DELAY) {
 		return errors.New("attestation is too new")
 	}
-	// Check target epoch, source epoch, and source root
-	targetEpoch := attestation.Data.Slot.ToEpoch()
-	sourceEpoch := attestation.Data.SourceEpoch
-	sourceRoot := attestation.Data.SourceRoot
-	if !((targetEpoch == state.Epoch() && sourceEpoch == state.CurrentJustifiedEpoch && sourceRoot == state.CurrentJustifiedRoot) ||
-		(targetEpoch == state.PreviousEpoch() && sourceEpoch == state.PreviousJustifiedEpoch && sourceRoot == state.PreviousJustifiedRoot)) {
+	// Check target epoch, source epoch, and source crosslink
+	targetEpoch := data.Slot.ToEpoch()
+	sourceEpoch := data.SourceEpoch
+	sourceRoot := data.SourceRoot
+	sourceCrosslink := data.PreviousCrosslinkRoot
+	if !(
+		(targetEpoch == state.Epoch() &&
+			sourceEpoch == state.CurrentJustifiedEpoch &&
+			sourceRoot == state.CurrentJustifiedRoot &&
+			sourceCrosslink == ssz.HashTreeRoot(state.CurrentCrosslinks[data.Shard])) ||
+		(targetEpoch == state.PreviousEpoch() &&
+			sourceEpoch == state.PreviousJustifiedEpoch &&
+			sourceRoot == state.PreviousJustifiedRoot) &&
+			sourceCrosslink == ssz.HashTreeRoot(state.PreviousCrosslinks[data.Shard])) {
 		return errors.New("attestation does not match recent state justification")
 	}
 
@@ -40,24 +53,17 @@ func ProcessAttestation(state *BeaconState, attestation *Attestation) error {
 	if attestation.Data.CrosslinkDataRoot == (Root{}) { //  # [to be removed in phase 1]
 		return errors.New("attestation cannot reference a crosslink root yet, processing as phase 0")
 	}
-	if !(
-	// Case 1: latest crosslink matches previous crosslink
-	state.LatestCrosslinks[attestation.Data.Shard] == attestation.Data.PreviousCrosslink ||
-		// Case 2: latest crosslink matches current crosslink
-		state.LatestCrosslinks[attestation.Data.Shard] == Crosslink{CrosslinkDataRoot: attestation.Data.CrosslinkDataRoot, Epoch: attestation.Data.Slot.ToEpoch()}) {
-		return errors.New("attestation crosslinking invalid")
-	}
 
 	// Check signature and bitfields
 	if indexedAtt, err := state.ConvertToIndexed(attestation); err != nil {
 		return errors.New("attestation could not be converted to an indexed attestation")
-	} else if !state.VerifyIndexedAttestation(indexedAtt) {
+	} else if err := state.VerifyIndexedAttestation(indexedAtt); err != nil {
 		return errors.New("attestation could not be verified in its indexed form")
 	}
 
 	// Cache pending attestation
 	pendingAttestation := &PendingAttestation{
-		Data:                attestation.Data,
+		Data:                *data,
 		AggregationBitfield: attestation.AggregationBitfield,
 		InclusionSlot:       state.Slot,
 	}

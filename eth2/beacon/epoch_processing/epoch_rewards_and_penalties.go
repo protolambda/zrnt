@@ -8,7 +8,6 @@ import (
 var deltaCalculators = []DeltasCalculator{
 	deltas_computation.DeltasJustificationAndFinalizationDeltas,
 	deltas_computation.DeltasCrosslinks,
-	// TODO: split up the above where possible, and add others where necessary
 }
 
 func ProcessEpochRewardsAndPenalties(state *BeaconState) {

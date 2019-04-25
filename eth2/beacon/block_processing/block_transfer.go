@@ -32,8 +32,9 @@ func ProcessBlockTransfers(state *BeaconState, block *BeaconBlock) error {
 }
 
 func ProcessTransfer(state *BeaconState, transfer *Transfer) error {
+	senderBalance := state.GetBalance(transfer.Sender)
 	// Verify the amount and fee aren't individually too big (for anti-overflow purposes)
-	if senderBalance := state.GetBalance(transfer.Sender); !(senderBalance >= transfer.Amount && senderBalance >= transfer.Fee) {
+	if !(senderBalance >= transfer.Amount && senderBalance >= transfer.Fee) {
 		return errors.New("transfer value parameter (amount and/or fee) is too big")
 	}
 	if transfer.Sender == transfer.Recipient {
@@ -45,9 +46,10 @@ func ProcessTransfer(state *BeaconState, transfer *Transfer) error {
 		return errors.New("transfer is not valid in current slot")
 	}
 	sender := state.ValidatorRegistry[transfer.Sender]
-	// Only withdrawn or not-yet-deposited accounts can transfer
-	if !(state.Epoch() >= sender.WithdrawableEpoch ||
-		sender.ActivationEpoch == FAR_FUTURE_EPOCH) {
+	// Sender must be not yet eligible for activation, withdrawn, or transfer balance over MAX_EFFECTIVE_BALANCE
+	if !(sender.ActivationEligibilityEpoch == FAR_FUTURE_EPOCH ||
+		state.Epoch() >= sender.WithdrawableEpoch ||
+		(transfer.Amount + transfer.Fee + MAX_EFFECTIVE_BALANCE) <= senderBalance) {
 		return errors.New("transfer sender is not eligible to make a transfer, it has to be withdrawn, or yet to be activated")
 	}
 	// Verify that the pubkey is valid
@@ -59,7 +61,7 @@ func ProcessTransfer(state *BeaconState, transfer *Transfer) error {
 	}
 	// Verify that the signature is valid
 	if !bls.BlsVerify(transfer.Pubkey, ssz.SigningRoot(transfer), transfer.Signature,
-		GetDomain(state.Fork, transfer.Slot.ToEpoch(), DOMAIN_TRANSFER)) {
+		state.GetDomain(DOMAIN_TRANSFER, transfer.Slot.ToEpoch())) {
 		return errors.New("transfer signature is invalid")
 	}
 	state.DecreaseBalance(transfer.Sender, transfer.Amount + transfer.Fee)

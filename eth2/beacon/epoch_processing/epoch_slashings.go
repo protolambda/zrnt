@@ -16,13 +16,12 @@ func ProcessEpochSlashings(state *BeaconState) {
 			epochIndex := currentEpoch % LATEST_SLASHED_EXIT_LENGTH
 			totalAtStart := state.LatestSlashedBalances[(epochIndex+1)%LATEST_SLASHED_EXIT_LENGTH]
 			totalAtEnd := state.LatestSlashedBalances[epochIndex]
-			balance := state.GetEffectiveBalance(ValidatorIndex(i))
 			penalty := Max(
-				balance*Min(
+				v.EffectiveBalance*Min(
 					(totalAtEnd-totalAtStart)*3,
 					totalBalance,
 				)/totalBalance,
-				balance/MIN_PENALTY_QUOTIENT)
+				v.EffectiveBalance/MIN_SLASHING_PENALTY_QUOTIENT)
 			state.DecreaseBalance(ValidatorIndex(i), penalty)
 		}
 	}

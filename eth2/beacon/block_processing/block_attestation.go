@@ -66,6 +66,7 @@ func ProcessAttestation(state *BeaconState, attestation *Attestation) error {
 		Data:                *data,
 		AggregationBitfield: attestation.AggregationBitfield,
 		InclusionSlot:       state.Slot,
+		ProposerIndex:       state.GetBeaconProposerIndex(),
 	}
 	if targetEpoch == state.Epoch() {
 		state.CurrentEpochAttestations = append(state.CurrentEpochAttestations, pendingAttestation)

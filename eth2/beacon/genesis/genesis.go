@@ -21,8 +21,8 @@ func GetGenesisBeaconState(validatorDeposits []Deposit, time Timestamp, eth1Data
 		}
 	}
 	// Process genesis activations
-	for i, v := range state.ValidatorRegistry {
-		if state.GetEffectiveBalance(ValidatorIndex(i)) >= MAX_EFFECTIVE_BALANCE {
+	for _, v := range state.ValidatorRegistry {
+		if v.EffectiveBalance >= MAX_EFFECTIVE_BALANCE {
 			v.ActivationEligibilityEpoch = GENESIS_EPOCH
 			v.ActivationEpoch = GENESIS_EPOCH
 		}

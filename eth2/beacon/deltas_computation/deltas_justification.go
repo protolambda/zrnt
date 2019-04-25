@@ -55,10 +55,10 @@ func DeltasJustificationAndFinalizationDeltas(state *BeaconState,) *Deltas {
 	}
 
 	{
-		previousBoundaryBlockRoot, _ := state.GetBlockRoot(state.PreviousEpoch().GetStartSlot())
+		previousBoundaryBlockRoot, _ := state.GetBlockRootAtSlot(state.PreviousEpoch().GetStartSlot())
 
 		for _, att := range state.PreviousEpochAttestations {
-			attBlockRoot, _ := state.GetBlockRoot(att.Data.Slot)
+			attBlockRoot, _ := state.GetBlockRootAtSlot(att.Data.Slot)
 			participants, _ := state.GetAttestingIndicesUnsorted(&att.Data, &att.AggregationBitfield)
 			for _, p := range participants {
 
@@ -92,7 +92,8 @@ func DeltasJustificationAndFinalizationDeltas(state *BeaconState,) *Deltas {
 	var totalBalance, totalAttestingBalance, epochBoundaryBalance, matchingHeadBalance Gwei
 	for i := ValidatorIndex(0); i < validatorCount; i++ {
 		status := &data[i]
-		b := state.GetEffectiveBalance(i)
+		v := state.ValidatorRegistry[i]
+		b := v.EffectiveBalance
 		totalBalance += b
 		if status.Flags.hasMarkers(prevEpochAttester | unslashed) {
 			totalAttestingBalance += b
@@ -103,7 +104,6 @@ func DeltasJustificationAndFinalizationDeltas(state *BeaconState,) *Deltas {
 		if status.Flags.hasMarkers(matchingHeadAttester | unslashed) {
 			matchingHeadBalance += b
 		}
-		v := state.ValidatorRegistry[i]
 		if v.IsActive(currentEpoch) || (v.Slashed && currentEpoch < v.WithdrawableEpoch) {
 			status.Flags |= eligibleAttester
 		}
@@ -118,14 +118,14 @@ func DeltasJustificationAndFinalizationDeltas(state *BeaconState,) *Deltas {
 		status := &data[i]
 		if status.Flags & eligibleAttester != 0 {
 
-			effectiveBalance := state.GetEffectiveBalance(i)
+			v := state.ValidatorRegistry[i]
 			baseReward := Gwei(0)
 			if adjustedQuotient != 0 {
-				baseReward = effectiveBalance / Gwei(adjustedQuotient) / 5
+				baseReward = v.EffectiveBalance / Gwei(adjustedQuotient) / 5
 			}
 			inactivityPenalty := baseReward
 			if epochsSinceFinality > 4 {
-				inactivityPenalty += effectiveBalance * Gwei(epochsSinceFinality) / INACTIVITY_PENALTY_QUOTIENT / 2
+				inactivityPenalty += v.EffectiveBalance * Gwei(epochsSinceFinality) / INACTIVITY_PENALTY_QUOTIENT / 2
 			}
 
 			// Expected FFG source

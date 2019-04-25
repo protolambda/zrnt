@@ -29,8 +29,7 @@ func ProcessBlockDeposits(state *BeaconState, block *BeaconBlock) error {
 	return nil
 }
 
-// Process a deposit from Ethereum 1.0.
-// Used to add a validator or top up an existing validator's balance by some deposit amount.
+// Process an Eth1 deposit, registering a validator or increasing its balance.
 func ProcessDeposit(state *BeaconState, dep *Deposit) error {
 	// Deposits must be processed in order
 	if dep.Index != state.DepositIndex {
@@ -72,7 +71,7 @@ func ProcessDeposit(state *BeaconState, dep *Deposit) error {
 			return errors.New("could not verify BLS signature")
 		}
 
-		// Not a known pubkey, add new validator
+		// Add validator and balance entries
 		validator := &Validator{
 			Pubkey:                dep.Data.Pubkey,
 			WithdrawalCredentials: dep.Data.WithdrawalCredentials,
@@ -80,11 +79,10 @@ func ProcessDeposit(state *BeaconState, dep *Deposit) error {
 			ActivationEpoch:       FAR_FUTURE_EPOCH,
 			ExitEpoch:             FAR_FUTURE_EPOCH,
 			WithdrawableEpoch:     FAR_FUTURE_EPOCH,
+			EffectiveBalance: dep.Data.Amount - (dep.Data.Amount % EFFECTIVE_BALANCE_INCREMENT),
 		}
-		// Note: In phase 2 registry indices that have been withdrawn for a long time will be recycled.
 		state.ValidatorRegistry = append(state.ValidatorRegistry, validator)
 		state.Balances = append(state.Balances, 0)
-		state.SetBalance(ValidatorIndex(len(state.ValidatorRegistry) - 1), dep.Data.Amount)
 	} else {
 		// Increase balance by deposit amount
 		state.IncreaseBalance(valIndex, dep.Data.Amount)

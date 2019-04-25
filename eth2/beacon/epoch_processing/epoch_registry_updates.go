@@ -10,11 +10,12 @@ func ProcessRegistryUpdates(state *BeaconState) {
 	// Process activation eligibility and ejections
 	currentEpoch := state.Epoch()
 	for i, v := range state.ValidatorRegistry {
-		balance := state.GetBalance(ValidatorIndex(i))
-		if v.ActivationEligibilityEpoch == FAR_FUTURE_EPOCH && balance >= MAX_EFFECTIVE_BALANCE {
+		if v.ActivationEligibilityEpoch == FAR_FUTURE_EPOCH &&
+			v.EffectiveBalance >= MAX_EFFECTIVE_BALANCE {
 			v.ActivationEligibilityEpoch = currentEpoch
 		}
-		if v.IsActive(currentEpoch) && balance < EJECTION_BALANCE {
+		if v.IsActive(currentEpoch) &&
+			v.EffectiveBalance < EJECTION_BALANCE {
 			state.InitiateValidatorExit(ValidatorIndex(i))
 		}
 	}

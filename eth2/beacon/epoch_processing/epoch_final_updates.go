@@ -14,6 +14,18 @@ func ProcessEpochFinalUpdates(state *BeaconState) {
 	if state.Slot % SLOTS_PER_ETH1_VOTING_PERIOD == 0 {
 		state.Eth1DataVotes = make([]Eth1Data, 0)
 	}
+	// Update effective balances with hysteresis
+	for i, v := range state.ValidatorRegistry {
+		balance := state.Balances[i]
+		if MAX_EFFECTIVE_BALANCE < balance {
+			balance = MAX_EFFECTIVE_BALANCE
+		}
+		if balance < v.EffectiveBalance ||
+			v.EffectiveBalance + 3 * HALF_INCREMENT < balance {
+			v.EffectiveBalance = balance - (balance % EFFECTIVE_BALANCE_INCREMENT)
+		}
+	}
+	// Update start shard
 	state.LatestStartShard = (state.LatestStartShard + state.GetShardDelta(currentEpoch)) % SHARD_COUNT
 
 	// Set active index root

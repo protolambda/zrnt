@@ -32,7 +32,10 @@ func ProcessBlockTransfers(state *BeaconState, block *BeaconBlock) error {
 }
 
 func ProcessTransfer(state *BeaconState, transfer *Transfer) error {
-	senderBalance := state.GetBalance(transfer.Sender)
+	if !state.ValidatorRegistry.IsValidatorIndex(transfer.Sender) {
+		return errors.New("cannot send funds from non-existent validator")
+	}
+	senderBalance := state.Balances[transfer.Sender]
 	// Verify the amount and fee aren't individually too big (for anti-overflow purposes)
 	if !(senderBalance >= transfer.Amount && senderBalance >= transfer.Fee) {
 		return errors.New("transfer value parameter (amount and/or fee) is too big")
@@ -69,10 +72,10 @@ func ProcessTransfer(state *BeaconState, transfer *Transfer) error {
 	propIndex := state.GetBeaconProposerIndex()
 	state.IncreaseBalance(propIndex, transfer.Fee)
 	// Verify balances are not dust
-	if b := state.GetBalance(transfer.Sender); !(0 < b && b < MIN_DEPOSIT_AMOUNT) {
+	if b := state.Balances[transfer.Sender]; !(0 < b && b < MIN_DEPOSIT_AMOUNT) {
 		return errors.New("transfer is invalid: results in dust on sender address")
 	}
-	if b := state.GetBalance(transfer.Recipient); !(0 < b && b < MIN_DEPOSIT_AMOUNT) {
+	if b := state.Balances[transfer.Recipient]; !(0 < b && b < MIN_DEPOSIT_AMOUNT) {
 		return errors.New("transfer is invalid: results in dust on recipient address")
 	}
 	return nil

@@ -33,13 +33,13 @@ func DeltasCrosslinks(state *BeaconState) *Deltas {
 			committee.ZigZagJoin(attestingIndices,
 				func(i ValidatorIndex) {
 					// Committee member participated, reward them
-					effectiveBalance := state.GetEffectiveBalance(i)
+					effectiveBalance := state.ValidatorRegistry[i].EffectiveBalance
 					baseReward := effectiveBalance / Gwei(adjustedQuotient) / 5
 
 					deltas.Rewards[i] += baseReward * attestingBalance / totalBalance
 				}, func(i ValidatorIndex) {
 					// Committee member did not participate, penalize them
-					effectiveBalance := state.GetEffectiveBalance(i)
+					effectiveBalance := state.ValidatorRegistry[i].EffectiveBalance
 					baseReward := effectiveBalance / Gwei(adjustedQuotient) / 5
 
 					deltas.Penalties[i] += baseReward

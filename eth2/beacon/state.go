@@ -156,9 +156,10 @@ func (state *BeaconState) GetBeaconProposerIndex() ValidatorIndex {
 		h := hash.Hash(buf)
 		for j := uint64(0); j < 32; j++ {
 			randomByte := h[j]
-			candidate := firstCommittee[(uint64(currentEpoch)+(i<<5|j))%uint64(len(firstCommittee))]
-			if state.GetEffectiveBalance(candidate)<<8 > MAX_EFFECTIVE_BALANCE*Gwei(randomByte) {
-				return candidate
+			candidateIndex := firstCommittee[(uint64(currentEpoch)+(i<<5|j))%uint64(len(firstCommittee))]
+			effectiveBalance := state.ValidatorRegistry[candidateIndex].EffectiveBalance
+			if effectiveBalance*0xff > MAX_EFFECTIVE_BALANCE*Gwei(randomByte) {
+				return candidateIndex
 			}
 		}
 	}
@@ -203,12 +204,17 @@ func (state *BeaconState) GenerateSeed(epoch Epoch) Root {
 	return hash.HashRoot(buf)
 }
 
-// Return the block root at a recent slot
-func (state *BeaconState) GetBlockRoot(slot Slot) (Root, error) {
-	if slot+SLOTS_PER_HISTORICAL_ROOT < state.Slot || slot > state.Slot {
+// Return the block root at the given slot (a recent one)
+func (state *BeaconState) GetBlockRootAtSlot(slot Slot) (Root, error) {
+	if !(slot < state.Slot && slot+SLOTS_PER_HISTORICAL_ROOT <= state.Slot) {
 		return Root{}, errors.New("cannot get block root for given slot")
 	}
 	return state.LatestBlockRoots[slot%SLOTS_PER_HISTORICAL_ROOT], nil
+}
+
+// Return the block root at a recent epoch
+func (state *BeaconState) GetBlockRoot(epoch Epoch) (Root, error) {
+	return state.GetBlockRootAtSlot(epoch.GetStartSlot())
 }
 
 // Return the state root at a recent
@@ -260,6 +266,7 @@ func (state *BeaconState) GetCrosslinkCommitteesAtSlot(slot Slot) []CrosslinkCom
 
 	crosslinkCommittees := make([]CrosslinkCommittee, committeesPerSlot)
 	{
+		// TODO: cache shuffling
 		shuffled := state.GetShuffled(seed, epoch)
 		activeValidatorCount := state.ValidatorRegistry.GetActiveValidatorCount(epoch)
 
@@ -392,17 +399,24 @@ func (state *BeaconState) GetAttestingIndices(attestationData *AttestationData, 
 }
 
 // Slash the validator with the given index.
-func (state *BeaconState) SlashValidator(slashedIndex ValidatorIndex) error {
+func (state *BeaconState) SlashValidator(slashedIndex ValidatorIndex, whistleblowerIndex *ValidatorIndex) error {
+	currentEpoch := state.Epoch()
 	validator := state.ValidatorRegistry[slashedIndex]
 	state.InitiateValidatorExit(slashedIndex)
-	state.LatestSlashedBalances[state.Epoch()%LATEST_SLASHED_EXIT_LENGTH] += state.GetEffectiveBalance(index)
+	validator.Slashed = true
+	validator.WithdrawableEpoch = currentEpoch + LATEST_SLASHED_EXIT_LENGTH
+	slashedBalance := validator.EffectiveBalance
+	state.LatestSlashedBalances[currentEpoch%LATEST_SLASHED_EXIT_LENGTH] += slashedBalance
 
 	propIndex := state.GetBeaconProposerIndex()
-	whistleblowerReward := state.GetEffectiveBalance(slashedIndex) / WHISTLEBLOWING_REWARD_QUOTIENT
+	if whistleblowerIndex == nil {
+		whistleblowerIndex = &propIndex
+	}
+	whistleblowerReward := slashedBalance / WHISTLEBLOWING_REWARD_QUOTIENT
+	proposerReward := whistleblowerReward / PROPOSER_REWARD_QUOTIENT
 	state.IncreaseBalance(propIndex, whistleblowerReward)
+	state.IncreaseBalance(*whistleblowerIndex, whistleblowerReward - proposerReward)
 	state.DecreaseBalance(slashedIndex, whistleblowerReward)
-	validator.Slashed = true
-	validator.WithdrawableEpoch = state.Epoch() + LATEST_SLASHED_EXIT_LENGTH
 	return nil
 }
 
@@ -428,15 +442,10 @@ func (state *BeaconState) ApplyDeltas(deltas *Deltas) {
 	}
 }
 
-// Return the effective balance (also known as "balance at stake") for a validator with the given index.
-func (state *BeaconState) GetEffectiveBalance(index ValidatorIndex) Gwei {
-	return Min(state.GetBalance(index), MAX_EFFECTIVE_BALANCE)
-}
-
 // Return the total balance sum
 func (state *BeaconState) GetTotalBalance() (sum Gwei) {
-	for i := 0; i < len(state.Balances); i++ {
-		sum += state.GetEffectiveBalance(ValidatorIndex(i))
+	for _, v := range state.ValidatorRegistry {
+		sum += v.EffectiveBalance
 	}
 	return sum
 }
@@ -444,36 +453,22 @@ func (state *BeaconState) GetTotalBalance() (sum Gwei) {
 // Return the combined effective balance of an array of validators.
 func (state *BeaconState) GetTotalBalanceOf(indices []ValidatorIndex) (sum Gwei) {
 	for _, vIndex := range indices {
-		sum += state.GetEffectiveBalance(vIndex)
+		sum += state.ValidatorRegistry[vIndex].EffectiveBalance
 	}
 	return sum
 }
 
-func (state *BeaconState) GetBalance(index ValidatorIndex) Gwei {
-	return state.Balances[index]
-}
-
-// Set the balance for a validator with the given ``index`` in both ``BeaconState``
-//  and validator's rounded balance ``high_balance``.
-func (state *BeaconState) SetBalance(index ValidatorIndex, balance Gwei) {
-	validator := state.ValidatorRegistry[index]
-	if validator.HighBalance > balance || validator.HighBalance+3*HALF_INCREMENT < balance {
-		validator.HighBalance = balance - (balance % HIGH_BALANCE_INCREMENT)
-	}
-	state.Balances[index] = balance
-}
-
 func (state *BeaconState) IncreaseBalance(index ValidatorIndex, delta Gwei) {
-	state.SetBalance(index, state.GetBalance(index)+delta)
+	state.Balances[index] += delta
 }
 
 func (state *BeaconState) DecreaseBalance(index ValidatorIndex, delta Gwei) {
-	currentBalance := state.GetBalance(index)
+	currentBalance := state.Balances[index]
 	// prevent underflow, clip to 0
 	if currentBalance >= delta {
-		state.SetBalance(index, currentBalance-delta)
+		state.Balances[index] += currentBalance-delta
 	} else {
-		state.SetBalance(index, 0)
+		state.Balances[index] = 0
 	}
 }
 

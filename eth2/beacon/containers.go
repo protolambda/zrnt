@@ -153,8 +153,8 @@ type Validator struct {
 	WithdrawableEpoch Epoch
 	// Was the validator slashed
 	Slashed bool
-	// Rounded balance
-	HighBalance Gwei
+	// Effective balance
+	EffectiveBalance Gwei
 }
 
 func (v *Validator) Copy() *Validator {
@@ -167,7 +167,7 @@ func (v *Validator) IsActive(epoch Epoch) bool {
 }
 
 func (v *Validator) IsSlashable(epoch Epoch) bool {
-	return v.ActivationEpoch <= epoch && epoch < v.WithdrawableEpoch && !v.Slashed
+	return !v.Slashed && v.ActivationEpoch <= epoch && epoch < v.WithdrawableEpoch
 }
 
 type PendingAttestation struct {
@@ -177,6 +177,8 @@ type PendingAttestation struct {
 	Data AttestationData
 	// Inclusion slot
 	InclusionSlot Slot
+	// Proposer index
+	ProposerIndex ValidatorIndex
 }
 
 type Fork struct {

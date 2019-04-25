@@ -15,7 +15,6 @@ var blockProcessors = []BlockProcessor{
 	block_processing.ProcessBlockProposerSlashings,
 	block_processing.ProcessBlockAttesterSlashings,
 	block_processing.ProcessBlockAttestations,
-	block_processing.ProcessProposerAttestationRewards,
 	block_processing.ProcessBlockDeposits,
 	block_processing.ProcessBlockVoluntaryExits,
 	block_processing.ProcessBlockTransfers,

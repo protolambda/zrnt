@@ -37,6 +37,6 @@ func (testCase *DepositTestCase) Run(t *testing.T) {
 }
 
 func TestDeposits(t *testing.T) {
-	spec_testing.RunSuitesInPath("../../../eth2.0-specs/yaml_tests/operations/deposits/",
+	spec_testing.RunSuitesInPath("../../../eth2.0-specs/eth2.0-spec-tests/tests/operations/deposits/",
 		func(raw interface{}) interface{} { return new(DepositTestCase) }, t)
 }

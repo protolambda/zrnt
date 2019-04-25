@@ -3,7 +3,6 @@ package beacon
 import (
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/bitfield"
-	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
 // NOTE: these containers are going to be moved to sub-packages, per-topic.
@@ -96,20 +95,6 @@ type DepositData struct {
 	Amount Gwei
 	// Container self-signature
 	Signature BLSSignature
-}
-
-// Let serialized_deposit_data be the serialized form of deposit.deposit_data.
-//
-// It should equal to:
-//  48 bytes for pubkey
-//  32 bytes for withdrawal credentials
-//  8 bytes for amount
-//  96 bytes for proof of possession
-//
-// This should match deposit_data in the Ethereum 1.0 deposit contract
-//  of which the hash was placed into the Merkle tree.
-func (d *DepositData) Serialized() []byte {
-	return ssz.SSZEncode(d)
 }
 
 type VoluntaryExit struct {

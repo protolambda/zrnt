@@ -13,6 +13,7 @@ type SSZStaticTestCase struct {
 	Value      interface{}
 	Serialized Bytes
 	Root       Root
+	SigningRoot Root
 }
 
 func (testCase *SSZStaticTestCase) Run(t *testing.T) {
@@ -36,6 +37,14 @@ func (testCase *SSZStaticTestCase) Run(t *testing.T) {
 				t.Fatalf("hash-tree-roots differ: %s (spec) <-> %s (zrnt)", testCase.Root.String(), root.String())
 			}
 		})
+		if testCase.SigningRoot != (Root{}) {
+			t.Run("signing_root", func(t *testing.T) {
+				root := ssz.SigningRoot(testCase.Value)
+				if root != testCase.SigningRoot {
+					t.Fatalf("signing-roots differ: %s (spec) <-> %s (zrnt)", testCase.SigningRoot.String(), root.String())
+				}
+			})
+		}
 	})
 }
 
@@ -65,7 +74,7 @@ var allocators = map[string]ObjAllocator{
 }
 
 func TestSSZStatic(t *testing.T) {
-	spec_testing.RunSuitesInPath("../../../eth2.0-specs/yaml_tests/ssz_static/core/",
+	spec_testing.RunSuitesInPath("../../../eth2.0-specs/eth2.0-spec-tests/tests/ssz_static/core/",
 		func(raw interface{}) interface{} {
 			data := raw.(map[string]interface{})
 			name := data["TypeName"].(string)

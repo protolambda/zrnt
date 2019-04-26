@@ -82,7 +82,7 @@ func ProcessDeposit(state *BeaconState, dep *Deposit) error {
 			EffectiveBalance: dep.Data.Amount - (dep.Data.Amount % EFFECTIVE_BALANCE_INCREMENT),
 		}
 		state.ValidatorRegistry = append(state.ValidatorRegistry, validator)
-		state.Balances = append(state.Balances, 0)
+		state.Balances = append(state.Balances, dep.Data.Amount)
 	} else {
 		// Increase balance by deposit amount
 		state.IncreaseBalance(valIndex, dep.Data.Amount)

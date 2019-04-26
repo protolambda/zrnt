@@ -172,8 +172,13 @@ func sszSerialize(v reflect.Value, dst *[]byte) (encodedLen uint32) {
 
 // constructs a merkle_root of the given data, but truncates last element (i.e. ignored, not part of the root)
 func SigningRoot(input interface{}) Root {
-	v := reflect.ValueOf(input)
+	return signingRoot(reflect.ValueOf(input))
+}
+
+func signingRoot(v reflect.Value) Root {
 	switch v.Kind() {
+	case reflect.Ptr:
+		return signingRoot(v.Elem())
 	case reflect.Struct:
 		data := composeStructRootData(v)
 		if len(data) <= 1 {

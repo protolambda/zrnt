@@ -16,8 +16,7 @@ func HashRoot(input []byte) (out Root) {
 func Hash(input []byte) (out []byte) {
 	hash := sha256.New()
 	hash.Write(input)
-	copy(out[:], hash.Sum(nil))
-	return out
+	return hash.Sum(nil)
 }
 
 // Hashes the input, and returns the hash as a byte slice

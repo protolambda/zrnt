@@ -18,6 +18,7 @@ type BeaconBlockHeader struct {
 type BeaconBlockBody struct {
 	RandaoReveal BLSSignature
 	Eth1Data     Eth1Data
+	Graffiti     Root
 
 	ProposerSlashings []ProposerSlashing
 	AttesterSlashings []AttesterSlashing

@@ -35,14 +35,13 @@ type Attestation struct {
 }
 
 type AttestationData struct {
-	//  LMD GHOST vote
-	Slot Slot
 	// Root of the signed beacon block
 	BeaconBlockRoot Root
 
 	// FFG vote
 	SourceEpoch Epoch
 	SourceRoot  Root
+	TargetEpoch Epoch
 	TargetRoot  Root
 
 	// Crosslink vote
@@ -161,7 +160,7 @@ type PendingAttestation struct {
 	// Attestation data
 	Data AttestationData
 	// Inclusion slot
-	InclusionSlot Slot
+	InclusionDelay Slot
 	// Proposer index
 	ProposerIndex ValidatorIndex
 }

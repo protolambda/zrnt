@@ -58,7 +58,7 @@ func withSize(dst *[]byte, size uint64) (start uint64, end uint64) {
 
 // Note: when this is changed,
 //  don't forget to change the PutUint32 calls that make put the length in this allocated space.
-const BYTES_PER_LENGTH_PREFIX = 4
+const BYTES_PER_LENGTH_OFFSET = 4
 
 func getSerializeCache(v reflect.Value) *SerializeCache {
 	prov, ok := v.Interface().(SSZSerializeCacheProvider)
@@ -70,47 +70,47 @@ func getSerializeCache(v reflect.Value) *SerializeCache {
 	}
 }
 
-func sszSerializeMaybeCached(v reflect.Value, dst *[]byte) uint32 {
-	var serializedSize uint32
+func sszSerializeMaybeCached(v reflect.Value, dst *[]byte) {
 	if cache := getSerializeCache(v); cache != nil {
 		// Cache, try to hit it.
 		if cache.Cached {
 			// use cache! manually place cache contents into destination
-			serializedSize = uint32(len(cache.Serialized))
-			datS, datE := withSize(dst, uint64(serializedSize))
+			datS, datE := withSize(dst, uint64(len(cache.Serialized)))
 			copy((*dst)[datS:datE], cache.Serialized)
 		} else {
-			// The start of the data will be the end of the current destination data (optionally incl length prefix)
+			// The start of the data will be the end of the current destination data
 			datS := uint32(len(*dst))
 			// serialize like normal
-			serializedSize = sszSerialize(v, dst)
+			sszSerialize(v, dst)
 			// fill cache using data that was placed in the destination
-			cache.Serialized = (*dst)[datS:datS+serializedSize]
+			cache.Serialized = (*dst)[datS:]
 			cache.Cached = true
 		}
 	} else {
-		// no cache available, handle like normal field
-		serializedSize = sszSerialize(v, dst)
+		// no cache available, handle like normal
+		sszSerialize(v, dst)
 	}
-	return serializedSize
 }
 
-func sszSerialize(v reflect.Value, dst *[]byte) (encodedLen uint32) {
+
+type offsetVariableRef struct {
+	offsetIndex uint32
+	fieldIndex int
+}
+
+func sszSerialize(v reflect.Value, dst *[]byte) {
 	switch v.Kind() {
 	case reflect.Ptr:
-		return sszSerialize(v.Elem(), dst)
+		sszSerialize(v.Elem(), dst)
 	case reflect.Uint8: // "uintN"
 		s, _ := withSize(dst, 1)
 		(*dst)[s] = byte(v.Uint())
-		return 1
 	case reflect.Uint32: // "uintN"
 		s, e := withSize(dst, 4)
 		binary.LittleEndian.PutUint32((*dst)[s:e], uint32(v.Uint()))
-		return 4
 	case reflect.Uint64: // "uintN"
 		s, e := withSize(dst, 8)
 		binary.LittleEndian.PutUint64((*dst)[s:e], uint64(v.Uint()))
-		return 8
 	case reflect.Bool: // "bool"
 		s, _ := withSize(dst, 1)
 		if v.Bool() {
@@ -118,53 +118,57 @@ func sszSerialize(v reflect.Value, dst *[]byte) (encodedLen uint32) {
 		} else {
 			(*dst)[s] = 0
 		}
-		return 1
-	case reflect.Array: // "vector"
-		if isFixedSize(v.Type()) {
+	case reflect.Array, reflect.Slice: // "vector", "list"
+		if elemT := v.Type().Elem(); elemT.Kind() == reflect.Uint8 {
+			// just directly copy over the bytes if we can
+			s, e := withSize(dst, uint64(v.Len()))
+			if v.Kind() == reflect.Array {
+				v = v.Slice(0, v.Len())
+			}
+			copy((*dst)[s:e], v.Bytes())
+		} else if isFixedSize(elemT) {
+			// not a bytes array, but fixed size still.
 			for i, size := 0, v.Len(); i < size; i++ {
-				encodedLen += sszSerializeMaybeCached(v.Index(i), dst)
+				sszSerializeMaybeCached(v.Index(i), dst)
 			}
 		} else {
-			// allocate size prefix
-			s, e := withSize(dst, BYTES_PER_LENGTH_PREFIX)
+			// fixed part: allocate offsets
+			absStart := len(*dst)
+			s, _ := withSize(dst, BYTES_PER_LENGTH_OFFSET * uint64(v.Len()))
+			// write the variable parts, and back-fill the offsets
 			for i, size := 0, v.Len(); i < size; i++ {
-				encodedLen += sszSerializeMaybeCached(v.Index(i), dst)
+				// offset points to end of previous data
+				// offset is located at start of fixed + (BYTES_PER_LENGTH_OFFSET * i)
+				binary.LittleEndian.PutUint32((*dst)[s:s+BYTES_PER_LENGTH_OFFSET], uint32(len(*dst) - absStart))
+				s += BYTES_PER_LENGTH_OFFSET
+				// append to dst
+				sszSerializeMaybeCached(v.Index(i), dst)
 			}
-			binary.LittleEndian.PutUint32((*dst)[s:e], encodedLen)
-			encodedLen += BYTES_PER_LENGTH_PREFIX
 		}
-		return encodedLen
-	case reflect.Slice: // "list"
-		// allocate size prefix
-		s, e := withSize(dst, BYTES_PER_LENGTH_PREFIX)
-		for i, size := 0, v.Len(); i < size; i++ {
-			encodedLen += sszSerializeMaybeCached(v.Index(i), dst)
-		}
-		binary.LittleEndian.PutUint32((*dst)[s:e], encodedLen)
-		encodedLen += BYTES_PER_LENGTH_PREFIX
-		return encodedLen
 	case reflect.Struct: // "container"
 		vType := v.Type()
-		if isFixedSize(vType) {
-			for i, size := 0, v.NumField(); i < size; i++ {
-				if hasSSZFlag(vType.Field(i), OMIT_FLAG) {
-					continue
-				}
-				encodedLen += sszSerializeMaybeCached(v.Field(i), dst)
+		varParts := make([]offsetVariableRef, 0)
+		absStart := len(*dst)
+		for i, size := 0, v.NumField(); i < size; i++ {
+			field := vType.Field(i)
+			if hasSSZFlag(field, OMIT_FLAG) {
+				continue
 			}
-		} else {
-			// allocate size prefix
-			lenS, lenE := withSize(dst, BYTES_PER_LENGTH_PREFIX)
-			for i, size := 0, v.NumField(); i < size; i++ {
-				if hasSSZFlag(vType.Field(i), OMIT_FLAG) {
-					continue
-				}
-				encodedLen += sszSerializeMaybeCached(v.Field(i), dst)
+			if isFixedSize(field.Type) {
+				// append to dst
+				sszSerializeMaybeCached(v.Field(i), dst)
+			} else {
+				// just create space for the offset (to be written later)
+				s, _ := withSize(dst, BYTES_PER_LENGTH_OFFSET)
+				varParts = append(varParts, offsetVariableRef{uint32(s), i})
 			}
-			binary.LittleEndian.PutUint32((*dst)[lenS:lenE], encodedLen)
-			encodedLen += BYTES_PER_LENGTH_PREFIX
 		}
-		return encodedLen
+		for _, fp := range varParts {
+			// offset points to end of previous data
+			binary.LittleEndian.PutUint32((*dst)[fp.offsetIndex:fp.offsetIndex+BYTES_PER_LENGTH_OFFSET], uint32(len(*dst) - absStart))
+			// append to dst
+			sszSerializeMaybeCached(v.Field(fp.fieldIndex), dst)
+		}
 	default:
 		panic("ssz encoding: unsupported value kind: " + v.Kind().String())
 	}
@@ -197,6 +201,8 @@ func HashTreeRoot(input interface{}) Root {
 
 func isFixedSize(vt reflect.Type) bool {
 	switch vt.Kind() {
+	case reflect.Ptr:
+		return isFixedSize(vt.Elem())
 	case reflect.Uint8, reflect.Uint32, reflect.Uint64, reflect.Bool:
 		return true
 	case reflect.Slice:
@@ -217,7 +223,7 @@ func isFixedSize(vt reflect.Type) bool {
 		return true
 
 	default:
-		panic("is-fixed length: unsupported value type: " + vt.String())
+		panic("is-fixed size: unsupported value type: " + vt.String())
 	}
 }
 

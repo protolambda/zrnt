@@ -168,7 +168,7 @@ func (state *BeaconState) GetBeaconProposerIndex() ValidatorIndex {
 
 func (state *BeaconState) GetCrosslinkFromAttestationData(data *AttestationData) *Crosslink {
 	epoch := state.CurrentCrosslinks[data.Shard].Epoch + MAX_CROSSLINK_EPOCHS
-	if currentEpoch := data.Slot.ToEpoch(); currentEpoch < epoch {
+	if currentEpoch := data.TargetEpoch; currentEpoch < epoch {
 		epoch = currentEpoch
 	}
 	return &Crosslink{
@@ -367,23 +367,23 @@ func (state *BeaconState) ExitValidator(index ValidatorIndex) {
 // Return the sorted attesting indices at for the attestation_data and bitfield
 func (state *BeaconState) GetAttestingIndicesUnsorted(attestationData *AttestationData, bitfield *bitfield.Bitfield) ([]ValidatorIndex, error) {
 	// Find the committee in the list with the desired shard
-	crosslinkCommittees := state.GetCrosslinkCommitteesAtSlot(attestationData.Slot)
-	crosslinkCommittee := crosslinkCommittees[(SHARD_COUNT-crosslinkCommittees[0].Shard+Shard(attestationData.Slot))%SHARD_COUNT].Committee
-
-	if len(crosslinkCommittee) == 0 {
-		return nil, errors.New(fmt.Sprintf("cannot find crosslink committee at slot %d for shard %d", attestationData.Slot, attestationData.Shard))
-	}
-	if !bitfield.VerifySize(uint64(len(crosslinkCommittee))) {
-		return nil, errors.New("bitfield has wrong size for corresponding crosslink committee")
-	}
+	//crosslinkCommittees := state.GetCrosslinkCommitteesAtSlot(attestationData.Slot)
+	//crosslinkCommittee := crosslinkCommittees[(SHARD_COUNT-crosslinkCommittees[0].Shard+Shard(attestationData.Slot))%SHARD_COUNT].Committee
+	//
+	//if len(crosslinkCommittee) == 0 {
+	//	return nil, errors.New(fmt.Sprintf("cannot find crosslink committee at slot %d for shard %d", attestationData.Slot, attestationData.Shard))
+	//}
+	//if !bitfield.VerifySize(uint64(len(crosslinkCommittee))) {
+	//	return nil, errors.New("bitfield has wrong size for corresponding crosslink committee")
+	//}
 
 	// Find the participating attesters in the committee
-	participants := make([]ValidatorIndex, 0, len(crosslinkCommittee))
-	for i, vIndex := range crosslinkCommittee {
-		if bitfield.GetBit(uint64(i)) == 1 {
-			participants = append(participants, vIndex)
-		}
-	}
+	participants := make([]ValidatorIndex, 0)//, len(crosslinkCommittee))
+	//for i, vIndex := range crosslinkCommittee {
+	//	if bitfield.GetBit(uint64(i)) == 1 {
+	//		participants = append(participants, vIndex)
+	//	}
+	//}
 	return participants, nil
 }
 
@@ -552,7 +552,7 @@ func (state *BeaconState) VerifyIndexedAttestation(indexedAttestation *IndexedAt
 			ssz.HashTreeRoot(AttestationDataAndCustodyBit{Data: indexedAttestation.Data, CustodyBit: false}),
 			ssz.HashTreeRoot(AttestationDataAndCustodyBit{Data: indexedAttestation.Data, CustodyBit: true})},
 		indexedAttestation.Signature,
-		state.GetDomain(DOMAIN_ATTESTATION, indexedAttestation.Data.Slot.ToEpoch()),
+		state.GetDomain(DOMAIN_ATTESTATION, indexedAttestation.Data.TargetEpoch),
 	) {
 		return nil
 	} else {

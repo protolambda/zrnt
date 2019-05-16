@@ -12,7 +12,7 @@ const TARGET_COMMITTEE_SIZE = constant_presets.TARGET_COMMITTEE_SIZE
 const MAX_INDICES_PER_ATTESTATION = constant_presets.MAX_INDICES_PER_ATTESTATION
 const MIN_PER_EPOCH_CHURN_LIMIT = constant_presets.MIN_PER_EPOCH_CHURN_LIMIT
 const CHURN_LIMIT_QUOTIENT = constant_presets.CHURN_LIMIT_QUOTIENT
-const BASE_REWARDS_PER_EPOCH = 5 // TODO add to config
+const BASE_REWARDS_PER_EPOCH = constant_presets.BASE_REWARDS_PER_EPOCH
 const SHUFFLE_ROUND_COUNT uint8 = constant_presets.SHUFFLE_ROUND_COUNT
 
 // Deposit contract
@@ -24,8 +24,8 @@ const MAX_EFFECTIVE_BALANCE Gwei = constant_presets.MAX_EFFECTIVE_BALANCE
 // unused const FORK_CHOICE_BALANCE_INCREMENT Gwei = constant_presets.FORK_CHOICE_BALANCE_INCREMENT
 const EJECTION_BALANCE Gwei = constant_presets.EJECTION_BALANCE
 
-const EFFECTIVE_BALANCE_INCREMENT Gwei = constant_presets.HIGH_BALANCE_INCREMENT // TODO rename config
-const HALF_INCREMENT = constant_presets.HIGH_BALANCE_INCREMENT / 2
+const EFFECTIVE_BALANCE_INCREMENT Gwei = constant_presets.EFFECTIVE_BALANCE_INCREMENT
+const HALF_INCREMENT = constant_presets.EFFECTIVE_BALANCE_INCREMENT / 2
 
 // Initial values: TODO: assumed to be 0 in a lot of initializations, may just remove completely.
 const GENESIS_SLOT Slot = constant_presets.GENESIS_SLOT
@@ -45,7 +45,7 @@ const SLOTS_PER_ETH1_VOTING_PERIOD Slot = constant_presets.SLOTS_PER_ETH1_VOTING
 const MIN_VALIDATOR_WITHDRAWABILITY_DELAY Epoch = constant_presets.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
 const PERSISTENT_COMMITTEE_PERIOD Epoch = constant_presets.PERSISTENT_COMMITTEE_PERIOD
 const MAX_CROSSLINK_EPOCHS Epoch = constant_presets.MAX_CROSSLINK_EPOCHS
-const MIN_EPOCHS_TO_INACTIVITY_PENALTY = 4 // TODO add to config
+const MIN_EPOCHS_TO_INACTIVITY_PENALTY = constant_presets.MIN_EPOCHS_TO_INACTIVITY_PENALTY
 
 // State list lengths
 const SLOTS_PER_HISTORICAL_ROOT Slot = constant_presets.SLOTS_PER_HISTORICAL_ROOT
@@ -57,10 +57,8 @@ const LATEST_SLASHED_EXIT_LENGTH Epoch = constant_presets.LATEST_SLASHED_EXIT_LE
 const BASE_REWARD_QUOTIENT = constant_presets.BASE_REWARD_QUOTIENT
 const WHISTLEBLOWING_REWARD_QUOTIENT = constant_presets.WHISTLEBLOWING_REWARD_QUOTIENT
 const PROPOSER_REWARD_QUOTIENT = constant_presets.PROPOSER_REWARD_QUOTIENT
-// TODO update config
 const INACTIVITY_PENALTY_QUOTIENT = constant_presets.INACTIVITY_PENALTY_QUOTIENT
-// TODO rename config
-const MIN_SLASHING_PENALTY_QUOTIENT = constant_presets.MIN_PENALTY_QUOTIENT
+const MIN_SLASHING_PENALTY_QUOTIENT = constant_presets.MIN_SLASHING_PENALTY_QUOTIENT
 
 // Max transactions per block
 const MAX_PROPOSER_SLASHINGS = constant_presets.MAX_PROPOSER_SLASHINGS

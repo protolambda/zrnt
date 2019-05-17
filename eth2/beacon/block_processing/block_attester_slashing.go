@@ -72,10 +72,10 @@ func ProcessAttesterSlashing(state *BeaconState, attesterSlashing *AttesterSlash
 
 // Check if a and b have the same target epoch.
 func IsDoubleVote(a *AttestationData, b *AttestationData) bool {
-	return a.Slot.ToEpoch() == b.Slot.ToEpoch()
+	return a.TargetEpoch == b.TargetEpoch
 }
 
 // Check if a surrounds b, i.E. source(a) < source(b) and target(a) > target(b)
 func IsSurroundVote(a *AttestationData, b *AttestationData) bool {
-	return a.SourceEpoch < b.SourceEpoch && a.Slot.ToEpoch() > b.Slot.ToEpoch()
+	return a.SourceEpoch < b.SourceEpoch && a.TargetEpoch > b.TargetEpoch
 }

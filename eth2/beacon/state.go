@@ -127,6 +127,28 @@ func (state *BeaconState) InitiateValidatorExit(index ValidatorIndex) {
 	validator.WithdrawableEpoch = validator.ExitEpoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY
 }
 
+func (state *BeaconState) GetEpochStartShard(epoch Epoch) Shard {
+	currentEpoch := state.Epoch()
+	checkEpoch := currentEpoch + 1
+	if  epoch > checkEpoch {
+		panic("cannot find start shard for epoch, epoch is too new")
+	}
+	shard := (state.LatestStartShard + state.GetShardDelta(currentEpoch)) % SHARD_COUNT
+	for checkEpoch > epoch {
+		checkEpoch--
+		shard = (shard + SHARD_COUNT - state.GetShardDelta(currentEpoch)) % SHARD_COUNT
+	}
+	return shard
+}
+
+// TODO: spec should refer to AttestationData here instead of Attestation
+func (state *BeaconState) GetAttestationSlot(attData *AttestationData) Slot {
+	epoch := attData.TargetEpoch
+	committeeCount := Slot(state.GetEpochCommitteeCount(epoch))
+	offset := Slot((attData.Shard + SHARD_COUNT - state.GetEpochStartShard(epoch)) % SHARD_COUNT)
+	return epoch.GetStartSlot() + (offset / (committeeCount / SLOTS_PER_EPOCH))
+}
+
 // Return the number of committees in one epoch.
 func (state *BeaconState) GetEpochCommitteeCount(epoch Epoch) uint64 {
 	activeValidatorCount := state.ValidatorRegistry.GetActiveValidatorCount(epoch)
@@ -146,9 +168,13 @@ func (state *BeaconState) GetShardDelta(epoch Epoch) Shard {
 
 // Return the beacon proposer index for the current slot
 func (state *BeaconState) GetBeaconProposerIndex() ValidatorIndex {
-	currentEpoch := state.Epoch()
-	firstCommittee := state.GetCrosslinkCommitteesAtSlot(state.Slot)[0].Committee
-	seed := state.GenerateSeed(currentEpoch)
+	epoch := state.Epoch()
+	committeesPerSlot := state.GetEpochCommitteeCount(epoch) / uint64(SLOTS_PER_EPOCH)
+	// TODO: spec is peculiar here, manual epoch computation for nothing. Ignored here.
+	offset := Shard(epoch) + Shard(committeesPerSlot)
+	shard := (state.GetEpochStartShard(epoch) + offset) % SHARD_COUNT
+	firstCommittee := state.GetCrosslinkCommittee(epoch, shard)
+	seed := state.GenerateSeed(epoch)
 	buf := make([]byte, 32+8, 32+8)
 	copy(buf[0:32], seed[:])
 	for i := uint64(0); true; i++ {
@@ -156,7 +182,7 @@ func (state *BeaconState) GetBeaconProposerIndex() ValidatorIndex {
 		h := hash.Hash(buf)
 		for j := uint64(0); j < 32; j++ {
 			randomByte := h[j]
-			candidateIndex := firstCommittee[(uint64(currentEpoch)+(i<<5|j))%uint64(len(firstCommittee))]
+			candidateIndex := firstCommittee[(uint64(epoch)+(i<<5|j))%uint64(len(firstCommittee))]
 			effectiveBalance := state.ValidatorRegistry[candidateIndex].EffectiveBalance
 			if effectiveBalance*0xff > MAX_EFFECTIVE_BALANCE*Gwei(randomByte) {
 				return candidateIndex
@@ -178,24 +204,26 @@ func (state *BeaconState) GetCrosslinkFromAttestationData(data *AttestationData)
 	}
 }
 
-//  Return the randao mix at a recent epoch
 func (state *BeaconState) GetRandaoMix(epoch Epoch) Root {
-	// Every usage is a trusted input (i.e. state is already up to date to handle the requested epoch number).
-	// If something is wrong due to unforeseen usage, panic to catch it during development.
-	if !(state.Epoch()-LATEST_RANDAO_MIXES_LENGTH < epoch && epoch <= state.Epoch()) {
+	// Epoch is expected to be between (current_epoch - LATEST_RANDAO_MIXES_LENGTH, current_epoch].
+	if currentEpoch := state.Epoch(); !(currentEpoch-LATEST_RANDAO_MIXES_LENGTH < epoch && epoch <= currentEpoch) {
 		panic("cannot get randao mix for out-of-bounds epoch")
 	}
 	return state.LatestRandaoMixes[epoch%LATEST_RANDAO_MIXES_LENGTH]
 }
 
 func (state *BeaconState) GetActiveIndexRoot(epoch Epoch) Root {
+	// Epoch is expected to be between (current_epoch - LATEST_ACTIVE_INDEX_ROOTS_LENGTH + ACTIVATION_EXIT_DELAY, current_epoch + ACTIVATION_EXIT_DELAY].
+	if currentEpoch := state.Epoch(); !(currentEpoch-LATEST_ACTIVE_INDEX_ROOTS_LENGTH < epoch && epoch <= currentEpoch) {
+		panic("cannot get active index root for out-of-bounds epoch")
+	}
 	return state.LatestActiveIndexRoots[epoch%LATEST_ACTIVE_INDEX_ROOTS_LENGTH]
 }
 
 // Generate a seed for the given epoch
 func (state *BeaconState) GenerateSeed(epoch Epoch) Root {
 	buf := make([]byte, 32*3)
-	mix := state.GetRandaoMix(epoch - MIN_SEED_LOOKAHEAD)
+	mix := state.GetRandaoMix(epoch + LATEST_RANDAO_MIXES_LENGTH - MIN_SEED_LOOKAHEAD)
 	copy(buf[0:32], mix[:])
 	// get_active_index_root in spec, but only used once, and the assertion is unnecessary, since epoch input is always trusted
 	activeIndexRoot := state.GetActiveIndexRoot(epoch)
@@ -225,20 +253,15 @@ func (state *BeaconState) GetStateRoot(slot Slot) (Root, error) {
 	return state.LatestStateRoots[slot%SLOTS_PER_HISTORICAL_ROOT], nil
 }
 
-type CrosslinkCommittee struct {
-	Committee []ValidatorIndex
-	Shard     Shard
+// Optimized compared to spec: takes pre-shuffled active indices as input, to not shuffle per-committee.
+func computeCommittee(shuffled []ValidatorIndex, index uint64, count uint64) []ValidatorIndex {
+	// Return the index'th shuffled committee out of the total committees data (shuffled active indices)
+	startOffset := (uint64(len(shuffled)) * index) / count
+	endOffset := (uint64(len(shuffled)) * (index + 1)) / count
+	return shuffled[startOffset:endOffset]
 }
 
-// Returns a value such that for a list L, chunk count k and index i,
-//  split(L, k)[i] == L[get_split_offset(len(L), k, i): get_split_offset(len(L), k, i+1)]
-func getSplitOffset(listSize uint64, chunks uint64, index uint64) uint64 {
-	return (listSize * index) / chunks
-}
-
-// Return the list of (committee, shard) tuples for the slot.
-func (state *BeaconState) GetCrosslinkCommitteesAtSlot(slot Slot) []CrosslinkCommittee {
-	epoch := slot.ToEpoch()
+func (state *BeaconState) GetCrosslinkCommittee(epoch Epoch, shard Shard) []ValidatorIndex {
 	currentEpoch := state.Epoch()
 	previousEpoch := state.PreviousEpoch()
 	nextEpoch := currentEpoch + 1
@@ -247,44 +270,14 @@ func (state *BeaconState) GetCrosslinkCommitteesAtSlot(slot Slot) []CrosslinkCom
 		panic("could not retrieve crosslink committee for out of range slot")
 	}
 
-	var startShard Shard
-	if epoch == currentEpoch {
-		startShard = state.LatestStartShard
-	} else if epoch == previousEpoch {
-		previousShardDelta := state.GetShardDelta(previousEpoch)
-		startShard = (state.LatestStartShard - previousShardDelta) % SHARD_COUNT
-	} else if epoch == nextEpoch {
-		currentShardDelta := state.GetShardDelta(currentEpoch)
-		startShard = (state.LatestStartShard + currentShardDelta) % SHARD_COUNT
-	}
-
-	committeesPerEpoch := state.GetEpochCommitteeCount(epoch)
-	committeesPerSlot := committeesPerEpoch / uint64(SLOTS_PER_EPOCH)
-	offset := uint64(slot % SLOTS_PER_EPOCH)
-	slotStartShard := (startShard + Shard(committeesPerSlot)*Shard(offset)) % SHARD_COUNT
 	seed := state.GenerateSeed(epoch)
-
-	crosslinkCommittees := make([]CrosslinkCommittee, committeesPerSlot)
-	{
-		// TODO: cache shuffling
-		shuffled := state.GetShuffled(seed, epoch)
-		activeValidatorCount := state.ValidatorRegistry.GetActiveValidatorCount(epoch)
-
-		// Return the index'th shuffled committee out of a total total_committees
-		computeCommittee := func(index uint64) []ValidatorIndex {
-			startOffset := getSplitOffset(activeValidatorCount, committeesPerEpoch, index)
-			endOffset := getSplitOffset(activeValidatorCount, committeesPerEpoch, index)
-			return shuffled[startOffset:endOffset]
-		}
-
-		for i := uint64(0); i < committeesPerSlot; i++ {
-			crosslinkCommittees[i] = CrosslinkCommittee{
-				Committee: computeCommittee(committeesPerSlot*offset + i),
-				Shard:     (slotStartShard + Shard(i)) % SHARD_COUNT,
-			}
-		}
-	}
-	return crosslinkCommittees
+	activeIndices := state.ValidatorRegistry.GetActiveValidatorIndices(epoch)
+	// Active validators, shuffled in-place.
+	// TODO: cache shuffling
+	shuffling.ShuffleList(activeIndices, seed)
+	index := uint64((shard + SHARD_COUNT - state.GetEpochStartShard(epoch)) % SHARD_COUNT)
+	count := state.GetEpochCommitteeCount(epoch)
+	return computeCommittee(activeIndices, index, count)
 }
 
 func (state *BeaconState) GetAttesters(attestations []*PendingAttestation, filter func (att *AttestationData) bool) ValidatorSet {
@@ -322,7 +315,7 @@ func (state *BeaconState) GetWinningCrosslinkAndAttestingIndices(shard Shard, ep
 	}
 	// handle when no attestations for shard available
 	if len(crosslinkAttesters) == 0 {
-		return Crosslink{Epoch: GENESIS_EPOCH}, nil
+		return Crosslink{}, nil
 	}
 	for k, v := range crosslinkAttesters {
 		v.Dedup()
@@ -367,23 +360,22 @@ func (state *BeaconState) ExitValidator(index ValidatorIndex) {
 // Return the sorted attesting indices at for the attestation_data and bitfield
 func (state *BeaconState) GetAttestingIndicesUnsorted(attestationData *AttestationData, bitfield *bitfield.Bitfield) ([]ValidatorIndex, error) {
 	// Find the committee in the list with the desired shard
-	//crosslinkCommittees := state.GetCrosslinkCommitteesAtSlot(attestationData.Slot)
-	//crosslinkCommittee := crosslinkCommittees[(SHARD_COUNT-crosslinkCommittees[0].Shard+Shard(attestationData.Slot))%SHARD_COUNT].Committee
-	//
-	//if len(crosslinkCommittee) == 0 {
-	//	return nil, errors.New(fmt.Sprintf("cannot find crosslink committee at slot %d for shard %d", attestationData.Slot, attestationData.Shard))
-	//}
-	//if !bitfield.VerifySize(uint64(len(crosslinkCommittee))) {
-	//	return nil, errors.New("bitfield has wrong size for corresponding crosslink committee")
-	//}
+	crosslinkCommittee := state.GetCrosslinkCommittee(attestationData.TargetEpoch, attestationData.Shard)
+
+	if len(crosslinkCommittee) == 0 {
+		return nil, errors.New(fmt.Sprintf("cannot find crosslink committee at target epoch %d for shard %d", attestationData.TargetEpoch, attestationData.Shard))
+	}
+	if !bitfield.VerifySize(uint64(len(crosslinkCommittee))) {
+		return nil, errors.New("bitfield has wrong size for corresponding crosslink committee")
+	}
 
 	// Find the participating attesters in the committee
-	participants := make([]ValidatorIndex, 0)//, len(crosslinkCommittee))
-	//for i, vIndex := range crosslinkCommittee {
-	//	if bitfield.GetBit(uint64(i)) == 1 {
-	//		participants = append(participants, vIndex)
-	//	}
-	//}
+	participants := make([]ValidatorIndex, 0, len(crosslinkCommittee))
+	for i, vIndex := range crosslinkCommittee {
+		if bitfield.GetBit(uint64(i)) == 1 {
+			participants = append(participants, vIndex)
+		}
+	}
 	return participants, nil
 }
 
@@ -570,18 +562,3 @@ func (state *BeaconState) GetDomain(dom BLSDomainType, messageEpoch Epoch) BLSDo
 	return BLSDomain((uint64(v.ToUint32()) << 32) | uint64(dom))
 }
 
-// Shuffle active validators
-func (state *BeaconState) GetShuffled(seed Root, epoch Epoch) []ValidatorIndex {
-	activeValidatorIndices := state.ValidatorRegistry.GetActiveValidatorIndices(epoch)
-	committeeCount := state.GetEpochCommitteeCount(epoch)
-	if committeeCount > uint64(len(activeValidatorIndices)) {
-		panic("not enough validators to form committees!")
-	}
-	indexList := make([]ValidatorIndex, len(state.ValidatorRegistry))
-	for i := 0; i < len(activeValidatorIndices); i++ {
-		indexList[i] = activeValidatorIndices[i]
-	}
-	// Active validators, shuffled in-place.
-	shuffling.ShuffleList(indexList, seed)
-	return indexList
-}

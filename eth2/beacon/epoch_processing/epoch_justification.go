@@ -70,6 +70,6 @@ func ProcessEpochJustification(state *BeaconState) {
 	if (bitf>>0)&3 == 3 && state.CurrentJustifiedEpoch == currentEpoch-1 {
 		state.FinalizedEpoch = oldCurrentJustifiedEpoch
 	}
-	root, _ := state.GetBlockRoot(state.FinalizedEpoch.GetStartSlot())
+	root, _ := state.GetBlockRoot(state.FinalizedEpoch)
 	state.FinalizedRoot = root
 }

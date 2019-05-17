@@ -159,7 +159,7 @@ type PendingAttestation struct {
 	AggregationBitfield bitfield.Bitfield
 	// Attestation data
 	Data AttestationData
-	// Inclusion slot
+	// Inclusion delay
 	InclusionDelay Slot
 	// Proposer index
 	ProposerIndex ValidatorIndex

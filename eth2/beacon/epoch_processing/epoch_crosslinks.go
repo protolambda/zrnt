@@ -2,6 +2,7 @@ package epoch_processing
 
 import (
 	. "github.com/protolambda/zrnt/eth2/beacon"
+	. "github.com/protolambda/zrnt/eth2/core"
 )
 
 func ProcessEpochCrosslinks(state *BeaconState) {
@@ -9,15 +10,17 @@ func ProcessEpochCrosslinks(state *BeaconState) {
 	currentEpoch := state.Epoch()
 	previousEpoch := state.PreviousEpoch()
 	nextEpoch := currentEpoch + 1
-	start := previousEpoch.GetStartSlot()
-	end := nextEpoch.GetStartSlot()
-	for slot := start; slot < end; slot++ {
-		for _, shardCommittee := range state.GetCrosslinkCommitteesAtSlot(slot) {
+	for epoch := previousEpoch; epoch < nextEpoch; epoch++ {
+		count := state.GetEpochCommitteeCount(epoch)
+		startShard := state.GetEpochStartShard(epoch)
+		for offset := uint64(0); offset < count; offset++ {
+			shard := (startShard + Shard(offset)) % SHARD_COUNT
+			crosslinkCommittee := state.GetCrosslinkCommittee(epoch, shard)
 			winningCrosslink, attestingIndices := state.GetWinningCrosslinkAndAttestingIndices(shardCommittee.Shard, slot.ToEpoch())
 			participatingBalance := state.GetTotalBalanceOf(attestingIndices)
-			totalBalance := state.GetTotalBalanceOf(shardCommittee.Committee)
+			totalBalance := state.GetTotalBalanceOf(crosslinkCommittee)
 			if 3*participatingBalance >= 2*totalBalance {
-				state.CurrentCrosslinks[shardCommittee.Shard] = winningCrosslink
+				state.CurrentCrosslinks[shard] = winningCrosslink
 			}
 		}
 	}

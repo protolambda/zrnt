@@ -71,15 +71,19 @@ func ProcessDeposit(state *BeaconState, dep *Deposit) error {
 			return errors.New("could not verify BLS signature")
 		}
 
+		effBalance := dep.Data.Amount - (dep.Data.Amount % EFFECTIVE_BALANCE_INCREMENT)
+		if effBalance > MAX_EFFECTIVE_BALANCE {
+			effBalance = MAX_EFFECTIVE_BALANCE
+		}
 		// Add validator and balance entries
 		validator := &Validator{
-			Pubkey:                dep.Data.Pubkey,
-			WithdrawalCredentials: dep.Data.WithdrawalCredentials,
+			Pubkey:                     dep.Data.Pubkey,
+			WithdrawalCredentials:      dep.Data.WithdrawalCredentials,
 			ActivationEligibilityEpoch: FAR_FUTURE_EPOCH,
-			ActivationEpoch:       FAR_FUTURE_EPOCH,
-			ExitEpoch:             FAR_FUTURE_EPOCH,
-			WithdrawableEpoch:     FAR_FUTURE_EPOCH,
-			EffectiveBalance: dep.Data.Amount - (dep.Data.Amount % EFFECTIVE_BALANCE_INCREMENT),
+			ActivationEpoch:            FAR_FUTURE_EPOCH,
+			ExitEpoch:                  FAR_FUTURE_EPOCH,
+			WithdrawableEpoch:          FAR_FUTURE_EPOCH,
+			EffectiveBalance:           effBalance,
 		}
 		state.ValidatorRegistry = append(state.ValidatorRegistry, validator)
 		state.Balances = append(state.Balances, dep.Data.Amount)

@@ -60,11 +60,25 @@ SSZ, BLS, hashing, merkleization, and other utils can be found in `eth2/util`
 
 ## Getting started
 
-This repo is still a work-in-progress. 
-To test creation of some Beacon chain genesis data, you can run `debug/create_debug_json_files.go`
+This repo is still a work-in-progress.
 
 More states and transition testing is coming SOON :tm:
 
+### Building
+
+Generate dynamic parts by running `go generate ./...` (make sure you locate the constant-presets relative to the dependency).
+
+Add a eth2-configuration build-constraint (also known as "build tag") when building ZRNT, or using it as a dependency:
+
+```
+go build -tags preset_mainnet
+
+or
+
+go build -tags preset_minimal
+
+etc.
+```
 
 ## Future plans
 

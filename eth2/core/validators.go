@@ -56,7 +56,7 @@ func (vs ValidatorSet) Intersects(target ValidatorSet) bool {
 	}
 	updateJ := func() {
 		// if out of bounds, just update to an impossibly high index
-		if i < len(vs) {
+		if j < len(vs) {
 			jV = target[j]
 		} else {
 			jV = ValidatorIndexMarker
@@ -73,7 +73,7 @@ func (vs ValidatorSet) Intersects(target ValidatorSet) bool {
 			return true
 		} else if iV < jV {
 			// if the index is lower than the current item in the target, it's not in the target.
-			for x := i; x < j; x++ {
+			for x := i; x <= j; x++ {
 				// go to next
 				i++
 				updateI()

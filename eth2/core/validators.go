@@ -56,7 +56,7 @@ func (vs ValidatorSet) Intersects(target ValidatorSet) bool {
 	}
 	updateJ := func() {
 		// if out of bounds, just update to an impossibly high index
-		if j < len(vs) {
+		if j < len(target) {
 			jV = target[j]
 		} else {
 			jV = ValidatorIndexMarker
@@ -72,12 +72,9 @@ func (vs ValidatorSet) Intersects(target ValidatorSet) bool {
 		if iV == jV {
 			return true
 		} else if iV < jV {
-			// if the index is lower than the current item in the target, it's not in the target.
-			for x := i; x <= j; x++ {
-				// go to next
-				i++
-				updateI()
-			}
+			// go to next
+			i++
+			updateI()
 		} else if iV > jV {
 			// if the index is higher than the current item in the target, go to the next item.
 			j++
@@ -105,7 +102,7 @@ func (vs ValidatorSet) ZigZagJoin(target ValidatorSet, onIn func(i ValidatorInde
 	}
 	updateJ := func() {
 		// if out of bounds, just update to an impossibly high index
-		if i < len(vs) {
+		if j < len(target) {
 			jV = target[j]
 		} else {
 			jV = ValidatorIndexMarker
@@ -129,14 +126,12 @@ func (vs ValidatorSet) ZigZagJoin(target ValidatorSet, onIn func(i ValidatorInde
 			updateJ()
 		} else if iV < jV {
 			// if the index is lower than the current item in the target, it's not in the target.
-			for x := i; x < j; x++ {
-				if onOut != nil {
-					onOut(iV)
-				}
-				// go to next
-				i++
-				updateI()
+			if onOut != nil {
+				onOut(iV)
 			}
+			// go to next
+			i++
+			updateI()
 		} else if iV > jV {
 			// if the index is higher than the current item in the target, go to the next item.
 			j++

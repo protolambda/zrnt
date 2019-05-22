@@ -56,6 +56,10 @@ type TestCase interface {
 	Run(t *testing.T)
 }
 
+type TitledTestCase interface {
+	Title() string
+}
+
 type CaseAllocator func(raw interface{}) interface{}
 
 type TestCasesHolder struct {
@@ -157,7 +161,11 @@ func LoadSuite(path string, caseAlloc CaseAllocator) (*TestSuite, error) {
 func (suite *TestSuite) Run(t *testing.T) {
 	t.Run(suite.Title, func(t *testing.T) {
 		for i, testCase := range suite.TestCases.Cases {
-			t.Run(fmt.Sprintf("case #%d", i), func(t *testing.T) {
+			title := fmt.Sprintf("case #%d", i)
+			if tc, ok := testCase.(TitledTestCase); ok {
+				title = tc.Title()
+			}
+			t.Run(title, func(t *testing.T) {
 				testCase.Run(t)
 			})
 		}

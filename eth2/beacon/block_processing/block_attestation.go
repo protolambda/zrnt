@@ -2,6 +2,7 @@ package block_processing
 
 import (
 	"errors"
+	"fmt"
 	. "github.com/protolambda/zrnt/eth2/beacon"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
@@ -51,15 +52,15 @@ func ProcessAttestation(state *BeaconState, attestation *Attestation) error {
 	}
 
 	// Check crosslink data
-	if attestation.Data.CrosslinkDataRoot == (Root{}) { //  # [to be removed in phase 1]
+	if attestation.Data.CrosslinkDataRoot != (Root{}) { //  # [to be removed in phase 1]
 		return errors.New("attestation cannot reference a crosslink root yet, processing as phase 0")
 	}
 
 	// Check signature and bitfields
 	if indexedAtt, err := state.ConvertToIndexed(attestation); err != nil {
-		return errors.New("attestation could not be converted to an indexed attestation")
+		return errors.New(fmt.Sprintf("attestation could not be converted to an indexed attestation: %v", err))
 	} else if err := state.VerifyIndexedAttestation(indexedAtt); err != nil {
-		return errors.New("attestation could not be verified in its indexed form")
+		return errors.New(fmt.Sprintf("attestation could not be verified in its indexed form: %v", err))
 	}
 
 	// Cache pending attestation

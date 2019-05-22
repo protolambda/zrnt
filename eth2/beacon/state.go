@@ -206,17 +206,13 @@ func (state *BeaconState) GetCrosslinkFromAttestationData(data *AttestationData)
 
 func (state *BeaconState) GetRandaoMix(epoch Epoch) Root {
 	// Epoch is expected to be between (current_epoch - LATEST_RANDAO_MIXES_LENGTH, current_epoch].
-	if currentEpoch := state.Epoch(); !(currentEpoch-LATEST_RANDAO_MIXES_LENGTH < epoch && epoch <= currentEpoch) {
-		panic("cannot get randao mix for out-of-bounds epoch")
-	}
+	// TODO: spec has expectations on input, but doesn't enforce them, and purposefully ignores them in some calls.
 	return state.LatestRandaoMixes[epoch%LATEST_RANDAO_MIXES_LENGTH]
 }
 
 func (state *BeaconState) GetActiveIndexRoot(epoch Epoch) Root {
 	// Epoch is expected to be between (current_epoch - LATEST_ACTIVE_INDEX_ROOTS_LENGTH + ACTIVATION_EXIT_DELAY, current_epoch + ACTIVATION_EXIT_DELAY].
-	if currentEpoch := state.Epoch(); !(currentEpoch-LATEST_ACTIVE_INDEX_ROOTS_LENGTH < epoch && epoch <= currentEpoch) {
-		panic("cannot get active index root for out-of-bounds epoch")
-	}
+	// TODO: spec has expectations on input, but doesn't enforce them, and purposefully ignores them in some calls.
 	return state.LatestActiveIndexRoots[epoch%LATEST_ACTIVE_INDEX_ROOTS_LENGTH]
 }
 
@@ -508,11 +504,11 @@ func (state *BeaconState) VerifyIndexedAttestation(indexedAttestation *IndexedAt
 	}
 
 	// The indices must be sorted
-	if sort.IsSorted(custodyBit0Indices) {
+	if !sort.IsSorted(custodyBit0Indices) {
 		return errors.New("custody bit 0 indices are not sorted")
 	}
 
-	if sort.IsSorted(custodyBit1Indices) {
+	if !sort.IsSorted(custodyBit1Indices) {
 		return errors.New("custody bit 1 indices are not sorted")
 	}
 

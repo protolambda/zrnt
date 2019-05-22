@@ -24,7 +24,8 @@ func ProcessBlockHeader(state *BeaconState, block *BeaconBlock) error {
 		BlockBodyRoot: ssz.HashTreeRoot(block.Body),
 	}
 
-	proposer := state.ValidatorRegistry[state.GetBeaconProposerIndex()]
+	proposerIndex := state.GetBeaconProposerIndex()
+	proposer := state.ValidatorRegistry[proposerIndex]
 	// Verify proposer is not slashed
 	if proposer.Slashed {
 		return errors.New("cannot accept block header from slashed proposer")

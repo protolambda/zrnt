@@ -31,15 +31,15 @@ func ProcessVoluntaryExit(state *BeaconState, exit *VoluntaryExit) error {
 		return errors.New("validator must be active to be able to voluntarily exit")
 	}
 	// Verify the validator has not yet exited
-	if validator.ExitEpoch == FAR_FUTURE_EPOCH {
+	if validator.ExitEpoch != FAR_FUTURE_EPOCH {
 		return errors.New("validator already exited")
 	}
 	// Exits must specify an epoch when they become valid; they are not valid before then
-	if currentEpoch > exit.Epoch {
+	if currentEpoch < exit.Epoch {
 		return errors.New("invalid exit epoch")
 	}
 	// Verify the validator has been active long enough
-	if currentEpoch >= validator.ActivationEpoch + PERSISTENT_COMMITTEE_PERIOD  {
+	if currentEpoch < validator.ActivationEpoch + PERSISTENT_COMMITTEE_PERIOD  {
 		return errors.New("exit is too soon")
 	}
 	if !bls.BlsVerify(

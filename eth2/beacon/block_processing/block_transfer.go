@@ -72,10 +72,10 @@ func ProcessTransfer(state *BeaconState, transfer *Transfer) error {
 	propIndex := state.GetBeaconProposerIndex()
 	state.IncreaseBalance(propIndex, transfer.Fee)
 	// Verify balances are not dust
-	if b := state.Balances[transfer.Sender]; !(0 < b && b < MIN_DEPOSIT_AMOUNT) {
+	if b := state.Balances[transfer.Sender]; 0 < b && b < MIN_DEPOSIT_AMOUNT {
 		return errors.New("transfer is invalid: results in dust on sender address")
 	}
-	if b := state.Balances[transfer.Recipient]; !(0 < b && b < MIN_DEPOSIT_AMOUNT) {
+	if b := state.Balances[transfer.Recipient]; 0 < b && b < MIN_DEPOSIT_AMOUNT {
 		return errors.New("transfer is invalid: results in dust on recipient address")
 	}
 	return nil

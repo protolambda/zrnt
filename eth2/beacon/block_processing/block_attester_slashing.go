@@ -23,7 +23,7 @@ func ProcessAttesterSlashing(state *BeaconState, attesterSlashing *AttesterSlash
 	sa2 := &attesterSlashing.Attestation2
 
 	// check that the attestations are conflicting
-	if sa1.Data != sa2.Data {
+	if sa1.Data == sa2.Data {
 		return errors.New("attestations of attester slashing are not conflicting")
 	}
 

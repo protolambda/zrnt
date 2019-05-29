@@ -4,39 +4,16 @@ import (
 	"encoding/binary"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/merkle"
+	"github.com/protolambda/zrnt/eth2/util/tags"
 	"reflect"
-	"strings"
 )
 
+const SSZ_TAG = "ssz"
 const OMIT_FLAG = "omit"
 
-func hasSSZFlag(vt reflect.StructField, flag string) bool {
-	if flag == "" {
-		return false
-	}
-	tag, ok := vt.Tag.Lookup("ssz")
-	if !ok {
-		return false
-	}
-	if len(tag) == 0 {
-		return false
-	}
-
-	// look through the tag to find a flag (comma separated)
-	for tag != "" {
-		var next string
-		i := strings.Index(tag, ",")
-		if i >= 0 {
-			tag, next = tag[:i], tag[i+1:]
-		}
-		if tag == flag {
-			return true
-		}
-		tag = next
-	}
-
-	return false
-}
+// Note: when this is changed,
+//  don't forget to change the PutUint32 calls that make put the length in this allocated space.
+const BYTES_PER_LENGTH_OFFSET = 4
 
 func SSZEncode(input interface{}) []byte {
 	out := make([]byte, 0)
@@ -55,10 +32,6 @@ func withSize(dst *[]byte, size uint64) (start uint64, end uint64) {
 	*dst = (*dst)[:end]
 	return start, end
 }
-
-// Note: when this is changed,
-//  don't forget to change the PutUint32 calls that make put the length in this allocated space.
-const BYTES_PER_LENGTH_OFFSET = 4
 
 func getSerializeCache(v reflect.Value) *SerializeCache {
 	prov, ok := v.Interface().(SSZSerializeCacheProvider)
@@ -151,7 +124,7 @@ func sszSerialize(v reflect.Value, dst *[]byte) {
 		absStart := len(*dst)
 		for i, size := 0, v.NumField(); i < size; i++ {
 			field := vType.Field(i)
-			if hasSSZFlag(field, OMIT_FLAG) {
+			if tags.HasFlag(&field, SSZ_TAG, OMIT_FLAG) {
 				continue
 			}
 			if isFixedSize(field.Type) {
@@ -213,7 +186,8 @@ func isFixedSize(vt reflect.Type) bool {
 		// We want to encode the struct in the most minimal way,
 		//  if it can be fixed length, make it fixed length.
 		for i, length := 0, vt.NumField(); i < length; i++ {
-			if hasSSZFlag(vt.Field(i), OMIT_FLAG) {
+			field := vt.Field(i)
+			if tags.HasFlag(&field, SSZ_TAG, OMIT_FLAG) {
 				continue
 			}
 			if !isFixedSize(vt.Field(i).Type) {
@@ -221,7 +195,6 @@ func isFixedSize(vt reflect.Type) bool {
 			}
 		}
 		return true
-
 	default:
 		panic("is-fixed size: unsupported value type: " + vt.String())
 	}
@@ -274,9 +247,9 @@ func composeStructRootData(v reflect.Value) []Root {
 	data := make([]Root, 0, fields)
 	vType := v.Type()
 	for i := 0; i < fields; i++ {
-		structField := vType.Field(i)
-		if !hasSSZFlag(structField, OMIT_FLAG) {
-			cacheFieldName := structField.Name + "SSZCache"
+		field := vType.Field(i)
+		if !tags.HasFlag(&field, SSZ_TAG, OMIT_FLAG) {
+			cacheFieldName := field.Name + "SSZCache"
 			_, ok := vType.FieldByName(cacheFieldName)
 			fieldV := v.Field(i)
 			if ok {
@@ -345,7 +318,8 @@ func sszPack(input reflect.Value) []Root {
 		case reflect.Struct:
 			vType := input.Type()
 			for i, length := 0, input.NumField(); i < length; i++ {
-				if !hasSSZFlag(vType.Field(i), OMIT_FLAG) {
+				field := vType.Field(i)
+				if !tags.HasFlag(&field, SSZ_TAG, OMIT_FLAG) {
 					sszSerialize(input.Field(i), &serialized)
 				}
 			}

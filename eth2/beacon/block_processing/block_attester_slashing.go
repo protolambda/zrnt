@@ -22,15 +22,10 @@ func ProcessAttesterSlashing(state *BeaconState, attesterSlashing *AttesterSlash
 	sa1 := &attesterSlashing.Attestation1
 	sa2 := &attesterSlashing.Attestation2
 
-	// check that the attestations are conflicting
-	if sa1.Data == sa2.Data {
-		return errors.New("attestations of attester slashing are not conflicting")
-	}
-
-	// verify the attester_slashing
-	if !(IsDoubleVote(&sa1.Data, &sa2.Data) || IsSurroundVote(&sa1.Data, &sa2.Data)) {
+	if !IsSlashableAttestationData(&sa1.Data, &sa2.Data) {
 		return errors.New("attester slashing is has no valid reasoning")
 	}
+
 	if err := state.VerifyIndexedAttestation(sa1); err != nil {
 		return errors.New("attestation 1 of attester slashing cannot be verified")
 	}
@@ -53,7 +48,7 @@ func ProcessAttesterSlashing(state *BeaconState, attesterSlashing *AttesterSlash
 	// run slashings where applicable
 	var anyErr error
 	indices1.ZigZagJoin(indices2, func(i ValidatorIndex) {
-		if state.ValidatorRegistry[i].IsSlashable(currentEpoch) {
+		if anyErr == nil && state.ValidatorRegistry[i].IsSlashable(currentEpoch) {
 			if err := state.SlashValidator(i, nil); err != nil {
 				anyErr = err
 			}
@@ -70,9 +65,13 @@ func ProcessAttesterSlashing(state *BeaconState, attesterSlashing *AttesterSlash
 	return nil
 }
 
+func IsSlashableAttestationData(a *AttestationData, b *AttestationData) bool {
+	return IsSurroundVote(a, b) || IsDoubleVote(a, b)
+}
+
 // Check if a and b have the same target epoch.
 func IsDoubleVote(a *AttestationData, b *AttestationData) bool {
-	return a.TargetEpoch == b.TargetEpoch
+	return *a != *b && a.TargetEpoch == b.TargetEpoch
 }
 
 // Check if a surrounds b, i.E. source(a) < source(b) and target(a) > target(b)

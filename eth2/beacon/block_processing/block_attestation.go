@@ -23,15 +23,11 @@ func ProcessBlockAttestations(state *BeaconState, block *BeaconBlock) error {
 func ProcessAttestation(state *BeaconState, attestation *Attestation) error {
 
 	data := &attestation.Data
-	minSlot := GENESIS_SLOT
-	if state.Epoch() > GENESIS_EPOCH {
-		minSlot = state.Slot - SLOTS_PER_EPOCH
-	}
 	attestationSlot := state.GetAttestationSlot(data)
-	if !(minSlot <= attestationSlot) {
+	if !(state.Slot <= attestationSlot + SLOTS_PER_EPOCH) {
 		return errors.New("attestation slot is too old")
 	}
-	if !(attestationSlot <= state.Slot-MIN_ATTESTATION_INCLUSION_DELAY) {
+	if !(attestationSlot + MIN_ATTESTATION_INCLUSION_DELAY <= state.Slot) {
 		return errors.New("attestation is too new")
 	}
 	// Check target epoch, source epoch, and source crosslink

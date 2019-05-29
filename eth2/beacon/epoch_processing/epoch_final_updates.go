@@ -17,12 +17,12 @@ func ProcessEpochFinalUpdates(state *BeaconState) {
 	// Update effective balances with hysteresis
 	for i, v := range state.ValidatorRegistry {
 		balance := state.Balances[i]
-		if MAX_EFFECTIVE_BALANCE < balance {
-			balance = MAX_EFFECTIVE_BALANCE
-		}
 		if balance < v.EffectiveBalance ||
 			v.EffectiveBalance + 3 * HALF_INCREMENT < balance {
 			v.EffectiveBalance = balance - (balance % EFFECTIVE_BALANCE_INCREMENT)
+			if MAX_EFFECTIVE_BALANCE < v.EffectiveBalance {
+				v.EffectiveBalance = MAX_EFFECTIVE_BALANCE
+			}
 		}
 	}
 	// Update start shard

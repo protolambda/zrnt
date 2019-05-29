@@ -194,8 +194,8 @@ func (state *BeaconState) GetBeaconProposerIndex() ValidatorIndex {
 
 func (state *BeaconState) GetCrosslinkFromAttestationData(data *AttestationData) *Crosslink {
 	epoch := state.CurrentCrosslinks[data.Shard].Epoch + MAX_CROSSLINK_EPOCHS
-	if currentEpoch := data.TargetEpoch; currentEpoch < epoch {
-		epoch = currentEpoch
+	if data.TargetEpoch < epoch {
+		epoch = data.TargetEpoch
 	}
 	return &Crosslink{
 		epoch,
@@ -239,14 +239,6 @@ func (state *BeaconState) GetBlockRootAtSlot(slot Slot) (Root, error) {
 // Return the block root at a recent epoch
 func (state *BeaconState) GetBlockRoot(epoch Epoch) (Root, error) {
 	return state.GetBlockRootAtSlot(epoch.GetStartSlot())
-}
-
-// Return the state root at a recent
-func (state *BeaconState) GetStateRoot(slot Slot) (Root, error) {
-	if slot+SLOTS_PER_HISTORICAL_ROOT < state.Slot || slot > state.Slot {
-		return Root{}, errors.New("cannot get state root for given slot")
-	}
-	return state.LatestStateRoots[slot%SLOTS_PER_HISTORICAL_ROOT], nil
 }
 
 // Optimized compared to spec: takes pre-shuffled active indices as input, to not shuffle per-committee.

@@ -129,14 +129,15 @@ func (state *BeaconState) InitiateValidatorExit(index ValidatorIndex) {
 
 func (state *BeaconState) GetEpochStartShard(epoch Epoch) Shard {
 	currentEpoch := state.Epoch()
+	// TODO assertion
 	checkEpoch := currentEpoch + 1
-	if  epoch > checkEpoch {
+	if epoch > checkEpoch {
 		panic("cannot find start shard for epoch, epoch is too new")
 	}
 	shard := (state.LatestStartShard + state.GetShardDelta(currentEpoch)) % SHARD_COUNT
 	for checkEpoch > epoch {
 		checkEpoch--
-		shard = (shard + SHARD_COUNT - state.GetShardDelta(currentEpoch)) % SHARD_COUNT
+		shard = (shard + SHARD_COUNT - state.GetShardDelta(checkEpoch)) % SHARD_COUNT
 	}
 	return shard
 }
@@ -170,8 +171,7 @@ func (state *BeaconState) GetShardDelta(epoch Epoch) Shard {
 func (state *BeaconState) GetBeaconProposerIndex() ValidatorIndex {
 	epoch := state.Epoch()
 	committeesPerSlot := state.GetEpochCommitteeCount(epoch) / uint64(SLOTS_PER_EPOCH)
-	// TODO: spec is peculiar here, manual epoch computation for nothing. Ignored here.
-	offset := Shard(epoch) + Shard(committeesPerSlot)
+	offset := Shard(committeesPerSlot) * Shard(state.Slot%SLOTS_PER_EPOCH)
 	shard := (state.GetEpochStartShard(epoch) + offset) % SHARD_COUNT
 	firstCommittee := state.GetCrosslinkCommittee(epoch, shard)
 	seed := state.GenerateSeed(epoch)
@@ -182,7 +182,7 @@ func (state *BeaconState) GetBeaconProposerIndex() ValidatorIndex {
 		h := hash.Hash(buf)
 		for j := uint64(0); j < 32; j++ {
 			randomByte := h[j]
-			candidateIndex := firstCommittee[(uint64(epoch)+(i<<5|j))%uint64(len(firstCommittee))]
+			candidateIndex := firstCommittee[(uint64(epoch)+((i<<5)|j))%uint64(len(firstCommittee))]
 			effectiveBalance := state.ValidatorRegistry[candidateIndex].EffectiveBalance
 			if effectiveBalance*0xff > MAX_EFFECTIVE_BALANCE*Gwei(randomByte) {
 				return candidateIndex
@@ -262,13 +262,13 @@ func (state *BeaconState) GetCrosslinkCommittee(epoch Epoch, shard Shard) []Vali
 	activeIndices := state.ValidatorRegistry.GetActiveValidatorIndices(epoch)
 	// Active validators, shuffled in-place.
 	// TODO: cache shuffling
-	shuffling.ShuffleList(activeIndices, seed)
+	shuffling.UnshuffleList(activeIndices, seed)
 	index := uint64((shard + SHARD_COUNT - state.GetEpochStartShard(epoch)) % SHARD_COUNT)
 	count := state.GetEpochCommitteeCount(epoch)
 	return computeCommittee(activeIndices, index, count)
 }
 
-func (state *BeaconState) GetAttesters(attestations []*PendingAttestation, filter func (att *AttestationData) bool) ValidatorSet {
+func (state *BeaconState) GetAttesters(attestations []*PendingAttestation, filter func(att *AttestationData) bool) ValidatorSet {
 	out := make(ValidatorSet, 0)
 	for _, att := range attestations {
 		// If the attestation is for the boundary:
@@ -395,7 +395,7 @@ func (state *BeaconState) SlashValidator(slashedIndex ValidatorIndex, whistleblo
 	whistleblowerReward := slashedBalance / WHISTLEBLOWING_REWARD_QUOTIENT
 	proposerReward := whistleblowerReward / PROPOSER_REWARD_QUOTIENT
 	state.IncreaseBalance(propIndex, whistleblowerReward)
-	state.IncreaseBalance(*whistleblowerIndex, whistleblowerReward - proposerReward)
+	state.IncreaseBalance(*whistleblowerIndex, whistleblowerReward-proposerReward)
 	state.DecreaseBalance(slashedIndex, whistleblowerReward)
 	return nil
 }
@@ -446,7 +446,7 @@ func (state *BeaconState) DecreaseBalance(index ValidatorIndex, delta Gwei) {
 	currentBalance := state.Balances[index]
 	// prevent underflow, clip to 0
 	if currentBalance >= delta {
-		state.Balances[index] += currentBalance-delta
+		state.Balances[index] += currentBalance - delta
 	} else {
 		state.Balances[index] = 0
 	}
@@ -549,4 +549,3 @@ func (state *BeaconState) GetDomain(dom BLSDomainType, messageEpoch Epoch) BLSDo
 	// combine fork version with domain type.
 	return BLSDomain((uint64(v.ToUint32()) << 32) | uint64(dom))
 }
-

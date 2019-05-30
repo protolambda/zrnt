@@ -4,13 +4,20 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
-	"github.com/protolambda/zrnt/tests/spec/test_runners"
+	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"testing"
 )
 
+type SSZTypeValue struct {
+	objAlloc ObjAllocator
+	data interface{}
+}
+// TODO: when this is being decoded, make objAlloc locate the destination object, and put it into the data field.
+
+
 type SSZStaticTestCase struct {
 	TypeName   string
-	Value      interface{}
+	Value      SSZTypeValue
 	Serialized Bytes
 	Root       Root
 	SigningRoot Root
@@ -19,7 +26,7 @@ type SSZStaticTestCase struct {
 func (testCase *SSZStaticTestCase) Run(t *testing.T) {
 	t.Run(testCase.TypeName, func(t *testing.T) {
 		t.Run("serialization", func(t *testing.T) {
-			encoded := ssz.SSZEncode(testCase.Value)
+			encoded := ssz.SSZEncode(testCase.Value.data)
 			if len(encoded) != len(testCase.Serialized) {
 				encodedBytes := Bytes(encoded)
 				t.Fatalf("encoded data has different length: %d (spec) <-> %d (zrnt)\nspec: %s\nzrnt: %s", len(testCase.Serialized), len(encoded), testCase.Serialized.String(), encodedBytes.String())
@@ -32,14 +39,14 @@ func (testCase *SSZStaticTestCase) Run(t *testing.T) {
 			}
 		})
 		t.Run("hash_tree_root", func(t *testing.T) {
-			root := ssz.HashTreeRoot(testCase.Value)
+			root := ssz.HashTreeRoot(testCase.Value.data)
 			if root != testCase.Root {
 				t.Fatalf("hash-tree-roots differ: %s (spec) <-> %s (zrnt)", testCase.Root.String(), root.String())
 			}
 		})
 		if testCase.SigningRoot != (Root{}) {
 			t.Run("signing_root", func(t *testing.T) {
-				root := ssz.SigningRoot(testCase.Value)
+				root := ssz.SigningRoot(testCase.Value.data)
 				if root != testCase.SigningRoot {
 					t.Fatalf("signing-roots differ: %s (spec) <-> %s (zrnt)", testCase.SigningRoot.String(), root.String())
 				}
@@ -74,13 +81,12 @@ var allocators = map[string]ObjAllocator{
 }
 
 func TestSSZStatic(t *testing.T) {
-	test_runners.RunSuitesInPath("ssz_static/core/",
+	test_util.RunSuitesInPath("ssz_static/core/",
 		func(raw interface{}) interface{} {
 			data := raw.(map[string]interface{})
 			name := data["TypeName"].(string)
-			valueAllocator := allocators[name]
 			testCase := new(SSZStaticTestCase)
-			testCase.Value = valueAllocator()
+			testCase.Value = SSZTypeValue{objAlloc: allocators[name]}
 			return testCase
 		}, t)
 }

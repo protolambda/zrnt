@@ -1,4 +1,4 @@
-package operations
+package test_util
 
 import (
 	"github.com/protolambda/zrnt/eth2/beacon"
@@ -6,12 +6,12 @@ import (
 	"testing"
 )
 
-type OperationsTest interface {
+type StateTransitionTest interface {
 	Process() error
-	Base() *OperationsTestBase
+	Base() *StateTransitionTestBase
 }
 
-type OperationsTestBase struct {
+type StateTransitionTestBase struct {
 	Description string
 	BlsSetting int
 	Pre         *beacon.BeaconState
@@ -24,15 +24,15 @@ const (
 	BLS_IGNORED = 2
 )
 
-func (base *OperationsTestBase) Title() string {
+func (base *StateTransitionTestBase) Title() string {
 	return base.Description
 }
 
-func (base *OperationsTestBase) Base() *OperationsTestBase {
+func (base *StateTransitionTestBase) Base() *StateTransitionTestBase {
 	return base
 }
 
-func RunTest(t *testing.T, testCase OperationsTest) {
+func RunTest(t *testing.T, testCase StateTransitionTest) {
 	base := testCase.Base()
 	if base.BlsSetting == BLS_REQUIRED {
 		t.Log("skipping BLS-only test")

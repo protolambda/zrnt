@@ -11,7 +11,7 @@ var epochProcessors = []EpochProcessor{
 	ProcessEpochJustification,
 	ProcessEpochCrosslinks,
 	ProcessEpochRewardsAndPenalties,
-	ProcessRegistryUpdates,
+	ProcessEpochRegistryUpdates,
 	ProcessEpochSlashings,
 	ProcessEpochFinalUpdates,
 }

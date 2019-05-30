@@ -3,13 +3,13 @@ package operations
 import (
 	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/beacon/block_processing"
-	"github.com/protolambda/zrnt/tests/spec/test_runners"
+	. "github.com/protolambda/zrnt/tests/spec/test_util"
 	"testing"
 )
 
 type AttesterSlashingTestCase struct {
 	AttesterSlashing     *beacon.AttesterSlashing
-	OperationsTestBase `mapstructure:",squash"`
+	StateTransitionTestBase `mapstructure:",squash"`
 }
 
 func (testCase *AttesterSlashingTestCase) Process() error {
@@ -21,6 +21,6 @@ func (testCase *AttesterSlashingTestCase) Run(t *testing.T) {
 }
 
 func TestAttesterSlashing(t *testing.T) {
-	test_runners.RunSuitesInPath("operations/attester_slashing/",
+	RunSuitesInPath("operations/attester_slashing/",
 		func(raw interface{}) interface{} { return new(AttesterSlashingTestCase) }, t)
 }

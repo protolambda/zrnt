@@ -1,4 +1,4 @@
-package test_runners
+package test_util
 
 import (
 	"errors"

@@ -3,13 +3,13 @@ package operations
 import (
 	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/beacon/block_processing"
-	"github.com/protolambda/zrnt/tests/spec/test_runners"
+	. "github.com/protolambda/zrnt/tests/spec/test_util"
 	"testing"
 )
 
 type VoluntaryExitTestCase struct {
 	VoluntaryExit     *beacon.VoluntaryExit
-	OperationsTestBase `mapstructure:",squash"`
+	StateTransitionTestBase `mapstructure:",squash"`
 }
 
 func (testCase *VoluntaryExitTestCase) Process() error {
@@ -21,6 +21,6 @@ func (testCase *VoluntaryExitTestCase) Run(t *testing.T) {
 }
 
 func TestVoluntaryExit(t *testing.T) {
-	test_runners.RunSuitesInPath("operations/voluntary_exit/",
+	RunSuitesInPath("operations/voluntary_exit/",
 		func(raw interface{}) interface{} { return new(VoluntaryExitTestCase) }, t)
 }

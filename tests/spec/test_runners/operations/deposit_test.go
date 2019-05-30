@@ -3,13 +3,13 @@ package operations
 import (
 	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/beacon/block_processing"
-	"github.com/protolambda/zrnt/tests/spec/test_runners"
+	. "github.com/protolambda/zrnt/tests/spec/test_util"
 	"testing"
 )
 
 type DepositTestCase struct {
 	Deposit     *beacon.Deposit
-	OperationsTestBase `mapstructure:",squash"`
+	StateTransitionTestBase `mapstructure:",squash"`
 }
 
 func (testCase *DepositTestCase) Process() error {
@@ -21,6 +21,6 @@ func (testCase *DepositTestCase) Run(t *testing.T) {
 }
 
 func TestDeposit(t *testing.T) {
-	test_runners.RunSuitesInPath("operations/deposit/",
+	RunSuitesInPath("operations/deposit/",
 		func(raw interface{}) interface{} { return new(DepositTestCase) }, t)
 }

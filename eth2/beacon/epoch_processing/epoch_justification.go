@@ -9,8 +9,8 @@ func ProcessEpochJustification(state *BeaconState) {
 	previousEpoch := state.PreviousEpoch()
 	currentEpoch := state.Epoch()
 	// epoch numbers are trusted, no errors
-	previousBoundaryBlockRoot, _ := state.GetBlockRoot(previousEpoch.GetStartSlot())
-	currentBoundaryBlockRoot, _ := state.GetBlockRoot(currentEpoch.GetStartSlot())
+	previousBoundaryBlockRoot, _ := state.GetBlockRoot(previousEpoch)
+	currentBoundaryBlockRoot, _ := state.GetBlockRoot(currentEpoch)
 
 	oldPreviousJustifiedEpoch := state.PreviousJustifiedEpoch
 	oldCurrentJustifiedEpoch := state.CurrentJustifiedEpoch

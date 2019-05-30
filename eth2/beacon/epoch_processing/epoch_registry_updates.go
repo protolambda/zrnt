@@ -6,7 +6,7 @@ import (
 	"sort"
 )
 
-func ProcessRegistryUpdates(state *BeaconState) {
+func ProcessEpochRegistryUpdates(state *BeaconState) {
 	// Process activation eligibility and ejections
 	currentEpoch := state.Epoch()
 	for i, v := range state.ValidatorRegistry {
@@ -15,13 +15,13 @@ func ProcessRegistryUpdates(state *BeaconState) {
 			v.ActivationEligibilityEpoch = currentEpoch
 		}
 		if v.IsActive(currentEpoch) &&
-			v.EffectiveBalance < EJECTION_BALANCE {
+			v.EffectiveBalance <= EJECTION_BALANCE {
 			state.InitiateValidatorExit(ValidatorIndex(i))
 		}
 	}
 	// Queue validators eligible for activation and not dequeued for activation prior to finalized epoch
 	activationQueue := make([]*Validator, 0)
-	for i, v := range state.ValidatorRegistry {
+	for _, v := range state.ValidatorRegistry {
 		if v.ActivationEligibilityEpoch != FAR_FUTURE_EPOCH &&
 			v.ActivationEpoch >= state.FinalizedEpoch.GetDelayedActivationExitEpoch() {
 			activationQueue = append(activationQueue, v)
@@ -32,7 +32,11 @@ func ProcessRegistryUpdates(state *BeaconState) {
 			activationQueue[j].ActivationEligibilityEpoch
 	})
 	// Dequeued validators for activation up to churn limit (without resetting activation epoch)
-	for _, v := range activationQueue[:state.GetChurnLimit()] {
+	churnLimit := state.GetChurnLimit()
+	if queueLen := uint64(len(activationQueue)); churnLimit > queueLen {
+		churnLimit = queueLen
+	}
+	for _, v := range activationQueue[:] {
 		if v.ActivationEpoch == FAR_FUTURE_EPOCH {
 			v.ActivationEpoch = currentEpoch.GetDelayedActivationExitEpoch()
 		}

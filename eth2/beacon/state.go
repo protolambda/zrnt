@@ -394,7 +394,7 @@ func (state *BeaconState) SlashValidator(slashedIndex ValidatorIndex, whistleblo
 	}
 	whistleblowerReward := slashedBalance / WHISTLEBLOWING_REWARD_QUOTIENT
 	proposerReward := whistleblowerReward / PROPOSER_REWARD_QUOTIENT
-	state.IncreaseBalance(propIndex, whistleblowerReward)
+	state.IncreaseBalance(propIndex, proposerReward)
 	state.IncreaseBalance(*whistleblowerIndex, whistleblowerReward-proposerReward)
 	state.DecreaseBalance(slashedIndex, whistleblowerReward)
 	return nil
@@ -446,7 +446,7 @@ func (state *BeaconState) DecreaseBalance(index ValidatorIndex, delta Gwei) {
 	currentBalance := state.Balances[index]
 	// prevent underflow, clip to 0
 	if currentBalance >= delta {
-		state.Balances[index] += currentBalance - delta
+		state.Balances[index] -= delta
 	} else {
 		state.Balances[index] = 0
 	}

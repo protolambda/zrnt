@@ -14,4 +14,4 @@
 
 debug_out
 
-constant_presets/*.go
+presets/generated/*.go

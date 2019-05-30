@@ -2,12 +2,12 @@ package epoch_processing
 
 import (
 	. "github.com/protolambda/zrnt/eth2/beacon"
-	"github.com/protolambda/zrnt/eth2/beacon/deltas_computation"
+	. "github.com/protolambda/zrnt/eth2/beacon/deltas_computation"
 )
 
 var deltaCalculators = []DeltasCalculator{
-	deltas_computation.DeltasJustificationAndFinalizationDeltas,
-	deltas_computation.DeltasCrosslinks,
+	AttestationDeltas,
+	CrosslinksDeltas,
 }
 
 func ProcessEpochRewardsAndPenalties(state *BeaconState) {

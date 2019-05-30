@@ -7,7 +7,7 @@ import (
 	"sort"
 )
 
-func DeltasCrosslinks(state *BeaconState) *Deltas {
+func CrosslinksDeltas(state *BeaconState) *Deltas {
 	deltas := NewDeltas(uint64(len(state.ValidatorRegistry)))
 
 	previousTotalBalance := state.GetTotalBalanceOf(

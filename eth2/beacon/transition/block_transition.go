@@ -2,22 +2,22 @@ package transition
 
 import (
 	. "github.com/protolambda/zrnt/eth2/beacon"
-	"github.com/protolambda/zrnt/eth2/beacon/block_processing"
+	. "github.com/protolambda/zrnt/eth2/beacon/block_processing"
 )
 
 type BlockProcessor func(state *BeaconState, block *BeaconBlock) error
 
 var blockProcessors = []BlockProcessor{
-	block_processing.ProcessBlockHeader,
-	block_processing.ProcessBlockRandao,
-	block_processing.ProcessBlockEth1,
+	ProcessBlockHeader,
+	ProcessBlockRandao,
+	ProcessBlockEth1,
 	// --- Transactions ---
-	block_processing.ProcessBlockProposerSlashings,
-	block_processing.ProcessBlockAttesterSlashings,
-	block_processing.ProcessBlockAttestations,
-	block_processing.ProcessBlockDeposits,
-	block_processing.ProcessBlockVoluntaryExits,
-	block_processing.ProcessBlockTransfers,
+	ProcessBlockProposerSlashings,
+	ProcessBlockAttesterSlashings,
+	ProcessBlockAttestations,
+	ProcessBlockDeposits,
+	ProcessBlockVoluntaryExits,
+	ProcessBlockTransfers,
 	// --------------------
 }
 

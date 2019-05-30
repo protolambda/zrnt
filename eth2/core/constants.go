@@ -6,6 +6,9 @@ import (
 	generated "github.com/protolambda/zrnt/presets/generated"
 )
 
+// Helper to know what preset is active
+const PRESET_NAME = generated.PRESET_NAME
+
 // Misc.
 const SHARD_COUNT Shard = generated.SHARD_COUNT
 const TARGET_COMMITTEE_SIZE = generated.TARGET_COMMITTEE_SIZE

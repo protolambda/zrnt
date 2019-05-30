@@ -1,10 +1,10 @@
-package spec_testing
+package test_runners
 
 import (
 	"errors"
 	"fmt"
 	. "github.com/mitchellh/mapstructure"
-	"github.com/protolambda/zrnt/constant_presets"
+	"github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/hex"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -44,7 +45,7 @@ type ConfigMismatchError struct {
 }
 
 func (confErr ConfigMismatchError) Error() string {
-	return fmt.Sprintf("cannot load suite for config: %s, current config is: %s", confErr.Config, constant_presets.CONFIG)
+	return fmt.Sprintf("cannot load suite for config: %s, current config is: %s", confErr.Config, core.PRESET_NAME)
 }
 
 type TestSuiteLoader struct {
@@ -149,7 +150,7 @@ func LoadSuite(path string, caseAlloc CaseAllocator) (*TestSuite, error) {
 		return nil, err
 	}
 	// skip test-suites with different configurations
-	if suiteLoader.Config != constant_presets.CONFIG {
+	if suiteLoader.Config != core.PRESET_NAME {
 		return nil, ConfigMismatchError{suiteLoader.Config}
 	}
 	if err := yaml.Unmarshal(yamlBytes, suite); err != nil {
@@ -175,6 +176,11 @@ func (suite *TestSuite) Run(t *testing.T) {
 func RunSuitesInPath(path string, caseAlloc CaseAllocator, t *testing.T) {
 	suitePaths := make([]string, 0)
 
+	// get the current path, go to the root, and get the tests path
+	_, filename, _, _ := runtime.Caller(0)
+	basepath := filepath.Dir(filepath.Dir(filename))
+	path = filepath.Join(basepath, "eth2.0-spec-tests/tests", path)
+
 	if err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			log.Fatal(err)
@@ -198,7 +204,7 @@ func RunSuitesInPath(path string, caseAlloc CaseAllocator, t *testing.T) {
 	for _, path := range suitePaths {
 		suite, err := LoadSuite(path, caseAlloc)
 		if confErr, ok := err.(ConfigMismatchError); ok {
-			t.Logf("Config %s of test-suite does not match current config %s, skipping suite %s", confErr.Config, constant_presets.CONFIG, path)
+			t.Logf("Config %s of test-suite does not match current config %s, skipping suite %s", confErr.Config, core.PRESET_NAME, path)
 			continue
 		}
 		if err != nil {

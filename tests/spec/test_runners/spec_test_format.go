@@ -1,4 +1,4 @@
-package spec_testing
+package test_runners
 
 import (
 	"regexp"

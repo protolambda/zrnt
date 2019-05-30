@@ -4,7 +4,7 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
-	"github.com/protolambda/zrnt/spec_testing"
+	"github.com/protolambda/zrnt/tests/spec/test_runners"
 	"testing"
 )
 
@@ -74,7 +74,7 @@ var allocators = map[string]ObjAllocator{
 }
 
 func TestSSZStatic(t *testing.T) {
-	spec_testing.RunSuitesInPath("../../../eth2.0-specs/eth2.0-spec-tests/tests/ssz_static/core/",
+	test_runners.RunSuitesInPath("ssz_static/core/",
 		func(raw interface{}) interface{} {
 			data := raw.(map[string]interface{})
 			name := data["TypeName"].(string)

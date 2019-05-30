@@ -113,7 +113,7 @@ var constantsFileTemplate = `// +build preset_{{.Name}}
 
 package constant_presets
 
-const CONFIG string = "{{.Name}}"
+const PRESET_NAME string = "{{.Name}}"
 
 {{ range .Entries }}
 {{.}}

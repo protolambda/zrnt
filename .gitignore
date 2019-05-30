@@ -15,3 +15,4 @@
 debug_out
 
 presets/generated/*.go
+tests/spec/eth2.0-spec-tests

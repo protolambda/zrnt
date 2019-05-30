@@ -13,11 +13,16 @@ type OperationsTest interface {
 
 type OperationsTestBase struct {
 	Description string
-	BlsRequired bool
-	BlsIgnored bool
+	BlsSetting int
 	Pre         *beacon.BeaconState
 	Post        *beacon.BeaconState
 }
+
+const (
+	BLS_OPTIONAL = 0
+	BLS_REQUIRED = 1
+	BLS_IGNORED = 2
+)
 
 func (base *OperationsTestBase) Title() string {
 	return base.Description
@@ -29,7 +34,7 @@ func (base *OperationsTestBase) Base() *OperationsTestBase {
 
 func RunTest(t *testing.T, testCase OperationsTest) {
 	base := testCase.Base()
-	if base.BlsRequired {
+	if base.BlsSetting == BLS_REQUIRED {
 		t.Log("skipping BLS-only test")
 		return
 	}

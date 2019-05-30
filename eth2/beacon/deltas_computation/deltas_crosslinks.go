@@ -10,10 +10,10 @@ import (
 func CrosslinksDeltas(state *BeaconState) *Deltas {
 	deltas := NewDeltas(uint64(len(state.ValidatorRegistry)))
 
-	previousTotalBalance := state.GetTotalBalanceOf(
-		state.ValidatorRegistry.GetActiveValidatorIndices(state.Epoch() - 1))
+	totalActiveBalance := state.GetTotalBalanceOf(
+		state.ValidatorRegistry.GetActiveValidatorIndices(state.Epoch()))
 
-	adjustedQuotient := math.IntegerSquareroot(uint64(previousTotalBalance)) / BASE_REWARD_QUOTIENT
+	adjustedQuotient := math.IntegerSquareroot(uint64(totalActiveBalance)) / BASE_REWARD_QUOTIENT
 
 	epoch := state.PreviousEpoch()
 	count := Shard(state.GetEpochCommitteeCount(epoch))

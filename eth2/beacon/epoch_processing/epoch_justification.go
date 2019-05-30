@@ -2,12 +2,15 @@ package epoch_processing
 
 import (
 	. "github.com/protolambda/zrnt/eth2/beacon"
+	. "github.com/protolambda/zrnt/eth2/core"
 )
 
 func ProcessEpochJustification(state *BeaconState) {
-
-	previousEpoch := state.PreviousEpoch()
 	currentEpoch := state.Epoch()
+	if currentEpoch <= GENESIS_EPOCH + 1 {
+		return
+	}
+	previousEpoch := state.PreviousEpoch()
 	// epoch numbers are trusted, no errors
 	previousBoundaryBlockRoot, _ := state.GetBlockRoot(previousEpoch)
 	currentBoundaryBlockRoot, _ := state.GetBlockRoot(currentEpoch)

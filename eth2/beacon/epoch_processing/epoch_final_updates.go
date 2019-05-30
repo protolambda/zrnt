@@ -48,5 +48,5 @@ func ProcessEpochFinalUpdates(state *BeaconState) {
 	}
 	// Rotate current/previous epoch attestations
 	state.PreviousEpochAttestations = state.CurrentEpochAttestations
-	state.CurrentEpochAttestations = make([]*PendingAttestation, 0)
+	state.CurrentEpochAttestations = nil
 }

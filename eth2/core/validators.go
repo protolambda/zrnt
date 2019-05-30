@@ -27,16 +27,20 @@ func (vs ValidatorSet) Swap(i int, j int) {
 
 // De-duplicates entries in the set in-place. (util to make a valid set from a list with duplicates)
 func (vs *ValidatorSet) Dedup() {
+	data := *vs
+	if len(data) == 0 {
+		return
+	}
 	sort.Sort(vs)
 	j := 0
-	for i := 1; i < len(*vs); i++ {
-		if (*vs)[j] == (*vs)[i] {
+	for i := 1; i < len(data); i++ {
+		if data[j] == data[i] {
 			continue
 		}
 		j++
-		(*vs)[j] = (*vs)[i]
+		data[j] = data[i]
 	}
-	*vs = (*vs)[:j+1]
+	*vs = data[:j+1]
 }
 
 // Joins two validator sets: check if there is any overlap

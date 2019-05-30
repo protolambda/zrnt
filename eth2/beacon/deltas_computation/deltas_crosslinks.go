@@ -15,36 +15,37 @@ func CrosslinksDeltas(state *BeaconState) *Deltas {
 
 	adjustedQuotient := math.IntegerSquareroot(uint64(previousTotalBalance)) / BASE_REWARD_QUOTIENT
 
-	// From previous epoch start, to current epoch start
-	start := state.PreviousEpoch().GetStartSlot()
-	end := state.Epoch().GetStartSlot()
-	for slot := start; slot < end; slot++ {
-		for _, shardCommittee := range state.GetCrosslinkCommitteesAtSlot(slot) {
-			_, attestingIndices := state.GetWinningCrosslinkAndAttestingIndices(shardCommittee.Shard, slot.ToEpoch())
-			attestingBalance := state.GetTotalBalanceOf(attestingIndices)
-			totalBalance := state.GetTotalBalanceOf(shardCommittee.Committee)
+	epoch := state.PreviousEpoch()
+	count := Shard(state.GetEpochCommitteeCount(epoch))
+	epochStartShard := state.GetEpochStartShard(epoch)
+	for offset := Shard(0); offset < count; offset++ {
+		shard := (epochStartShard + offset) % SHARD_COUNT
 
-			committee := make(ValidatorSet, 0, len(shardCommittee.Committee))
-			committee = append(committee, shardCommittee.Committee...)
-			sort.Sort(committee)
+		crosslinkCommittee := state.GetCrosslinkCommittee(epoch, shard)
+		committee := make(ValidatorSet, 0, len(crosslinkCommittee))
+		committee = append(committee, crosslinkCommittee...)
+		sort.Sort(committee)
 
-			// reward/penalize using a zig-zag merge join.
-			// ----------------------------------------------------
-			committee.ZigZagJoin(attestingIndices,
-				func(i ValidatorIndex) {
-					// Committee member participated, reward them
-					effectiveBalance := state.ValidatorRegistry[i].EffectiveBalance
-					baseReward := effectiveBalance / Gwei(adjustedQuotient) / 5
+		_, attestingIndices := state.GetWinningCrosslinkAndAttestingIndices(shard, epoch)
+		attestingBalance := state.GetTotalBalanceOf(attestingIndices)
+		totalBalance := state.GetTotalBalanceOf(committee)
 
-					deltas.Rewards[i] += baseReward * attestingBalance / totalBalance
-				}, func(i ValidatorIndex) {
-					// Committee member did not participate, penalize them
-					effectiveBalance := state.ValidatorRegistry[i].EffectiveBalance
-					baseReward := effectiveBalance / Gwei(adjustedQuotient) / 5
+		// reward/penalize using a zig-zag merge join.
+		// ----------------------------------------------------
+		committee.ZigZagJoin(attestingIndices,
+			func(i ValidatorIndex) {
+				// Committee member participated, reward them
+				effectiveBalance := state.ValidatorRegistry[i].EffectiveBalance
+				baseReward := effectiveBalance / Gwei(adjustedQuotient) / 5
 
-					deltas.Penalties[i] += baseReward
-				})
-		}
+				deltas.Rewards[i] += baseReward * attestingBalance / totalBalance
+			}, func(i ValidatorIndex) {
+				// Committee member did not participate, penalize them
+				effectiveBalance := state.ValidatorRegistry[i].EffectiveBalance
+				baseReward := effectiveBalance / Gwei(adjustedQuotient) / 5
+
+				deltas.Penalties[i] += baseReward
+			})
 	}
 	return deltas
 }

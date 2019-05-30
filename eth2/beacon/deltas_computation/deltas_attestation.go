@@ -20,39 +20,19 @@ const (
 	eligibleAttester
 )
 
-const noInclusionMarker = ^Slot(0)
-
 type ValidatorStatus struct {
-	InclusionSlot Slot
-	DataSlot Slot
+	// no delay (i.e. 0) by default
+	InclusionDelay Slot
 	Flags ValidatorStatusFlag
 }
 
-// Retrieves the inclusion slot of the earliest attestation in the previous epoch.
-// Ok == true if there is such attestation, false otherwise.
-func (status *ValidatorStatus) inclusionSlot() (slot Slot, ok bool) {
-	if status.InclusionSlot == noInclusionMarker {
-		return 0, false
-	} else {
-		return status.InclusionSlot, true
-	}
-}
-
-// Note: ONLY safe to call when vIndex is known to be an active validator in the previous epoch
-func (status *ValidatorStatus) inclusionDistance() Slot {
-	return status.InclusionSlot - status.DataSlot
-}
-
-func DeltasJustificationAndFinalizationDeltas(state *BeaconState,) *Deltas {
+func AttestationDeltas(state *BeaconState,) *Deltas {
 	validatorCount := ValidatorIndex(len(state.ValidatorRegistry))
 	deltas := NewDeltas(uint64(validatorCount))
 
 	currentEpoch := state.Epoch()
 
 	data := make([]ValidatorStatus, validatorCount, validatorCount)
-	for i := 0; i < len(data); i++ {
-		data[i].InclusionSlot = noInclusionMarker
-	}
 
 	{
 		previousBoundaryBlockRoot, _ := state.GetBlockRootAtSlot(state.PreviousEpoch().GetStartSlot())
@@ -64,10 +44,9 @@ func DeltasJustificationAndFinalizationDeltas(state *BeaconState,) *Deltas {
 
 				status := &data[p]
 
-				// If the attestation is the earliest:
-				if status.InclusionSlot > att.InclusionSlot {
-					status.InclusionSlot = att.InclusionSlot
-					status.DataSlot = att.Data.Slot
+				// If the attestation is the earliest, i.e. has the biggest delay
+				if status.InclusionDelay < att.InclusionDelay {
+					status.InclusionDelay = att.InclusionDelay
 				}
 
 				if !state.ValidatorRegistry[p].Slashed {
@@ -134,8 +113,7 @@ func DeltasJustificationAndFinalizationDeltas(state *BeaconState,) *Deltas {
 				deltas.Rewards[i] += baseReward * totalAttestingBalance / totalBalance
 
 				// Inclusion speed bonus
-				inclusionDelay := status.inclusionDistance()
-				deltas.Rewards[i] += baseReward * Gwei(MIN_ATTESTATION_INCLUSION_DELAY) / Gwei(inclusionDelay)
+				deltas.Rewards[i] += baseReward * Gwei(MIN_ATTESTATION_INCLUSION_DELAY) / Gwei(status.InclusionDelay)
 			} else {
 				//Justification-non-participation R-penalty
 				deltas.Penalties[i] += baseReward

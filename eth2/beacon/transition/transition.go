@@ -7,14 +7,15 @@ import (
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
-func StateTransition(preState *BeaconState, block *BeaconBlock, verifyStateRoot bool) (res *BeaconState, err error) {
-	if preState.Slot >= block.Slot {
-		return nil, errors.New("cannot handle block on top of pre-state with equal or higher slot than block")
+// Transition the state to the given slot.
+// Returns an error if the slot is older than the state is already at.
+// Mutates the state, does not copy.
+func StateTransitionTo(state *BeaconState, slot Slot) error {
+	if state.Slot > slot {
+		return errors.New("cannot handle block on top of pre-state with equal or higher slot than block")
 	}
-	// We work on a copy of the input state. If the block is invalid, or input is re-used, we don't have to care.
-	state := preState.Copy()
 	// happens at the start of every Slot
-	for ; state.Slot < block.Slot; {
+	for ; state.Slot < slot; {
 		CacheState(state)
 		// Per-epoch transition happens at the start of the first slot of every epoch.
 		if (state.Slot+1)%SLOTS_PER_EPOCH == 0 {
@@ -22,13 +23,23 @@ func StateTransition(preState *BeaconState, block *BeaconBlock, verifyStateRoot 
 		}
 		state.Slot++
 	}
-	// happens at every block
+	return nil
+}
+
+// Transition the state to the slot of the given block, then processes the block.
+// Returns an error if the slot is older than the state is already at.
+// Mutates the state, does not copy.
+func StateTransition(state *BeaconState, block *BeaconBlock, verifyStateRoot bool) error {
+	if err := StateTransitionTo(state, block.Slot); err != nil {
+		return err
+	}
+
 	if err := ProcessBlock(state, block); err != nil {
-		return nil, err
+		return err
 	}
 	// State root verification
 	if verifyStateRoot && block.StateRoot != ssz.HashTreeRoot(state) {
-		return nil, errors.New("block has invalid state root")
+		return errors.New("block has invalid state root")
 	}
-	return state, nil
+	return nil
 }

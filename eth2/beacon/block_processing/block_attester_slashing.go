@@ -4,6 +4,7 @@ import (
 	"errors"
 	. "github.com/protolambda/zrnt/eth2/beacon"
 	. "github.com/protolambda/zrnt/eth2/core"
+	"sort"
 )
 
 func ProcessBlockAttesterSlashings(state *BeaconState, block *BeaconBlock) error {
@@ -40,9 +41,11 @@ func ProcessAttesterSlashing(state *BeaconState, attesterSlashing *AttesterSlash
 	indices1 := make(ValidatorSet, 0, len(sa1.CustodyBit0Indices) + len(sa1.CustodyBit1Indices))
 	indices1 = append(indices1, sa1.CustodyBit0Indices...)
 	indices1 = append(indices1, sa1.CustodyBit1Indices...)
+	sort.Sort(indices1)
 	indices2 := make(ValidatorSet, 0, len(sa2.CustodyBit0Indices) + len(sa2.CustodyBit1Indices))
-	indices2 = append(indices1, sa2.CustodyBit0Indices...)
-	indices2 = append(indices1, sa2.CustodyBit1Indices...)
+	indices2 = append(indices2, sa2.CustodyBit0Indices...)
+	indices2 = append(indices2, sa2.CustodyBit1Indices...)
+	sort.Sort(indices2)
 
 	currentEpoch := state.Epoch()
 	// run slashings where applicable

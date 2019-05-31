@@ -11,7 +11,7 @@ func ProcessEpochFinalUpdates(state *BeaconState) {
 	nextEpoch := currentEpoch + 1
 
 	// Reset eth1 data votes
-	if state.Slot % SLOTS_PER_ETH1_VOTING_PERIOD == 0 {
+	if (state.Slot + 1) % SLOTS_PER_ETH1_VOTING_PERIOD == 0 {
 		state.Eth1DataVotes = make([]Eth1Data, 0)
 	}
 	// Update effective balances with hysteresis

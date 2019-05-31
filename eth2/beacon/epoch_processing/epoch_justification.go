@@ -60,19 +60,21 @@ func ProcessEpochJustification(state *BeaconState) {
 	// The 2nd/3rd/4th most recent epochs are all justified, the 2nd using the 4th as source
 	if (bitf>>1)&7 == 7 && state.PreviousJustifiedEpoch == currentEpoch-3 {
 		state.FinalizedEpoch = oldPreviousJustifiedEpoch
+		state.FinalizedRoot, _ = state.GetBlockRoot(state.FinalizedEpoch)
 	}
 	// The 2nd/3rd most recent epochs are both justified, the 2nd using the 3rd as source
 	if (bitf>>1)&3 == 3 && state.PreviousJustifiedEpoch == currentEpoch-2 {
 		state.FinalizedEpoch = oldPreviousJustifiedEpoch
+		state.FinalizedRoot, _ = state.GetBlockRoot(state.FinalizedEpoch)
 	}
 	// The 1st/2nd/3rd most recent epochs are all justified, the 1st using the 3rd as source
 	if (bitf>>0)&7 == 7 && state.CurrentJustifiedEpoch == currentEpoch-2 {
 		state.FinalizedEpoch = oldCurrentJustifiedEpoch
+		state.FinalizedRoot, _ = state.GetBlockRoot(state.FinalizedEpoch)
 	}
 	// The 1st/2nd most recent epochs are both justified, the 1st using the 2nd as source
 	if (bitf>>0)&3 == 3 && state.CurrentJustifiedEpoch == currentEpoch-1 {
 		state.FinalizedEpoch = oldCurrentJustifiedEpoch
+		state.FinalizedRoot, _ = state.GetBlockRoot(state.FinalizedEpoch)
 	}
-	root, _ := state.GetBlockRoot(state.FinalizedEpoch)
-	state.FinalizedRoot = root
 }

@@ -2,10 +2,11 @@
 
 ## Installing
 
-To run the spec tests, you need the test-vectors provided here: .
-These vectors are hosted in a Git LFS repository. Alternatively, you can download a `.tar.gz` from the releases page.
+To run the spec tests, you need the test-vectors provided here: https://github.com/ethereum/eth2.0-spec-tests
+These vectors are hosted in a [Git LFS](https://git-lfs.github.com/) repository. 
+Alternatively, you can download a `.tar.gz` from the releases page.
 
-Next, you place the repository in `./spec/eth2.0-spec-tests`, or, symlink to them (your paths may vary):
+Next, you place the repository in `<zrnt root>/tests/spec/eth2.0-spec-tests`, or, symlink to them (your paths may vary):
 ```bash
 ln -s ../../../eth2.0-specs/eth2.0-spec-tests tests/spec/eth2.0-spec-tests
 ```

@@ -66,9 +66,9 @@ More states and transition testing is coming SOON :tm:
 
 ### Building
 
-Generate dynamic parts by running `go generate ./...` (make sure you locate the constant-presets relative to the dependency).
+Generate dynamic parts by running `go generate ./...` (make sure the presets submodule is pulled).
 
-Add a eth2-configuration build-constraint (also known as "build tag") when building ZRNT, or using it as a dependency:
+Add a build-constraint (also known as "build tag") when building ZRNT, or using it as a dependency:
 
 ```
 go build -tags preset_mainnet
@@ -80,10 +80,16 @@ go build -tags preset_minimal
 etc.
 ```
 
+### Testing
+
+The specs are tested using test-vectors shared between Eth 2.0 clients,
+ found here: [`ethereum/eth2.0-spec-tests`](https://github.com/ethereum/eth2.0-spec-tests).
+Instructions on the usage of these test-vectors with ZRNT can be found in the [testing readme](./tests/spec/README.md).
+
 ## Future plans
 
 Use the repo for conformance test generation, fuzzing,
- and implement a minimal (but fast) ETH 2.0 client around it.
+ and implement a minimal (but fast) Eth 2.0 client around it.
 
 ## Contributing
 

@@ -4,6 +4,7 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/math"
+	"github.com/protolambda/zrnt/presets/generated"
 )
 
 type ValidatorStatusFlag uint64
@@ -23,6 +24,7 @@ const (
 type ValidatorStatus struct {
 	// no delay (i.e. 0) by default
 	InclusionDelay Slot
+	Proposer ValidatorIndex
 	Flags ValidatorStatusFlag
 }
 
@@ -31,6 +33,7 @@ func AttestationDeltas(state *BeaconState,) *Deltas {
 	deltas := NewDeltas(uint64(validatorCount))
 
 	currentEpoch := state.Epoch()
+	previousEpoch := state.PreviousEpoch()
 
 	data := make([]ValidatorStatus, validatorCount, validatorCount)
 
@@ -47,6 +50,7 @@ func AttestationDeltas(state *BeaconState,) *Deltas {
 				// If the attestation is the earliest, i.e. has the biggest delay
 				if status.InclusionDelay < att.InclusionDelay {
 					status.InclusionDelay = att.InclusionDelay
+					status.Proposer = att.ProposerIndex
 				}
 
 				if !state.ValidatorRegistry[p].Slashed {
@@ -91,7 +95,7 @@ func AttestationDeltas(state *BeaconState,) *Deltas {
 		state.ValidatorRegistry.GetActiveValidatorIndices(state.PreviousEpoch()))
 
 	adjustedQuotient := math.IntegerSquareroot(uint64(previousTotalBalance)) / BASE_REWARD_QUOTIENT
-	epochsSinceFinality := currentEpoch + 1 - state.FinalizedEpoch
+	finalityDelay := previousEpoch - state.FinalizedEpoch
 
 	for i := ValidatorIndex(0); i < validatorCount; i++ {
 		status := &data[i]
@@ -102,10 +106,6 @@ func AttestationDeltas(state *BeaconState,) *Deltas {
 			if adjustedQuotient != 0 {
 				baseReward = v.EffectiveBalance / Gwei(adjustedQuotient) / 5
 			}
-			inactivityPenalty := baseReward
-			if epochsSinceFinality > 4 {
-				inactivityPenalty += v.EffectiveBalance * Gwei(epochsSinceFinality) / INACTIVITY_PENALTY_QUOTIENT / 2
-			}
 
 			// Expected FFG source
 			if status.Flags.hasMarkers(prevEpochAttester | unslashed) {
@@ -113,6 +113,7 @@ func AttestationDeltas(state *BeaconState,) *Deltas {
 				deltas.Rewards[i] += baseReward * totalAttestingBalance / totalBalance
 
 				// Inclusion speed bonus
+				deltas.Rewards[status.Proposer] += baseReward / PROPOSER_REWARD_QUOTIENT
 				deltas.Rewards[i] += baseReward * Gwei(MIN_ATTESTATION_INCLUSION_DELAY) / Gwei(status.InclusionDelay)
 			} else {
 				//Justification-non-participation R-penalty
@@ -126,7 +127,7 @@ func AttestationDeltas(state *BeaconState,) *Deltas {
 				deltas.Rewards[i] += baseReward * epochBoundaryBalance / totalBalance
 			} else {
 				//Boundary-attestation-non-participation R-penalty
-				deltas.Penalties[i] += inactivityPenalty
+				deltas.Penalties[i] += baseReward
 			}
 
 			// Expected head
@@ -139,8 +140,11 @@ func AttestationDeltas(state *BeaconState,) *Deltas {
 			}
 
 			// Take away max rewards if we're not finalizing
-			if epochsSinceFinality > 4 {
-				deltas.Penalties[i] += baseReward * 4
+			if finalityDelay > constant_presets.MIN_EPOCHS_TO_INACTIVITY_PENALTY {
+				deltas.Penalties[i] += baseReward * BASE_REWARDS_PER_EPOCH
+				if !status.Flags.hasMarkers(matchingHeadAttester | unslashed)  {
+					deltas.Penalties[i] += v.EffectiveBalance * Gwei(finalityDelay) / INACTIVITY_PENALTY_QUOTIENT
+				}
 			}
 		}
 	}

@@ -24,7 +24,6 @@ func ProcessBlockDeposits(state *BeaconState, block *BeaconBlock) error {
 		if err := ProcessDeposit(state, dep); err != nil {
 			return err
 		}
-		state.DepositIndex += 1
 	}
 	return nil
 }

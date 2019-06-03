@@ -66,7 +66,7 @@ More states and transition testing is coming SOON :tm:
 
 ### Building
 
-Generate dynamic parts by running `go generate ./...` (make sure the presets submodule is pulled).
+Re-generate dynamic parts by running `go generate ./...` (make sure the presets submodule is pulled).
 
 Add a build-constraint (also known as "build tag") when building ZRNT, or using it as a dependency:
 

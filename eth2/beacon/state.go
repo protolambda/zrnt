@@ -7,7 +7,7 @@ import (
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/bitfield"
 	"github.com/protolambda/zrnt/eth2/util/bls"
-	"github.com/protolambda/zrnt/eth2/util/hash"
+	. "github.com/protolambda/zrnt/eth2/util/hashing"
 	"github.com/protolambda/zrnt/eth2/util/math"
 	"github.com/protolambda/zrnt/eth2/util/shuffling"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
@@ -179,7 +179,7 @@ func (state *BeaconState) GetBeaconProposerIndex() ValidatorIndex {
 	copy(buf[0:32], seed[:])
 	for i := uint64(0); true; i++ {
 		binary.LittleEndian.PutUint64(buf[32:], i)
-		h := hash.Hash(buf)
+		h := Hash(buf)
 		for j := uint64(0); j < 32; j++ {
 			randomByte := h[j]
 			candidateIndex := firstCommittee[(uint64(epoch)+((i<<5)|j))%uint64(len(firstCommittee))]
@@ -225,7 +225,7 @@ func (state *BeaconState) GenerateSeed(epoch Epoch) Root {
 	activeIndexRoot := state.GetActiveIndexRoot(epoch)
 	copy(buf[32:64], activeIndexRoot[:])
 	binary.LittleEndian.PutUint64(buf[64:], uint64(epoch))
-	return hash.HashRoot(buf)
+	return Hash(buf)
 }
 
 // Return the block root at the given slot (a recent one)

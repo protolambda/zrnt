@@ -3,7 +3,7 @@ package shuffling
 import (
 	"encoding/binary"
 	. "github.com/protolambda/zrnt/eth2/core"
-	. "github.com/protolambda/zrnt/eth2/util/hash"
+	. "github.com/protolambda/zrnt/eth2/util/hashing"
 )
 
 const hSeedSize = int8(32)
@@ -57,7 +57,8 @@ func innerPermuteIndex(hashFn HashFn, input ValidatorIndex, listSize uint64, see
 		buf[hSeedSize] = r
 		// Seed is already in place, now just hash the correct part of the buffer, and take a uint64 from it,
 		//  and modulo it to get a pivot within range.
-		pivot := binary.LittleEndian.Uint64(hashFn(buf[:hPivotViewSize])[:8]) % listSize
+		h := hashFn(buf[:hPivotViewSize])
+		pivot := binary.LittleEndian.Uint64(h[:8]) % listSize
 		// spec: flip = (pivot - index) % list_size
 		// Add extra list_size to prevent underflows.
 		// "flip" will be the other side of the pair
@@ -179,7 +180,8 @@ func innerShuffleList(hashFn HashFn, input []ValidatorIndex, seed Root, dir bool
 		buf[hSeedSize] = r
 		// Seed is already in place, now just hash the correct part of the buffer, and take a uint64 from it,
 		//  and modulo it to get a pivot within range.
-		pivot := binary.LittleEndian.Uint64(hashFn(buf[:hPivotViewSize])[:8]) % listSize
+		h := hashFn(buf[:hPivotViewSize])
+		pivot := binary.LittleEndian.Uint64(h[:8]) % listSize
 
 		// Split up the for-loop in two:
 		//  1. Handle the part from 0 (incl) to pivot (incl). This is mirrored around (pivot / 2)

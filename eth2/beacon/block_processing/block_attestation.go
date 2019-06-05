@@ -5,7 +5,7 @@ import (
 	"fmt"
 	. "github.com/protolambda/zrnt/eth2/beacon"
 	. "github.com/protolambda/zrnt/eth2/core"
-	"github.com/protolambda/zrnt/eth2/util/ssz"
+	"github.com/protolambda/zssz"
 )
 
 func ProcessBlockAttestations(state *BeaconState, block *BeaconBlock) error {
@@ -39,7 +39,7 @@ func ProcessAttestation(state *BeaconState, attestation *Attestation) error {
 		(targetEpoch == state.Epoch() &&
 			sourceEpoch == state.CurrentJustifiedEpoch &&
 			sourceRoot == state.CurrentJustifiedRoot &&
-			sourceCrosslink == ssz.HashTreeRoot(state.CurrentCrosslinks[data.Shard])) ||
+			sourceCrosslink == zssz.HashTreeRoot(state.CurrentCrosslinks[data.Shard], crosslinkSSZ)) ||
 		(targetEpoch == state.PreviousEpoch() &&
 			sourceEpoch == state.PreviousJustifiedEpoch &&
 			sourceRoot == state.PreviousJustifiedRoot) &&

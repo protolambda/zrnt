@@ -6,7 +6,7 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/bls"
-	"github.com/protolambda/zrnt/eth2/util/hash"
+	. "github.com/protolambda/zrnt/eth2/util/hashing"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
@@ -56,7 +56,7 @@ func ProcessTransfer(state *BeaconState, transfer *Transfer) error {
 		return errors.New("transfer sender is not eligible to make a transfer, it has to be withdrawn, or yet to be activated")
 	}
 	// Verify that the pubkey is valid
-	withdrawCred := hash.HashRoot(transfer.Pubkey[:])
+	withdrawCred := Hash(transfer.Pubkey[:])
 	// overwrite first byte, remainder (the [1:] part, is still the hash)
 	withdrawCred[0] = BLS_WITHDRAWAL_PREFIX_BYTE
 	if sender.WithdrawalCredentials != withdrawCred {

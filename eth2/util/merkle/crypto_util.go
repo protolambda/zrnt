@@ -2,7 +2,7 @@ package merkle
 
 import (
 	. "github.com/protolambda/zrnt/eth2/core"
-	"github.com/protolambda/zrnt/eth2/util/hash"
+	"github.com/protolambda/zrnt/eth2/util/hashing"
 	"github.com/protolambda/zrnt/eth2/util/math"
 )
 
@@ -19,7 +19,7 @@ func MerkleRoot(values []Root) Root {
 	o := make([]Root, power2<<1)
 	copy(o[power2:], values)
 	for i := int64(power2) - 1; i > 0; i-- {
-		o[i] = hash.HashRoot(append(o[i<<1][:], o[(i<<1)+1][:]...))
+		o[i] = hashing.Hash(append(o[i<<1][:], o[(i<<1)+1][:]...))
 	}
 	return o[1]
 }
@@ -29,9 +29,9 @@ func VerifyMerkleBranch(leaf Root, branch []Root, depth uint64, index uint64, ro
 	value := leaf
 	for i := uint64(0); i < depth; i++ {
 		if (index>>i)&1 == 1 {
-			value = hash.HashRoot(append(branch[i][:], value[:]...))
+			value = hashing.Hash(append(branch[i][:], value[:]...))
 		} else {
-			value = hash.HashRoot(append(value[:], branch[i][:]...))
+			value = hashing.Hash(append(value[:], branch[i][:]...))
 		}
 	}
 	return value == root
@@ -46,7 +46,7 @@ func ConstructProof(values []Root, index uint64, depth uint8) (branch []Root) {
 	o := make([]Root, power2<<1)
 	copy(o[power2:], values)
 	for i := int64(power2) - 1; i > 0; i-- {
-		o[i] = hash.HashRoot(append(o[i<<1][:], o[(i<<1)+1][:]...))
+		o[i] = hashing.Hash(append(o[i<<1][:], o[(i<<1)+1][:]...))
 	}
 	depthOffset := power2 << 1
 	for j := uint8(0); j < depth; j++ {

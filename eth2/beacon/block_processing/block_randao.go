@@ -5,7 +5,7 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/bls"
-	"github.com/protolambda/zrnt/eth2/util/hash"
+	. "github.com/protolambda/zrnt/eth2/util/hashing"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
@@ -20,8 +20,8 @@ func ProcessBlockRandao(state *BeaconState, block *BeaconBlock) error {
 	) {
 		return errors.New("randao invalid")
 	}
-	state.LatestRandaoMixes[state.Epoch()%LATEST_RANDAO_MIXES_LENGTH] = hash.XorRoots(
+	state.LatestRandaoMixes[state.Epoch()%LATEST_RANDAO_MIXES_LENGTH] = XorBytes32(
 		state.GetRandaoMix(state.Epoch()),
-		hash.HashRoot(block.Body.RandaoReveal[:]))
+		Hash(block.Body.RandaoReveal[:]))
 	return nil
 }

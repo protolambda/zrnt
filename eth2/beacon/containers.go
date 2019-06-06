@@ -3,6 +3,7 @@ package beacon
 import (
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/bitfield"
+	"github.com/protolambda/zssz"
 )
 
 // NOTE: these containers are going to be moved to sub-packages, per-topic.
@@ -50,6 +51,8 @@ type AttestationData struct {
 	CrosslinkDataRoot Root
 }
 
+var AttestationDataAndCustodyBitSSZ = zssz.GetSSZ((*AttestationDataAndCustodyBit)(nil))
+
 type AttestationDataAndCustodyBit struct {
 	// Attestation data
 	Data AttestationData
@@ -66,6 +69,8 @@ type IndexedAttestation struct {
 	// BLS aggregate signature
 	Signature BLSSignature
 }
+
+var CrosslinkSSZ = zssz.GetSSZ((*Crosslink)(nil))
 
 type Crosslink struct {
 	// Epoch number
@@ -85,6 +90,8 @@ type Deposit struct {
 	Data DepositData
 }
 
+var DepositDataSSZ = zssz.GetSSZ((*DepositData)(nil))
+
 type DepositData struct {
 	// BLS pubkey
 	Pubkey BLSPubkey
@@ -96,6 +103,8 @@ type DepositData struct {
 	Signature BLSSignature
 }
 
+var VoluntaryExitSSZ = zssz.GetSSZ((*VoluntaryExit)(nil))
+
 type VoluntaryExit struct {
 	// Minimum epoch for processing exit
 	Epoch Epoch
@@ -104,6 +113,8 @@ type VoluntaryExit struct {
 	// Validator signature
 	Signature BLSSignature
 }
+
+var TransferSSZ = zssz.GetSSZ((*Transfer)(nil))
 
 type Transfer struct {
 	// Sender index
@@ -189,6 +200,8 @@ func (vr ValidatorRegistry) IsValidatorIndex(index ValidatorIndex) bool {
 	return index < ValidatorIndex(len(vr))
 }
 
+var ValidatorIndexListSSZ = zssz.GetSSZ((*[]ValidatorIndex)(nil))
+
 func (vr ValidatorRegistry) GetActiveValidatorIndices(epoch Epoch) []ValidatorIndex {
 	res := make([]ValidatorIndex, 0, len(vr))
 	for i, v := range vr {
@@ -207,6 +220,8 @@ func (vr ValidatorRegistry) GetActiveValidatorCount(epoch Epoch) (count uint64) 
 	}
 	return
 }
+
+var HistoricalBatchSSZ = zssz.GetSSZ((*HistoricalBatch)(nil))
 
 type HistoricalBatch struct {
 	BlockRoots [SLOTS_PER_HISTORICAL_ROOT]Root

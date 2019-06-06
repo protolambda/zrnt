@@ -12,3 +12,14 @@ func HashTreeRoot(value interface{}, sszTyp types.SSZ) core.Root {
 	hFn := hashing.GetHashFn()
 	return zssz.HashTreeRoot(htr.HashFn(hFn), value, sszTyp)
 }
+
+
+func SigningRoot(value interface{}, sszTyp types.SSZ) core.Root {
+	hFn := hashing.GetHashFn()
+	signedSSZ, ok := sszTyp.(types.SignedSSZ)
+	if !ok {
+		// resort to Hash-tree-root, if the type is not something that can be signed
+		return zssz.HashTreeRoot(htr.HashFn(hFn), value, sszTyp)
+	}
+	return zssz.SigningRoot(htr.HashFn(hFn), value, signedSSZ)
+}

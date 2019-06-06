@@ -14,7 +14,7 @@ func ProcessBlockRandao(state *BeaconState, block *BeaconBlock) error {
 	proposer := state.ValidatorRegistry[propIndex]
 	if !bls.BlsVerify(
 		proposer.Pubkey,
-		ssz.HashTreeRoot(state.Epoch()),
+		ssz.HashTreeRoot(state.Epoch(), BeaconStateSSZ),
 		block.Body.RandaoReveal,
 		state.GetDomain(DOMAIN_RANDAO, state.Epoch()),
 	) {

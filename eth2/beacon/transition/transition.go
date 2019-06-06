@@ -38,7 +38,7 @@ func StateTransition(state *BeaconState, block *BeaconBlock, verifyStateRoot boo
 		return err
 	}
 	// State root verification
-	if verifyStateRoot && block.StateRoot != ssz.HashTreeRoot(state) {
+	if verifyStateRoot && block.StateRoot != ssz.HashTreeRoot(state, BeaconStateSSZ) {
 		return errors.New("block has invalid state root")
 	}
 	return nil

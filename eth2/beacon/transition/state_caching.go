@@ -8,7 +8,7 @@ import (
 
 func CacheState(state *BeaconState) {
 	// Cache latest known state root (for previous slot)
-	latestStateRoot := ssz.HashTreeRoot(state)
+	latestStateRoot := ssz.HashTreeRoot(state, BeaconStateSSZ)
 	state.LatestStateRoots[state.Slot%SLOTS_PER_HISTORICAL_ROOT] = latestStateRoot
 
 	// Store latest known state root (for previous slot) in latest_block_header if it is empty
@@ -17,5 +17,5 @@ func CacheState(state *BeaconState) {
 	}
 
 	// Cache latest known block root (for previous slot)
-	state.LatestBlockRoots[state.Slot%SLOTS_PER_HISTORICAL_ROOT] = ssz.SigningRoot(state.LatestBlockHeader)
+	state.LatestBlockRoots[state.Slot%SLOTS_PER_HISTORICAL_ROOT] = ssz.SigningRoot(state.LatestBlockHeader, BeaconBlockHeaderSSZ)
 }

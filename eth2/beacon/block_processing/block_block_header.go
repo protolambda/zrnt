@@ -14,14 +14,14 @@ func ProcessBlockHeader(state *BeaconState, block *BeaconBlock) error {
 		return errors.New("slot of block does not match slot of state")
 	}
 	// Verify that the parent matches
-	if block.PreviousBlockRoot != ssz.SigningRoot(state.LatestBlockHeader) {
+	if block.PreviousBlockRoot != ssz.SigningRoot(state.LatestBlockHeader, BeaconBlockHeaderSSZ) {
 		return errors.New("previous block root does not match root from latest state block header")
 	}
 	// Save current block as the new latest block
 	state.LatestBlockHeader = BeaconBlockHeader{
 		Slot: block.Slot,
 		PreviousBlockRoot: block.PreviousBlockRoot,
-		BlockBodyRoot: ssz.HashTreeRoot(block.Body),
+		BlockBodyRoot: ssz.HashTreeRoot(block.Body, BeaconBlockBodySSZ),
 	}
 
 	proposerIndex := state.GetBeaconProposerIndex()
@@ -33,7 +33,7 @@ func ProcessBlockHeader(state *BeaconState, block *BeaconBlock) error {
 	// Block signature
 	if !bls.BlsVerify(
 		proposer.Pubkey,
-		ssz.SigningRoot(block),
+		ssz.SigningRoot(block, BeaconBlockSSZ),
 		block.Signature,
 		state.GetDomain(DOMAIN_BEACON_PROPOSER, state.Epoch())) {
 		return errors.New("block signature invalid")

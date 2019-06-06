@@ -28,7 +28,7 @@ func GetGenesisBeaconState(validatorDeposits []Deposit, time Timestamp, eth1Data
 		}
 	}
 	genesisActiveIndexRoot := ssz.HashTreeRoot(
-		state.ValidatorRegistry.GetActiveValidatorIndices(GENESIS_EPOCH))
+		state.ValidatorRegistry.GetActiveValidatorIndices(GENESIS_EPOCH), ValidatorIndexListSSZ)
 	for i := Epoch(0); i < LATEST_ACTIVE_INDEX_ROOTS_LENGTH; i++ {
 		state.LatestActiveIndexRoots[i] = genesisActiveIndexRoot
 	}

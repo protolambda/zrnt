@@ -31,7 +31,7 @@ func ProcessEpochFinalUpdates(state *BeaconState) {
 	// Set active index root
 	indexRootPosition := (nextEpoch + ACTIVATION_EXIT_DELAY) % LATEST_ACTIVE_INDEX_ROOTS_LENGTH
 	state.LatestActiveIndexRoots[indexRootPosition] =
-		ssz.HashTreeRoot(state.ValidatorRegistry.GetActiveValidatorIndices(nextEpoch + ACTIVATION_EXIT_DELAY))
+		ssz.HashTreeRoot(state.ValidatorRegistry.GetActiveValidatorIndices(nextEpoch + ACTIVATION_EXIT_DELAY), ValidatorIndexListSSZ)
 	state.LatestSlashedBalances[nextEpoch%LATEST_SLASHED_EXIT_LENGTH] =
 		state.LatestSlashedBalances[currentEpoch%LATEST_SLASHED_EXIT_LENGTH]
 
@@ -44,7 +44,7 @@ func ProcessEpochFinalUpdates(state *BeaconState) {
 			StateRoots: state.LatestStateRoots,
 		}
 
-		state.HistoricalRoots = append(state.HistoricalRoots, ssz.HashTreeRoot(historicalBatch))
+		state.HistoricalRoots = append(state.HistoricalRoots, ssz.HashTreeRoot(historicalBatch, HistoricalBatchSSZ))
 	}
 	// Rotate current/previous epoch attestations
 	state.PreviousEpochAttestations = state.CurrentEpochAttestations

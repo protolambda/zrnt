@@ -2,7 +2,10 @@ package beacon
 
 import (
 	. "github.com/protolambda/zrnt/eth2/core"
+	"github.com/protolambda/zssz"
 )
+
+var BeaconBlockHeaderSSZ = zssz.GetSSZ((*BeaconBlockHeader)(nil))
 
 type BeaconBlockHeader struct {
 	Slot              Slot
@@ -14,6 +17,8 @@ type BeaconBlockHeader struct {
 	// Signature
 	Signature BLSSignature
 }
+
+var BeaconBlockBodySSZ = zssz.GetSSZ((*BeaconBlockBody)(nil))
 
 type BeaconBlockBody struct {
 	RandaoReveal BLSSignature
@@ -27,6 +32,8 @@ type BeaconBlockBody struct {
 	VoluntaryExits    []VoluntaryExit
 	Transfers         []Transfer
 }
+
+var BeaconBlockSSZ = zssz.GetSSZ((*BeaconBlock)(nil))
 
 type BeaconBlock struct {
 	// Header

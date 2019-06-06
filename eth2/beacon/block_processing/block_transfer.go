@@ -63,7 +63,7 @@ func ProcessTransfer(state *BeaconState, transfer *Transfer) error {
 		return errors.New("transfer pubkey is invalid")
 	}
 	// Verify that the signature is valid
-	if !bls.BlsVerify(transfer.Pubkey, ssz.SigningRoot(transfer), transfer.Signature,
+	if !bls.BlsVerify(transfer.Pubkey, ssz.SigningRoot(transfer, TransferSSZ), transfer.Signature,
 		state.GetDomain(DOMAIN_TRANSFER, transfer.Slot.ToEpoch())) {
 		return errors.New("transfer signature is invalid")
 	}

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	. "github.com/protolambda/zrnt/eth2/beacon"
 	. "github.com/protolambda/zrnt/eth2/core"
-	"github.com/protolambda/zssz"
+	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
 func ProcessBlockAttestations(state *BeaconState, block *BeaconBlock) error {
@@ -39,11 +39,11 @@ func ProcessAttestation(state *BeaconState, attestation *Attestation) error {
 		(targetEpoch == state.Epoch() &&
 			sourceEpoch == state.CurrentJustifiedEpoch &&
 			sourceRoot == state.CurrentJustifiedRoot &&
-			sourceCrosslink == zssz.HashTreeRoot(state.CurrentCrosslinks[data.Shard], crosslinkSSZ)) ||
+			sourceCrosslink == ssz.HashTreeRoot(state.CurrentCrosslinks[data.Shard], CrosslinkSSZ)) ||
 		(targetEpoch == state.PreviousEpoch() &&
 			sourceEpoch == state.PreviousJustifiedEpoch &&
 			sourceRoot == state.PreviousJustifiedRoot) &&
-			sourceCrosslink == ssz.HashTreeRoot(state.PreviousCrosslinks[data.Shard])) {
+			sourceCrosslink == ssz.HashTreeRoot(state.PreviousCrosslinks[data.Shard], CrosslinkSSZ)) {
 		return errors.New("attestation does not match recent state justification")
 	}
 

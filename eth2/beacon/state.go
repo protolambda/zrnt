@@ -11,8 +11,11 @@ import (
 	"github.com/protolambda/zrnt/eth2/util/math"
 	"github.com/protolambda/zrnt/eth2/util/shuffling"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
+	"github.com/protolambda/zssz"
 	"sort"
 )
+
+var BeaconStateSSZ = zssz.GetSSZ((*BeaconState)(nil))
 
 type BeaconState struct {
 	// Misc
@@ -287,7 +290,7 @@ func (state *BeaconState) GetWinningCrosslinkAndAttestingIndices(shard Shard, ep
 		pendingAttestations = state.CurrentEpochAttestations
 	}
 
-	latestCrosslinkRoot := ssz.HashTreeRoot(state.CurrentCrosslinks[shard])
+	latestCrosslinkRoot := ssz.HashTreeRoot(&state.CurrentCrosslinks[shard], CrosslinkSSZ)
 
 	// keyed by raw crosslink object. Not too big, and simplifies reduction to unique crosslinks
 	crosslinkAttesters := make(map[Crosslink]ValidatorSet)
@@ -295,7 +298,7 @@ func (state *BeaconState) GetWinningCrosslinkAndAttestingIndices(shard Shard, ep
 		if att.Data.Shard == shard {
 			c := state.GetCrosslinkFromAttestationData(&att.Data)
 			if c.PreviousCrosslinkRoot == latestCrosslinkRoot ||
-				latestCrosslinkRoot == ssz.HashTreeRoot(c) {
+				latestCrosslinkRoot == ssz.HashTreeRoot(c, CrosslinkSSZ) {
 				participants, _ := state.GetAttestingIndices(&att.Data, &att.AggregationBitfield)
 				crosslinkAttesters[*c] = append(crosslinkAttesters[*c], participants...)
 			}
@@ -529,8 +532,8 @@ func (state *BeaconState) VerifyIndexedAttestation(indexedAttestation *IndexedAt
 			bls.BlsAggregatePubkeys(custodyBit0Pubkeys),
 			bls.BlsAggregatePubkeys(custodyBit1Pubkeys)},
 		[]Root{
-			ssz.HashTreeRoot(AttestationDataAndCustodyBit{Data: indexedAttestation.Data, CustodyBit: false}),
-			ssz.HashTreeRoot(AttestationDataAndCustodyBit{Data: indexedAttestation.Data, CustodyBit: true})},
+			ssz.HashTreeRoot(&AttestationDataAndCustodyBit{Data: indexedAttestation.Data, CustodyBit: false}, AttestationDataAndCustodyBitSSZ),
+			ssz.HashTreeRoot(&AttestationDataAndCustodyBit{Data: indexedAttestation.Data, CustodyBit: true}, AttestationDataAndCustodyBitSSZ)},
 		indexedAttestation.Signature,
 		state.GetDomain(DOMAIN_ATTESTATION, indexedAttestation.Data.TargetEpoch),
 	) {

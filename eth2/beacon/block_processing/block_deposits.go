@@ -37,7 +37,7 @@ func ProcessDeposit(state *BeaconState, dep *Deposit) error {
 
 	// Verify the Merkle branch
 	if !merkle.VerifyMerkleBranch(
-		ssz.HashTreeRoot(&dep.Data),
+		ssz.HashTreeRoot(&dep.Data, DepositDataSSZ),
 		dep.Proof[:],
 		DEPOSIT_CONTRACT_TREE_DEPTH,
 		uint64(dep.Index),
@@ -64,7 +64,7 @@ func ProcessDeposit(state *BeaconState, dep *Deposit) error {
 		// only unknown pubkeys need to be verified, others are already trusted
 		if !bls.BlsVerify(
 			dep.Data.Pubkey,
-			ssz.SigningRoot(dep.Data),
+			ssz.SigningRoot(dep.Data, DepositDataSSZ),
 			dep.Data.Signature,
 			state.GetDomain(DOMAIN_DEPOSIT, state.Epoch())) {
 			return errors.New("could not verify BLS signature")

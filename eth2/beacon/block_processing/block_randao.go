@@ -7,14 +7,17 @@ import (
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	. "github.com/protolambda/zrnt/eth2/util/hashing"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
+	"github.com/protolambda/zssz"
 )
+
+var RandaoEpochSSZ = zssz.GetSSZ((*Epoch)(nil))
 
 func ProcessBlockRandao(state *BeaconState, block *BeaconBlock) error {
 	propIndex := state.GetBeaconProposerIndex()
 	proposer := state.ValidatorRegistry[propIndex]
 	if !bls.BlsVerify(
 		proposer.Pubkey,
-		ssz.HashTreeRoot(state.Epoch(), BeaconStateSSZ),
+		ssz.HashTreeRoot(state.Epoch(), RandaoEpochSSZ),
 		block.Body.RandaoReveal,
 		state.GetDomain(DOMAIN_RANDAO, state.Epoch()),
 	) {

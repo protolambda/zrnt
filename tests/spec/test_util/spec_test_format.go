@@ -29,9 +29,8 @@ func toPascalCase(str string) string {
 }
 
 func decodeList(v []interface{}) []interface{} {
-	// return an explicit empty list for length 0 elements (may be nil slice)
 	if len(v) == 0 {
-		return make([]interface{}, 0)
+		return nil
 	}
 	items := len(v)
 	out := make([]interface{}, 0, items)

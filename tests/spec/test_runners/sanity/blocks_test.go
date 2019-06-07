@@ -28,5 +28,5 @@ func (testCase *BlocksTestCase) Run(t *testing.T) {
 
 func TestBlocks(t *testing.T) {
 	RunSuitesInPath("sanity/blocks/",
-		func(raw interface{}) interface{} { return new(BlocksTestCase) }, t)
+		func(raw interface{}) (interface{}, interface {}) { return new(BlocksTestCase), raw }, t)
 }

@@ -22,5 +22,5 @@ func (testCase *TransferTestCase) Run(t *testing.T) {
 
 func TestTransfer(t *testing.T) {
 	RunSuitesInPath("operations/transfer/",
-		func(raw interface{}) interface{} { return new(TransferTestCase) }, t)
+		func(raw interface{}) (interface{}, interface {}) { return new(TransferTestCase), raw }, t)
 }

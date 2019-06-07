@@ -34,39 +34,43 @@ func (testCase *SSZStaticTestCase) Run(t *testing.T) {
 			var buf bytes.Buffer
 			bufWriter := bufio.NewWriter(&buf)
 			if err := zssz.Encode(bufWriter, testCase.Value, testCase.SSZ); err != nil {
-				t.Fatal(err)
+				t.Error(err)
+				return
 			}
 			if err := bufWriter.Flush(); err != nil {
-				t.Fatal(err)
+				t.Error(err)
+				return
 			}
 			data := buf.Bytes()
 			if len(data) != len(testCase.Serialized) {
 				b := Bytes(data)
-				t.Fatalf("encoded data has different length: %d (spec) <-> %d (zrnt)\nspec: %s\nzrnt: %s", len(testCase.Serialized), len(data), testCase.Serialized.String(), b.String())
+				t.Errorf("encoded data has different length: %d (spec) <-> %d (zrnt)\nspec: %s\nzrnt: %s", len(testCase.Serialized), len(data), testCase.Serialized.String(), b.String())
+				return
 			}
 			for i := 0; i < len(data); i++ {
 				if data[i] != testCase.Serialized[i] {
 					b := Bytes(data)
-					t.Fatalf("byte i: %d differs: %d (spec) <-> %d (zrnt)\nspec: %s\nzrnt: %s", i, testCase.Serialized[i], data[i], testCase.Serialized.String(), b.String())
+					t.Errorf("byte i: %d differs: %d (spec) <-> %d (zrnt)\nspec: %s\nzrnt: %s", i, testCase.Serialized[i], data[i], testCase.Serialized.String(), b.String())
+					return
 				}
 			}
 		})
 		t.Run("decode", func(t *testing.T) {
-			var buf bytes.Buffer
-			buf.Write(testCase.Serialized)
-			bufReader := bufio.NewReader(&buf)
-			if err := zssz.Decode(bufReader, uint32(len(testCase.Serialized)), testCase.EmptyValue, testCase.SSZ); err != nil {
+			r := bytes.NewReader(testCase.Serialized)
+			if err := zssz.Decode(r, uint32(len(testCase.Serialized)), testCase.EmptyValue, testCase.SSZ); err != nil {
 				t.Fatal(err)
 			}
 			if diff, equal := messagediff.PrettyDiff(testCase.EmptyValue, testCase.Value); !equal {
-				t.Fatalf("decode result does not match expectation!\n%s", diff)
+				t.Errorf("decode result does not match expectation!\n%s", diff)
+				return
 			}
 		})
 		t.Run("hash_tree_root", func(t *testing.T) {
 			hfn := hashing.GetHashFn()
 			root := Root(zssz.HashTreeRoot(htr.HashFn(hfn), testCase.Value, testCase.SSZ))
 			if root != testCase.Root {
-				t.Fatalf("hash-tree-roots differ: %s (spec) <-> %s (zrnt)", testCase.Root.String(), root.String())
+				t.Errorf("hash-tree-roots differ: %s (spec) <-> %s (zrnt)", testCase.Root.String(), root.String())
+				return
 			}
 		})
 		if testCase.SigningRoot != (Root{}) {
@@ -76,7 +80,7 @@ func (testCase *SSZStaticTestCase) Run(t *testing.T) {
 					hfn := hashing.GetHashFn()
 					root := Root(zssz.SigningRoot(htr.HashFn(hfn), testCase.Value, signedSSZ))
 					if root != testCase.SigningRoot {
-						t.Fatalf("signing-roots differ: %s (spec) <-> %s (zrnt)", testCase.SigningRoot.String(), root.String())
+						t.Errorf("signing-roots differ: %s (spec) <-> %s (zrnt)", testCase.SigningRoot.String(), root.String())
 					}
 				})
 			}
@@ -91,11 +95,7 @@ type ObjData struct {
 	SSZ   types.SSZ
 }
 
-func (o *ObjData) LoadSSZ() {
-	o.SSZ = zssz.GetSSZ(o.Alloc())
-}
-
-var objs = map[string]ObjData{
+var objs = map[string]*ObjData{
 	"Fork":                         {Alloc: func() interface{} { return new(Fork) }},
 	"Crosslink":                    {Alloc: func() interface{} { return new(Crosslink) }},
 	"Eth1Data":                     {Alloc: func() interface{} { return new(Eth1Data) }},
@@ -120,7 +120,7 @@ var objs = map[string]ObjData{
 
 func init()  {
 	for _, o := range objs {
-		o.LoadSSZ()
+		o.SSZ = zssz.GetSSZ(o.Alloc())
 	}
 }
 

@@ -61,10 +61,11 @@ type TitledTestCase interface {
 	Title() string
 }
 
-type CaseAllocator func(raw interface{}) interface{}
+// input -> TestCase destination struct, re-mapped data (to be loaded into test case)
+type CaseLoader func(raw interface{}) (interface{}, interface{})
 
 type TestCasesHolder struct {
-	CaseAlloc CaseAllocator
+	CaseLoader CaseLoader
 	Cases []TestCase
 }
 
@@ -107,8 +108,11 @@ func (holder *TestCasesHolder) UnmarshalYAML(unmarshal func(interface{}) error) 
 
 	holder.Cases = make([]TestCase, 0, len(transformed))
 
-	for _, transformedCase := range transformed {
-		caseTyped := holder.CaseAlloc(transformedCase)
+	for i, transformedCase := range transformed {
+		caseTyped, remappedCase := holder.CaseLoader(transformedCase)
+		if caseTyped == nil {
+			return errors.New(fmt.Sprintf("cannot load test-case: %d", i))
+		}
 
 		var md Metadata
 		config := &DecoderConfig{
@@ -123,7 +127,7 @@ func (holder *TestCasesHolder) UnmarshalYAML(unmarshal func(interface{}) error) 
 			return err
 		}
 
-		if err := decoder.Decode(transformedCase); err != nil {
+		if err := decoder.Decode(remappedCase); err != nil {
 			return errors.New(fmt.Sprintf("cannot decode test-case: %v", err))
 		}
 		if len(md.Unused) > 0 {
@@ -138,9 +142,9 @@ func (holder *TestCasesHolder) UnmarshalYAML(unmarshal func(interface{}) error) 
 	return nil
 }
 
-func LoadSuite(path string, caseAlloc CaseAllocator) (*TestSuite, error) {
+func LoadSuite(path string, caseLoader CaseLoader) (*TestSuite, error) {
 	suite := new(TestSuite)
-	suite.TestCases.CaseAlloc = caseAlloc
+	suite.TestCases.CaseLoader = caseLoader
 	yamlBytes, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("cannot read test cases file %s %v", path, err))
@@ -173,7 +177,7 @@ func (suite *TestSuite) Run(t *testing.T) {
 	})
 }
 
-func RunSuitesInPath(path string, caseAlloc CaseAllocator, t *testing.T) {
+func RunSuitesInPath(path string, caseLoader CaseLoader, t *testing.T) {
 	suitePaths := make([]string, 0)
 
 	// get the current path, go to the root, and get the tests path
@@ -202,7 +206,7 @@ func RunSuitesInPath(path string, caseAlloc CaseAllocator, t *testing.T) {
 	}
 
 	for _, path := range suitePaths {
-		suite, err := LoadSuite(path, caseAlloc)
+		suite, err := LoadSuite(path, caseLoader)
 		if confErr, ok := err.(ConfigMismatchError); ok {
 			t.Logf("Config %s of test-suite does not match current config %s, skipping suite %s", confErr.Config, core.PRESET_NAME, path)
 			continue

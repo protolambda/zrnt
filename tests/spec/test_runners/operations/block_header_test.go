@@ -22,5 +22,5 @@ func (testCase *BlockHeaderTestCase) Run(t *testing.T) {
 
 func TestBlockHeader(t *testing.T) {
 	RunSuitesInPath("operations/block_header/",
-		func(raw interface{}) interface{} { return new(BlockHeaderTestCase) }, t)
+	func(raw interface{}) (interface{}, interface {}) { return new(BlockHeaderTestCase), raw }, t)
 }

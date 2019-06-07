@@ -22,5 +22,5 @@ func (testCase *AttestationTestCase) Run(t *testing.T) {
 
 func TestAttestation(t *testing.T) {
 	RunSuitesInPath("operations/attestation/",
-		func(raw interface{}) interface{} { return new(AttestationTestCase) }, t)
+		func(raw interface{}) (interface{}, interface {}) { return new(AttestationTestCase), raw }, t)
 }

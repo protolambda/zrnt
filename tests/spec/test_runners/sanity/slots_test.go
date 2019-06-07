@@ -26,5 +26,5 @@ func (testCase *SlotsTestCase) Run(t *testing.T) {
 
 func TestSlots(t *testing.T) {
 	RunSuitesInPath("sanity/slots/",
-		func(raw interface{}) interface{} { return new(SlotsTestCase) }, t)
+		func(raw interface{}) (interface{}, interface {}) { return new(SlotsTestCase), raw }, t)
 }

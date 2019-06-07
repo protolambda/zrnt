@@ -22,5 +22,5 @@ func (testCase *AttesterSlashingTestCase) Run(t *testing.T) {
 
 func TestAttesterSlashing(t *testing.T) {
 	RunSuitesInPath("operations/attester_slashing/",
-		func(raw interface{}) interface{} { return new(AttesterSlashingTestCase) }, t)
+	func(raw interface{}) (interface{}, interface {}) { return new(AttesterSlashingTestCase), raw }, t)
 }

@@ -22,5 +22,5 @@ func (testCase *ProposerSlashingTestCase) Run(t *testing.T) {
 
 func TestProposerSlashing(t *testing.T) {
 	RunSuitesInPath("operations/proposer_slashing/",
-		func(raw interface{}) interface{} { return new(ProposerSlashingTestCase) }, t)
+		func(raw interface{}) (interface{}, interface {}) { return new(ProposerSlashingTestCase), raw }, t)
 }

@@ -22,5 +22,5 @@ func (testCase *VoluntaryExitTestCase) Run(t *testing.T) {
 
 func TestVoluntaryExit(t *testing.T) {
 	RunSuitesInPath("operations/voluntary_exit/",
-		func(raw interface{}) interface{} { return new(VoluntaryExitTestCase) }, t)
+		func(raw interface{}) (interface{}, interface {}) { return new(VoluntaryExitTestCase), raw }, t)
 }

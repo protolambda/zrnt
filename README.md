@@ -1,4 +1,4 @@
-# ZRNT
+# ZRNT [![Go Report Card](https://goreportcard.com/badge/github.com/protolambda/zrnt)](https://goreportcard.com/report/github.com/protolambda/zrnt) [![CircleCI Build Status](https://circleci.com/gh/protolambda/zrnt.svg?style=shield)](https://circleci.com/gh/CircleCI-Public/circleci-demo-go) [![codecov](https://codecov.io/gh/protolambda/zrnt/branch/master/graph/badge.svg)](https://codecov.io/gh/protolambda/zrnt) [![MIT Licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 A minimal Go implementation of the ETH 2.0 spec, by @protolambda.
 

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"github.com/protolambda/messagediff"
 	. "github.com/protolambda/zrnt/eth2/beacon"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/hashing"
@@ -11,7 +12,6 @@ import (
 	"github.com/protolambda/zssz"
 	"github.com/protolambda/zssz/htr"
 	"github.com/protolambda/zssz/types"
-	"gopkg.in/d4l3k/messagediff.v1"
 	"testing"
 )
 
@@ -60,7 +60,7 @@ func (testCase *SSZStaticTestCase) Run(t *testing.T) {
 			if err := zssz.Decode(r, uint32(len(testCase.Serialized)), testCase.EmptyValue, testCase.SSZ); err != nil {
 				t.Fatal(err)
 			}
-			if diff, equal := messagediff.PrettyDiff(testCase.EmptyValue, testCase.Value); !equal {
+			if diff, equal := messagediff.PrettyDiff(testCase.EmptyValue, testCase.Value, messagediff.SliceWeakEmptyOption{}); !equal {
 				t.Errorf("decode result does not match expectation!\n%s", diff)
 				return
 			}

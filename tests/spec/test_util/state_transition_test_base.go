@@ -1,8 +1,8 @@
 package test_util
 
 import (
+	"github.com/protolambda/messagediff"
 	"github.com/protolambda/zrnt/eth2/beacon"
-	"gopkg.in/d4l3k/messagediff.v1"
 	"testing"
 )
 
@@ -55,7 +55,7 @@ func RunTest(t *testing.T, testCase StateTransitionTest) {
 	}
 
 	// in case hashes are incorrectly correct (e.g. new SSZ behavior), we still have diffs
-	if diff, equal := messagediff.PrettyDiff(base.Pre, base.Post); !equal {
+	if diff, equal := messagediff.PrettyDiff(base.Pre, base.Post, messagediff.SliceWeakEmptyOption{}); !equal {
 		t.Fatalf("end result does not match expectation!\n%s", diff)
 	}
 }

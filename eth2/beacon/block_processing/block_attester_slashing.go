@@ -38,11 +38,11 @@ func ProcessAttesterSlashing(state *BeaconState, attesterSlashing *AttesterSlash
 	slashedAny := false
 
 	// indices are trusted (valid range), they have been verified by verify_slashable_attestation(...)
-	indices1 := make(ValidatorSet, 0, len(sa1.CustodyBit0Indices) + len(sa1.CustodyBit1Indices))
+	indices1 := make(ValidatorSet, 0, len(sa1.CustodyBit0Indices)+len(sa1.CustodyBit1Indices))
 	indices1 = append(indices1, sa1.CustodyBit0Indices...)
 	indices1 = append(indices1, sa1.CustodyBit1Indices...)
 	sort.Sort(indices1)
-	indices2 := make(ValidatorSet, 0, len(sa2.CustodyBit0Indices) + len(sa2.CustodyBit1Indices))
+	indices2 := make(ValidatorSet, 0, len(sa2.CustodyBit0Indices)+len(sa2.CustodyBit1Indices))
 	indices2 = append(indices2, sa2.CustodyBit0Indices...)
 	indices2 = append(indices2, sa2.CustodyBit1Indices...)
 	sort.Sort(indices2)

@@ -10,7 +10,7 @@ import (
 type ValidatorStatusFlag uint64
 
 func (flags ValidatorStatusFlag) hasMarkers(markers ValidatorStatusFlag) bool {
-	return flags & markers == markers
+	return flags&markers == markers
 }
 
 const (
@@ -24,11 +24,11 @@ const (
 type ValidatorStatus struct {
 	// no delay (i.e. 0) by default
 	InclusionDelay Slot
-	Proposer ValidatorIndex
-	Flags ValidatorStatusFlag
+	Proposer       ValidatorIndex
+	Flags          ValidatorStatusFlag
 }
 
-func AttestationDeltas(state *BeaconState,) *Deltas {
+func AttestationDeltas(state *BeaconState) *Deltas {
 	validatorCount := ValidatorIndex(len(state.ValidatorRegistry))
 	deltas := NewDeltas(uint64(validatorCount))
 
@@ -99,7 +99,7 @@ func AttestationDeltas(state *BeaconState,) *Deltas {
 
 	for i := ValidatorIndex(0); i < validatorCount; i++ {
 		status := &data[i]
-		if status.Flags & eligibleAttester != 0 {
+		if status.Flags&eligibleAttester != 0 {
 
 			v := state.ValidatorRegistry[i]
 			baseReward := Gwei(0)
@@ -119,7 +119,6 @@ func AttestationDeltas(state *BeaconState,) *Deltas {
 				//Justification-non-participation R-penalty
 				deltas.Penalties[i] += baseReward
 			}
-
 
 			// Expected FFG target
 			if status.Flags.hasMarkers(epochBoundaryAttester | unslashed) {
@@ -142,7 +141,7 @@ func AttestationDeltas(state *BeaconState,) *Deltas {
 			// Take away max rewards if we're not finalizing
 			if finalityDelay > constant_presets.MIN_EPOCHS_TO_INACTIVITY_PENALTY {
 				deltas.Penalties[i] += baseReward * BASE_REWARDS_PER_EPOCH
-				if !status.Flags.hasMarkers(matchingHeadAttester | unslashed)  {
+				if !status.Flags.hasMarkers(matchingHeadAttester | unslashed) {
 					deltas.Penalties[i] += v.EffectiveBalance * Gwei(finalityDelay) / INACTIVITY_PENALTY_QUOTIENT
 				}
 			}

@@ -13,7 +13,7 @@ type StateTransitionTest interface {
 
 type StateTransitionTestBase struct {
 	Description string
-	BlsSetting int
+	BlsSetting  int
 	Pre         *beacon.BeaconState
 	Post        *beacon.BeaconState
 }
@@ -21,7 +21,7 @@ type StateTransitionTestBase struct {
 const (
 	BLS_OPTIONAL = 0
 	BLS_REQUIRED = 1
-	BLS_IGNORED = 2
+	BLS_IGNORED  = 2
 )
 
 func (base *StateTransitionTestBase) Title() string {

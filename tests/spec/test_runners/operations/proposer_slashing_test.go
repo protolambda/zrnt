@@ -8,7 +8,7 @@ import (
 )
 
 type ProposerSlashingTestCase struct {
-	ProposerSlashing     *beacon.ProposerSlashing
+	ProposerSlashing        *beacon.ProposerSlashing
 	StateTransitionTestBase `mapstructure:",squash"`
 }
 
@@ -22,5 +22,5 @@ func (testCase *ProposerSlashingTestCase) Run(t *testing.T) {
 
 func TestProposerSlashing(t *testing.T) {
 	RunSuitesInPath("operations/proposer_slashing/",
-		func(raw interface{}) (interface{}, interface {}) { return new(ProposerSlashingTestCase), raw }, t)
+		func(raw interface{}) (interface{}, interface{}) { return new(ProposerSlashingTestCase), raw }, t)
 }

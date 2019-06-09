@@ -8,7 +8,7 @@ import (
 )
 
 type BlockHeaderTestCase struct {
-	Block     *beacon.BeaconBlock
+	Block                   *beacon.BeaconBlock
 	StateTransitionTestBase `mapstructure:",squash"`
 }
 
@@ -22,5 +22,5 @@ func (testCase *BlockHeaderTestCase) Run(t *testing.T) {
 
 func TestBlockHeader(t *testing.T) {
 	RunSuitesInPath("operations/block_header/",
-	func(raw interface{}) (interface{}, interface {}) { return new(BlockHeaderTestCase), raw }, t)
+		func(raw interface{}) (interface{}, interface{}) { return new(BlockHeaderTestCase), raw }, t)
 }

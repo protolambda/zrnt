@@ -15,7 +15,7 @@ func StateTransitionTo(state *BeaconState, slot Slot) error {
 		return errors.New("cannot handle block on top of pre-state with equal or higher slot than block")
 	}
 	// happens at the start of every Slot
-	for ; state.Slot < slot; {
+	for state.Slot < slot {
 		CacheState(state)
 		// Per-epoch transition happens at the start of the first slot of every epoch.
 		if (state.Slot+1)%SLOTS_PER_EPOCH == 0 {

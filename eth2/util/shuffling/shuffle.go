@@ -27,7 +27,7 @@ Return `p(index)` in a pseudorandom permutation `p` of `0...list_size-1` with ``
 
 Eth 2.0 spec implementation here:
 	https://github.com/ethereum/eth2.0-specs/blob/dev/specs/core/0_beacon-chain.md#get_permuted_index
- */
+*/
 
 // Permute index, i.e. shuffle an individual list item without allocating a complete list.
 // Returns the index in the would-be shuffled list.
@@ -144,7 +144,7 @@ Main differences, implemented by @protolambda:
     - Replaced pseudocode/python workarounds with bit-logic.
     - User can provide their own hash-function (as long as it outputs a 32 len byte slice)
 
- */
+*/
 
 // Shuffles the list
 func ShuffleList(input []ValidatorIndex, seed Root) {

@@ -21,5 +21,5 @@ func (testCase *RegistryUpdatesTestCase) Run(t *testing.T) {
 
 func TestRegistryUpdates(t *testing.T) {
 	RunSuitesInPath("epoch_processing/registry_updates/",
-		func(raw interface{}) (interface{}, interface {}) { return new(RegistryUpdatesTestCase), raw }, t)
+		func(raw interface{}) (interface{}, interface{}) { return new(RegistryUpdatesTestCase), raw }, t)
 }

@@ -8,7 +8,7 @@ import (
 )
 
 type DepositTestCase struct {
-	Deposit     *beacon.Deposit
+	Deposit                 *beacon.Deposit
 	StateTransitionTestBase `mapstructure:",squash"`
 }
 
@@ -22,5 +22,5 @@ func (testCase *DepositTestCase) Run(t *testing.T) {
 
 func TestDeposit(t *testing.T) {
 	RunSuitesInPath("operations/deposit/",
-		func(raw interface{}) (interface{}, interface {}) { return new(DepositTestCase), raw }, t)
+		func(raw interface{}) (interface{}, interface{}) { return new(DepositTestCase), raw }, t)
 }

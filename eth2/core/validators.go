@@ -9,7 +9,6 @@ type ValidatorIndex uint64
 // An impossible high validator index used to mark special internal cases. (all 1s binary)
 const ValidatorIndexMarker = ValidatorIndex(^uint64(0))
 
-
 // Collection of validators, should always be sorted.
 type ValidatorSet []ValidatorIndex
 

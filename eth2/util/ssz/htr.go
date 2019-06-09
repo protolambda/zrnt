@@ -13,7 +13,6 @@ func HashTreeRoot(value interface{}, sszTyp types.SSZ) core.Root {
 	return zssz.HashTreeRoot(htr.HashFn(hFn), value, sszTyp)
 }
 
-
 func SigningRoot(value interface{}, sszTyp types.SSZ) core.Root {
 	hFn := hashing.GetHashFn()
 	signedSSZ, ok := sszTyp.(types.SignedSSZ)

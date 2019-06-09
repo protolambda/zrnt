@@ -16,7 +16,7 @@ func BenchmarkPermuteIndex(b *testing.B) {
 		// benchmark!
 		b.Run(fmt.Sprintf("PermuteIndex_%d", listSize), func(ib *testing.B) {
 			for i := uint64(0); i < uint64(ib.N); i++ {
-				PermuteIndex(core.ValidatorIndex(i % listSize), listSize, seed)
+				PermuteIndex(core.ValidatorIndex(i%listSize), listSize, seed)
 			}
 		})
 	}

@@ -15,12 +15,11 @@ import (
 	"testing"
 )
 
-
 type SSZStaticTestCase struct {
-	TypeName    string
+	TypeName string
 
-	SSZ         types.SSZ
-	EmptyValue  interface{}
+	SSZ        types.SSZ
+	EmptyValue interface{}
 
 	Value       interface{}
 	Serialized  Bytes
@@ -118,7 +117,7 @@ var objs = map[string]*ObjData{
 	"BeaconState":                  {Alloc: func() interface{} { return new(BeaconState) }},
 }
 
-func init()  {
+func init() {
 	for _, o := range objs {
 		o.SSZ = zssz.GetSSZ(o.Alloc())
 	}

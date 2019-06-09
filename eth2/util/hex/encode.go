@@ -7,7 +7,7 @@ import (
 func EncodeHexStr(v []byte) string {
 	out := make([]byte, hexenc.EncodedLen(len(v)))
 	hexenc.Encode(out, v)
-	return "0x"+string(out)
+	return "0x" + string(out)
 }
 
 // encodes with prefix

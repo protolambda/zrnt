@@ -8,7 +8,7 @@ import (
 )
 
 type AttesterSlashingTestCase struct {
-	AttesterSlashing     *beacon.AttesterSlashing
+	AttesterSlashing        *beacon.AttesterSlashing
 	StateTransitionTestBase `mapstructure:",squash"`
 }
 
@@ -22,5 +22,5 @@ func (testCase *AttesterSlashingTestCase) Run(t *testing.T) {
 
 func TestAttesterSlashing(t *testing.T) {
 	RunSuitesInPath("operations/attester_slashing/",
-	func(raw interface{}) (interface{}, interface {}) { return new(AttesterSlashingTestCase), raw }, t)
+		func(raw interface{}) (interface{}, interface{}) { return new(AttesterSlashingTestCase), raw }, t)
 }

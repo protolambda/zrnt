@@ -8,7 +8,7 @@ import (
 )
 
 type AttestationTestCase struct {
-	Attestation     *beacon.Attestation
+	Attestation             *beacon.Attestation
 	StateTransitionTestBase `mapstructure:",squash"`
 }
 
@@ -22,5 +22,5 @@ func (testCase *AttestationTestCase) Run(t *testing.T) {
 
 func TestAttestation(t *testing.T) {
 	RunSuitesInPath("operations/attestation/",
-		func(raw interface{}) (interface{}, interface {}) { return new(AttestationTestCase), raw }, t)
+		func(raw interface{}) (interface{}, interface{}) { return new(AttestationTestCase), raw }, t)
 }

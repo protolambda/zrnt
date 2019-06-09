@@ -21,5 +21,5 @@ func (testCase *CrosslinksTestCase) Run(t *testing.T) {
 
 func TestCrosslinks(t *testing.T) {
 	RunSuitesInPath("epoch_processing/crosslinks/",
-		func(raw interface{}) (interface{}, interface {}) { return new(CrosslinksTestCase), raw }, t)
+		func(raw interface{}) (interface{}, interface{}) { return new(CrosslinksTestCase), raw }, t)
 }

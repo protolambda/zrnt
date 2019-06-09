@@ -24,10 +24,10 @@ func ProcessAttestation(state *BeaconState, attestation *Attestation) error {
 
 	data := &attestation.Data
 	attestationSlot := state.GetAttestationSlot(data)
-	if !(state.Slot <= attestationSlot + SLOTS_PER_EPOCH) {
+	if !(state.Slot <= attestationSlot+SLOTS_PER_EPOCH) {
 		return errors.New("attestation slot is too old")
 	}
-	if !(attestationSlot + MIN_ATTESTATION_INCLUSION_DELAY <= state.Slot) {
+	if !(attestationSlot+MIN_ATTESTATION_INCLUSION_DELAY <= state.Slot) {
 		return errors.New("attestation is too new")
 	}
 	// Check target epoch, source epoch, and source crosslink
@@ -35,11 +35,10 @@ func ProcessAttestation(state *BeaconState, attestation *Attestation) error {
 	sourceEpoch := data.SourceEpoch
 	sourceRoot := data.SourceRoot
 	sourceCrosslink := data.PreviousCrosslinkRoot
-	if !(
-		(targetEpoch == state.Epoch() &&
-			sourceEpoch == state.CurrentJustifiedEpoch &&
-			sourceRoot == state.CurrentJustifiedRoot &&
-			sourceCrosslink == ssz.HashTreeRoot(state.CurrentCrosslinks[data.Shard], CrosslinkSSZ)) ||
+	if !((targetEpoch == state.Epoch() &&
+		sourceEpoch == state.CurrentJustifiedEpoch &&
+		sourceRoot == state.CurrentJustifiedRoot &&
+		sourceCrosslink == ssz.HashTreeRoot(state.CurrentCrosslinks[data.Shard], CrosslinkSSZ)) ||
 		(targetEpoch == state.PreviousEpoch() &&
 			sourceEpoch == state.PreviousJustifiedEpoch &&
 			sourceRoot == state.PreviousJustifiedRoot) &&

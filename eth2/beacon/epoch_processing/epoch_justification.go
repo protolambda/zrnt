@@ -7,7 +7,7 @@ import (
 
 func ProcessEpochJustification(state *BeaconState) {
 	currentEpoch := state.Epoch()
-	if currentEpoch <= GENESIS_EPOCH + 1 {
+	if currentEpoch <= GENESIS_EPOCH+1 {
 		return
 	}
 	previousEpoch := state.PreviousEpoch()

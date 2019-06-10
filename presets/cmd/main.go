@@ -135,5 +135,4 @@ package constant_presets
 const PRESET_NAME string = "{{.Name}}"
 {{ range .Entries }}
 {{.}}
-{{ end }}
-`
+{{ end }}`

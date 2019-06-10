@@ -67,8 +67,8 @@ func (state *BeaconState) Copy() *BeaconState {
 	// manually copy over slices, and efficiently (i.e. explicitly make, but don't initially zero out, just overwrite)
 	// validators
 	res.ValidatorRegistry = make([]*Validator, 0, len(state.ValidatorRegistry))
-	for i, v := range state.ValidatorRegistry {
-		res.ValidatorRegistry[i] = v.Copy()
+	for _, v := range state.ValidatorRegistry {
+		res.ValidatorRegistry = append(res.ValidatorRegistry, v.Copy())
 	}
 	res.Balances = append(make([]Gwei, 0, len(state.Balances)), state.Balances...)
 	// finality

@@ -6,7 +6,7 @@ import (
 	"github.com/protolambda/zrnt/eth2/util/math"
 )
 
-// Merkleize values (where len(values) is a power of two) and return the Merkle root.
+// MerkleRoot merkleizes values (where len(values) is a power of two) and returns the Merkle root.
 // Note that the leaves are not hashed.
 func MerkleRoot(values []Root) Root {
 	if len(values) == 0 {
@@ -24,7 +24,8 @@ func MerkleRoot(values []Root) Root {
 	return o[1]
 }
 
-// Verify that the given leaf is on the merkle branch.
+// VerifyMerkleBranch verifies that the given leaf is
+// on the merkle branch at the given depth, at the index at that depth.
 func VerifyMerkleBranch(leaf Root, branch []Root, depth uint64, index uint64, root Root) bool {
 	value := leaf
 	for i := uint64(0); i < depth; i++ {
@@ -37,6 +38,9 @@ func VerifyMerkleBranch(leaf Root, branch []Root, depth uint64, index uint64, ro
 	return value == root
 }
 
+// ConstructProof builds a merkle-branch of the given depth,
+// as a proof of inclusion of the leaf (or something in the path to the root, with a smaller depth)
+// at the given index (at that depth), for a list of leafs of a balanced binary hash-root-tree.
 func ConstructProof(values []Root, index uint64, depth uint8) (branch []Root) {
 	power2 := math.NextPowerOfTwo(uint64(len(values)))
 	branch = make([]Root, depth)

@@ -18,7 +18,7 @@ func ProcessBlockTransfers(state *BeaconState, block *BeaconBlock) error {
 	distinctionCheckSet := make(map[BLSSignature]struct{})
 	for i, v := range block.Body.Transfers {
 		if existing, ok := distinctionCheckSet[v.Signature]; ok {
-			return errors.New(fmt.Sprintf("transfer %d is the same as transfer %d, aborting", i, existing))
+			return fmt.Errorf("transfer %d is the same as transfer %d, aborting", i, existing)
 		}
 		distinctionCheckSet[v.Signature] = struct{}{}
 	}

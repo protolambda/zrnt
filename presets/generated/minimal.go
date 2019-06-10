@@ -4,7 +4,6 @@ package constant_presets
 
 const PRESET_NAME string = "minimal"
 
-
 const SHARD_COUNT = 8
 
 const TARGET_COMMITTEE_SIZE = 4

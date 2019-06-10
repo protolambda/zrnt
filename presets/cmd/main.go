@@ -14,7 +14,7 @@ import (
 )
 
 type ContstantsPreset struct {
-	Name string
+	Name    string
 	Entries []string
 }
 
@@ -24,7 +24,7 @@ func hexStrToLiteralStr(hex string) string {
 	formattedValue := fmt.Sprintf("[%d]byte{", byteCount)
 	for i := 0; i < len(hex); i += 2 {
 		formattedValue += "0x" + hex[i:i+2]
-		if i + 2 < len(hex) {
+		if i+2 < len(hex) {
 			formattedValue += ", "
 		}
 	}
@@ -48,7 +48,7 @@ func buildPreset(path string) (*ContstantsPreset, error) {
 	}
 
 	preset := ContstantsPreset{
-		Name: presetName,
+		Name:    presetName,
 		Entries: make([]string, 0, len(rawPreset)),
 	}
 	for _, item := range rawPreset {
@@ -61,7 +61,7 @@ func buildPreset(path string) (*ContstantsPreset, error) {
 				formattedValue = fmt.Sprintf("%d", intV)
 			} else if strings.HasPrefix(strV, "0x") {
 				strNibbles := strV[2:]
-				if len(strNibbles) % 2 != 0 {
+				if len(strNibbles)%2 != 0 {
 					return nil, errors.New(fmt.Sprintf("invalid constant, %s has value %s", k, strV))
 				}
 				formattedValue = hexStrToLiteralStr(strNibbles)
@@ -80,7 +80,7 @@ func buildPreset(path string) (*ContstantsPreset, error) {
 			}
 		}
 
-		preset.Entries = append(preset.Entries, formattedStart + formattedValue)
+		preset.Entries = append(preset.Entries, formattedStart+formattedValue)
 	}
 	return &preset, nil
 }
@@ -94,7 +94,7 @@ func main() {
 	templ := template.Must(template.New("constants_file").Parse(constantsFileTemplate))
 
 	if err := filepath.Walk(presetsDirPath,
-		func (path string, info os.FileInfo, err error) error {
+		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
@@ -111,7 +111,7 @@ func main() {
 				return err
 			}
 
-			outPath := filepath.Join(outputDirPath, preset.Name + ".go")
+			outPath := filepath.Join(outputDirPath, preset.Name+".go")
 			fmt.Printf("writing constants preset %s to %s\n", preset.Name, outPath)
 			f, err := os.Create(outPath)
 			if err != nil {
@@ -133,7 +133,6 @@ var constantsFileTemplate = `// +build preset_{{.Name}}
 package constant_presets
 
 const PRESET_NAME string = "{{.Name}}"
-
 {{ range .Entries }}
 {{.}}
 {{ end }}

@@ -4,7 +4,6 @@ package constant_presets
 
 const PRESET_NAME string = "mainnet"
 
-
 const SHARD_COUNT = 1024
 
 const TARGET_COMMITTEE_SIZE = 128

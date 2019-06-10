@@ -8,7 +8,7 @@ import (
 )
 
 type VoluntaryExitTestCase struct {
-	VoluntaryExit     *beacon.VoluntaryExit
+	VoluntaryExit           *beacon.VoluntaryExit
 	StateTransitionTestBase `mapstructure:",squash"`
 }
 
@@ -22,5 +22,5 @@ func (testCase *VoluntaryExitTestCase) Run(t *testing.T) {
 
 func TestVoluntaryExit(t *testing.T) {
 	RunSuitesInPath("operations/voluntary_exit/",
-		func(raw interface{}) (interface{}, interface {}) { return new(VoluntaryExitTestCase), raw }, t)
+		func(raw interface{}) (interface{}, interface{}) { return new(VoluntaryExitTestCase), raw }, t)
 }

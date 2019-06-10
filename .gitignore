@@ -16,4 +16,4 @@ debug_out
 
 tests/spec/eth2.0-spec-tests
 
-coverage.txt
+test_out

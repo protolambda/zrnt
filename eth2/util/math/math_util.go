@@ -29,7 +29,8 @@ func IsPowerOfTwo(n uint64) bool {
 	return (n > 0) && (n&(n-1) == 0)
 }
 
-// Returns the next power of two for the given number. (returns the number itself if it's a power of two)
+// NextPowerOfTwo returns the next power of two for the given number.
+// It returns the number itself if it's a power of two.
 func NextPowerOfTwo(in uint64) uint64 {
 	v := in
 	v--

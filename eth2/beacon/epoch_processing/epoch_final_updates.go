@@ -11,14 +11,14 @@ func ProcessEpochFinalUpdates(state *BeaconState) {
 	nextEpoch := currentEpoch + 1
 
 	// Reset eth1 data votes
-	if (state.Slot + 1) % SLOTS_PER_ETH1_VOTING_PERIOD == 0 {
+	if (state.Slot+1)%SLOTS_PER_ETH1_VOTING_PERIOD == 0 {
 		state.Eth1DataVotes = make([]Eth1Data, 0)
 	}
 	// Update effective balances with hysteresis
 	for i, v := range state.ValidatorRegistry {
 		balance := state.Balances[i]
 		if balance < v.EffectiveBalance ||
-			v.EffectiveBalance + 3 * HALF_INCREMENT < balance {
+			v.EffectiveBalance+3*HALF_INCREMENT < balance {
 			v.EffectiveBalance = balance - (balance % EFFECTIVE_BALANCE_INCREMENT)
 			if MAX_EFFECTIVE_BALANCE < v.EffectiveBalance {
 				v.EffectiveBalance = MAX_EFFECTIVE_BALANCE
@@ -31,7 +31,7 @@ func ProcessEpochFinalUpdates(state *BeaconState) {
 	// Set active index root
 	indexRootPosition := (nextEpoch + ACTIVATION_EXIT_DELAY) % LATEST_ACTIVE_INDEX_ROOTS_LENGTH
 	state.LatestActiveIndexRoots[indexRootPosition] =
-		ssz.HashTreeRoot(state.ValidatorRegistry.GetActiveValidatorIndices(nextEpoch + ACTIVATION_EXIT_DELAY), ValidatorIndexListSSZ)
+		ssz.HashTreeRoot(state.ValidatorRegistry.GetActiveValidatorIndices(nextEpoch+ACTIVATION_EXIT_DELAY), ValidatorIndexListSSZ)
 	state.LatestSlashedBalances[nextEpoch%LATEST_SLASHED_EXIT_LENGTH] =
 		state.LatestSlashedBalances[currentEpoch%LATEST_SLASHED_EXIT_LENGTH]
 

@@ -32,7 +32,7 @@ func ProcessBlockDeposits(state *BeaconState, block *BeaconBlock) error {
 func ProcessDeposit(state *BeaconState, dep *Deposit) error {
 	// Deposits must be processed in order
 	if dep.Index != state.DepositIndex {
-		return errors.New(fmt.Sprintf("deposit has index %d that does not match with state index %d", dep.Index, state.DepositIndex))
+		return fmt.Errorf("deposit has index %d that does not match with state index %d", dep.Index, state.DepositIndex)
 	}
 
 	// Verify the Merkle branch
@@ -42,7 +42,7 @@ func ProcessDeposit(state *BeaconState, dep *Deposit) error {
 		DEPOSIT_CONTRACT_TREE_DEPTH,
 		uint64(dep.Index),
 		state.LatestEth1Data.DepositRoot) {
-		return errors.New(fmt.Sprintf("deposit %d has merkle proof that failed to be verified", dep.Index))
+		return fmt.Errorf("deposit %d has merkle proof that failed to be verified", dep.Index)
 	}
 
 	// Increment the next deposit index we are expecting. Note that this

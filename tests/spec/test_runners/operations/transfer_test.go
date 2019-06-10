@@ -8,7 +8,7 @@ import (
 )
 
 type TransferTestCase struct {
-	Transfer     *beacon.Transfer
+	Transfer                *beacon.Transfer
 	StateTransitionTestBase `mapstructure:",squash"`
 }
 
@@ -22,5 +22,5 @@ func (testCase *TransferTestCase) Run(t *testing.T) {
 
 func TestTransfer(t *testing.T) {
 	RunSuitesInPath("operations/transfer/",
-		func(raw interface{}) (interface{}, interface {}) { return new(TransferTestCase), raw }, t)
+		func(raw interface{}) (interface{}, interface{}) { return new(TransferTestCase), raw }, t)
 }

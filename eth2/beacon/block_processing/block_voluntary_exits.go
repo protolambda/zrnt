@@ -39,14 +39,14 @@ func ProcessVoluntaryExit(state *BeaconState, exit *VoluntaryExit) error {
 		return errors.New("invalid exit epoch")
 	}
 	// Verify the validator has been active long enough
-	if currentEpoch < validator.ActivationEpoch + PERSISTENT_COMMITTEE_PERIOD  {
+	if currentEpoch < validator.ActivationEpoch+PERSISTENT_COMMITTEE_PERIOD {
 		return errors.New("exit is too soon")
 	}
 	if !bls.BlsVerify(
-				validator.Pubkey,
-				ssz.SigningRoot(exit, VoluntaryExitSSZ),
-				exit.Signature,
-				state.GetDomain(DOMAIN_VOLUNTARY_EXIT, exit.Epoch)) {
+		validator.Pubkey,
+		ssz.SigningRoot(exit, VoluntaryExitSSZ),
+		exit.Signature,
+		state.GetDomain(DOMAIN_VOLUNTARY_EXIT, exit.Epoch)) {
 		return errors.New("voluntary exit signature could not be verified")
 	}
 	// Initiate exit

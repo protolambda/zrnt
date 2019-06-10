@@ -1,0 +1,60 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: protolambda/zrnt-ci-primary:1.0.0
+    working_directory: /zrnt-repo
+
+    parallelism: 2
+
+    environment:
+      TEST_RESULTS: /tmp/test-results
+
+    steps:
+      - checkout
+      - run: mkdir -p $TEST_RESULTS
+
+      - restore_cache:
+          keys:
+            - spec-tests-v0_6_3
+
+      - run:
+          name: Update spec tests cache
+          command: |
+            cd tests/spec
+            if ! test -d eth2.0-spec-tests; then git clone https://github.com/ethereum/eth2.0-spec-tests.git; fi
+            cd eth2.0-spec-tests
+            git lfs pull
+
+      - run:
+          name: Run unit tests and generate coverage reports
+          command: TEST_OUT_DIR=$TEST_RESULTS make test
+
+      - save_cache:
+          key: spec-tests-v0_6_3
+          paths:
+            - tests/spec/eth2.0-spec-tests
+
+      - save_cache:
+          key: go-mod-v1-{{ checksum "go.sum" }}
+          paths:
+            - "/go/pkg/mod"
+
+      - run:
+          name: Upload coverage report to codecov
+          command: bash <(curl -s https://codecov.io/bash) -f $TEST_RESULTS/coverage.out
+
+      # TODO implement demo-run (e.g. 1000 simulated blocks from genesis)
+
+      - store_artifacts: # upload test summary for display in Artifacts
+          path: /tmp/test-results
+          destination: raw-test-output
+
+      - store_test_results: # upload test results for display in Test Summary
+          path: /tmp/test-results
+
+workflows:
+  version: 2
+  build-workflow:
+    jobs:
+      - build

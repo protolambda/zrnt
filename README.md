@@ -1,4 +1,4 @@
-# ZRNT
+# ZRNT [![Go Report Card](https://goreportcard.com/badge/github.com/protolambda/zrnt)](https://goreportcard.com/report/github.com/protolambda/zrnt) [![CircleCI Build Status](https://circleci.com/gh/protolambda/zrnt.svg?style=shield)](https://circleci.com/gh/CircleCI-Public/circleci-demo-go) [![codecov](https://codecov.io/gh/protolambda/zrnt/branch/master/graph/badge.svg)](https://codecov.io/gh/protolambda/zrnt) [![MIT Licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 A minimal Go implementation of the ETH 2.0 spec, by @protolambda.
 
@@ -56,7 +56,11 @@ Planned package, new type of chain introduced in Phase-1.
 
 ### Util
 
-SSZ, BLS, hashing, merkleization, and other utils can be found in `eth2/util`
+Hashing, merkleization, and other utils can be found in `eth2/util`.
+
+BLS is stubbed, integration of a BLS library is a work in progress.
+
+SSZ is provided by ZRNT-SSZ (ZSSZ), optimized for speed: [`github.com/protolambda/zssz`](https://github.com/protolambda/zssz)
 
 ## Getting started
 
@@ -82,14 +86,34 @@ etc.
 
 ### Testing
 
+To run all tests and generate test and coverage reports: `make test`
+
 The specs are tested using test-vectors shared between Eth 2.0 clients,
  found here: [`ethereum/eth2.0-spec-tests`](https://github.com/ethereum/eth2.0-spec-tests).
 Instructions on the usage of these test-vectors with ZRNT can be found in the [testing readme](./tests/spec/README.md).
 
+#### Coverage reports
+
+After running `make test`, run `make open-coverage` to open a Go-test coverage report in your browser.
+
 ## Future plans
 
-Use the repo for conformance test generation, fuzzing,
- and implement a minimal (but fast) Eth 2.0 client around it.
+### Fuzzing
+
+There is a fuzzing effort ongoing, based on ZRNT and ZSSZ as base packages for state transitions and encoding.
+
+The fuzzing repo can be found here: https://github.com/guidovranken/eth2.0-fuzzing/.
+If you are interested in helping, please open an issue, or contact us through Gitter/Twitter.
+
+### Conformance testing
+
+Passing all spec-tests is primary goal to build and direct the Eth 2.0 fuzzing effort.
+
+### Minimal client
+
+Besides testing, a Go codebase with full conformance to the eth2.0 spec is also a great play-ground
+ to implement a minimal client around, and work on phase-1. If anyone is interested in helping out, contact on Gitter/Twitter.
+
 
 ## Contributing
 
@@ -98,7 +122,8 @@ If they are not small changes, please make a GH issue and/or contact me first.
 
 ## Funding
 
-This project is based on [my work for a bountied challenge by Justin Drake](https://github.com/protolambda/beacon-challenge) to write the ETH 2.0 spec in 1024 lines. A ridiculous challenge, but it was fun, and proved to be useful: 
+This project is based on [my work for a bountied challenge by Justin Drake](https://github.com/protolambda/beacon-challenge)
+ to write the ETH 2.0 spec in 1024 lines. A ridiculous challenge, but it was fun, and proved to be useful: 
  every line of code in the spec got extra attention, and it was a fun way to get started on an executable spec.
 A month later I (@protolambda) started working for the EF,
  and maintain ZRNT to keep up with changes, test the spec, and provide a performant core component for other ETH 2.0 Go projects.

@@ -46,9 +46,9 @@ type AttestationData struct {
 	TargetRoot  Root
 
 	// Crosslink vote
-	Shard             Shard
+	Shard                 Shard
 	PreviousCrosslinkRoot Root
-	CrosslinkDataRoot Root
+	CrosslinkDataRoot     Root
 }
 
 var AttestationDataAndCustodyBitSSZ = zssz.GetSSZ((*AttestationDataAndCustodyBit)(nil))

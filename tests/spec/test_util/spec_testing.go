@@ -49,9 +49,8 @@ func (confErr ConfigMismatchError) Error() string {
 }
 
 type TestSuiteLoader struct {
-	Config  string `yaml:"config"`
+	Config string `yaml:"config"`
 }
-
 
 type TestCase interface {
 	Run(t *testing.T)
@@ -66,7 +65,7 @@ type CaseLoader func(raw interface{}) (interface{}, interface{})
 
 type TestCasesHolder struct {
 	CaseLoader CaseLoader
-	Cases []TestCase
+	Cases      []TestCase
 }
 
 func decodeHook(s reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
@@ -116,8 +115,8 @@ func (holder *TestCasesHolder) UnmarshalYAML(unmarshal func(interface{}) error) 
 
 		var md Metadata
 		config := &DecoderConfig{
-			DecodeHook: decodeHook,
-			Metadata: &md,
+			DecodeHook:       decodeHook,
+			Metadata:         &md,
 			WeaklyTypedInput: false,
 			Result:           caseTyped,
 		}

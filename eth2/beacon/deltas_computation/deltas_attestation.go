@@ -10,7 +10,7 @@ import (
 type ValidatorStatusFlag uint64
 
 func (flags ValidatorStatusFlag) hasMarkers(markers ValidatorStatusFlag) bool {
-	return flags & markers == markers
+	return flags&markers == markers
 }
 
 const (
@@ -24,53 +24,63 @@ const (
 type ValidatorStatus struct {
 	// no delay (i.e. 0) by default
 	InclusionDelay Slot
-	Proposer ValidatorIndex
-	Flags ValidatorStatusFlag
+	Proposer       ValidatorIndex
+	Flags          ValidatorStatusFlag
 }
 
-func AttestationDeltas(state *BeaconState,) *Deltas {
-	validatorCount := ValidatorIndex(len(state.ValidatorRegistry))
-	deltas := NewDeltas(uint64(validatorCount))
+type ValidatorStatusList []ValidatorStatus
 
-	currentEpoch := state.Epoch()
-	previousEpoch := state.PreviousEpoch()
+func (vsl ValidatorStatusList) loadStatuses(state *BeaconState) {
+	previousBoundaryBlockRoot, _ := state.GetBlockRootAtSlot(state.PreviousEpoch().GetStartSlot())
 
-	data := make([]ValidatorStatus, validatorCount, validatorCount)
+	for _, att := range state.PreviousEpochAttestations {
+		attBlockRoot, _ := state.GetBlockRootAtSlot(state.GetAttestationSlot(&att.Data))
+		participants, _ := state.GetAttestingIndicesUnsorted(&att.Data, &att.AggregationBitfield)
+		for _, p := range participants {
 
-	{
-		previousBoundaryBlockRoot, _ := state.GetBlockRootAtSlot(state.PreviousEpoch().GetStartSlot())
+			status := &vsl[p]
 
-		for _, att := range state.PreviousEpochAttestations {
-			attBlockRoot, _ := state.GetBlockRootAtSlot(state.GetAttestationSlot(&att.Data))
-			participants, _ := state.GetAttestingIndicesUnsorted(&att.Data, &att.AggregationBitfield)
-			for _, p := range participants {
+			// If the attestation is the earliest, i.e. has the biggest delay
+			if status.InclusionDelay < att.InclusionDelay {
+				status.InclusionDelay = att.InclusionDelay
+				status.Proposer = att.ProposerIndex
+			}
 
-				status := &data[p]
+			if !state.ValidatorRegistry[p].Slashed {
+				status.Flags |= unslashed
+			}
 
-				// If the attestation is the earliest, i.e. has the biggest delay
-				if status.InclusionDelay < att.InclusionDelay {
-					status.InclusionDelay = att.InclusionDelay
-					status.Proposer = att.ProposerIndex
-				}
+			// remember the participant as one of the good validators
+			status.Flags |= prevEpochAttester
 
-				if !state.ValidatorRegistry[p].Slashed {
-					status.Flags |= unslashed
-				}
-
-				// remember the participant as one of the good validators
-				status.Flags |= prevEpochAttester
-
-				// If the attestation is for the boundary:
-				if att.Data.TargetRoot == previousBoundaryBlockRoot {
-					status.Flags |= epochBoundaryAttester
-				}
-				// If the attestation is for the head (att the time of attestation):
-				if att.Data.BeaconBlockRoot == attBlockRoot {
-					status.Flags |= matchingHeadAttester
-				}
+			// If the attestation is for the boundary:
+			if att.Data.TargetRoot == previousBoundaryBlockRoot {
+				status.Flags |= epochBoundaryAttester
+			}
+			// If the attestation is for the head (att the time of attestation):
+			if att.Data.BeaconBlockRoot == attBlockRoot {
+				status.Flags |= matchingHeadAttester
 			}
 		}
 	}
+	currentEpoch := state.Epoch()
+	for i := 0; i < len(vsl); i++ {
+		v := state.ValidatorRegistry[i]
+		status := &vsl[i]
+		if v.IsActive(currentEpoch) || (v.Slashed && currentEpoch < v.WithdrawableEpoch) {
+			status.Flags |= eligibleAttester
+		}
+	}
+}
+
+func AttestationDeltas(state *BeaconState) *Deltas {
+	validatorCount := ValidatorIndex(len(state.ValidatorRegistry))
+	deltas := NewDeltas(uint64(validatorCount))
+
+	previousEpoch := state.PreviousEpoch()
+
+	data := make(ValidatorStatusList, validatorCount, validatorCount)
+	data.loadStatuses(state)
 
 	var totalBalance, totalAttestingBalance, epochBoundaryBalance, matchingHeadBalance Gwei
 	for i := ValidatorIndex(0); i < validatorCount; i++ {
@@ -87,9 +97,6 @@ func AttestationDeltas(state *BeaconState,) *Deltas {
 		if status.Flags.hasMarkers(matchingHeadAttester | unslashed) {
 			matchingHeadBalance += b
 		}
-		if v.IsActive(currentEpoch) || (v.Slashed && currentEpoch < v.WithdrawableEpoch) {
-			status.Flags |= eligibleAttester
-		}
 	}
 	previousTotalBalance := state.GetTotalBalanceOf(
 		state.ValidatorRegistry.GetActiveValidatorIndices(state.PreviousEpoch()))
@@ -99,7 +106,7 @@ func AttestationDeltas(state *BeaconState,) *Deltas {
 
 	for i := ValidatorIndex(0); i < validatorCount; i++ {
 		status := &data[i]
-		if status.Flags & eligibleAttester != 0 {
+		if status.Flags&eligibleAttester != 0 {
 
 			v := state.ValidatorRegistry[i]
 			baseReward := Gwei(0)
@@ -119,7 +126,6 @@ func AttestationDeltas(state *BeaconState,) *Deltas {
 				//Justification-non-participation R-penalty
 				deltas.Penalties[i] += baseReward
 			}
-
 
 			// Expected FFG target
 			if status.Flags.hasMarkers(epochBoundaryAttester | unslashed) {
@@ -142,7 +148,7 @@ func AttestationDeltas(state *BeaconState,) *Deltas {
 			// Take away max rewards if we're not finalizing
 			if finalityDelay > constant_presets.MIN_EPOCHS_TO_INACTIVITY_PENALTY {
 				deltas.Penalties[i] += baseReward * BASE_REWARDS_PER_EPOCH
-				if !status.Flags.hasMarkers(matchingHeadAttester | unslashed)  {
+				if !status.Flags.hasMarkers(matchingHeadAttester | unslashed) {
 					deltas.Penalties[i] += v.EffectiveBalance * Gwei(finalityDelay) / INACTIVITY_PENALTY_QUOTIENT
 				}
 			}

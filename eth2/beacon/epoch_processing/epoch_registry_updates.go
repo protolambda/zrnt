@@ -32,11 +32,11 @@ func ProcessEpochRegistryUpdates(state *BeaconState) {
 			activationQueue[j].ActivationEligibilityEpoch
 	})
 	// Dequeued validators for activation up to churn limit (without resetting activation epoch)
-	churnLimit := state.GetChurnLimit()
-	if queueLen := uint64(len(activationQueue)); churnLimit > queueLen {
-		churnLimit = queueLen
+	queueLen := uint64(len(activationQueue))
+	if churnLimit := state.GetChurnLimit(); churnLimit < queueLen {
+		queueLen = churnLimit
 	}
-	for _, v := range activationQueue[:] {
+	for _, v := range activationQueue[:queueLen] {
 		if v.ActivationEpoch == FAR_FUTURE_EPOCH {
 			v.ActivationEpoch = currentEpoch.GetDelayedActivationExitEpoch()
 		}

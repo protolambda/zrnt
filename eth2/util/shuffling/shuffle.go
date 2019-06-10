@@ -27,15 +27,16 @@ Return `p(index)` in a pseudorandom permutation `p` of `0...list_size-1` with ``
 
 Eth 2.0 spec implementation here:
 	https://github.com/ethereum/eth2.0-specs/blob/dev/specs/core/0_beacon-chain.md#get_permuted_index
- */
+*/
 
-// Permute index, i.e. shuffle an individual list item without allocating a complete list.
+// PermuteIndex shuffles an individual list item without allocating a complete list.
 // Returns the index in the would-be shuffled list.
 func PermuteIndex(index ValidatorIndex, listSize uint64, seed Root) ValidatorIndex {
 	return innerPermuteIndex(Hash, index, listSize, seed, true)
 }
 
-// Inverse of PermuteIndex, returns original index when given the same shuffling context parameters and permuted index.
+// UnpermuteIndex does the inverse of PermuteIndex,
+// it returns the original index when given the same shuffling context parameters and permuted index.
 func UnpermuteIndex(index ValidatorIndex, listSize uint64, seed Root) ValidatorIndex {
 	return innerPermuteIndex(Hash, index, listSize, seed, false)
 }
@@ -144,15 +145,15 @@ Main differences, implemented by @protolambda:
     - Replaced pseudocode/python workarounds with bit-logic.
     - User can provide their own hash-function (as long as it outputs a 32 len byte slice)
 
- */
+*/
 
-// Shuffles the list
+// ShuffleList shuffles a list, using the given seed for randomness.
 func ShuffleList(input []ValidatorIndex, seed Root) {
 	hashFn := GetHashFn()
 	innerShuffleList(hashFn, input, seed, true)
 }
 
-// Un-shuffles the list
+// UnshuffleList undoes a list shuffling using the seed of the shuffling.
 func UnshuffleList(input []ValidatorIndex, seed Root) {
 	hashFn := GetHashFn()
 	innerShuffleList(hashFn, input, seed, false)

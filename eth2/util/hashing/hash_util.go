@@ -16,7 +16,7 @@ type HashFn func(input []byte) [32]byte
 // Get a hash-function that re-uses the hashing working-variables
 func GetHashFn() HashFn {
 	hash := sha256.New()
-	hashFn := func(in []byte)  (out [32]byte) {
+	hashFn := func(in []byte) (out [32]byte) {
 		hash.Reset()
 		hash.Write(in)
 		copy(out[:], hash.Sum(nil))

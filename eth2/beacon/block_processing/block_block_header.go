@@ -19,9 +19,9 @@ func ProcessBlockHeader(state *BeaconState, block *BeaconBlock) error {
 	}
 	// Save current block as the new latest block
 	state.LatestBlockHeader = BeaconBlockHeader{
-		Slot: block.Slot,
+		Slot:              block.Slot,
 		PreviousBlockRoot: block.PreviousBlockRoot,
-		BlockBodyRoot: ssz.HashTreeRoot(block.Body, BeaconBlockBodySSZ),
+		BlockBodyRoot:     ssz.HashTreeRoot(block.Body, BeaconBlockBodySSZ),
 	}
 
 	proposerIndex := state.GetBeaconProposerIndex()

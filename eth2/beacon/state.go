@@ -354,7 +354,7 @@ func (state *BeaconState) GetAttestingIndicesUnsorted(attestationData *Attestati
 	crosslinkCommittee := state.GetCrosslinkCommittee(attestationData.TargetEpoch, attestationData.Shard)
 
 	if len(crosslinkCommittee) == 0 {
-		return nil, errors.New(fmt.Sprintf("cannot find crosslink committee at target epoch %d for shard %d", attestationData.TargetEpoch, attestationData.Shard))
+		return nil, fmt.Errorf("cannot find crosslink committee at target epoch %d for shard %d", attestationData.TargetEpoch, attestationData.Shard)
 	}
 	if !bitfield.VerifySize(uint64(len(crosslinkCommittee))) {
 		return nil, errors.New("bitfield has wrong size for corresponding crosslink committee")
@@ -495,7 +495,7 @@ func (state *BeaconState) VerifyIndexedAttestation(indexedAttestation *IndexedAt
 
 	totalAttestingIndices := len(custodyBit1Indices) + len(custodyBit0Indices)
 	if !(1 <= totalAttestingIndices && totalAttestingIndices <= MAX_INDICES_PER_ATTESTATION) {
-		return errors.New(fmt.Sprintf("invalid indices count in indexed attestation: %d", totalAttestingIndices))
+		return fmt.Errorf("invalid indices count in indexed attestation: %d", totalAttestingIndices)
 	}
 
 	// The indices must be sorted
@@ -538,9 +538,9 @@ func (state *BeaconState) VerifyIndexedAttestation(indexedAttestation *IndexedAt
 		state.GetDomain(DOMAIN_ATTESTATION, indexedAttestation.Data.TargetEpoch),
 	) {
 		return nil
-	} else {
-		return errors.New("could not verify BLS signature for indexed attestation")
 	}
+
+	return errors.New("could not verify BLS signature for indexed attestation")
 }
 
 // Return the signature domain (fork version concatenated with domain type) of a message.

@@ -5,6 +5,11 @@ import (
 	"strings"
 )
 
+// HasFlag checks if the given struct-field is tagged
+// with the given flag (comma separated), in the given tag namespace.
+// Example:
+// 	MyField: bool `foobar:"abc,def"`
+// Namespace: "foobar", flags: "abc", "def"
 func HasFlag(vt *reflect.StructField, namespace string, flag string) bool {
 	if flag == "" {
 		return false

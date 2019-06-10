@@ -2,8 +2,8 @@ version: 2
 jobs:
   build:
     docker:
-      # CircleCI Go images available at: https://hub.docker.com/r/circleci/golang/
-      - image: circleci/golang:1.12
+      - image: protolambda/zrnt-ci-primary:1.0.0
+    working_directory: /zrnt-repo
 
     parallelism: 2
 

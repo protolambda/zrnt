@@ -2,6 +2,7 @@ package block_processing
 
 import (
 	"errors"
+	"fmt"
 	. "github.com/protolambda/zrnt/eth2/beacon"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/bls"
@@ -14,8 +15,8 @@ func ProcessBlockHeader(state *BeaconState, block *BeaconBlock) error {
 		return errors.New("slot of block does not match slot of state")
 	}
 	// Verify that the parent matches
-	if block.PreviousBlockRoot != ssz.SigningRoot(state.LatestBlockHeader, BeaconBlockHeaderSSZ) {
-		return errors.New("previous block root does not match root from latest state block header")
+	if signingRoot := ssz.SigningRoot(state.LatestBlockHeader, BeaconBlockHeaderSSZ); block.PreviousBlockRoot != signingRoot {
+		return fmt.Errorf("previous block root %x does not match root %x from latest state block header", block.PreviousBlockRoot, signingRoot)
 	}
 	// Save current block as the new latest block
 	state.LatestBlockHeader = BeaconBlockHeader{

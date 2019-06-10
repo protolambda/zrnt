@@ -45,6 +45,9 @@ func main() {
 		fmt.Println("processing preset", presetName)
 
 		yamlBytes, err := ioutil.ReadFile(path)
+		if err != nil {
+			return err
+		}
 		rawPreset := make(map[string]interface{})
 		if err := yaml.Unmarshal(yamlBytes, &rawPreset); err != nil {
 			return err

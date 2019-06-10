@@ -14,6 +14,10 @@ jobs:
       - checkout
       - run: mkdir -p $TEST_RESULTS
 
+      - run:
+          name: Check formatting
+          command: "! go fmt ./... 2>&1 | read"
+
       - restore_cache:
           keys:
             - spec-tests-v0_6_3

@@ -42,7 +42,7 @@ jobs:
 
       - run:
           name: Upload coverage report to codecov
-          command: bash <(curl -s https://codecov.io/bash) -f $TEST_RESULTS/coverage.out
+          command: curl -s https://codecov.io/bash | bash -s -- -f $TEST_RESULTS/coverage.out
 
       # TODO implement demo-run (e.g. 1000 simulated blocks from genesis)
 

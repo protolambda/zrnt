@@ -457,6 +457,11 @@ func (state *BeaconState) DecreaseBalance(index ValidatorIndex, delta Gwei) {
 
 // Convert attestation to (almost) indexed-verifiable form
 func (state *BeaconState) ConvertToIndexed(attestation *Attestation) (*IndexedAttestation, error) {
+	if a, b := len(attestation.AggregationBitfield), len(attestation.CustodyBitfield); a != b {
+		return nil, fmt.Errorf("aggregation bitfield does not match custody bitfield size: %d <> %d", a, b)
+	} else if a > (MAX_INDICES_PER_ATTESTATION / 8) {
+		return nil, fmt.Errorf("aggregation bitfield is too large: %d", a)
+	}
 	participants, err := state.GetAttestingIndices(&attestation.Data, &attestation.AggregationBitfield)
 	if err != nil {
 		return nil, errors.New("participants could not be derived from aggregation_bitfield")
@@ -465,6 +470,11 @@ func (state *BeaconState) ConvertToIndexed(attestation *Attestation) (*IndexedAt
 	if err != nil {
 		return nil, errors.New("participants could not be derived from custody_bitfield")
 	}
+	if len(custodyBit1Indices) > len(participants) {
+		return nil, fmt.Errorf("attestation has more custody bits set (%d) than participants allowed (%d)",
+			len(custodyBit1Indices), len(participants))
+	}
+	// everyone who is a participant, and has not a custody bit set to 1, is part of the 0 custody bit indices.
 	custodyBit0Indices := make([]ValidatorIndex, 0, len(participants)-len(custodyBit1Indices))
 	participants.ZigZagJoin(custodyBit1Indices, nil, func(i ValidatorIndex) {
 		custodyBit0Indices = append(custodyBit0Indices, i)

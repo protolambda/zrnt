@@ -1,4 +1,6 @@
 version: 2
+orbs:
+  codecov: codecov/codecov@1.0.5
 jobs:
   build:
     docker:
@@ -46,9 +48,8 @@ jobs:
           paths:
             - "/go/pkg/mod"
 
-      - run:
-          name: Upload coverage report to codecov
-          command: curl -s https://codecov.io/bash | bash -s -- -f $TEST_RESULTS/coverage.out
+      - codecov/upload:
+          file: {{ $TEST_RESULTS/coverage.out }}
 
       # TODO implement demo-run (e.g. 1000 simulated blocks from genesis)
 

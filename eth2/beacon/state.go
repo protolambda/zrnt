@@ -187,7 +187,7 @@ func (state *BeaconState) GetBeaconProposerIndex() ValidatorIndex {
 			randomByte := h[j]
 			candidateIndex := firstCommittee[(uint64(epoch)+((i<<5)|j))%uint64(len(firstCommittee))]
 			effectiveBalance := state.ValidatorRegistry[candidateIndex].EffectiveBalance
-			if effectiveBalance*0xff > MAX_EFFECTIVE_BALANCE*Gwei(randomByte) {
+			if effectiveBalance*0xff >= MAX_EFFECTIVE_BALANCE*Gwei(randomByte) {
 				return candidateIndex
 			}
 		}

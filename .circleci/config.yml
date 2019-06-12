@@ -28,7 +28,9 @@ jobs:
             cd tests/spec
             if ! test -d eth2.0-spec-tests; then git clone https://github.com/ethereum/eth2.0-spec-tests.git; fi
             cd eth2.0-spec-tests
-            git lfs pull
+            git lfs version
+            git checkout v0.6.3
+            git pull
 
       - run:
           name: Run unit tests and generate coverage reports

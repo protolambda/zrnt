@@ -11,13 +11,13 @@ coverage:
     project:
       default:
         # basic
-        target: auto
+        target: 65
         threshold: 2
         base: auto
     patch:
       # basic
-      target: auto
-      threshold: 2
+      target: 30
+      threshold: 100
       base: auto
     changes: yes
 

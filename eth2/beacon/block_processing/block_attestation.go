@@ -25,6 +25,11 @@ func ProcessAttestation(state *BeaconState, attestation *Attestation) error {
 	if data.Shard >= SHARD_COUNT {
 		return errors.New("attestation data is invalid, shard out of range")
 	}
+	if data.TargetEpoch < state.PreviousEpoch() {
+		return errors.New("attestation data is invalid, target is too far in past")
+	} else if data.TargetEpoch > state.Epoch() {
+		return errors.New("attestation data is invalid, target is in future")
+	}
 	attestationSlot := state.GetAttestationSlot(data)
 	if !(state.Slot <= attestationSlot+SLOTS_PER_EPOCH) {
 		return errors.New("attestation slot is too old")

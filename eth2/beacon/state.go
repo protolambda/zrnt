@@ -132,7 +132,6 @@ func (state *BeaconState) InitiateValidatorExit(index ValidatorIndex) {
 
 func (state *BeaconState) GetEpochStartShard(epoch Epoch) Shard {
 	currentEpoch := state.Epoch()
-	// TODO assertion
 	checkEpoch := currentEpoch + 1
 	if epoch > checkEpoch {
 		panic("cannot find start shard for epoch, epoch is too new")

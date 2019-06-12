@@ -51,7 +51,7 @@ jobs:
             - "/go/pkg/mod"
 
       - codecov/upload:
-          file: {{ $TEST_RESULTS/coverage.out }}
+          file: /tmp/test-results/coverage.out
 
       # TODO implement demo-run (e.g. 1000 simulated blocks from genesis)
 

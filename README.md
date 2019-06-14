@@ -127,7 +127,7 @@ hashing.GetHashFn = func() HashFn { // Better: re-use allocated working variable
 
 ### Conformance testing
 
-Passing all spec-tests is primary goal to build and direct the Eth 2.0 fuzzing effort.
+Passing all spec-tests is the primary goal to build and direct the Eth 2.0 fuzzing effort.
 
 ### Minimal client
 

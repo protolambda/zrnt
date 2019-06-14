@@ -105,6 +105,26 @@ There is a fuzzing effort ongoing, based on ZRNT and ZSSZ as base packages for s
 The fuzzing repo can be found here: https://github.com/guidovranken/eth2.0-fuzzing/.
 If you are interested in helping, please open an issue, or contact us through Gitter/Twitter.
 
+#### Replacing the hash-function
+
+For fast fuzzing, the hash-function can be swapped for any other hash function that outputs 32 bytes:
+
+```go
+import (
+	"github.com/protolambda/zrnt/eth2/util/hashing"
+	"github.com/protolambda/zrnt/eth2/util/ssz"
+)
+
+// myHashFn: func(input []byte) [32]byte
+// e.g. sha256.Sum256
+
+ssz.InitZeroHashes(myHashFn)
+hashing.Hash = myHashFn
+hashing.GetHashFn = func() HashFn { // Better: re-use allocated working variables,
+	return GetHashFn                //  and reset on next call of returned hash-function.
+}                                   // A new hash function returned by GetHashFn is never called concurrently.
+```
+
 ### Conformance testing
 
 Passing all spec-tests is primary goal to build and direct the Eth 2.0 fuzzing effort.

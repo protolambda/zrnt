@@ -37,3 +37,10 @@ func SigningRoot(value interface{}, sszTyp types.SSZ) core.Root {
 	}
 	return zssz.SigningRoot(htr.HashFn(hFn), value, signedSSZ)
 }
+
+// When the hash function changed, also re-initialize the precomputed zero-hashes with this hash-function.
+// These precomputed hashes are used to complete merkle-trees efficiently to a power of 2,
+// without unnecessary duplicate hashing of zeroes, or hashes of, or higher order, up to 32.
+func InitZeroHashes(hashFn hashing.HashFn) {
+	htr.InitZeroHashes(htr.HashFn(hashFn))
+}

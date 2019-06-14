@@ -121,7 +121,7 @@ import (
 ssz.InitZeroHashes(myHashFn)
 hashing.Hash = myHashFn
 hashing.GetHashFn = func() HashFn { // Better: re-use allocated working variables,
-	return GetHashFn                //  and reset on next call of returned hash-function.
+	return myHashFn                 //  and reset on next call of returned hash-function.
 }                                   // A new hash function returned by GetHashFn is never called concurrently.
 ```
 

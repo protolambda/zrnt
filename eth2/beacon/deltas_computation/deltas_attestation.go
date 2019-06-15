@@ -101,7 +101,7 @@ func AttestationDeltas(state *BeaconState) *Deltas {
 	previousTotalBalance := state.GetTotalBalanceOf(
 		state.ValidatorRegistry.GetActiveValidatorIndices(state.PreviousEpoch()))
 
-	adjustedQuotient := math.IntegerSquareroot(uint64(previousTotalBalance)) / BASE_REWARD_QUOTIENT
+	balanceSqRoot := Gwei(math.IntegerSquareroot(uint64(previousTotalBalance)))
 	finalityDelay := previousEpoch - state.FinalizedEpoch
 
 	for i := ValidatorIndex(0); i < validatorCount; i++ {
@@ -109,10 +109,9 @@ func AttestationDeltas(state *BeaconState) *Deltas {
 		if status.Flags&eligibleAttester != 0 {
 
 			v := state.ValidatorRegistry[i]
-			baseReward := Gwei(0)
-			if adjustedQuotient != 0 {
-				baseReward = v.EffectiveBalance / Gwei(adjustedQuotient) / 5
-			}
+			baseReward := v.EffectiveBalance * BASE_REWARD_FACTOR /
+				balanceSqRoot / BASE_REWARDS_PER_EPOCH
+
 
 			// Expected FFG source
 			if status.Flags.hasMarkers(prevEpochAttester | unslashed) {

@@ -7,15 +7,15 @@ import (
 
 func ProcessEpochSlashings(state *BeaconState) {
 	currentEpoch := state.Epoch()
-	activeValidatorIndices := state.ValidatorRegistry.GetActiveValidatorIndices(currentEpoch)
-	totalBalance := state.GetTotalBalanceOf(activeValidatorIndices)
+	totalBalance := state.GetTotalActiveBalance()
+
+	epochIndex := currentEpoch % LATEST_SLASHED_EXIT_LENGTH
+	// Compute slashed balances in the current epoch
+	totalAtStart := state.LatestSlashedBalances[(epochIndex+1)%LATEST_SLASHED_EXIT_LENGTH]
+	totalAtEnd := state.LatestSlashedBalances[epochIndex]
 
 	for i, v := range state.ValidatorRegistry {
-		if v.Slashed &&
-			currentEpoch == v.WithdrawableEpoch-(LATEST_SLASHED_EXIT_LENGTH/2) {
-			epochIndex := currentEpoch % LATEST_SLASHED_EXIT_LENGTH
-			totalAtStart := state.LatestSlashedBalances[(epochIndex+1)%LATEST_SLASHED_EXIT_LENGTH]
-			totalAtEnd := state.LatestSlashedBalances[epochIndex]
+		if v.Slashed && currentEpoch == v.WithdrawableEpoch-(LATEST_SLASHED_EXIT_LENGTH/2) {
 			penalty := Max(
 				v.EffectiveBalance*Min(
 					(totalAtEnd-totalAtStart)*3,

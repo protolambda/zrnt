@@ -27,10 +27,10 @@ func ProcessAttesterSlashing(state *BeaconState, attesterSlashing *AttesterSlash
 		return errors.New("attester slashing is has no valid reasoning")
 	}
 
-	if err := state.VerifyIndexedAttestation(sa1); err != nil {
+	if err := state.ValidateIndexedAttestation(sa1); err != nil {
 		return errors.New("attestation 1 of attester slashing cannot be verified")
 	}
-	if err := state.VerifyIndexedAttestation(sa2); err != nil {
+	if err := state.ValidateIndexedAttestation(sa2); err != nil {
 		return errors.New("attestation 2 of attester slashing cannot be verified")
 	}
 

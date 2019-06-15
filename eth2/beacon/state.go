@@ -89,10 +89,10 @@ func (state *BeaconState) Epoch() Epoch {
 // Return previous epoch.
 func (state *BeaconState) PreviousEpoch() Epoch {
 	currentEpoch := state.Epoch()
-	if currentEpoch > GENESIS_EPOCH {
-		return currentEpoch - 1
+	if currentEpoch == GENESIS_EPOCH {
+		return GENESIS_EPOCH
 	} else {
-		return currentEpoch
+		return currentEpoch - 1
 	}
 }
 
@@ -101,7 +101,7 @@ func (state *BeaconState) GetChurnLimit() uint64 {
 		state.ValidatorRegistry.GetActiveValidatorCount(state.Epoch())/CHURN_LIMIT_QUOTIENT)
 }
 
-// Initiate the validator of the given index
+// Initiate the exit of the validator of the given index
 func (state *BeaconState) InitiateValidatorExit(index ValidatorIndex) {
 	validator := state.ValidatorRegistry[index]
 	// Return if validator already initiated exit
@@ -148,7 +148,7 @@ func (state *BeaconState) GetEpochStartShard(epoch Epoch) Shard {
 func (state *BeaconState) GetAttestationSlot(attData *AttestationData) Slot {
 	epoch := attData.TargetEpoch
 	committeeCount := Slot(state.GetEpochCommitteeCount(epoch))
-	offset := Slot((attData.Shard + SHARD_COUNT - state.GetEpochStartShard(epoch)) % SHARD_COUNT)
+	offset := Slot((attData.Crosslink.Shard + SHARD_COUNT - state.GetEpochStartShard(epoch)) % SHARD_COUNT)
 	return epoch.GetStartSlot() + (offset / (committeeCount / SLOTS_PER_EPOCH))
 }
 
@@ -195,7 +195,7 @@ func (state *BeaconState) GetBeaconProposerIndex() ValidatorIndex {
 }
 
 func (state *BeaconState) GetCrosslinkFromAttestationData(data *AttestationData) *Crosslink {
-	epoch := state.CurrentCrosslinks[data.Shard].Epoch + MAX_CROSSLINK_EPOCHS
+	epoch := state.CurrentCrosslinks[data.Shard].StartEpoch + MAX_CROSSLINK_EPOCHS
 	if data.TargetEpoch < epoch {
 		epoch = data.TargetEpoch
 	}
@@ -296,7 +296,7 @@ func (state *BeaconState) GetWinningCrosslinkAndAttestingIndices(shard Shard, ep
 	for _, att := range pendingAttestations {
 		if att.Data.Shard == shard {
 			c := state.GetCrosslinkFromAttestationData(&att.Data)
-			if c.PreviousCrosslinkRoot == latestCrosslinkRoot ||
+			if c.ParentRoot == latestCrosslinkRoot ||
 				latestCrosslinkRoot == ssz.HashTreeRoot(c, CrosslinkSSZ) {
 				participants, _ := state.GetAttestingIndices(&att.Data, &att.AggregationBitfield)
 				crosslinkAttesters[*c] = append(crosslinkAttesters[*c], participants...)
@@ -324,7 +324,7 @@ func (state *BeaconState) GetWinningCrosslinkAndAttestingIndices(shard Shard, ep
 		if weight == winningWeight {
 			// break tie lexicographically
 			for i := 0; i < 32; i++ {
-				if crosslink.CrosslinkDataRoot[i] > winningLink.CrosslinkDataRoot[i] {
+				if crosslink.DataRoot[i] > winningLink.DataRoot[i] {
 					winningLink = crosslink
 					break
 				}
@@ -350,7 +350,7 @@ func (state *BeaconState) ExitValidator(index ValidatorIndex) {
 // Return the sorted attesting indices at for the attestation_data and bitfield
 func (state *BeaconState) GetAttestingIndicesUnsorted(attestationData *AttestationData, bitfield *bitfield.Bitfield) ([]ValidatorIndex, error) {
 	// Find the committee in the list with the desired shard
-	crosslinkCommittee := state.GetCrosslinkCommittee(attestationData.TargetEpoch, attestationData.Shard)
+	crosslinkCommittee := state.GetCrosslinkCommittee(attestationData.TargetEpoch, attestationData.Crosslink.Shard)
 
 	if len(crosslinkCommittee) == 0 {
 		return nil, fmt.Errorf("cannot find crosslink committee at target epoch %d for shard %d", attestationData.TargetEpoch, attestationData.Shard)
@@ -424,18 +424,27 @@ func (state *BeaconState) ApplyDeltas(deltas *Deltas) {
 	}
 }
 
-// Return the total balance sum
-func (state *BeaconState) GetTotalBalance() (sum Gwei) {
+// Return the total balance sum (1 Gwei minimum to avoid divisions by zero.)
+func (state *BeaconState) GetTotalActiveBalance() (sum Gwei) {
+	epoch := state.Epoch()
 	for _, v := range state.ValidatorRegistry {
-		sum += v.EffectiveBalance
+		if v.IsActive(epoch) {
+			sum += v.EffectiveBalance
+		}
+	}
+	if sum == 0 {
+		return 1
 	}
 	return sum
 }
 
-// Return the combined effective balance of an array of validators.
+// Return the combined effective balance of an array of validators. (1 Gwei minimum to avoid divisions by zero.)
 func (state *BeaconState) GetTotalBalanceOf(indices []ValidatorIndex) (sum Gwei) {
 	for _, vIndex := range indices {
 		sum += state.ValidatorRegistry[vIndex].EffectiveBalance
+	}
+	if sum == 0 {
+		return 1
 	}
 	return sum
 }
@@ -487,51 +496,52 @@ func (state *BeaconState) ConvertToIndexed(attestation *Attestation) (*IndexedAt
 }
 
 // Verify validity of slashable_attestation fields.
-func (state *BeaconState) VerifyIndexedAttestation(indexedAttestation *IndexedAttestation) error {
+func (state *BeaconState) ValidateIndexedAttestation(indexedAttestation *IndexedAttestation) error {
 	// wrap it in validator-sets. Does not sort it, but does make checking if it is a lot easier.
-	custodyBit0Indices := ValidatorSet(indexedAttestation.CustodyBit0Indices)
-	custodyBit1Indices := ValidatorSet(indexedAttestation.CustodyBit1Indices)
+	bit0Indices := ValidatorSet(indexedAttestation.CustodyBit0Indices)
+	bit1Indices := ValidatorSet(indexedAttestation.CustodyBit1Indices)
 
-	// Ensure no duplicate indices across custody bits
-	if custodyBit0Indices.Intersects(custodyBit1Indices) {
-		return errors.New("validator set for custody bit 1 intersects with validator set for custody bit 0")
-	}
+	// Phase 1
+	//if len(bit1Indices) != 0 {
+	//	return errors.New("validators cannot have a custody bit set to 1 during phase 0")
+	//}
 
-	// [TO BE REMOVED IN PHASE 1]
-	if len(custodyBit1Indices) != 0 {
-		return errors.New("validators cannot have a custody bit set to 1 during phase 0")
-	}
-
-	totalAttestingIndices := len(custodyBit1Indices) + len(custodyBit0Indices)
+	// Verify max number of indices
+	totalAttestingIndices := len(bit1Indices) + len(bit0Indices)
 	if !(1 <= totalAttestingIndices && totalAttestingIndices <= MAX_INDICES_PER_ATTESTATION) {
 		return fmt.Errorf("invalid indices count in indexed attestation: %d", totalAttestingIndices)
 	}
 
+	// Verify index sets are disjoint
+	if bit0Indices.Intersects(bit1Indices) {
+		return errors.New("validator set for custody bit 1 intersects with validator set for custody bit 0")
+	}
+
 	// The indices must be sorted
-	if !sort.IsSorted(custodyBit0Indices) {
+	if !sort.IsSorted(bit0Indices) {
 		return errors.New("custody bit 0 indices are not sorted")
 	}
 
-	if !sort.IsSorted(custodyBit1Indices) {
+	if !sort.IsSorted(bit1Indices) {
 		return errors.New("custody bit 1 indices are not sorted")
 	}
 
 	// Check the last item of the sorted list to be a valid index,
 	// if this one is valid, the others are as well.
-	if !state.ValidatorRegistry.IsValidatorIndex(custodyBit0Indices[len(custodyBit0Indices)-1]) {
+	if !state.ValidatorRegistry.IsValidatorIndex(bit0Indices[len(bit0Indices)-1]) {
 		return errors.New("index in custody bit 1 indices is invalid")
 	}
 
-	if !state.ValidatorRegistry.IsValidatorIndex(custodyBit0Indices[len(custodyBit0Indices)-1]) {
+	if !state.ValidatorRegistry.IsValidatorIndex(bit0Indices[len(bit0Indices)-1]) {
 		return errors.New("index in custody bit 1 indices is invalid")
 	}
 
 	custodyBit0Pubkeys := make([]BLSPubkey, 0)
-	for _, i := range custodyBit0Indices {
+	for _, i := range bit0Indices {
 		custodyBit0Pubkeys = append(custodyBit0Pubkeys, state.ValidatorRegistry[i].Pubkey)
 	}
 	custodyBit1Pubkeys := make([]BLSPubkey, 0)
-	for _, i := range custodyBit1Indices {
+	for _, i := range bit1Indices {
 		custodyBit1Pubkeys = append(custodyBit1Pubkeys, state.ValidatorRegistry[i].Pubkey)
 	}
 

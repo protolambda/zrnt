@@ -6,7 +6,7 @@ import (
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
-func CacheState(state *BeaconState) {
+func ProcessSlot(state *BeaconState) {
 	// Cache latest known state root (for previous slot)
 	latestStateRoot := ssz.HashTreeRoot(state, BeaconStateSSZ)
 	state.LatestStateRoots[state.Slot%SLOTS_PER_HISTORICAL_ROOT] = latestStateRoot
@@ -17,5 +17,6 @@ func CacheState(state *BeaconState) {
 	}
 
 	// Cache latest known block root (for previous slot)
-	state.LatestBlockRoots[state.Slot%SLOTS_PER_HISTORICAL_ROOT] = ssz.SigningRoot(state.LatestBlockHeader, BeaconBlockHeaderSSZ)
+	previousBlockRoot := ssz.SigningRoot(state.LatestBlockHeader, BeaconBlockHeaderSSZ)
+	state.LatestBlockRoots[state.Slot%SLOTS_PER_HISTORICAL_ROOT] = previousBlockRoot
 }

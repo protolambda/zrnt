@@ -46,9 +46,7 @@ type AttestationData struct {
 	TargetRoot  Root
 
 	// Crosslink vote
-	Shard                 Shard
-	PreviousCrosslinkRoot Root
-	CrosslinkDataRoot     Root
+	Crosslink Crosslink
 }
 
 var AttestationDataAndCustodyBitSSZ = zssz.GetSSZ((*AttestationDataAndCustodyBit)(nil))
@@ -73,19 +71,20 @@ type IndexedAttestation struct {
 var CrosslinkSSZ = zssz.GetSSZ((*Crosslink)(nil))
 
 type Crosslink struct {
-	// Epoch number
-	Epoch Epoch
+	// Shard number
+	Shard Shard
+	// Crosslinking data from epochs [start....end-1]
+	StartEpoch Epoch
+	EndEpoch Epoch
 	// Root of the previous crosslink
-	PreviousCrosslinkRoot Root
+	ParentRoot Root
 	// Root of the crosslinked shard data since the previous crosslink
-	CrosslinkDataRoot Root
+	DataRoot Root
 }
 
 type Deposit struct {
 	// Branch in the deposit tree
 	Proof [DEPOSIT_CONTRACT_TREE_DEPTH]Root
-	// Index in the deposit tree
-	Index DepositIndex
 	// Data
 	Data DepositData
 }

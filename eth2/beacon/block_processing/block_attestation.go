@@ -22,7 +22,7 @@ func ProcessBlockAttestations(state *BeaconState, block *BeaconBlock) error {
 
 func ProcessAttestation(state *BeaconState, attestation *Attestation) error {
 	data := &attestation.Data
-	if data.Shard >= SHARD_COUNT {
+	if data.Crosslink.Shard >= SHARD_COUNT {
 		return errors.New("attestation data is invalid, shard out of range")
 	}
 	if data.TargetEpoch < state.PreviousEpoch() {
@@ -41,27 +41,27 @@ func ProcessAttestation(state *BeaconState, attestation *Attestation) error {
 	targetEpoch := data.TargetEpoch
 	sourceEpoch := data.SourceEpoch
 	sourceRoot := data.SourceRoot
-	sourceCrosslink := data.PreviousCrosslinkRoot
+	sourceCrosslink := data.Crosslink.ParentRoot
 	if !((targetEpoch == state.Epoch() &&
 		sourceEpoch == state.CurrentJustifiedEpoch &&
 		sourceRoot == state.CurrentJustifiedRoot &&
-		sourceCrosslink == ssz.HashTreeRoot(state.CurrentCrosslinks[data.Shard], CrosslinkSSZ)) ||
+		sourceCrosslink == ssz.HashTreeRoot(state.CurrentCrosslinks[data.Crosslink.Shard], CrosslinkSSZ)) ||
 		(targetEpoch == state.PreviousEpoch() &&
 			sourceEpoch == state.PreviousJustifiedEpoch &&
 			sourceRoot == state.PreviousJustifiedRoot) &&
-			sourceCrosslink == ssz.HashTreeRoot(state.PreviousCrosslinks[data.Shard], CrosslinkSSZ)) {
+			sourceCrosslink == ssz.HashTreeRoot(state.PreviousCrosslinks[data.Crosslink.Shard], CrosslinkSSZ)) {
 		return errors.New("attestation does not match recent state justification")
 	}
 
 	// Check crosslink data
-	if attestation.Data.CrosslinkDataRoot != (Root{}) { //  # [to be removed in phase 1]
+	if attestation.Data.Crosslink.DataRoot != (Root{}) { //  # [to be removed in phase 1]
 		return errors.New("attestation cannot reference a crosslink root yet, processing as phase 0")
 	}
 
 	// Check signature and bitfields
 	if indexedAtt, err := state.ConvertToIndexed(attestation); err != nil {
 		return fmt.Errorf("attestation could not be converted to an indexed attestation: %v", err)
-	} else if err := state.VerifyIndexedAttestation(indexedAtt); err != nil {
+	} else if err := state.ValidateIndexedAttestation(indexedAtt); err != nil {
 		return fmt.Errorf("attestation could not be verified in its indexed form: %v", err)
 	}
 

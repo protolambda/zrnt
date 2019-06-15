@@ -24,7 +24,7 @@ jobs:
 
       - restore_cache:
           keys:
-            - spec-tests-v0_6_3
+            - spec-tests-v0_7_0
 
       - run:
           name: Update spec tests cache
@@ -34,14 +34,14 @@ jobs:
             cd eth2.0-spec-tests
             git lfs version
             git status
-            git checkout v0.6.3
+            git checkout v0.7.0
 
       - run:
           name: Run unit tests and generate coverage reports
           command: TEST_OUT_DIR=$TEST_RESULTS make test
 
       - save_cache:
-          key: spec-tests-v0_6_3
+          key: spec-tests-v0_7_0
           paths:
             - tests/spec/eth2.0-spec-tests
 

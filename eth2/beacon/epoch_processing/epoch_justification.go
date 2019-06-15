@@ -58,22 +58,22 @@ func ProcessEpochJustification(state *BeaconState) {
 	// > Finalization
 	bitf := state.JustificationBitfield
 	// The 2nd/3rd/4th most recent epochs are all justified, the 2nd using the 4th as source
-	if (bitf>>1)&7 == 7 && state.PreviousJustifiedEpoch == currentEpoch-3 {
+	if (bitf>>1)&7 == 7 && state.PreviousJustifiedEpoch+3 == currentEpoch {
 		state.FinalizedEpoch = oldPreviousJustifiedEpoch
 		state.FinalizedRoot, _ = state.GetBlockRoot(state.FinalizedEpoch)
 	}
 	// The 2nd/3rd most recent epochs are both justified, the 2nd using the 3rd as source
-	if (bitf>>1)&3 == 3 && state.PreviousJustifiedEpoch == currentEpoch-2 {
+	if (bitf>>1)&3 == 3 && state.PreviousJustifiedEpoch+2 == currentEpoch {
 		state.FinalizedEpoch = oldPreviousJustifiedEpoch
 		state.FinalizedRoot, _ = state.GetBlockRoot(state.FinalizedEpoch)
 	}
 	// The 1st/2nd/3rd most recent epochs are all justified, the 1st using the 3rd as source
-	if (bitf>>0)&7 == 7 && state.CurrentJustifiedEpoch == currentEpoch-2 {
+	if (bitf>>0)&7 == 7 && state.CurrentJustifiedEpoch+2 == currentEpoch {
 		state.FinalizedEpoch = oldCurrentJustifiedEpoch
 		state.FinalizedRoot, _ = state.GetBlockRoot(state.FinalizedEpoch)
 	}
 	// The 1st/2nd most recent epochs are both justified, the 1st using the 2nd as source
-	if (bitf>>0)&3 == 3 && state.CurrentJustifiedEpoch == currentEpoch-1 {
+	if (bitf>>0)&3 == 3 && state.CurrentJustifiedEpoch+1 == currentEpoch {
 		state.FinalizedEpoch = oldCurrentJustifiedEpoch
 		state.FinalizedRoot, _ = state.GetBlockRoot(state.FinalizedEpoch)
 	}

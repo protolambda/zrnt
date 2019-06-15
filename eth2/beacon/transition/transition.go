@@ -16,7 +16,7 @@ func StateTransitionTo(state *BeaconState, slot Slot) error {
 	}
 	// happens at the start of every Slot
 	for state.Slot < slot {
-		CacheState(state)
+		ProcessSlot(state)
 		// Per-epoch transition happens at the start of the first slot of every epoch.
 		if (state.Slot+1)%SLOTS_PER_EPOCH == 0 {
 			EpochTransition(state)

@@ -8,12 +8,12 @@ import (
 var BeaconBlockHeaderSSZ = zssz.GetSSZ((*BeaconBlockHeader)(nil))
 
 type BeaconBlockHeader struct {
-	Slot              Slot
-	PreviousBlockRoot Root
-	StateRoot         Root
+	Slot       Slot
+	ParentRoot Root
+	StateRoot  Root
 
 	// Where the body would be, just a root embedded here.
-	BlockBodyRoot Root
+	BodyRoot Root
 	// Signature
 	Signature BLSSignature
 }

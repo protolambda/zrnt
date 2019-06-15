@@ -30,17 +30,18 @@ func ProcessBlockDeposits(state *BeaconState, block *BeaconBlock) error {
 
 // Process an Eth1 deposit, registering a validator or increasing its balance.
 func ProcessDeposit(state *BeaconState, dep *Deposit) error {
-	// Deposits must be processed in order
-	if dep.Index != state.DepositIndex {
-		return fmt.Errorf("deposit has index %d that does not match with state index %d", dep.Index, state.DepositIndex)
-	}
+	// Temporarily removed, is going back in.
+	//// Deposits must be processed in order
+	//if dep.Index != state.DepositIndex {
+	//	return fmt.Errorf("deposit has index %d that does not match with state index %d", dep.Index, state.DepositIndex)
+	//}
 
 	// Verify the Merkle branch
 	if !merkle.VerifyMerkleBranch(
 		ssz.HashTreeRoot(&dep.Data, DepositDataSSZ),
 		dep.Proof[:],
 		DEPOSIT_CONTRACT_TREE_DEPTH,
-		uint64(dep.Index),
+		uint64(state.DepositIndex),
 		state.LatestEth1Data.DepositRoot) {
 		return fmt.Errorf("deposit %d has merkle proof that failed to be verified", dep.Index)
 	}

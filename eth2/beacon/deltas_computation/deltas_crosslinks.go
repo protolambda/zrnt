@@ -13,7 +13,7 @@ func CrosslinksDeltas(state *BeaconState) *Deltas {
 	totalActiveBalance := state.GetTotalBalanceOf(
 		state.ValidatorRegistry.GetActiveValidatorIndices(state.Epoch()))
 
-	adjustedQuotient := math.IntegerSquareroot(uint64(totalActiveBalance)) / BASE_REWARD_QUOTIENT
+	totalBalanceSqRoot := Gwei(math.IntegerSquareroot(uint64(totalActiveBalance)))
 
 	epoch := state.PreviousEpoch()
 	count := Shard(state.GetEpochCommitteeCount(epoch))
@@ -36,13 +36,13 @@ func CrosslinksDeltas(state *BeaconState) *Deltas {
 			func(i ValidatorIndex) {
 				// Committee member participated, reward them
 				effectiveBalance := state.ValidatorRegistry[i].EffectiveBalance
-				baseReward := effectiveBalance / Gwei(adjustedQuotient) / 5
+				baseReward := effectiveBalance * BASE_REWARD_FACTOR / totalBalanceSqRoot / BASE_REWARDS_PER_EPOCH
 
 				deltas.Rewards[i] += baseReward * attestingBalance / totalBalance
 			}, func(i ValidatorIndex) {
 				// Committee member did not participate, penalize them
 				effectiveBalance := state.ValidatorRegistry[i].EffectiveBalance
-				baseReward := effectiveBalance / Gwei(adjustedQuotient) / 5
+				baseReward := effectiveBalance * BASE_REWARD_FACTOR / totalBalanceSqRoot / BASE_REWARDS_PER_EPOCH
 
 				deltas.Penalties[i] += baseReward
 			})

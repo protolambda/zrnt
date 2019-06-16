@@ -19,7 +19,7 @@ func ProcessEpochCrosslinks(state *BeaconState) {
 			participatingBalance := state.GetTotalBalanceOf(attestingIndices)
 			totalBalance := state.GetTotalBalanceOf(crosslinkCommittee)
 			if 3*participatingBalance >= 2*totalBalance {
-				state.CurrentCrosslinks[shard] = winningCrosslink
+				state.CurrentCrosslinks[shard] = *winningCrosslink
 			}
 		}
 	}

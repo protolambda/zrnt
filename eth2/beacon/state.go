@@ -194,18 +194,6 @@ func (state *BeaconState) GetBeaconProposerIndex() ValidatorIndex {
 	return 0
 }
 
-func (state *BeaconState) GetCrosslinkFromAttestationData(data *AttestationData) *Crosslink {
-	epoch := state.CurrentCrosslinks[data.Shard].StartEpoch + MAX_EPOCHS_PER_CROSSLINK
-	if data.TargetEpoch < epoch {
-		epoch = data.TargetEpoch
-	}
-	return &Crosslink{
-		epoch,
-		data.PreviousCrosslinkRoot,
-		data.CrosslinkDataRoot,
-	}
-}
-
 func (state *BeaconState) GetRandaoMix(epoch Epoch) Root {
 	// Epoch is expected to be between (current_epoch - LATEST_RANDAO_MIXES_LENGTH, current_epoch].
 	// TODO: spec has expectations on input, but doesn't enforce them, and purposefully ignores them in some calls.
@@ -283,7 +271,7 @@ func (state *BeaconState) GetAttesters(attestations []*PendingAttestation, filte
 	return out
 }
 
-func (state *BeaconState) GetWinningCrosslinkAndAttestingIndices(shard Shard, epoch Epoch) (Crosslink, ValidatorSet) {
+func (state *BeaconState) GetWinningCrosslinkAndAttestingIndices(shard Shard, epoch Epoch) (*Crosslink, ValidatorSet) {
 	pendingAttestations := state.PreviousEpochAttestations
 	if epoch == state.Epoch() {
 		pendingAttestations = state.CurrentEpochAttestations
@@ -292,20 +280,19 @@ func (state *BeaconState) GetWinningCrosslinkAndAttestingIndices(shard Shard, ep
 	latestCrosslinkRoot := ssz.HashTreeRoot(&state.CurrentCrosslinks[shard], CrosslinkSSZ)
 
 	// keyed by raw crosslink object. Not too big, and simplifies reduction to unique crosslinks
-	crosslinkAttesters := make(map[Crosslink]ValidatorSet)
+	crosslinkAttesters := make(map[*Crosslink]ValidatorSet)
 	for _, att := range pendingAttestations {
-		if att.Data.Shard == shard {
-			c := state.GetCrosslinkFromAttestationData(&att.Data)
-			if c.ParentRoot == latestCrosslinkRoot ||
-				latestCrosslinkRoot == ssz.HashTreeRoot(c, CrosslinkSSZ) {
+		if att.Data.Crosslink.Shard == shard {
+			if att.Data.Crosslink.ParentRoot == latestCrosslinkRoot ||
+				latestCrosslinkRoot == ssz.HashTreeRoot(&att.Data.Crosslink, CrosslinkSSZ) {
 				participants, _ := state.GetAttestingIndices(&att.Data, &att.AggregationBitfield)
-				crosslinkAttesters[*c] = append(crosslinkAttesters[*c], participants...)
+				crosslinkAttesters[&att.Data.Crosslink] = append(crosslinkAttesters[&att.Data.Crosslink], participants...)
 			}
 		}
 	}
 	// handle when no attestations for shard available
 	if len(crosslinkAttesters) == 0 {
-		return Crosslink{}, nil
+		return &Crosslink{}, nil
 	}
 	for k, v := range crosslinkAttesters {
 		v.Dedup()
@@ -313,15 +300,15 @@ func (state *BeaconState) GetWinningCrosslinkAndAttestingIndices(shard Shard, ep
 	}
 
 	// Now determine the best crosslink, by total weight (votes, weighted by balance)
-	winningLink := Crosslink{}
+	var winningLink *Crosslink = nil
 	winningWeight := Gwei(0)
 	for crosslink, attesters := range crosslinkAttesters {
 		// effectively "get_attesting_balance": attesters consists of only de-duplicated unslashed validators.
 		weight := state.GetTotalBalanceOf(attesters)
-		if weight > winningWeight {
+		if winningLink == nil || weight > winningWeight {
 			winningLink = crosslink
 		}
-		if weight == winningWeight {
+		if winningLink != nil && weight == winningWeight {
 			// break tie lexicographically
 			for i := 0; i < 32; i++ {
 				if crosslink.DataRoot[i] > winningLink.DataRoot[i] {
@@ -353,7 +340,7 @@ func (state *BeaconState) GetAttestingIndicesUnsorted(attestationData *Attestati
 	crosslinkCommittee := state.GetCrosslinkCommittee(attestationData.TargetEpoch, attestationData.Crosslink.Shard)
 
 	if len(crosslinkCommittee) == 0 {
-		return nil, fmt.Errorf("cannot find crosslink committee at target epoch %d for shard %d", attestationData.TargetEpoch, attestationData.Shard)
+		return nil, fmt.Errorf("cannot find crosslink committee at target epoch %d for shard %d", attestationData.TargetEpoch, attestationData.Crosslink.Shard)
 	}
 	if !bitfield.VerifySize(uint64(len(crosslinkCommittee))) {
 		return nil, errors.New("bitfield has wrong size for corresponding crosslink committee")

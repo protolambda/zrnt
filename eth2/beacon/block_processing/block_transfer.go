@@ -58,7 +58,7 @@ func ProcessTransfer(state *BeaconState, transfer *Transfer) error {
 	// Verify that the pubkey is valid
 	withdrawCred := Hash(transfer.Pubkey[:])
 	// overwrite first byte, remainder (the [1:] part, is still the hash)
-	withdrawCred[0] = BLS_WITHDRAWAL_PREFIX_BYTE
+	withdrawCred[0] = BLS_WITHDRAWAL_PREFIX
 	if sender.WithdrawalCredentials != withdrawCred {
 		return errors.New("transfer pubkey is invalid")
 	}

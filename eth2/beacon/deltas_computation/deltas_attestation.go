@@ -4,7 +4,6 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/math"
-	"github.com/protolambda/zrnt/presets/generated"
 )
 
 type ValidatorStatusFlag uint64
@@ -145,7 +144,7 @@ func AttestationDeltas(state *BeaconState) *Deltas {
 			}
 
 			// Take away max rewards if we're not finalizing
-			if finalityDelay > constant_presets.MIN_EPOCHS_TO_INACTIVITY_PENALTY {
+			if finalityDelay > MIN_EPOCHS_TO_INACTIVITY_PENALTY {
 				deltas.Penalties[i] += baseReward * BASE_REWARDS_PER_EPOCH
 				if !status.Flags.hasMarkers(matchingHeadAttester | unslashed) {
 					deltas.Penalties[i] += v.EffectiveBalance * Gwei(finalityDelay) / INACTIVITY_PENALTY_QUOTIENT

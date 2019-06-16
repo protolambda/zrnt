@@ -195,7 +195,7 @@ func (state *BeaconState) GetBeaconProposerIndex() ValidatorIndex {
 }
 
 func (state *BeaconState) GetCrosslinkFromAttestationData(data *AttestationData) *Crosslink {
-	epoch := state.CurrentCrosslinks[data.Shard].StartEpoch + MAX_CROSSLINK_EPOCHS
+	epoch := state.CurrentCrosslinks[data.Shard].StartEpoch + MAX_EPOCHS_PER_CROSSLINK
 	if data.TargetEpoch < epoch {
 		epoch = data.TargetEpoch
 	}

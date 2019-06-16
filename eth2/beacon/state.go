@@ -488,20 +488,15 @@ func (state *BeaconState) ValidateIndexedAttestation(indexedAttestation *Indexed
 	bit0Indices := ValidatorSet(indexedAttestation.CustodyBit0Indices)
 	bit1Indices := ValidatorSet(indexedAttestation.CustodyBit1Indices)
 
-	// Phase 1
-	//if len(bit1Indices) != 0 {
-	//	return errors.New("validators cannot have a custody bit set to 1 during phase 0")
-	//}
+	// To be removed in Phase 1.
+	if len(bit1Indices) != 0 {
+		return errors.New("validators cannot have a custody bit set to 1 during phase 0")
+	}
 
 	// Verify max number of indices
 	totalAttestingIndices := len(bit1Indices) + len(bit0Indices)
 	if !(1 <= totalAttestingIndices && totalAttestingIndices <= MAX_INDICES_PER_ATTESTATION) {
 		return fmt.Errorf("invalid indices count in indexed attestation: %d", totalAttestingIndices)
-	}
-
-	// Verify index sets are disjoint
-	if bit0Indices.Intersects(bit1Indices) {
-		return errors.New("validator set for custody bit 1 intersects with validator set for custody bit 0")
 	}
 
 	// The indices must be sorted
@@ -513,13 +508,18 @@ func (state *BeaconState) ValidateIndexedAttestation(indexedAttestation *Indexed
 		return errors.New("custody bit 1 indices are not sorted")
 	}
 
+	// Verify index sets are disjoint
+	if bit0Indices.Intersects(bit1Indices) {
+		return errors.New("validator set for custody bit 1 intersects with validator set for custody bit 0")
+	}
+
 	// Check the last item of the sorted list to be a valid index,
 	// if this one is valid, the others are as well.
-	if !state.ValidatorRegistry.IsValidatorIndex(bit0Indices[len(bit0Indices)-1]) {
+	if len(bit0Indices) > 0 && !state.ValidatorRegistry.IsValidatorIndex(bit0Indices[len(bit0Indices)-1]) {
 		return errors.New("index in custody bit 1 indices is invalid")
 	}
 
-	if !state.ValidatorRegistry.IsValidatorIndex(bit0Indices[len(bit0Indices)-1]) {
+	if len(bit1Indices) > 0 && !state.ValidatorRegistry.IsValidatorIndex(bit1Indices[len(bit1Indices)-1]) {
 		return errors.New("index in custody bit 1 indices is invalid")
 	}
 

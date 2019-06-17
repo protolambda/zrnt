@@ -494,9 +494,8 @@ func (state *BeaconState) ValidateIndexedAttestation(indexedAttestation *Indexed
 	}
 
 	// Verify max number of indices
-	totalAttestingIndices := len(bit1Indices) + len(bit0Indices)
-	if !(1 <= totalAttestingIndices && totalAttestingIndices <= MAX_INDICES_PER_ATTESTATION) {
-		return fmt.Errorf("invalid indices count in indexed attestation: %d", totalAttestingIndices)
+	if count := len(bit1Indices) + len(bit0Indices); count > MAX_INDICES_PER_ATTESTATION {
+		return fmt.Errorf("invalid indices count in indexed attestation: %d", count)
 	}
 
 	// The indices must be sorted

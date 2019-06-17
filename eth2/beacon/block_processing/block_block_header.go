@@ -15,14 +15,15 @@ func ProcessBlockHeader(state *BeaconState, block *BeaconBlock) error {
 		return errors.New("slot of block does not match slot of state")
 	}
 	// Verify that the parent matches
-	if signingRoot := ssz.SigningRoot(state.LatestBlockHeader, BeaconBlockHeaderSSZ); block.PreviousBlockRoot != signingRoot {
-		return fmt.Errorf("previous block root %x does not match root %x from latest state block header", block.PreviousBlockRoot, signingRoot)
+	if signingRoot := ssz.SigningRoot(state.LatestBlockHeader, BeaconBlockHeaderSSZ); block.ParentRoot != signingRoot {
+		return fmt.Errorf("previous block root %x does not match root %x from latest state block header", block.ParentRoot, signingRoot)
 	}
 	// Save current block as the new latest block
 	state.LatestBlockHeader = BeaconBlockHeader{
 		Slot:       block.Slot,
-		ParentRoot: block.PreviousBlockRoot,
+		ParentRoot: block.ParentRoot,
 		BodyRoot:   ssz.HashTreeRoot(block.Body, BeaconBlockBodySSZ),
+		// note that StateRoot is set to 0. (filled by next process-slot call after block-processing)
 	}
 
 	proposerIndex := state.GetBeaconProposerIndex()

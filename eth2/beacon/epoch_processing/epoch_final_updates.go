@@ -37,6 +37,7 @@ func ProcessEpochFinalUpdates(state *BeaconState) {
 
 	// Set randao mix
 	state.LatestRandaoMixes[nextEpoch%LATEST_RANDAO_MIXES_LENGTH] = state.GetRandaoMix(currentEpoch)
+
 	// Set historical root accumulator
 	if nextEpoch%SLOTS_PER_HISTORICAL_ROOT.ToEpoch() == 0 {
 		historicalBatch := HistoricalBatch{

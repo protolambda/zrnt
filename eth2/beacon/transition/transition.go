@@ -12,7 +12,7 @@ import (
 // Mutates the state, does not copy.
 func StateTransitionTo(state *BeaconState, slot Slot) error {
 	if state.Slot > slot {
-		return errors.New("cannot handle block on top of pre-state with equal or higher slot than block")
+		return errors.New("cannot transition from pre-state with higher slot than transition target")
 	}
 	// happens at the start of every Slot
 	for state.Slot < slot {

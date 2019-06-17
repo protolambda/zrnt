@@ -43,7 +43,7 @@ func ProcessDeposit(state *BeaconState, dep *Deposit) error {
 		DEPOSIT_CONTRACT_TREE_DEPTH,
 		uint64(state.DepositIndex),
 		state.LatestEth1Data.DepositRoot) {
-		return fmt.Errorf("deposit %d has merkle proof that failed to be verified", dep.Index)
+		return fmt.Errorf("deposit %d merkle proof failed to be verified", state.DepositIndex)
 	}
 
 	// Increment the next deposit index we are expecting. Note that this

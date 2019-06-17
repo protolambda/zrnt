@@ -37,9 +37,9 @@ var BeaconBlockSSZ = zssz.GetSSZ((*BeaconBlock)(nil))
 
 type BeaconBlock struct {
 	// Header
-	Slot              Slot
-	PreviousBlockRoot Root
-	StateRoot         Root
+	Slot       Slot
+	ParentRoot Root
+	StateRoot  Root
 
 	// Body
 	Body BeaconBlockBody

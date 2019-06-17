@@ -75,7 +75,7 @@ type Crosslink struct {
 	Shard Shard
 	// Crosslinking data from epochs [start....end-1]
 	StartEpoch Epoch
-	EndEpoch Epoch
+	EndEpoch   Epoch
 	// Root of the previous crosslink
 	ParentRoot Root
 	// Root of the crosslinked shard data since the previous crosslink

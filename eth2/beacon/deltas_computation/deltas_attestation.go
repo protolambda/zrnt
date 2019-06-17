@@ -111,7 +111,6 @@ func AttestationDeltas(state *BeaconState) *Deltas {
 			baseReward := v.EffectiveBalance * BASE_REWARD_FACTOR /
 				balanceSqRoot / BASE_REWARDS_PER_EPOCH
 
-
 			// Expected FFG source
 			if status.Flags.hasMarkers(prevEpochAttester | unslashed) {
 				// Justification-participation reward

@@ -43,13 +43,13 @@ func (testCase *SSZStaticTestCase) Run(t *testing.T) {
 			data := buf.Bytes()
 			if len(data) != len(testCase.Serialized) {
 				b := Bytes(data)
-				t.Errorf("encoded data has different length: %d (spec) <-> %d (zrnt)\nspec: %s\nzrnt: %s", len(testCase.Serialized), len(data), testCase.Serialized.String(), b.String())
+				t.Errorf("encoded data has different length: %d (spec) <-> %d (zrnt)\nspec: %x\nzrnt: %x", len(testCase.Serialized), len(data), testCase.Serialized, b)
 				return
 			}
 			for i := 0; i < len(data); i++ {
 				if data[i] != testCase.Serialized[i] {
 					b := Bytes(data)
-					t.Errorf("byte i: %d differs: %d (spec) <-> %d (zrnt)\nspec: %s\nzrnt: %s", i, testCase.Serialized[i], data[i], testCase.Serialized.String(), b.String())
+					t.Errorf("byte i: %d differs: %d (spec) <-> %d (zrnt)\nspec: %x\nzrnt: %x", i, testCase.Serialized[i], data[i], testCase.Serialized, b)
 					return
 				}
 			}
@@ -68,7 +68,7 @@ func (testCase *SSZStaticTestCase) Run(t *testing.T) {
 			hfn := hashing.GetHashFn()
 			root := Root(zssz.HashTreeRoot(htr.HashFn(hfn), testCase.Value, testCase.SSZ))
 			if root != testCase.Root {
-				t.Errorf("hash-tree-roots differ: %s (spec) <-> %s (zrnt)", testCase.Root.String(), root.String())
+				t.Errorf("hash-tree-roots differ: %x (spec) <-> %x (zrnt)", testCase.Root, root)
 				return
 			}
 		})
@@ -79,7 +79,7 @@ func (testCase *SSZStaticTestCase) Run(t *testing.T) {
 					hfn := hashing.GetHashFn()
 					root := Root(zssz.SigningRoot(htr.HashFn(hfn), testCase.Value, signedSSZ))
 					if root != testCase.SigningRoot {
-						t.Errorf("signing-roots differ: %s (spec) <-> %s (zrnt)", testCase.SigningRoot.String(), root.String())
+						t.Errorf("signing-roots differ: %x (spec) <-> %x (zrnt)", testCase.SigningRoot, root)
 					}
 				})
 			}

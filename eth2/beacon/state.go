@@ -59,28 +59,6 @@ type BeaconState struct {
 	DepositIndex   DepositIndex
 }
 
-// Make a deep copy of the state object
-func (state *BeaconState) Copy() *BeaconState {
-	// copy over state
-	stUn := *state
-	res := &stUn
-	// manually copy over slices, and efficiently (i.e. explicitly make, but don't initially zero out, just overwrite)
-	// validators
-	res.ValidatorRegistry = make([]*Validator, 0, len(state.ValidatorRegistry))
-	for _, v := range state.ValidatorRegistry {
-		res.ValidatorRegistry = append(res.ValidatorRegistry, v.Copy())
-	}
-	res.Balances = append(make([]Gwei, 0, len(state.Balances)), state.Balances...)
-	// finality
-	res.PreviousEpochAttestations = append(make([]*PendingAttestation, 0, len(state.PreviousEpochAttestations)), state.PreviousEpochAttestations...)
-	res.CurrentEpochAttestations = append(make([]*PendingAttestation, 0, len(state.CurrentEpochAttestations)), state.CurrentEpochAttestations...)
-	// recent state
-	res.HistoricalRoots = append(make([]Root, 0, len(state.HistoricalRoots)), state.HistoricalRoots...)
-	// eth1
-	res.Eth1DataVotes = append(make([]Eth1Data, 0, len(state.Eth1DataVotes)), state.Eth1DataVotes...)
-	return res
-}
-
 // Get current epoch
 func (state *BeaconState) Epoch() Epoch {
 	return state.Slot.ToEpoch()
@@ -368,7 +346,7 @@ func (state *BeaconState) GetAttestingIndices(attestationData *AttestationData, 
 }
 
 // Slash the validator with the given index.
-func (state *BeaconState) SlashValidator(slashedIndex ValidatorIndex, whistleblowerIndex *ValidatorIndex) error {
+func (state *BeaconState) SlashValidator(slashedIndex ValidatorIndex, whistleblowerIndex *ValidatorIndex) {
 	currentEpoch := state.Epoch()
 	validator := state.ValidatorRegistry[slashedIndex]
 	state.InitiateValidatorExit(slashedIndex)
@@ -386,7 +364,6 @@ func (state *BeaconState) SlashValidator(slashedIndex ValidatorIndex, whistleblo
 	state.IncreaseBalance(propIndex, proposerReward)
 	state.IncreaseBalance(*whistleblowerIndex, whistleblowerReward-proposerReward)
 	state.DecreaseBalance(slashedIndex, whistleblowerReward)
-	return nil
 }
 
 // Filters a slice in-place. Only keeps the unslashed validators.

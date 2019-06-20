@@ -42,5 +42,6 @@ func ProcessProposerSlashing(state *BeaconState, ps *ProposerSlashing) error {
 		bls.BlsVerify(proposer.Pubkey, ssz.SigningRoot(ps.Header2, BeaconBlockHeaderSSZ), ps.Header2.Signature, state.GetDomain(DOMAIN_BEACON_PROPOSER, ps.Header2.Slot.ToEpoch()))) {
 		return errors.New("proposer slashing has header with invalid BLS signature")
 	}
-	return state.SlashValidator(ps.ProposerIndex, nil)
+	state.SlashValidator(ps.ProposerIndex, nil)
+	return nil
 }

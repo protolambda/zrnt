@@ -151,11 +151,6 @@ type Validator struct {
 	EffectiveBalance Gwei
 }
 
-func (v *Validator) Copy() *Validator {
-	copyV := *v
-	return &copyV
-}
-
 func (v *Validator) IsActive(epoch Epoch) bool {
 	return v.ActivationEpoch <= epoch && epoch < v.ExitEpoch
 }

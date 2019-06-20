@@ -17,10 +17,6 @@ func NewDeltas(validatorCount uint64) *Deltas {
 }
 
 func (deltas *Deltas) Add(other *Deltas) {
-	if len(deltas.Penalties) != len(other.Penalties) ||
-		len(deltas.Rewards) != len(other.Rewards) {
-		panic("cannot add other deltas, lengths do not match")
-	}
 	for i := 0; i < len(deltas.Rewards); i++ {
 		deltas.Rewards[i] += other.Rewards[i]
 	}

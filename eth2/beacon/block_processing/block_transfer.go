@@ -37,8 +37,11 @@ func ProcessTransfer(state *BeaconState, transfer *Transfer) error {
 	}
 	senderBalance := state.Balances[transfer.Sender]
 	// Verify the amount and fee aren't individually too big (for anti-overflow purposes)
-	if !(senderBalance >= transfer.Amount && senderBalance >= transfer.Fee) {
-		return errors.New("transfer value parameter (amount and/or fee) is too big")
+	if senderBalance < transfer.Amount {
+		return errors.New("transfer amount is too big")
+	}
+	if senderBalance < transfer.Fee {
+		return errors.New("transfer fee is too big")
 	}
 	if transfer.Sender == transfer.Recipient {
 		return errors.New("no self-transfers (to enforce >= MIN_DEPOSIT_AMOUNT or zero balance invariant)")

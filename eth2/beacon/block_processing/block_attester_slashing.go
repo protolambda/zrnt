@@ -49,19 +49,12 @@ func ProcessAttesterSlashing(state *BeaconState, attesterSlashing *AttesterSlash
 
 	currentEpoch := state.Epoch()
 	// run slashings where applicable
-	var anyErr error
 	indices1.ZigZagJoin(indices2, func(i ValidatorIndex) {
-		if anyErr == nil && state.ValidatorRegistry[i].IsSlashable(currentEpoch) {
-			if err := state.SlashValidator(i, nil); err != nil {
-				anyErr = err
-			}
+		if state.ValidatorRegistry[i].IsSlashable(currentEpoch) {
+			state.SlashValidator(i, nil)
 			slashedAny = true
 		}
 	}, nil)
-	if anyErr != nil {
-		return anyErr
-	}
-	// "Verify that len(slashable_indices) >= 1."
 	if !slashedAny {
 		return errors.New("attester slashing %d is not effective, hence invalid")
 	}

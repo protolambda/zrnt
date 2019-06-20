@@ -15,7 +15,7 @@ type BlocksTestCase struct {
 func (testCase *BlocksTestCase) Process() error {
 	for _, block := range testCase.Blocks {
 		// TODO: mark block number in error? (Maybe with Go 1.13, coming out soon, supporting wrapped errors)
-		if err := transition.StateTransition(testCase.Pre, block, false); err != nil {
+		if err := transition.StateTransition(testCase.Pre, block, true); err != nil {
 			return err
 		}
 	}

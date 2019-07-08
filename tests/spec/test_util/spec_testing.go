@@ -5,7 +5,6 @@ import (
 	"fmt"
 	. "github.com/mitchellh/mapstructure"
 	"github.com/protolambda/zrnt/eth2/core"
-	"github.com/protolambda/zrnt/eth2/util/hex"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"log"
@@ -79,7 +78,7 @@ func decodeHook(s reflect.Type, t reflect.Type, data interface{}) (interface{}, 
 	if t.Kind() == reflect.Array && t.Elem().Kind() == reflect.Uint8 {
 		res := reflect.New(t).Elem()
 		sliceRes := res.Slice(0, t.Len()).Interface()
-		err := hex.DecodeHex([]byte(strData), sliceRes.([]byte))
+		err := DecodeHex([]byte(strData), sliceRes.([]byte))
 		return res.Interface(), err
 	}
 	if t.Kind() == reflect.Uint64 {
@@ -87,9 +86,9 @@ func decodeHook(s reflect.Type, t reflect.Type, data interface{}) (interface{}, 
 	}
 	if t.Kind() == reflect.Slice && t.Elem().Kind() == reflect.Uint8 {
 		inBytes := []byte(strData)
-		_, byteCount := hex.DecodeHexOffsetAndLen(inBytes)
+		_, byteCount := DecodeHexOffsetAndLen(inBytes)
 		res := make([]byte, byteCount, byteCount)
-		err := hex.DecodeHex([]byte(strData), res)
+		err := DecodeHex([]byte(strData), res)
 		return res, err
 	}
 	return data, nil

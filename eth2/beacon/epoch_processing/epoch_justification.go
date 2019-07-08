@@ -37,10 +37,10 @@ func ProcessEpochJustification(state *BeaconState) {
 	state.JustificationBitfield <<= 1
 
 	// Get the sum balances of the boundary attesters, and the total balance at the time.
-	previousEpochBoundaryAttestingBalance := state.GetTotalBalanceOf(previousEpochBoundaryAttesterIndices)
-	previousTotalBalance := state.GetTotalBalanceOf(state.Validators.GetActiveValidatorIndices(currentEpoch - 1))
-	currentEpochBoundaryAttestingBalance := state.GetTotalBalanceOf(currentEpochBoundaryAttesterIndices)
-	currentTotalBalance := state.GetTotalBalanceOf(state.Validators.GetActiveValidatorIndices(currentEpoch))
+	previousEpochBoundaryAttestingBalance := state.Validators.GetTotalEffectiveBalanceOf(previousEpochBoundaryAttesterIndices)
+	previousTotalBalance := state.Validators.GetTotalEffectiveBalanceOf(state.Validators.GetActiveValidatorIndices(currentEpoch - 1))
+	currentEpochBoundaryAttestingBalance := state.Validators.GetTotalEffectiveBalanceOf(currentEpochBoundaryAttesterIndices)
+	currentTotalBalance := state.Validators.GetTotalEffectiveBalanceOf(state.Validators.GetActiveValidatorIndices(currentEpoch))
 
 	// > Justification
 	// If the previous epoch gets justified, fill the second last bit

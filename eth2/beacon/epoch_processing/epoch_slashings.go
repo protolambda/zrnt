@@ -9,22 +9,21 @@ func ProcessEpochSlashings(state *BeaconState) {
 	currentEpoch := state.Epoch()
 	totalBalance := state.Validators.GetTotalActiveEffectiveBalance(currentEpoch)
 
-	epochIndex := currentEpoch % LATEST_SLASHED_EXIT_LENGTH
+	epochIndex := currentEpoch % EPOCHS_PER_SLASHINGS_VECTOR
 	// Compute slashed balances in the current epoch
-	totalAtStart := state.LatestSlashedBalances[(epochIndex+1)%LATEST_SLASHED_EXIT_LENGTH]
-	totalAtEnd := state.LatestSlashedBalances[epochIndex]
+	slashings := state.Slashings[(epochIndex+1)%EPOCHS_PER_SLASHINGS_VECTOR]
 
-	for i, v := range state.ValidatorRegistry {
-		if v.Slashed && currentEpoch == v.WithdrawableEpoch-(LATEST_SLASHED_EXIT_LENGTH/2) {
+	for i, v := range state.Validators {
+		if v.Slashed && currentEpoch+(EPOCHS_PER_SLASHINGS_VECTOR/2) == v.WithdrawableEpoch {
 			scaledBalance := v.EffectiveBalance
-			if balanceDiff := (totalAtEnd - totalAtStart) * 3; totalBalance > balanceDiff {
+			if balanceDiff := slashings * 3; totalBalance > balanceDiff {
 				scaledBalance = (scaledBalance * balanceDiff) / totalBalance
 			}
 			penalty := scaledBalance
 			if minimumPenalty := v.EffectiveBalance / MIN_SLASHING_PENALTY_QUOTIENT; minimumPenalty < penalty {
 				penalty = minimumPenalty
 			}
-			state.DecreaseBalance(ValidatorIndex(i), penalty)
+			state.Balances.DecreaseBalance(ValidatorIndex(i), penalty)
 		}
 	}
 }

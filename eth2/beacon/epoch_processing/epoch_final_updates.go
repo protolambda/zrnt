@@ -4,7 +4,10 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon/components"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
+	"github.com/protolambda/zssz"
 )
+
+var ValidatorIndexListSSZ = zssz.GetSSZ((*[]ValidatorIndex)(nil))
 
 func ProcessEpochFinalUpdates(state *BeaconState) {
 	currentEpoch := state.Epoch()
@@ -26,7 +29,7 @@ func ProcessEpochFinalUpdates(state *BeaconState) {
 		}
 	}
 	// Update start shard
-	state.LatestStartShard = (state.LatestStartShard + state.GetShardDelta(currentEpoch)) % SHARD_COUNT
+	state.LatestStartShard = (state.LatestStartShard + state.Validators.GetShardDelta(currentEpoch)) % SHARD_COUNT
 
 	// Set active index root
 	indexRootPosition := (nextEpoch + ACTIVATION_EXIT_DELAY) % EPOCHS_PER_HISTORICAL_VECTOR

@@ -20,11 +20,6 @@ type Deposit struct {
 
 // Process an Eth1 deposit, registering a validator or increasing its balance.
 func (dep *Deposit) Process(state *BeaconState) error {
-	// Temporarily removed, is going back in.
-	//// Deposits must be processed in order
-	//if dep.Index != state.DepositIndex {
-	//	return fmt.Errorf("deposit has index %d that does not match with state index %d", dep.Index, state.DepositIndex)
-	//}
 
 	// Verify the Merkle branch
 	if !merkle.VerifyMerkleBranch(

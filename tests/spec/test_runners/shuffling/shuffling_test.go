@@ -9,8 +9,8 @@ import (
 )
 
 type ShufflingTestCase struct {
-	Seed Root
-	Count uint64
+	Seed     Root
+	Count    uint64
 	Shuffled []ValidatorIndex
 }
 

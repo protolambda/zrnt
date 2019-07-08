@@ -47,7 +47,7 @@ func TestGetBitOutOfRange(t *testing.T) {
 func TestVerifySize(t *testing.T) {
 	fields := []struct {
 		minExpectedSize uint64
-		field Bitfield
+		field           Bitfield
 	}{
 		{minExpectedSize: 0, field: Bitfield{}},
 		{minExpectedSize: 1, field: Bitfield{0}},
@@ -65,11 +65,11 @@ func TestVerifySize(t *testing.T) {
 				t.Errorf("cannot verify field #%d as size %d", i, s)
 			}
 		}
-		if f.minExpectedSize > 0 && f.field.VerifySize(f.minExpectedSize - 1) {
-			t.Errorf("field #%d can be verified as smaller than expected: %d", i, f.minExpectedSize - 1)
+		if f.minExpectedSize > 0 && f.field.VerifySize(f.minExpectedSize-1) {
+			t.Errorf("field #%d can be verified as smaller than expected: %d", i, f.minExpectedSize-1)
 		}
 		if f.field.VerifySize(max + 1) {
-			t.Errorf("field #%d can be verified as larger than expected: %d", i, max + 1)
+			t.Errorf("field #%d can be verified as larger than expected: %d", i, max+1)
 		}
 	}
 }

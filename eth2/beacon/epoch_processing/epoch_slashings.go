@@ -17,11 +17,11 @@ func ProcessEpochSlashings(state *BeaconState) {
 	for i, v := range state.ValidatorRegistry {
 		if v.Slashed && currentEpoch == v.WithdrawableEpoch-(LATEST_SLASHED_EXIT_LENGTH/2) {
 			scaledBalance := v.EffectiveBalance
-			if balanceDiff := (totalAtEnd-totalAtStart)*3; totalBalance > balanceDiff {
+			if balanceDiff := (totalAtEnd - totalAtStart) * 3; totalBalance > balanceDiff {
 				scaledBalance = (scaledBalance * balanceDiff) / totalBalance
 			}
 			penalty := scaledBalance
-			if minimumPenalty := v.EffectiveBalance/MIN_SLASHING_PENALTY_QUOTIENT; minimumPenalty < penalty {
+			if minimumPenalty := v.EffectiveBalance / MIN_SLASHING_PENALTY_QUOTIENT; minimumPenalty < penalty {
 				penalty = minimumPenalty
 			}
 			state.DecreaseBalance(ValidatorIndex(i), penalty)

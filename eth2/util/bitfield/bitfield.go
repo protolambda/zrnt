@@ -28,12 +28,3 @@ func (b Bitfield) VerifySize(size uint64) bool {
 	}
 	return true
 }
-
-func (b Bitfield) IsZero() bool {
-	for i := 0; i < len(b); i++ {
-		if b[i] != 0 {
-			return false
-		}
-	}
-	return true
-}

@@ -7,6 +7,17 @@ import (
 	"sort"
 )
 
+type AttesterSlashings []AttesterSlashing
+
+func (ops AttesterSlashings) Process(state *BeaconState) error {
+	for _, op := range ops {
+		if err := op.Process(state); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 type AttesterSlashing struct {
 	// First attestation
 	Attestation1 IndexedAttestation

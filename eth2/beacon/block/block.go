@@ -7,16 +7,6 @@ import (
 	"github.com/protolambda/zssz"
 )
 
-var BeaconBlockBodySSZ = zssz.GetSSZ((*BeaconBlockBody)(nil))
-
-type BeaconBlockBody struct {
-	RandaoReveal BLSSignature
-	Eth1BlockData
-	Graffiti Root
-
-	BlockOperations
-}
-
 var BeaconBlockSSZ = zssz.GetSSZ((*BeaconBlock)(nil))
 
 type BeaconBlock struct {

@@ -9,6 +9,17 @@ import (
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
+type Attestations []Attestation
+
+func (ops Attestations) Process(state *BeaconState) error {
+	for _, op := range ops {
+		if err := op.Process(state); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 type Attestation struct {
 	// Attester aggregation bitfield
 	AggregationBitfield bitfield.Bitfield

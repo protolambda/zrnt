@@ -11,7 +11,7 @@ type CrosslinksTestCase struct {
 }
 
 func (testCase *CrosslinksTestCase) Process() error {
-	epoch_processing.ProcessEpochCrosslinks(testCase.Pre)
+	epoch.ProcessEpochCrosslinks(testCase.Pre)
 	return nil
 }
 

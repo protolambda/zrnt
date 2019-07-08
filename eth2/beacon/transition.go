@@ -1,11 +1,28 @@
-package transition
+package beacon
 
 import (
 	"errors"
-	. "github.com/protolambda/zrnt/eth2/beacon"
+	. "github.com/protolambda/zrnt/eth2/beacon/block"
+	. "github.com/protolambda/zrnt/eth2/beacon/components"
+	"github.com/protolambda/zrnt/eth2/beacon/epoch"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
+
+func ProcessSlot(state *BeaconState) {
+	// Cache latest known state root (for previous slot)
+	latestStateRoot := ssz.HashTreeRoot(state, BeaconStateSSZ)
+	state.LatestStateRoots[state.Slot%SLOTS_PER_HISTORICAL_ROOT] = latestStateRoot
+
+	// Store latest known state root (for previous slot) in latest_block_header if it is empty
+	if state.LatestBlockHeader.StateRoot == (Root{}) {
+		state.LatestBlockHeader.StateRoot = latestStateRoot
+	}
+
+	// Cache latest known block root (for previous slot)
+	previousBlockRoot := ssz.SigningRoot(state.LatestBlockHeader, BeaconBlockHeaderSSZ)
+	state.LatestBlockRoots[state.Slot%SLOTS_PER_HISTORICAL_ROOT] = previousBlockRoot
+}
 
 // Transition the state to the given slot.
 // Returns an error if the slot is older than the state is already at.
@@ -19,7 +36,7 @@ func StateTransitionTo(state *BeaconState, slot Slot) error {
 		ProcessSlot(state)
 		// Per-epoch transition happens at the start of the first slot of every epoch.
 		if (state.Slot+1)%SLOTS_PER_EPOCH == 0 {
-			EpochTransition(state)
+			epoch.Transition(state)
 		}
 		state.Slot++
 	}
@@ -34,7 +51,7 @@ func StateTransition(state *BeaconState, block *BeaconBlock, verifyStateRoot boo
 		return err
 	}
 
-	if err := ProcessBlock(state, block); err != nil {
+	if err := block.Transition(state); err != nil {
 		return err
 	}
 	// State root verification

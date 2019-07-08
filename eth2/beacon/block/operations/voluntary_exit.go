@@ -9,6 +9,17 @@ import (
 	"github.com/protolambda/zssz"
 )
 
+type VoluntaryExits []VoluntaryExit
+
+func (ops VoluntaryExits) Process(state *BeaconState) error {
+	for _, op := range ops {
+		if err := op.Process(state); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 var VoluntaryExitSSZ = zssz.GetSSZ((*VoluntaryExit)(nil))
 
 type VoluntaryExit struct {

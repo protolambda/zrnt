@@ -11,7 +11,7 @@ type RegistryUpdatesTestCase struct {
 }
 
 func (testCase *RegistryUpdatesTestCase) Process() error {
-	epoch_processing.ProcessEpochRegistryUpdates(testCase.Pre)
+	epoch.ProcessEpochRegistryUpdates(testCase.Pre)
 	return nil
 }
 

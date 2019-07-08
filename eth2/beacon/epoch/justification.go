@@ -1,4 +1,4 @@
-package epoch_processing
+package epoch
 
 import (
 	. "github.com/protolambda/zrnt/eth2/beacon/components"

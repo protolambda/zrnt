@@ -1,13 +1,11 @@
-package epoch_processing
+package epoch
 
 import (
 	. "github.com/protolambda/zrnt/eth2/beacon/components"
+	. "github.com/protolambda/zrnt/eth2/beacon/components/registry"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
-	"github.com/protolambda/zssz"
 )
-
-var ValidatorIndexListSSZ = zssz.GetSSZ((*[]ValidatorIndex)(nil))
 
 func ProcessEpochFinalUpdates(state *BeaconState) {
 	currentEpoch := state.Epoch()

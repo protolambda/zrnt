@@ -1,9 +1,10 @@
 package components
 
 import (
+	. "github.com/protolambda/zrnt/eth2/beacon/components/registry"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/bitfield"
-	"github.com/protolambda/zrnt/eth2/util/shuffling"
+	"github.com/protolambda/zrnt/eth2/util/math"
 	"github.com/protolambda/zssz"
 )
 
@@ -46,33 +47,6 @@ type AttestationsState struct {
 	CurrentEpochAttestations  []*PendingAttestation
 }
 
-// Optimized compared to spec: takes pre-shuffled active indices as input, to not shuffle per-committee.
-func computeCommittee(shuffled []ValidatorIndex, index uint64, count uint64) []ValidatorIndex {
-	// Return the index'th shuffled committee out of the total committees data (shuffled active indices)
-	startOffset := (uint64(len(shuffled)) * index) / count
-	endOffset := (uint64(len(shuffled)) * (index + 1)) / count
-	return shuffled[startOffset:endOffset]
-}
-
-func (state *BeaconState) GetCrosslinkCommittee(epoch Epoch, shard Shard) []ValidatorIndex {
-	currentEpoch := state.Epoch()
-	previousEpoch := state.PreviousEpoch()
-	nextEpoch := currentEpoch + 1
-
-	if !(previousEpoch <= epoch && epoch <= nextEpoch) {
-		panic("could not retrieve crosslink committee for out of range slot")
-	}
-
-	seed := state.GenerateSeed(epoch)
-	activeIndices := state.Validators.GetActiveValidatorIndices(epoch)
-	// Active validators, shuffled in-place.
-	// TODO: cache shuffling
-	shuffling.UnshuffleList(activeIndices, seed)
-	index := uint64((shard + SHARD_COUNT - state.GetEpochStartShard(epoch)) % SHARD_COUNT)
-	count := state.Validators.GetEpochCommitteeCount(epoch)
-	return computeCommittee(activeIndices, index, count)
-}
-
 func (state *BeaconState) GetAttesters(attestations []*PendingAttestation, filter func(att *AttestationData) bool) ValidatorSet {
 	out := make(ValidatorSet, 0)
 	for _, att := range attestations {
@@ -91,4 +65,85 @@ func (state *BeaconState) GetAttestationSlot(attData *AttestationData) Slot {
 	committeeCount := Slot(state.Validators.GetEpochCommitteeCount(epoch))
 	offset := Slot((attData.Crosslink.Shard + SHARD_COUNT - state.GetEpochStartShard(epoch)) % SHARD_COUNT)
 	return epoch.GetStartSlot() + (offset / (committeeCount / SLOTS_PER_EPOCH))
+}
+
+func (state *BeaconState) AttestationDeltas() *Deltas {
+	validatorCount := ValidatorIndex(len(state.Validators))
+	deltas := NewDeltas(uint64(validatorCount))
+
+	previousEpoch := state.PreviousEpoch()
+
+	data := state.ValidationStatus()
+
+	var totalBalance, totalAttestingBalance, epochBoundaryBalance, matchingHeadBalance Gwei
+	for i := ValidatorIndex(0); i < validatorCount; i++ {
+		status := &data[i]
+		v := state.Validators[i]
+		b := v.EffectiveBalance
+		totalBalance += b
+		if status.Flags.hasMarkers(PrevEpochAttester | UnslashedAttester) {
+			totalAttestingBalance += b
+		}
+		if status.Flags.hasMarkers(EpochBoundaryAttester | UnslashedAttester) {
+			epochBoundaryBalance += b
+		}
+		if status.Flags.hasMarkers(MatchingHeadAttester | UnslashedAttester) {
+			matchingHeadBalance += b
+		}
+	}
+	previousTotalBalance := state.Validators.GetTotalActiveEffectiveBalance(state.PreviousEpoch())
+
+	balanceSqRoot := Gwei(math.IntegerSquareroot(uint64(previousTotalBalance)))
+	finalityDelay := previousEpoch - state.FinalizedEpoch
+
+	for i := ValidatorIndex(0); i < validatorCount; i++ {
+		status := &data[i]
+		if status.Flags&EligibleAttester != 0 {
+
+			v := state.Validators[i]
+			baseReward := v.EffectiveBalance * BASE_REWARD_FACTOR /
+				balanceSqRoot / BASE_REWARDS_PER_EPOCH
+
+			// Expected FFG source
+			if status.Flags.hasMarkers(PrevEpochAttester | UnslashedAttester) {
+				// Justification-participation reward
+				deltas.Rewards[i] += baseReward * totalAttestingBalance / totalBalance
+
+				// Inclusion speed bonus
+				deltas.Rewards[status.Proposer] += baseReward / PROPOSER_REWARD_QUOTIENT
+				deltas.Rewards[i] += baseReward * Gwei(MIN_ATTESTATION_INCLUSION_DELAY) / Gwei(status.InclusionDelay)
+			} else {
+				//Justification-non-participation R-penalty
+				deltas.Penalties[i] += baseReward
+			}
+
+			// Expected FFG target
+			if status.Flags.hasMarkers(EpochBoundaryAttester | UnslashedAttester) {
+				// Boundary-attestation reward
+				deltas.Rewards[i] += baseReward * epochBoundaryBalance / totalBalance
+			} else {
+				//Boundary-attestation-non-participation R-penalty
+				deltas.Penalties[i] += baseReward
+			}
+
+			// Expected head
+			if status.Flags.hasMarkers(MatchingHeadAttester | UnslashedAttester) {
+				// Canonical-participation reward
+				deltas.Rewards[i] += baseReward * matchingHeadBalance / totalBalance
+			} else {
+				// Non-canonical-participation R-penalty
+				deltas.Penalties[i] += baseReward
+			}
+
+			// Take away max rewards if we're not finalizing
+			if finalityDelay > MIN_EPOCHS_TO_INACTIVITY_PENALTY {
+				deltas.Penalties[i] += baseReward * BASE_REWARDS_PER_EPOCH
+				if !status.Flags.hasMarkers(MatchingHeadAttester | UnslashedAttester) {
+					deltas.Penalties[i] += v.EffectiveBalance * Gwei(finalityDelay) / INACTIVITY_PENALTY_QUOTIENT
+				}
+			}
+		}
+	}
+
+	return deltas
 }

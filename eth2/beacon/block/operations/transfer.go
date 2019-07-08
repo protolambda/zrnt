@@ -2,6 +2,7 @@ package operations
 
 import (
 	"errors"
+	"fmt"
 	. "github.com/protolambda/zrnt/eth2/beacon/components"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/bls"
@@ -9,6 +10,26 @@ import (
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/protolambda/zssz"
 )
+
+type Transfers []Transfer
+
+func (ops Transfers) Process(state *BeaconState) error {
+	// check if all transfers are distinct
+	distinctionCheckSet := make(map[BLSSignature]struct{})
+	for i, v := range ops {
+		if existing, ok := distinctionCheckSet[v.Signature]; ok {
+			return fmt.Errorf("transfer %d is the same as transfer %d, aborting", i, existing)
+		}
+		distinctionCheckSet[v.Signature] = struct{}{}
+	}
+
+	for _, op := range ops {
+		if err := op.Process(state); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 var TransferSSZ = zssz.GetSSZ((*Transfer)(nil))
 

@@ -8,6 +8,17 @@ import (
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
+type ProposerSlashings []ProposerSlashing
+
+func (ops ProposerSlashings) Process(state *BeaconState) error {
+	for _, op := range ops {
+		if err := op.Process(state); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 type ProposerSlashing struct {
 	// Proposer index
 	ProposerIndex ValidatorIndex

@@ -1,35 +1,40 @@
 package genesis
 
 import (
-	. "github.com/protolambda/zrnt/eth2/beacon"
-	"github.com/protolambda/zrnt/eth2/beacon/block_processing"
+	. "github.com/protolambda/zrnt/eth2/beacon/block/operations"
+	. "github.com/protolambda/zrnt/eth2/beacon/components"
+	. "github.com/protolambda/zrnt/eth2/beacon/components/registry"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
-func GetGenesisBeaconState(validatorDeposits []Deposit, time Timestamp, eth1Data Eth1Data) *BeaconState {
+func Genesis(validatorDeposits []Deposit, time Timestamp, eth1Data Eth1Data) *BeaconState {
 	state := &BeaconState{
-		GenesisTime: time,
+		VersioningState: VersioningState{
+			GenesisTime: time,
+		},
 		// Ethereum 1.0 chain data
-		LatestEth1Data: eth1Data,
+		Eth1State: Eth1State{
+			LatestEth1Data: eth1Data,
+		},
 	}
 	// Process genesis deposits
 	for _, dep := range validatorDeposits {
 		// in the rare case someone tries to create a genesis block using invalid data, panic.
-		if err := block_processing.ProcessDeposit(state, &dep); err != nil {
+		if err := dep.Process(state); err != nil {
 			panic(err)
 		}
 	}
 	// Process genesis activations
-	for _, v := range state.ValidatorRegistry {
+	for _, v := range state.Validators {
 		if v.EffectiveBalance >= MAX_EFFECTIVE_BALANCE {
 			v.ActivationEligibilityEpoch = GENESIS_EPOCH
 			v.ActivationEpoch = GENESIS_EPOCH
 		}
 	}
-	genesisActiveIndexRoot := ssz.HashTreeRoot(
-		state.ValidatorRegistry.GetActiveValidatorIndices(GENESIS_EPOCH), ValidatorIndexListSSZ)
-	for i := Epoch(0); i < LATEST_ACTIVE_INDEX_ROOTS_LENGTH; i++ {
+	indices := state.Validators.GetActiveValidatorIndices(GENESIS_EPOCH)
+	genesisActiveIndexRoot := ssz.HashTreeRoot(indices, ValidatorIndexListSSZ)
+	for i := Epoch(0); i < EPOCHS_PER_HISTORICAL_VECTOR; i++ {
 		state.LatestActiveIndexRoots[i] = genesisActiveIndexRoot
 	}
 	return state

@@ -11,6 +11,26 @@ import (
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
+type Deposits []Deposit
+
+func (ops Deposits) Process(state *BeaconState) error {
+	depositCount := DepositIndex(len(ops))
+	expectedCount := state.LatestEth1Data.DepositCount - state.DepositIndex
+	if expectedCount > MAX_DEPOSITS {
+		expectedCount = MAX_DEPOSITS
+	}
+	if depositCount != expectedCount {
+		return errors.New("block does not contain expected deposits amount")
+	}
+
+	for _, op := range ops {
+		if err := op.Process(state); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 type Deposit struct {
 	// Branch in the deposit tree
 	Proof [DEPOSIT_CONTRACT_TREE_DEPTH]Root

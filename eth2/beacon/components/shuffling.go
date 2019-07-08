@@ -5,6 +5,7 @@ import (
 	"errors"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/bls"
+	"github.com/protolambda/zrnt/eth2/util/shuffling"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/protolambda/zssz"
 )
@@ -53,6 +54,33 @@ func (state *BeaconState) GetEpochStartShard(epoch Epoch) Shard {
 		shard = (shard + SHARD_COUNT - state.Validators.GetShardDelta(checkEpoch)) % SHARD_COUNT
 	}
 	return shard
+}
+
+// Optimized compared to spec: takes pre-shuffled active indices as input, to not shuffle per-committee.
+func computeCommittee(shuffled []ValidatorIndex, index uint64, count uint64) []ValidatorIndex {
+	// Return the index'th shuffled committee out of the total committees data (shuffled active indices)
+	startOffset := (uint64(len(shuffled)) * index) / count
+	endOffset := (uint64(len(shuffled)) * (index + 1)) / count
+	return shuffled[startOffset:endOffset]
+}
+
+func (state *BeaconState) GetCrosslinkCommittee(epoch Epoch, shard Shard) []ValidatorIndex {
+	currentEpoch := state.Epoch()
+	previousEpoch := state.PreviousEpoch()
+	nextEpoch := currentEpoch + 1
+
+	if !(previousEpoch <= epoch && epoch <= nextEpoch) {
+		panic("could not retrieve crosslink committee for out of range slot")
+	}
+
+	seed := state.GenerateSeed(epoch)
+	activeIndices := state.Validators.GetActiveValidatorIndices(epoch)
+	// Active validators, shuffled in-place.
+	// TODO: cache shuffling
+	shuffling.UnshuffleList(activeIndices, seed)
+	index := uint64((shard + SHARD_COUNT - state.GetEpochStartShard(epoch)) % SHARD_COUNT)
+	count := state.Validators.GetEpochCommitteeCount(epoch)
+	return computeCommittee(activeIndices, index, count)
 }
 
 type RandaoRevealBlockData struct {

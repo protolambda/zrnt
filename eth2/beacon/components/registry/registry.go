@@ -2,6 +2,7 @@ package registry
 
 import (
 	. "github.com/protolambda/zrnt/eth2/core"
+	"github.com/protolambda/zssz"
 )
 
 // Validator registry
@@ -9,6 +10,8 @@ type RegistryState struct {
 	Validators ValidatorRegistry
 	Balances   Balances
 }
+
+var ValidatorIndexListSSZ = zssz.GetSSZ((*[]ValidatorIndex)(nil))
 
 type ValidatorRegistry []*Validator
 

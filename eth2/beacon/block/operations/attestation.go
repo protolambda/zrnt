@@ -1,23 +1,24 @@
-package block_processing
+package operations
 
 import (
 	"errors"
 	"fmt"
-	. "github.com/protolambda/zrnt/eth2/beacon"
+	. "github.com/protolambda/zrnt/eth2/beacon/components"
 	. "github.com/protolambda/zrnt/eth2/core"
+	"github.com/protolambda/zrnt/eth2/util/bitfield"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
-func ProcessBlockAttestations(state *BeaconState, block *BeaconBlock) error {
-	if len(block.Body.Attestations) > MAX_ATTESTATIONS {
-		return errors.New("too many attestations")
-	}
-	for _, attestation := range block.Body.Attestations {
-		if err := ProcessAttestation(state, &attestation); err != nil {
-			return err
-		}
-	}
-	return nil
+
+type Attestation struct {
+	// Attester aggregation bitfield
+	AggregationBitfield bitfield.Bitfield
+	// Attestation data
+	Data AttestationData
+	// Custody bitfield
+	CustodyBitfield bitfield.Bitfield
+	// BLS aggregate signature
+	Signature BLSSignature
 }
 
 type ffg struct {
@@ -26,7 +27,7 @@ type ffg struct {
 	targetEpoch Epoch
 }
 
-func ProcessAttestation(state *BeaconState, attestation *Attestation) error {
+func (attestation *Attestation) Process(state *BeaconState) error {
 	data := &attestation.Data
 	if data.Crosslink.Shard >= SHARD_COUNT {
 		return errors.New("attestation data is invalid, shard out of range")
@@ -91,7 +92,7 @@ func ProcessAttestation(state *BeaconState, attestation *Attestation) error {
 	}
 
 	// Check signature and bitfields
-	if indexedAtt, err := state.ConvertToIndexed(attestation); err != nil {
+	if indexedAtt, err := attestation.ConvertToIndexed(state); err != nil {
 		return fmt.Errorf("attestation could not be converted to an indexed attestation: %v", err)
 	} else if err := state.ValidateIndexedAttestation(indexedAtt); err != nil {
 		return fmt.Errorf("attestation could not be verified in its indexed form: %v", err)
@@ -110,4 +111,35 @@ func ProcessAttestation(state *BeaconState, attestation *Attestation) error {
 		state.PreviousEpochAttestations = append(state.PreviousEpochAttestations, pendingAttestation)
 	}
 	return nil
+}
+
+
+// Convert attestation to (almost) indexed-verifiable form
+func (attestation *Attestation) ConvertToIndexed(state *BeaconState) (*IndexedAttestation, error) {
+	if a, b := len(attestation.AggregationBitfield), len(attestation.CustodyBitfield); a != b {
+		return nil, fmt.Errorf("aggregation bitfield does not match custody bitfield size: %d <> %d", a, b)
+	}
+	participants, err := state.GetAttestingIndices(&attestation.Data, &attestation.AggregationBitfield)
+	if err != nil {
+		return nil, errors.New("participants could not be derived from aggregation_bitfield")
+	}
+	custodyBit1Indices, err := state.GetAttestingIndices(&attestation.Data, &attestation.CustodyBitfield)
+	if err != nil {
+		return nil, errors.New("participants could not be derived from custody_bitfield")
+	}
+	if len(custodyBit1Indices) > len(participants) {
+		return nil, fmt.Errorf("attestation has more custody bits set (%d) than participants allowed (%d)",
+			len(custodyBit1Indices), len(participants))
+	}
+	// everyone who is a participant, and has not a custody bit set to 1, is part of the 0 custody bit indices.
+	custodyBit0Indices := make([]ValidatorIndex, 0, len(participants)-len(custodyBit1Indices))
+	participants.ZigZagJoin(custodyBit1Indices, nil, func(i ValidatorIndex) {
+		custodyBit0Indices = append(custodyBit0Indices, i)
+	})
+	return &IndexedAttestation{
+		CustodyBit0Indices: custodyBit0Indices,
+		CustodyBit1Indices: custodyBit1Indices,
+		Data:               attestation.Data,
+		Signature:          attestation.Signature,
+	}, nil
 }

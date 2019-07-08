@@ -1,25 +1,20 @@
-package block_processing
+package operations
 
 import (
 	"errors"
-	. "github.com/protolambda/zrnt/eth2/beacon"
+	. "github.com/protolambda/zrnt/eth2/beacon/components"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"sort"
 )
 
-func ProcessBlockAttesterSlashings(state *BeaconState, block *BeaconBlock) error {
-	if len(block.Body.AttesterSlashings) > MAX_ATTESTER_SLASHINGS {
-		return errors.New("too many attester slashings")
-	}
-	for _, attesterSlashing := range block.Body.AttesterSlashings {
-		if err := ProcessAttesterSlashing(state, &attesterSlashing); err != nil {
-			return err
-		}
-	}
-	return nil
+type AttesterSlashing struct {
+	// First attestation
+	Attestation1 IndexedAttestation
+	// Second attestation
+	Attestation2 IndexedAttestation
 }
 
-func ProcessAttesterSlashing(state *BeaconState, attesterSlashing *AttesterSlashing) error {
+func (attesterSlashing *AttesterSlashing) Process(state *BeaconState) error {
 	sa1 := &attesterSlashing.Attestation1
 	sa2 := &attesterSlashing.Attestation2
 
@@ -50,7 +45,7 @@ func ProcessAttesterSlashing(state *BeaconState, attesterSlashing *AttesterSlash
 	currentEpoch := state.Epoch()
 	// run slashings where applicable
 	indices1.ZigZagJoin(indices2, func(i ValidatorIndex) {
-		if state.ValidatorRegistry[i].IsSlashable(currentEpoch) {
+		if state.Validators[i].IsSlashable(currentEpoch) {
 			state.SlashValidator(i, nil)
 			slashedAny = true
 		}

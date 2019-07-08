@@ -1,7 +1,7 @@
 package epoch_processing
 
 import (
-	. "github.com/protolambda/zrnt/eth2/beacon"
+	. "github.com/protolambda/zrnt/eth2/beacon/components"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
@@ -15,7 +15,7 @@ func ProcessEpochFinalUpdates(state *BeaconState) {
 		state.Eth1DataVotes = make([]Eth1Data, 0)
 	}
 	// Update effective balances with hysteresis
-	for i, v := range state.ValidatorRegistry {
+	for i, v := range state.Validators {
 		balance := state.Balances[i]
 		if balance < v.EffectiveBalance ||
 			v.EffectiveBalance+3*HALF_INCREMENT < balance {
@@ -29,14 +29,13 @@ func ProcessEpochFinalUpdates(state *BeaconState) {
 	state.LatestStartShard = (state.LatestStartShard + state.GetShardDelta(currentEpoch)) % SHARD_COUNT
 
 	// Set active index root
-	indexRootPosition := (nextEpoch + ACTIVATION_EXIT_DELAY) % LATEST_ACTIVE_INDEX_ROOTS_LENGTH
+	indexRootPosition := (nextEpoch + ACTIVATION_EXIT_DELAY) % EPOCHS_PER_HISTORICAL_VECTOR
 	state.LatestActiveIndexRoots[indexRootPosition] =
-		ssz.HashTreeRoot(state.ValidatorRegistry.GetActiveValidatorIndices(nextEpoch+ACTIVATION_EXIT_DELAY), ValidatorIndexListSSZ)
-	state.LatestSlashedBalances[nextEpoch%LATEST_SLASHED_EXIT_LENGTH] =
-		state.LatestSlashedBalances[currentEpoch%LATEST_SLASHED_EXIT_LENGTH]
+		ssz.HashTreeRoot(state.Validators.GetActiveValidatorIndices(nextEpoch+ACTIVATION_EXIT_DELAY), ValidatorIndexListSSZ)
+	state.Slashings[nextEpoch%EPOCHS_PER_SLASHINGS_VECTOR] = 0 // TODO
 
 	// Set randao mix
-	state.LatestRandaoMixes[nextEpoch%LATEST_RANDAO_MIXES_LENGTH] = state.GetRandaoMix(currentEpoch)
+	state.LatestRandaoMixes[nextEpoch%EPOCHS_PER_HISTORICAL_VECTOR] = state.GetRandaoMix(currentEpoch)
 
 	// Set historical root accumulator
 	if nextEpoch%SLOTS_PER_HISTORICAL_ROOT.ToEpoch() == 0 {

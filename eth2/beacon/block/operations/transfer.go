@@ -1,38 +1,36 @@
-package block_processing
+package operations
 
 import (
 	"errors"
-	"fmt"
-	. "github.com/protolambda/zrnt/eth2/beacon"
+	. "github.com/protolambda/zrnt/eth2/beacon/components"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	. "github.com/protolambda/zrnt/eth2/util/hashing"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
+	"github.com/protolambda/zssz"
 )
 
-func ProcessBlockTransfers(state *BeaconState, block *BeaconBlock) error {
-	if len(block.Body.Transfers) > MAX_TRANSFERS {
-		return errors.New("too many transfers")
-	}
-	// check if all transfers are distinct
-	distinctionCheckSet := make(map[BLSSignature]struct{})
-	for i, v := range block.Body.Transfers {
-		if existing, ok := distinctionCheckSet[v.Signature]; ok {
-			return fmt.Errorf("transfer %d is the same as transfer %d, aborting", i, existing)
-		}
-		distinctionCheckSet[v.Signature] = struct{}{}
-	}
+var TransferSSZ = zssz.GetSSZ((*Transfer)(nil))
 
-	for _, transfer := range block.Body.Transfers {
-		if err := ProcessTransfer(state, &transfer); err != nil {
-			return err
-		}
-	}
-	return nil
+type Transfer struct {
+	// Sender index
+	Sender ValidatorIndex
+	// Recipient index
+	Recipient ValidatorIndex
+	// Amount in Gwei
+	Amount Gwei
+	// Fee in Gwei for block proposer
+	Fee Gwei
+	// Inclusion slot
+	Slot Slot
+	// Sender withdrawal pubkey
+	Pubkey BLSPubkey
+	// Sender signature
+	Signature BLSSignature
 }
 
-func ProcessTransfer(state *BeaconState, transfer *Transfer) error {
-	if !state.ValidatorRegistry.IsValidatorIndex(transfer.Sender) {
+func (transfer *Transfer) Process(state *BeaconState) error {
+	if !state.Validators.IsValidatorIndex(transfer.Sender) {
 		return errors.New("cannot send funds from non-existent validator")
 	}
 	senderBalance := state.Balances[transfer.Sender]
@@ -51,7 +49,7 @@ func ProcessTransfer(state *BeaconState, transfer *Transfer) error {
 	if state.Slot != transfer.Slot {
 		return errors.New("transfer is not valid in current slot")
 	}
-	sender := state.ValidatorRegistry[transfer.Sender]
+	sender := state.Validators[transfer.Sender]
 	// Sender must be not yet eligible for activation, withdrawn, or transfer balance over MAX_EFFECTIVE_BALANCE
 	if !(sender.ActivationEligibilityEpoch == FAR_FUTURE_EPOCH ||
 		state.Epoch() >= sender.WithdrawableEpoch ||
@@ -70,10 +68,10 @@ func ProcessTransfer(state *BeaconState, transfer *Transfer) error {
 		state.GetDomain(DOMAIN_TRANSFER, transfer.Slot.ToEpoch())) {
 		return errors.New("transfer signature is invalid")
 	}
-	state.DecreaseBalance(transfer.Sender, transfer.Amount+transfer.Fee)
-	state.IncreaseBalance(transfer.Recipient, transfer.Amount)
+	state.Balances.DecreaseBalance(transfer.Sender, transfer.Amount+transfer.Fee)
+	state.Balances.IncreaseBalance(transfer.Recipient, transfer.Amount)
 	propIndex := state.GetBeaconProposerIndex()
-	state.IncreaseBalance(propIndex, transfer.Fee)
+	state.Balances.IncreaseBalance(propIndex, transfer.Fee)
 	// Verify balances are not dust
 	if b := state.Balances[transfer.Sender]; 0 < b && b < MIN_DEPOSIT_AMOUNT {
 		return errors.New("transfer is invalid: results in dust on sender address")

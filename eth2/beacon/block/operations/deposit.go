@@ -1,35 +1,25 @@
-package block_processing
+package operations
 
 import (
 	"errors"
 	"fmt"
-	. "github.com/protolambda/zrnt/eth2/beacon"
+	. "github.com/protolambda/zrnt/eth2/beacon/components"
+	. "github.com/protolambda/zrnt/eth2/beacon/components/registry"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/merkle"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
-func ProcessBlockDeposits(state *BeaconState, block *BeaconBlock) error {
-	depositCount := DepositIndex(len(block.Body.Deposits))
-	expectedCount := state.LatestEth1Data.DepositCount - state.DepositIndex
-	if expectedCount > MAX_DEPOSITS {
-		expectedCount = MAX_DEPOSITS
-	}
-	if depositCount != expectedCount {
-		return errors.New("block does not contain expected deposits amount")
-	}
-	for i := 0; i < len(block.Body.Deposits); i++ {
-		dep := &block.Body.Deposits[i]
-		if err := ProcessDeposit(state, dep); err != nil {
-			return err
-		}
-	}
-	return nil
+type Deposit struct {
+	// Branch in the deposit tree
+	Proof [DEPOSIT_CONTRACT_TREE_DEPTH]Root
+	// Data
+	Data DepositData
 }
 
 // Process an Eth1 deposit, registering a validator or increasing its balance.
-func ProcessDeposit(state *BeaconState, dep *Deposit) error {
+func (dep *Deposit) Process(state *BeaconState) error {
 	// Temporarily removed, is going back in.
 	//// Deposits must be processed in order
 	//if dep.Index != state.DepositIndex {
@@ -53,7 +43,7 @@ func ProcessDeposit(state *BeaconState, dep *Deposit) error {
 	state.DepositIndex += 1
 
 	valIndex := ValidatorIndexMarker
-	for i, v := range state.ValidatorRegistry {
+	for i, v := range state.Validators {
 		if v.Pubkey == dep.Data.Pubkey {
 			valIndex = ValidatorIndex(i)
 			break
@@ -85,11 +75,11 @@ func ProcessDeposit(state *BeaconState, dep *Deposit) error {
 			WithdrawableEpoch:          FAR_FUTURE_EPOCH,
 			EffectiveBalance:           effBalance,
 		}
-		state.ValidatorRegistry = append(state.ValidatorRegistry, validator)
+		state.Validators = append(state.Validators, validator)
 		state.Balances = append(state.Balances, dep.Data.Amount)
 	} else {
 		// Increase balance by deposit amount
-		state.IncreaseBalance(valIndex, dep.Data.Amount)
+		state.Balances.IncreaseBalance(valIndex, dep.Data.Amount)
 	}
 	return nil
 }

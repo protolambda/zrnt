@@ -1,7 +1,8 @@
 package epoch_processing
 
 import (
-	. "github.com/protolambda/zrnt/eth2/beacon"
+	. "github.com/protolambda/zrnt/eth2/beacon/components"
+	. "github.com/protolambda/zrnt/eth2/beacon/components/registry"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"sort"
 )
@@ -9,7 +10,7 @@ import (
 func ProcessEpochRegistryUpdates(state *BeaconState) {
 	// Process activation eligibility and ejections
 	currentEpoch := state.Epoch()
-	for i, v := range state.ValidatorRegistry {
+	for i, v := range state.Validators {
 		if v.ActivationEligibilityEpoch == FAR_FUTURE_EPOCH &&
 			v.EffectiveBalance >= MAX_EFFECTIVE_BALANCE {
 			v.ActivationEligibilityEpoch = currentEpoch
@@ -21,7 +22,7 @@ func ProcessEpochRegistryUpdates(state *BeaconState) {
 	}
 	// Queue validators eligible for activation and not dequeued for activation prior to finalized epoch
 	activationQueue := make([]*Validator, 0)
-	for _, v := range state.ValidatorRegistry {
+	for _, v := range state.Validators {
 		if v.ActivationEligibilityEpoch != FAR_FUTURE_EPOCH &&
 			v.ActivationEpoch >= state.FinalizedEpoch.GetDelayedActivationExitEpoch() {
 			activationQueue = append(activationQueue, v)

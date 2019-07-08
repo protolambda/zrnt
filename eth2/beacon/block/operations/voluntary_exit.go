@@ -1,31 +1,31 @@
-package block_processing
+package operations
 
 import (
 	"errors"
-	. "github.com/protolambda/zrnt/eth2/beacon"
+	. "github.com/protolambda/zrnt/eth2/beacon/components"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
+	"github.com/protolambda/zssz"
 )
 
-func ProcessBlockVoluntaryExits(state *BeaconState, block *BeaconBlock) error {
-	if len(block.Body.VoluntaryExits) > MAX_VOLUNTARY_EXITS {
-		return errors.New("too many voluntary exits")
-	}
-	for _, exit := range block.Body.VoluntaryExits {
-		if err := ProcessVoluntaryExit(state, &exit); err != nil {
-			return err
-		}
-	}
-	return nil
+var VoluntaryExitSSZ = zssz.GetSSZ((*VoluntaryExit)(nil))
+
+type VoluntaryExit struct {
+	// Minimum epoch for processing exit
+	Epoch Epoch
+	// Index of the exiting validator
+	ValidatorIndex ValidatorIndex
+	// Validator signature
+	Signature BLSSignature
 }
 
-func ProcessVoluntaryExit(state *BeaconState, exit *VoluntaryExit) error {
+func (exit *VoluntaryExit) Process(state *BeaconState) error {
 	currentEpoch := state.Epoch()
-	if !state.ValidatorRegistry.IsValidatorIndex(exit.ValidatorIndex) {
+	if !state.Validators.IsValidatorIndex(exit.ValidatorIndex) {
 		return errors.New("invalid exit validator index")
 	}
-	validator := state.ValidatorRegistry[exit.ValidatorIndex]
+	validator := state.Validators[exit.ValidatorIndex]
 	// Verify that the validator is active
 	if !validator.IsActive(currentEpoch) {
 		return errors.New("validator must be active to be able to voluntarily exit")

@@ -1,13 +1,13 @@
 package epoch_processing
 
 import (
-	. "github.com/protolambda/zrnt/eth2/beacon"
+	. "github.com/protolambda/zrnt/eth2/beacon/components"
 	. "github.com/protolambda/zrnt/eth2/core"
 )
 
 func ProcessEpochSlashings(state *BeaconState) {
 	currentEpoch := state.Epoch()
-	totalBalance := state.GetTotalActiveBalance()
+	totalBalance := state.Validators.GetTotalActiveEffectiveBalance(currentEpoch)
 
 	epochIndex := currentEpoch % LATEST_SLASHED_EXIT_LENGTH
 	// Compute slashed balances in the current epoch

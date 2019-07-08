@@ -1,4 +1,4 @@
-package beacon
+package registry
 
 import . "github.com/protolambda/zrnt/eth2/core"
 
@@ -24,5 +24,3 @@ func (deltas *Deltas) Add(other *Deltas) {
 		deltas.Penalties[i] += other.Penalties[i]
 	}
 }
-
-type DeltasCalculator func(state *BeaconState) *Deltas

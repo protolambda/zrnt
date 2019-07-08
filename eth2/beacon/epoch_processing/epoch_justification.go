@@ -1,7 +1,7 @@
 package epoch_processing
 
 import (
-	. "github.com/protolambda/zrnt/eth2/beacon"
+	. "github.com/protolambda/zrnt/eth2/beacon/components"
 	. "github.com/protolambda/zrnt/eth2/core"
 )
 
@@ -18,13 +18,13 @@ func ProcessEpochJustification(state *BeaconState) {
 	oldPreviousJustifiedEpoch := state.PreviousJustifiedEpoch
 	oldCurrentJustifiedEpoch := state.CurrentJustifiedEpoch
 
-	previousEpochBoundaryAttesterIndices := state.FilterUnslashed(state.GetAttesters(
+	previousEpochBoundaryAttesterIndices := state.Validators.FilterUnslashed(state.GetAttesters(
 		state.PreviousEpochAttestations,
 		func(att *AttestationData) bool {
 			return att.TargetRoot == previousBoundaryBlockRoot
 		}))
 
-	currentEpochBoundaryAttesterIndices := state.FilterUnslashed(state.GetAttesters(
+	currentEpochBoundaryAttesterIndices := state.Validators.FilterUnslashed(state.GetAttesters(
 		state.CurrentEpochAttestations,
 		func(att *AttestationData) bool {
 			return att.TargetRoot == currentBoundaryBlockRoot
@@ -38,9 +38,9 @@ func ProcessEpochJustification(state *BeaconState) {
 
 	// Get the sum balances of the boundary attesters, and the total balance at the time.
 	previousEpochBoundaryAttestingBalance := state.GetTotalBalanceOf(previousEpochBoundaryAttesterIndices)
-	previousTotalBalance := state.GetTotalBalanceOf(state.ValidatorRegistry.GetActiveValidatorIndices(currentEpoch - 1))
+	previousTotalBalance := state.GetTotalBalanceOf(state.Validators.GetActiveValidatorIndices(currentEpoch - 1))
 	currentEpochBoundaryAttestingBalance := state.GetTotalBalanceOf(currentEpochBoundaryAttesterIndices)
-	currentTotalBalance := state.GetTotalBalanceOf(state.ValidatorRegistry.GetActiveValidatorIndices(currentEpoch))
+	currentTotalBalance := state.GetTotalBalanceOf(state.Validators.GetActiveValidatorIndices(currentEpoch))
 
 	// > Justification
 	// If the previous epoch gets justified, fill the second last bit

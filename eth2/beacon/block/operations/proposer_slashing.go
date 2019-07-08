@@ -1,30 +1,27 @@
-package block_processing
+package operations
 
 import (
 	"errors"
-	. "github.com/protolambda/zrnt/eth2/beacon"
+	. "github.com/protolambda/zrnt/eth2/beacon/components"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
-func ProcessBlockProposerSlashings(state *BeaconState, block *BeaconBlock) error {
-	if len(block.Body.ProposerSlashings) > MAX_PROPOSER_SLASHINGS {
-		return errors.New("too many proposer slashings")
-	}
-	for _, ps := range block.Body.ProposerSlashings {
-		if err := ProcessProposerSlashing(state, &ps); err != nil {
-			return err
-		}
-	}
-	return nil
+type ProposerSlashing struct {
+	// Proposer index
+	ProposerIndex ValidatorIndex
+	// First proposal
+	Header1 BeaconBlockHeader
+	// Second proposal
+	Header2 BeaconBlockHeader
 }
 
-func ProcessProposerSlashing(state *BeaconState, ps *ProposerSlashing) error {
-	if !state.ValidatorRegistry.IsValidatorIndex(ps.ProposerIndex) {
+func (ps *ProposerSlashing) Process(state *BeaconState) error {
+	if !state.Validators.IsValidatorIndex(ps.ProposerIndex) {
 		return errors.New("invalid proposer index")
 	}
-	proposer := state.ValidatorRegistry[ps.ProposerIndex]
+	proposer := state.Validators[ps.ProposerIndex]
 	// Verify that the epoch is the same
 	if ps.Header1.Slot.ToEpoch() != ps.Header2.Slot.ToEpoch() {
 		return errors.New("proposer slashing requires slashing headers to be in same epoch")

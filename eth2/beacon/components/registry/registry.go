@@ -16,7 +16,6 @@ func (vr ValidatorRegistry) IsValidatorIndex(index ValidatorIndex) bool {
 	return index < ValidatorIndex(len(vr))
 }
 
-
 func (vr ValidatorRegistry) GetActiveValidatorIndices(epoch Epoch) []ValidatorIndex {
 	res := make([]ValidatorIndex, 0, len(vr))
 	for i, v := range vr {
@@ -71,4 +70,3 @@ func (vr ValidatorRegistry) FilterUnslashed(indices []ValidatorIndex) []Validato
 	}
 	return unslashed
 }
-

@@ -5,11 +5,11 @@ import (
 )
 
 type FinalityState struct {
-	PreviousJustifiedEpoch    Epoch
-	CurrentJustifiedEpoch     Epoch
-	PreviousJustifiedRoot     Root
-	CurrentJustifiedRoot      Root
-	JustificationBitfield     uint64
-	FinalizedEpoch            Epoch
-	FinalizedRoot             Root
+	PreviousJustifiedEpoch Epoch
+	CurrentJustifiedEpoch  Epoch
+	PreviousJustifiedRoot  Root
+	CurrentJustifiedRoot   Root
+	JustificationBitfield  uint64
+	FinalizedEpoch         Epoch
+	FinalizedRoot          Root
 }

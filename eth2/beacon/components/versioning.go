@@ -15,8 +15,8 @@ type Fork struct {
 
 type VersioningState struct {
 	GenesisTime Timestamp
-	Slot Slot
-	Fork Fork
+	Slot        Slot
+	Fork        Fork
 }
 
 // Get current epoch

@@ -12,7 +12,7 @@ var BeaconBlockBodySSZ = zssz.GetSSZ((*BeaconBlockBody)(nil))
 type BeaconBlockBody struct {
 	RandaoReveal BLSSignature
 	Eth1BlockData
-	Graffiti     Root
+	Graffiti Root
 
 	BlockOperations
 }
@@ -31,10 +31,10 @@ type BeaconBlock struct {
 
 func (block *BeaconBlock) Header() *BeaconBlockHeader {
 	return &BeaconBlockHeader{
-		Slot: block.Slot,
+		Slot:       block.Slot,
 		ParentRoot: block.ParentRoot,
-		StateRoot: block.StateRoot,
-		BodyRoot: ssz.HashTreeRoot(block.Body, BeaconBlockBodySSZ),
-		Signature: block.Signature,
+		StateRoot:  block.StateRoot,
+		BodyRoot:   ssz.HashTreeRoot(block.Body, BeaconBlockBodySSZ),
+		Signature:  block.Signature,
 	}
 }

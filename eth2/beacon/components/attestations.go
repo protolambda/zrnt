@@ -30,7 +30,6 @@ type AttestationData struct {
 	Crosslink Crosslink
 }
 
-
 type PendingAttestation struct {
 	// Attester aggregation bitfield
 	AggregationBitfield bitfield.Bitfield
@@ -93,4 +92,3 @@ func (state *BeaconState) GetAttestationSlot(attData *AttestationData) Slot {
 	offset := Slot((attData.Crosslink.Shard + SHARD_COUNT - state.GetEpochStartShard(epoch)) % SHARD_COUNT)
 	return epoch.GetStartSlot() + (offset / (committeeCount / SLOTS_PER_EPOCH))
 }
-

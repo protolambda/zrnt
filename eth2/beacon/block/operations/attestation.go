@@ -9,7 +9,6 @@ import (
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
-
 type Attestation struct {
 	// Attester aggregation bitfield
 	AggregationBitfield bitfield.Bitfield
@@ -112,7 +111,6 @@ func (attestation *Attestation) Process(state *BeaconState) error {
 	}
 	return nil
 }
-
 
 // Convert attestation to (almost) indexed-verifiable form
 func (attestation *Attestation) ConvertToIndexed(state *BeaconState) (*IndexedAttestation, error) {

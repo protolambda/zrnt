@@ -20,7 +20,6 @@ type Crosslink struct {
 }
 
 type CrosslinksState struct {
-
-	CurrentCrosslinks      [SHARD_COUNT]Crosslink
-	PreviousCrosslinks     [SHARD_COUNT]Crosslink
+	CurrentCrosslinks  [SHARD_COUNT]Crosslink
+	PreviousCrosslinks [SHARD_COUNT]Crosslink
 }

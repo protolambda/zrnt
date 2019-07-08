@@ -3,6 +3,7 @@ package components
 import (
 	"encoding/binary"
 	. "github.com/protolambda/zrnt/eth2/core"
+	. "github.com/protolambda/zrnt/eth2/util/hashing"
 )
 
 // Return the beacon proposer index for the current slot

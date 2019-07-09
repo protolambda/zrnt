@@ -57,7 +57,25 @@ func (cb CommitteeBits) FilterParticipants(committee []ValidatorIndex) []Validat
 		panic("committee mismatch, bitfield length does not match")
 	}
 	for i := uint32(0); i < bitLen; i++ {
-		out = append(out, committee[i])
+		if cb.GetBit(i) {
+			out = append(out, committee[i])
+		}
+	}
+	return out
+}
+
+// In-place filters a list of committees indices to only keep the bitfield NON-participants.
+// The result is not sorted. Returns the re-sliced filtered non-participants list.
+func (cb CommitteeBits) FilterNonParticipants(committee []ValidatorIndex) []ValidatorIndex {
+	bitLen := cb.BitLen()
+	out := committee[:0]
+	if bitLen != uint32(len(committee)) {
+		panic("committee mismatch, bitfield length does not match")
+	}
+	for i := uint32(0); i < bitLen; i++ {
+		if !cb.GetBit(i) {
+			out = append(out, committee[i])
+		}
 	}
 	return out
 }

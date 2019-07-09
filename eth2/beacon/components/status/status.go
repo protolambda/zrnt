@@ -15,6 +15,5 @@ type Status struct {
 func (status *Status) Load(state *BeaconState) {
 	status.ShufflingStatus.Load(state)
 	status.CrosslinkingStatus.Load(state, &status.ShufflingStatus)
-	// TODO use shuffling status to optimize validation status
 	status.ValidationStatus.Load(state, &status.ShufflingStatus)
 }

@@ -18,8 +18,8 @@ func (status *CrosslinkingStatus) Load(state *BeaconState, shufflingStatus *Shuf
 }
 
 type LinkWinner struct {
-	Crosslink *Crosslink
-	Attesters ValidatorSet
+	Crosslink *Crosslink // nil when there are no crosslinks for the shard.
+	Attesters ValidatorSet // nil-slice when there are no attestations for the shard.
 }
 
 type CrosslinkingEpoch struct {
@@ -60,7 +60,7 @@ func (crep *CrosslinkingEpoch) Load(state *BeaconState, shuffling *ShufflingEpoc
 	}
 
 	winningCrosslinks := [SHARD_COUNT]weightedLink{}
-	participants := append(make([]ValidatorIndex, 0, MAX_VALIDATORS_PER_COMMITTEE))
+	participants := make([]ValidatorIndex, 0, MAX_VALIDATORS_PER_COMMITTEE)
 	for k, v := range crosslinkAttesters {
 		shard := k.Shard
 		committee := shuffling.Committees[shard]

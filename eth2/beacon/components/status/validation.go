@@ -31,17 +31,24 @@ type ValidationStatus struct {
 	ValidatorStatuses []ValidatorStatus
 }
 
-func (vs *ValidationStatus) Load(state *BeaconState) {
-	vs.ValidatorStatuses = make([]ValidatorStatus, len(state.Validators), len(state.Validators))
+func (status *ValidationStatus) Load(state *BeaconState, shufflingStatus *ShufflingStatus) {
+	status.ValidatorStatuses = make([]ValidatorStatus, len(state.Validators), len(state.Validators))
 
 	previousBoundaryBlockRoot, _ := state.GetBlockRootAtSlot(state.PreviousEpoch().GetStartSlot())
 
+	participants := make([]ValidatorIndex, 0, MAX_VALIDATORS_PER_COMMITTEE)
 	for _, att := range state.PreviousEpochAttestations {
 		attBlockRoot, _ := state.GetBlockRootAtSlot(state.GetAttestationSlot(&att.Data))
-		participants, _ := state.GetAttestingIndicesUnsorted(&att.Data, &att.AggregationBits)
+
+		// attestation-target is already known to be previous-epoch, get it from the pre-computed shuffling directly.
+		committee := shufflingStatus.Previous.Committees[att.Data.Crosslink.Shard]
+
+		participants = participants[:0]                                     // reset old slice (re-used in for loop)
+		participants = append(participants, committee...)                   // add committee indices
+		participants = att.AggregationBits.FilterParticipants(participants) // only keep the participants
 		for _, p := range participants {
 
-			status := &vs.ValidatorStatuses[p]
+			status := &status.ValidatorStatuses[p]
 
 			// If the attestation is the earliest, i.e. has the biggest delay
 			if status.InclusionDelay < att.InclusionDelay {
@@ -67,13 +74,12 @@ func (vs *ValidationStatus) Load(state *BeaconState) {
 		}
 	}
 	currentEpoch := state.Epoch()
-	for i := 0; i < len(vs.ValidatorStatuses); i++ {
+	for i := 0; i < len(status.ValidatorStatuses); i++ {
 		v := state.Validators[i]
-		status := &vs.ValidatorStatuses[i]
+		vStatus := &status.ValidatorStatuses[i]
 		if v.IsActive(currentEpoch) || (v.Slashed && currentEpoch < v.WithdrawableEpoch) {
-			status.Flags |= EligibleAttester
+			vStatus.Flags |= EligibleAttester
 		}
 	}
 	return
 }
-

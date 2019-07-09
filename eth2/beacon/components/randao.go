@@ -14,7 +14,6 @@ type RandaoState struct {
 	RandaoMixes [EPOCHS_PER_HISTORICAL_VECTOR]Root
 }
 
-// The epoch is expected to be between (current_epoch - LATEST_RANDAO_MIXES_LENGTH, current_epoch].
 func (state *RandaoState) GetRandaoMix(epoch Epoch) Root {
 	return state.RandaoMixes[epoch%EPOCHS_PER_HISTORICAL_VECTOR]
 }

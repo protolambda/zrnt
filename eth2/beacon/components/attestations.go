@@ -33,8 +33,33 @@ func (cb CommitteeBits) BitLen() uint32 {
 	return bitfields.BitlistLen(cb)
 }
 
+func (cb CommitteeBits) GetBit(i uint32) bool {
+	return bitfields.GetBit(cb, i)
+}
+
 func (cb *CommitteeBits) Limit() uint32 {
 	return MAX_VALIDATORS_PER_COMMITTEE
+}
+
+// Sets the bits to true that are true in other. (in place)
+func (cb CommitteeBits) Or(other CommitteeBits) {
+	for i := 0; i < len(cb); i++ {
+		cb[i] |= other[i]
+	}
+}
+
+// In-place filters a list of committees indices to only keep the bitfield participants.
+// The result is not sorted. Returns the re-sliced filtered participants list.
+func (cb CommitteeBits) FilterParticipants(committee []ValidatorIndex) []ValidatorIndex {
+	bitLen := cb.BitLen()
+	out := committee[:0]
+	if bitLen != uint32(len(committee)) {
+		panic("committee mismatch, bitfield length does not match")
+	}
+	for i := uint32(0); i < bitLen; i++ {
+		out = append(out, committee[i])
+	}
+	return out
 }
 
 type PendingAttestation struct {

@@ -1,6 +1,7 @@
-package components
+package status
 
 import (
+	. "github.com/protolambda/zrnt/eth2/beacon/components"
 	. "github.com/protolambda/zrnt/eth2/core"
 )
 
@@ -25,19 +26,22 @@ type ValidatorStatus struct {
 	Flags          ValidatorStatusFlag
 }
 
-type ValidationStatus []ValidatorStatus
+// depends on ShufflingStatus
+type ValidationStatus struct {
+	ValidatorStatuses []ValidatorStatus
+}
 
-func (state *BeaconState) ValidationStatus() (vsl ValidationStatus) {
-	vsl = make(ValidationStatus, len(state.Validators), len(state.Validators))
+func (vs *ValidationStatus) Load(state *BeaconState) {
+	vs.ValidatorStatuses = make([]ValidatorStatus, len(state.Validators), len(state.Validators))
 
 	previousBoundaryBlockRoot, _ := state.GetBlockRootAtSlot(state.PreviousEpoch().GetStartSlot())
 
 	for _, att := range state.PreviousEpochAttestations {
 		attBlockRoot, _ := state.GetBlockRootAtSlot(state.GetAttestationSlot(&att.Data))
-		participants, _ := state.GetAttestingIndicesUnsorted(&att.Data, &att.AggregationBitfield)
+		participants, _ := state.GetAttestingIndicesUnsorted(&att.Data, &att.AggregationBits)
 		for _, p := range participants {
 
-			status := &vsl[p]
+			status := &vs.ValidatorStatuses[p]
 
 			// If the attestation is the earliest, i.e. has the biggest delay
 			if status.InclusionDelay < att.InclusionDelay {
@@ -53,7 +57,7 @@ func (state *BeaconState) ValidationStatus() (vsl ValidationStatus) {
 			status.Flags |= PrevEpochAttester
 
 			// If the attestation is for the boundary:
-			if att.Data.TargetRoot == previousBoundaryBlockRoot {
+			if att.Data.Target.Root == previousBoundaryBlockRoot {
 				status.Flags |= EpochBoundaryAttester
 			}
 			// If the attestation is for the head (att the time of attestation):
@@ -63,12 +67,13 @@ func (state *BeaconState) ValidationStatus() (vsl ValidationStatus) {
 		}
 	}
 	currentEpoch := state.Epoch()
-	for i := 0; i < len(vsl); i++ {
+	for i := 0; i < len(vs.ValidatorStatuses); i++ {
 		v := state.Validators[i]
-		status := &vsl[i]
+		status := &vs.ValidatorStatuses[i]
 		if v.IsActive(currentEpoch) || (v.Slashed && currentEpoch < v.WithdrawableEpoch) {
 			status.Flags |= EligibleAttester
 		}
 	}
 	return
 }
+

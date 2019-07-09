@@ -5,11 +5,19 @@ import (
 )
 
 type FinalityState struct {
-	PreviousJustifiedEpoch Epoch
-	CurrentJustifiedEpoch  Epoch
-	PreviousJustifiedRoot  Root
-	CurrentJustifiedRoot   Root
-	JustificationBitfield  uint64
-	FinalizedEpoch         Epoch
-	FinalizedRoot          Root
+	JustificationBits           JustificationBits
+	PreviousJustifiedCheckpoint Checkpoint
+	CurrentJustifiedCheckpoint  Checkpoint
+	FinalizedCheckpoint         Checkpoint
+}
+
+type JustificationBits [(JUSTIFICATION_BITS_LENGTH + 7) / 8]byte
+
+func (jb *JustificationBits) BitLen() uint32 {
+	return JUSTIFICATION_BITS_LENGTH
+}
+
+type Checkpoint struct {
+	Epoch Epoch
+	Root  Root
 }

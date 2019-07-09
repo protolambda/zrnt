@@ -11,15 +11,12 @@ import (
 var CrosslinkSSZ = zssz.GetSSZ((*Crosslink)(nil))
 
 type Crosslink struct {
-	// Shard number
-	Shard Shard
-	// Crosslinking data from epochs [start....end-1]
+	Shard      Shard
+	ParentRoot Root
+	// Crosslinking data
 	StartEpoch Epoch
 	EndEpoch   Epoch
-	// Root of the previous crosslink
-	ParentRoot Root
-	// Root of the crosslinked shard data since the previous crosslink
-	DataRoot Root
+	DataRoot   Root
 }
 
 type CrosslinksState struct {

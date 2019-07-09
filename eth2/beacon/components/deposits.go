@@ -8,12 +8,8 @@ import (
 var DepositDataSSZ = zssz.GetSSZ((*DepositData)(nil))
 
 type DepositData struct {
-	// BLS pubkey
-	Pubkey BLSPubkey
-	// Withdrawal credentials
+	Pubkey                BLSPubkey
 	WithdrawalCredentials Root
-	// Amount in Gwei
-	Amount Gwei
-	// Container self-signature
-	Signature BLSSignature
+	Amount                Gwei
+	Signature             BLSSignature
 }

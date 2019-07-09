@@ -12,7 +12,7 @@ import (
 func ProcessSlot(state *BeaconState) {
 	// Cache latest known state root (for previous slot)
 	latestStateRoot := ssz.HashTreeRoot(state, BeaconStateSSZ)
-	state.LatestStateRoots[state.Slot%SLOTS_PER_HISTORICAL_ROOT] = latestStateRoot
+	state.StateRoots[state.Slot%SLOTS_PER_HISTORICAL_ROOT] = latestStateRoot
 
 	// Store latest known state root (for previous slot) in latest_block_header if it is empty
 	if state.LatestBlockHeader.StateRoot == (Root{}) {
@@ -21,7 +21,7 @@ func ProcessSlot(state *BeaconState) {
 
 	// Cache latest known block root (for previous slot)
 	previousBlockRoot := ssz.SigningRoot(state.LatestBlockHeader, BeaconBlockHeaderSSZ)
-	state.LatestBlockRoots[state.Slot%SLOTS_PER_HISTORICAL_ROOT] = previousBlockRoot
+	state.BlockRoots[state.Slot%SLOTS_PER_HISTORICAL_ROOT] = previousBlockRoot
 }
 
 // Transition the state to the given slot.

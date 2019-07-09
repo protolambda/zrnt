@@ -5,12 +5,9 @@ import (
 )
 
 type Eth1Data struct {
-	// Root of the deposit tree
-	DepositRoot Root
-	// Total number of deposits
+	DepositRoot  Root // Hash-tree-root of DepositData tree.
 	DepositCount DepositIndex
-	// Block hash
-	BlockHash Root
+	BlockHash    Root
 }
 
 // Ethereum 1.0 chain data

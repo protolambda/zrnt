@@ -5,22 +5,16 @@ import (
 )
 
 type Validator struct {
-	// BLS public key
-	Pubkey BLSPubkey
-	// Withdrawal credentials
-	WithdrawalCredentials Root
-	// Epoch when became eligible for activation
-	ActivationEligibilityEpoch Epoch
-	// Epoch when validator activated
-	ActivationEpoch Epoch
-	// Epoch when validator exited
-	ExitEpoch Epoch
-	// Epoch when validator is eligible to withdraw
-	WithdrawableEpoch Epoch
-	// Was the validator slashed
-	Slashed bool
-	// Effective balance
-	EffectiveBalance Gwei
+	Pubkey                BLSPubkey
+	WithdrawalCredentials Root // Commitment to pubkey for withdrawals and transfers
+	EffectiveBalance      Gwei // Balance at stake
+	Slashed               bool
+
+	// Status epochs
+	ActivationEligibilityEpoch Epoch // When criteria for activation were met
+	ActivationEpoch            Epoch
+	ExitEpoch                  Epoch
+	WithdrawableEpoch          Epoch // When validator can withdraw or transfer funds
 }
 
 func (v *Validator) IsActive(epoch Epoch) bool {

@@ -41,8 +41,8 @@ func ProcessEpochFinalUpdates(state *BeaconState) {
 	// Set historical root accumulator
 	if nextEpoch%SLOTS_PER_HISTORICAL_ROOT.ToEpoch() == 0 {
 		historicalBatch := HistoricalBatch{
-			BlockRoots: state.LatestBlockRoots,
-			StateRoots: state.LatestStateRoots,
+			BlockRoots: state.BlockRoots,
+			StateRoots: state.StateRoots,
 		}
 
 		state.HistoricalRoots = append(state.HistoricalRoots, ssz.HashTreeRoot(historicalBatch, HistoricalBatchSSZ))

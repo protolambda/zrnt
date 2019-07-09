@@ -9,13 +9,19 @@ import (
 	"sort"
 )
 
+type CommitteeIndices []ValidatorIndex
+
+func (ci *CommitteeIndices) Limit() uint32 {
+	return MAX_VALIDATORS_PER_COMMITTEE
+}
+
 type IndexedAttestation struct {
-	// Validator Indices
-	CustodyBit0Indices []ValidatorIndex
-	CustodyBit1Indices []ValidatorIndex
-	// Attestation data
+	// Indices with custody bit equal to 0
+	CustodyBit0Indices CommitteeIndices
+	// Indices with custody bit equal to 1
+	CustodyBit1Indices CommitteeIndices
+
 	Data AttestationData
-	// BLS aggregate signature
 	Signature BLSSignature
 }
 

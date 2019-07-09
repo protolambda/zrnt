@@ -6,9 +6,9 @@ import (
 
 type Fork struct {
 	// Previous fork version
-	PreviousVersion ForkVersion
+	PreviousVersion Version
 	// Current fork version
-	CurrentVersion ForkVersion
+	CurrentVersion Version
 	// Fork epoch number
 	Epoch Epoch
 }

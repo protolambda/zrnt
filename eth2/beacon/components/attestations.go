@@ -3,43 +3,45 @@ package components
 import (
 	. "github.com/protolambda/zrnt/eth2/beacon/components/registry"
 	. "github.com/protolambda/zrnt/eth2/core"
-	"github.com/protolambda/zrnt/eth2/util/bitfield"
 	"github.com/protolambda/zrnt/eth2/util/math"
 	"github.com/protolambda/zssz"
+	"github.com/protolambda/zssz/bitfields"
 )
 
 var AttestationDataAndCustodyBitSSZ = zssz.GetSSZ((*AttestationDataAndCustodyBit)(nil))
 
 type AttestationDataAndCustodyBit struct {
-	// Attestation data
-	Data AttestationData
-	// Custody bit
-	CustodyBit bool
+	Data       AttestationData
+	CustodyBit bool // Challengeable bit (SSZ-bool, 1 byte) for the custody of crosslink data
 }
 
 type AttestationData struct {
-	// Root of the signed beacon block
+	// LMD GHOST vote
 	BeaconBlockRoot Root
 
 	// FFG vote
-	SourceEpoch Epoch
-	SourceRoot  Root
-	TargetEpoch Epoch
-	TargetRoot  Root
+	Source Checkpoint
+	Target Checkpoint
 
 	// Crosslink vote
 	Crosslink Crosslink
 }
 
+type CommitteeBits []byte
+
+func (cb CommitteeBits) BitLen() uint32 {
+	return bitfields.BitlistLen(cb)
+}
+
+func (cb *CommitteeBits) Limit() uint32 {
+	return MAX_VALIDATORS_PER_COMMITTEE
+}
+
 type PendingAttestation struct {
-	// Attester aggregation bitfield
-	AggregationBitfield bitfield.Bitfield
-	// Attestation data
-	Data AttestationData
-	// Inclusion delay
-	InclusionDelay Slot
-	// Proposer index
-	ProposerIndex ValidatorIndex
+	AggregationBits CommitteeBits
+	Data            AttestationData
+	InclusionDelay  Slot
+	ProposerIndex   ValidatorIndex
 }
 
 type AttestationsState struct {

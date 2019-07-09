@@ -12,6 +12,8 @@ type BeaconState struct {
 	HistoryState
 	Eth1State
 	RegistryState
+	ShardRotationState
+	RandaoState
 	ShufflingState
 	SlashingsState
 	AttestationsState

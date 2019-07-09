@@ -27,3 +27,11 @@ func (e Epoch) GetStartSlot() Slot {
 func (e Epoch) GetDelayedActivationExitEpoch() Epoch {
 	return e + 1 + ACTIVATION_EXIT_DELAY
 }
+
+func (e Epoch) Previous() Epoch {
+	if e == GENESIS_EPOCH {
+		return GENESIS_EPOCH
+	} else {
+		return e - 1
+	}
+}

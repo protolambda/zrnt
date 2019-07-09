@@ -26,12 +26,7 @@ func (state *VersioningState) Epoch() Epoch {
 
 // Return previous epoch.
 func (state *VersioningState) PreviousEpoch() Epoch {
-	currentEpoch := state.Epoch()
-	if currentEpoch == GENESIS_EPOCH {
-		return GENESIS_EPOCH
-	} else {
-		return currentEpoch - 1
-	}
+	return state.Epoch().Previous()
 }
 
 // Return the signature domain (fork version concatenated with domain type) of a message.

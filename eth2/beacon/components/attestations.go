@@ -49,6 +49,12 @@ type AttestationsState struct {
 	CurrentEpochAttestations  []*PendingAttestation
 }
 
+// Rotate current/previous epoch attestations
+func (state *AttestationsState) RotateEpochAttestations() {
+	state.PreviousEpochAttestations = state.CurrentEpochAttestations
+	state.CurrentEpochAttestations = nil
+}
+
 func (state *BeaconState) GetAttesters(attestations []*PendingAttestation, filter func(att *AttestationData) bool) ValidatorSet {
 	out := make(ValidatorSet, 0)
 	for _, att := range attestations {

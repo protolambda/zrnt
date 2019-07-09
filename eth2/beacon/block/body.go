@@ -9,7 +9,7 @@ import (
 var BeaconBlockBodySSZ = zssz.GetSSZ((*BeaconBlockBody)(nil))
 
 type BeaconBlockBody struct {
-	RandaoRevealBlockData
+	RandaoBlockData
 	Eth1BlockData
 	Graffiti Root
 
@@ -17,7 +17,7 @@ type BeaconBlockBody struct {
 }
 
 func (body *BeaconBlockBody) Process(state *BeaconState) error {
-	if err := body.RandaoRevealBlockData.Process(state); err != nil {
+	if err := body.RandaoBlockData.Process(state); err != nil {
 		return nil
 	}
 	if err := body.Eth1BlockData.Process(state); err != nil {

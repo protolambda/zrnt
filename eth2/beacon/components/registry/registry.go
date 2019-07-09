@@ -11,6 +11,20 @@ type RegistryState struct {
 	Balances   Balances
 }
 
+// Update effective balances with hysteresis
+func (state *RegistryState) UpdateEffectiveBalances() {
+	for i, v := range state.Validators {
+		balance := state.Balances[i]
+		if balance < v.EffectiveBalance ||
+			v.EffectiveBalance+3*HALF_INCREMENT < balance {
+			v.EffectiveBalance = balance - (balance % EFFECTIVE_BALANCE_INCREMENT)
+			if MAX_EFFECTIVE_BALANCE < v.EffectiveBalance {
+				v.EffectiveBalance = MAX_EFFECTIVE_BALANCE
+			}
+		}
+	}
+}
+
 var ValidatorIndexListSSZ = zssz.GetSSZ((*[]ValidatorIndex)(nil))
 
 type ValidatorRegistry []*Validator

@@ -9,6 +9,10 @@ type SlashingsState struct {
 	Slashings [EPOCHS_PER_SLASHINGS_VECTOR]Gwei
 }
 
+func (state *SlashingsState) ResetSlashings(epoch Epoch) {
+	state.Slashings[epoch%EPOCHS_PER_SLASHINGS_VECTOR] = 0
+}
+
 // Slash the validator with the given index.
 func (state *BeaconState) SlashValidator(slashedIndex ValidatorIndex, whistleblowerIndex *ValidatorIndex) {
 	currentEpoch := state.Epoch()

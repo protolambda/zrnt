@@ -17,6 +17,11 @@ type Eth1State struct {
 	DepositIndex   DepositIndex
 }
 
+// Done at the end of every voting period
+func (state *Eth1State) ResetEth1Votes() {
+	state.Eth1DataVotes = make([]Eth1Data, 0)
+}
+
 type Eth1BlockData struct {
 	Eth1Data Eth1Data
 }

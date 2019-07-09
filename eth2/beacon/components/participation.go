@@ -9,7 +9,6 @@ import (
 	"sort"
 )
 
-
 // Return the sorted attesting indices at for the attestation_data and bitfield
 func (state *BeaconState) GetAttestingIndicesUnsorted(attestationData *AttestationData, bitfield *bitfield.Bitfield) ([]ValidatorIndex, error) {
 	// Find the committee in the list with the desired shard

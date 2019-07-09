@@ -8,7 +8,7 @@ import (
 )
 
 type ShufflingStatus struct {
-	Current ShufflingEpoch
+	Current  ShufflingEpoch
 	Previous ShufflingEpoch
 }
 
@@ -18,9 +18,9 @@ func (status *ShufflingStatus) Load(state *BeaconState) {
 }
 
 type ShufflingEpoch struct {
-	Shuffling []ValidatorIndex // the active validator indices, shuffled into their committee
-	Committees [SHARD_COUNT][]ValidatorIndex // slices of Shuffling, 1 per slot
-	CommitteeSorted [SHARD_COUNT]ValidatorSet // copy of Committees, with sorted indices for each committee
+	Shuffling       []ValidatorIndex              // the active validator indices, shuffled into their committee
+	Committees      [SHARD_COUNT][]ValidatorIndex // slices of Shuffling, 1 per slot
+	CommitteeSorted [SHARD_COUNT]ValidatorSet     // copy of Committees, with sorted indices for each committee
 }
 
 func (shep *ShufflingEpoch) Load(state *BeaconState, epoch Epoch) {

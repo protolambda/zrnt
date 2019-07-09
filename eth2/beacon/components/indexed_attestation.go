@@ -21,7 +21,7 @@ type IndexedAttestation struct {
 	// Indices with custody bit equal to 1
 	CustodyBit1Indices CommitteeIndices
 
-	Data AttestationData
+	Data      AttestationData
 	Signature BLSSignature
 }
 

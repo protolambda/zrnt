@@ -18,7 +18,7 @@ func (status *CrosslinkingStatus) Load(state *BeaconState, shufflingStatus *Shuf
 }
 
 type LinkWinner struct {
-	Crosslink *Crosslink // nil when there are no crosslinks for the shard.
+	Crosslink *Crosslink   // nil when there are no crosslinks for the shard.
 	Attesters ValidatorSet // nil-slice when there are no attestations for the shard.
 }
 
@@ -27,8 +27,8 @@ type CrosslinkingEpoch struct {
 }
 
 type weightedLink struct {
-	weight Gwei
-	link   *Crosslink
+	weight    Gwei
+	link      *Crosslink
 	attesters []ValidatorIndex
 }
 
@@ -87,7 +87,7 @@ func (crep *CrosslinkingEpoch) Load(state *BeaconState, shuffling *ShufflingEpoc
 			currentWinner.weight = weight
 			currentWinner.link = k
 			if currentWinner.attesters == nil {
-				currentWinner.attesters = make([]ValidatorIndex, 0, len(participants) << 2) // bit of extra capacity
+				currentWinner.attesters = make([]ValidatorIndex, 0, len(participants)<<2) // bit of extra capacity
 			}
 			// re-use previously allocated indices slice (append will re-allocate if more participants than previously)
 			currentWinner.attesters = currentWinner.attesters[:0]

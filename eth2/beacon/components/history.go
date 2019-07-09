@@ -11,7 +11,7 @@ type HistoryState struct {
 	LatestBlockHeader BeaconBlockHeader
 	BlockRoots        [SLOTS_PER_HISTORICAL_ROOT]Root
 	StateRoots        [SLOTS_PER_HISTORICAL_ROOT]Root
-	HistoricalRoots   []Root  // roots of HistoricalBatch
+	HistoricalRoots   []Root // roots of HistoricalBatch
 }
 
 var HistoricalBatchSSZ = zssz.GetSSZ((*HistoricalBatch)(nil))

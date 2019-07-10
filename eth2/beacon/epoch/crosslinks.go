@@ -14,8 +14,8 @@ func ProcessEpochCrosslinks(state *BeaconState) {
 		startShard := state.GetEpochStartShard(epoch)
 		for offset := uint64(0); offset < count; offset++ {
 			shard := (startShard + Shard(offset)) % SHARD_COUNT
-			crosslinkCommittee := state.GetCrosslinkCommittee(epoch, shard)
-			winningCrosslink, attestingIndices := state.GetWinningCrosslinkAndAttestingIndices(shard, epoch)
+			crosslinkCommittee := state.PrecomputedData.GetCrosslinkCommittee(epoch, shard)
+			winningCrosslink, attestingIndices := state.PrecomputedData.GetWinningCrosslinkAndAttesters(epoch, shard)
 			participatingBalance := state.Validators.GetTotalEffectiveBalanceOf(attestingIndices)
 			totalBalance := state.Validators.GetTotalEffectiveBalanceOf(crosslinkCommittee)
 			if 3*participatingBalance >= 2*totalBalance {

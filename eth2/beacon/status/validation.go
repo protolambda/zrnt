@@ -5,27 +5,6 @@ import (
 	. "github.com/protolambda/zrnt/eth2/core"
 )
 
-type ValidatorStatusFlag uint64
-
-func (flags ValidatorStatusFlag) hasMarkers(markers ValidatorStatusFlag) bool {
-	return flags&markers == markers
-}
-
-const (
-	PrevEpochAttester ValidatorStatusFlag = 1 << iota
-	MatchingHeadAttester
-	EpochBoundaryAttester
-	UnslashedAttester
-	EligibleAttester
-)
-
-type ValidatorStatus struct {
-	// no delay (i.e. 0) by default
-	InclusionDelay Slot
-	Proposer       ValidatorIndex
-	Flags          ValidatorStatusFlag
-}
-
 // depends on ShufflingStatus
 type ValidationStatus struct {
 	ValidatorStatuses []ValidatorStatus
@@ -35,6 +14,7 @@ func (status *ValidationStatus) Load(state *BeaconState, shufflingStatus *Shuffl
 	status.ValidatorStatuses = make([]ValidatorStatus, len(state.Validators), len(state.Validators))
 
 	previousBoundaryBlockRoot, _ := state.GetBlockRootAtSlot(state.PreviousEpoch().GetStartSlot())
+	currentBoundaryBlockRoot, _ := state.GetBlockRootAtSlot(state.Epoch().GetStartSlot())
 
 	participants := make([]ValidatorIndex, 0, MAX_VALIDATORS_PER_COMMITTEE)
 	for _, att := range state.PreviousEpochAttestations {
@@ -65,7 +45,10 @@ func (status *ValidationStatus) Load(state *BeaconState, shufflingStatus *Shuffl
 
 			// If the attestation is for the boundary:
 			if att.Data.Target.Root == previousBoundaryBlockRoot {
-				status.Flags |= EpochBoundaryAttester
+				status.Flags |= PrevEpochBoundaryAttester
+			}
+			if att.Data.Target.Root == currentBoundaryBlockRoot {
+				status.Flags |= CurrEpochBoundaryAttester
 			}
 			// If the attestation is for the head (att the time of attestation):
 			if att.Data.BeaconBlockRoot == attBlockRoot {

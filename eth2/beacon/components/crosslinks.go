@@ -8,6 +8,10 @@ import (
 	"sort"
 )
 
+type CrosslinkingData interface {
+	GetWinningCrosslinkAndAttesters(epoch Epoch, shard Shard) (*Crosslink, ValidatorSet)
+}
+
 var CrosslinkSSZ = zssz.GetSSZ((*Crosslink)(nil))
 
 type Crosslink struct {
@@ -37,12 +41,12 @@ func (state *BeaconState) CrosslinksDeltas() *Deltas {
 	for offset := Shard(0); offset < count; offset++ {
 		shard := (epochStartShard + offset) % SHARD_COUNT
 
-		crosslinkCommittee := state.GetCrosslinkCommittee(epoch, shard)
+		crosslinkCommittee := state.PrecomputedData.GetCrosslinkCommittee(epoch, shard)
 		committee := make(ValidatorSet, 0, len(crosslinkCommittee))
 		committee = append(committee, crosslinkCommittee...)
 		sort.Sort(committee)
 
-		_, attestingIndices := state.GetWinningCrosslinkAndAttestingIndices(shard, epoch)
+		_, attestingIndices := state.PrecomputedData.GetWinningCrosslinkAndAttesters(epoch, shard)
 		attestingBalance := state.Validators.GetTotalEffectiveBalanceOf(attestingIndices)
 		totalBalance := state.Validators.GetTotalEffectiveBalanceOf(committee)
 

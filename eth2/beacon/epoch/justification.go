@@ -16,31 +16,29 @@ func ProcessEpochJustification(state *BeaconState) {
 	previousBoundaryBlockRoot, _ := state.GetBlockRoot(previousEpoch)
 	currentBoundaryBlockRoot, _ := state.GetBlockRoot(currentEpoch)
 
-	previousEpochBoundaryAttesterIndices := state.Validators.FilterUnslashed(
-		state.GetAttesters(state.PreviousEpochAttestations,
-			func(att *AttestationData) bool {
-				return att.Target.Root == previousBoundaryBlockRoot
-			}))
+	// Get the sum balances of the boundary attesters
+	previousEpochBoundaryAttestingBalance := Gwei(0)
+	currentEpochBoundaryAttestingBalance := Gwei(0)
+	for i, v := range state.Validators {
+		vStatus := state.PrecomputedData.GetValidatorStatus(ValidatorIndex(i))
+		if vStatus.Flags.HasMarkers(PrevEpochBoundaryAttester | UnslashedAttester) {
+			previousEpochBoundaryAttestingBalance += v.EffectiveBalance
+		}
+		if vStatus.Flags.HasMarkers(CurrEpochBoundaryAttester | UnslashedAttester) {
+			previousEpochBoundaryAttestingBalance += v.EffectiveBalance
+		}
+	}
 
-	currentEpochBoundaryAttesterIndices := state.Validators.FilterUnslashed(
-		state.GetAttesters(state.CurrentEpochAttestations,
-			func(att *AttestationData) bool {
-				return att.Target.Root == currentBoundaryBlockRoot
-			}))
+	// Get the sum balances of the attesters for the epochs
+	previousTotalBalance := state.Validators.GetTotalActiveEffectiveBalance(previousEpoch)
+	currentTotalBalance := state.Validators.GetTotalActiveEffectiveBalance(currentEpoch)
 
 	oldPreviousJustified := state.PreviousJustifiedCheckpoint
 	oldCurrentJustified := state.CurrentJustifiedCheckpoint
 
 	// Rotate current into previous
 	state.PreviousJustifiedCheckpoint = state.CurrentJustifiedCheckpoint
-	state.PreviousJustifiedCheckpoint = state.CurrentJustifiedCheckpoint
 	state.JustificationBits.NextEpoch()
-
-	// Get the sum balances of the boundary attesters, and the total balance at the time.
-	previousEpochBoundaryAttestingBalance := state.Validators.GetTotalEffectiveBalanceOf(previousEpochBoundaryAttesterIndices)
-	previousTotalBalance := state.Validators.GetTotalEffectiveBalanceOf(state.Validators.GetActiveValidatorIndices(currentEpoch - 1))
-	currentEpochBoundaryAttestingBalance := state.Validators.GetTotalEffectiveBalanceOf(currentEpochBoundaryAttesterIndices)
-	currentTotalBalance := state.Validators.GetTotalEffectiveBalanceOf(state.Validators.GetActiveValidatorIndices(currentEpoch))
 
 	// > Justification
 	if previousEpochBoundaryAttestingBalance*3 >= previousTotalBalance*2 {

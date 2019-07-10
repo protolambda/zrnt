@@ -98,24 +98,37 @@ func (state *AttestationsState) RotateEpochAttestations() {
 	state.CurrentEpochAttestations = nil
 }
 
-func (state *BeaconState) GetAttesters(attestations []*PendingAttestation, filter func(att *AttestationData) bool) ValidatorSet {
-	out := make(ValidatorSet, 0)
-	for _, att := range attestations {
-		// If the attestation is for the boundary:
-		if filter(&att.Data) {
-			participants, _ := state.GetAttestingIndicesUnsorted(&att.Data, &att.AggregationBitfield)
-			out = append(out, participants...)
-		}
-	}
-	out.Dedup()
-	return out
-}
-
 func (state *BeaconState) GetAttestationSlot(attData *AttestationData) Slot {
-	epoch := attData.TargetEpoch
+	epoch := attData.Target.Epoch
 	committeeCount := Slot(state.Validators.GetEpochCommitteeCount(epoch))
 	offset := Slot((attData.Crosslink.Shard + SHARD_COUNT - state.GetEpochStartShard(epoch)) % SHARD_COUNT)
 	return epoch.GetStartSlot() + (offset / (committeeCount / SLOTS_PER_EPOCH))
+}
+
+type ValidatorStatusFlag uint64
+
+func (flags ValidatorStatusFlag) HasMarkers(markers ValidatorStatusFlag) bool {
+	return flags&markers == markers
+}
+
+const (
+	PrevEpochAttester ValidatorStatusFlag = 1 << iota
+	MatchingHeadAttester
+	PrevEpochBoundaryAttester
+	CurrEpochBoundaryAttester
+	UnslashedAttester
+	EligibleAttester
+)
+
+type ValidatorStatus struct {
+	// no delay (i.e. 0) by default
+	InclusionDelay Slot
+	Proposer       ValidatorIndex
+	Flags          ValidatorStatusFlag
+}
+
+type ValidationData interface {
+	GetValidatorStatus(index ValidatorIndex) ValidatorStatus
 }
 
 func (state *BeaconState) AttestationDeltas() *Deltas {
@@ -124,31 +137,29 @@ func (state *BeaconState) AttestationDeltas() *Deltas {
 
 	previousEpoch := state.PreviousEpoch()
 
-	data := state.ValidationStatus()
-
 	var totalBalance, totalAttestingBalance, epochBoundaryBalance, matchingHeadBalance Gwei
 	for i := ValidatorIndex(0); i < validatorCount; i++ {
-		status := &data[i]
+		status := state.PrecomputedData.GetValidatorStatus(i)
 		v := state.Validators[i]
 		b := v.EffectiveBalance
 		totalBalance += b
-		if status.Flags.hasMarkers(PrevEpochAttester | UnslashedAttester) {
+		if status.Flags.HasMarkers(PrevEpochAttester | UnslashedAttester) {
 			totalAttestingBalance += b
 		}
-		if status.Flags.hasMarkers(EpochBoundaryAttester | UnslashedAttester) {
+		if status.Flags.HasMarkers(PrevEpochBoundaryAttester | UnslashedAttester) {
 			epochBoundaryBalance += b
 		}
-		if status.Flags.hasMarkers(MatchingHeadAttester | UnslashedAttester) {
+		if status.Flags.HasMarkers(MatchingHeadAttester | UnslashedAttester) {
 			matchingHeadBalance += b
 		}
 	}
 	previousTotalBalance := state.Validators.GetTotalActiveEffectiveBalance(state.PreviousEpoch())
 
 	balanceSqRoot := Gwei(math.IntegerSquareroot(uint64(previousTotalBalance)))
-	finalityDelay := previousEpoch - state.FinalizedEpoch
+	finalityDelay := previousEpoch - state.FinalizedCheckpoint.Epoch
 
 	for i := ValidatorIndex(0); i < validatorCount; i++ {
-		status := &data[i]
+		status := state.PrecomputedData.GetValidatorStatus(i)
 		if status.Flags&EligibleAttester != 0 {
 
 			v := state.Validators[i]
@@ -156,7 +167,7 @@ func (state *BeaconState) AttestationDeltas() *Deltas {
 				balanceSqRoot / BASE_REWARDS_PER_EPOCH
 
 			// Expected FFG source
-			if status.Flags.hasMarkers(PrevEpochAttester | UnslashedAttester) {
+			if status.Flags.HasMarkers(PrevEpochAttester | UnslashedAttester) {
 				// Justification-participation reward
 				deltas.Rewards[i] += baseReward * totalAttestingBalance / totalBalance
 
@@ -169,7 +180,7 @@ func (state *BeaconState) AttestationDeltas() *Deltas {
 			}
 
 			// Expected FFG target
-			if status.Flags.hasMarkers(EpochBoundaryAttester | UnslashedAttester) {
+			if status.Flags.HasMarkers(PrevEpochBoundaryAttester | UnslashedAttester) {
 				// Boundary-attestation reward
 				deltas.Rewards[i] += baseReward * epochBoundaryBalance / totalBalance
 			} else {
@@ -178,7 +189,7 @@ func (state *BeaconState) AttestationDeltas() *Deltas {
 			}
 
 			// Expected head
-			if status.Flags.hasMarkers(MatchingHeadAttester | UnslashedAttester) {
+			if status.Flags.HasMarkers(MatchingHeadAttester | UnslashedAttester) {
 				// Canonical-participation reward
 				deltas.Rewards[i] += baseReward * matchingHeadBalance / totalBalance
 			} else {
@@ -189,7 +200,7 @@ func (state *BeaconState) AttestationDeltas() *Deltas {
 			// Take away max rewards if we're not finalizing
 			if finalityDelay > MIN_EPOCHS_TO_INACTIVITY_PENALTY {
 				deltas.Penalties[i] += baseReward * BASE_REWARDS_PER_EPOCH
-				if !status.Flags.hasMarkers(MatchingHeadAttester | UnslashedAttester) {
+				if !status.Flags.HasMarkers(MatchingHeadAttester | UnslashedAttester) {
 					deltas.Penalties[i] += v.EffectiveBalance * Gwei(finalityDelay) / INACTIVITY_PENALTY_QUOTIENT
 				}
 			}

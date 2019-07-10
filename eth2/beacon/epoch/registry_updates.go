@@ -24,7 +24,7 @@ func ProcessEpochRegistryUpdates(state *BeaconState) {
 	activationQueue := make([]*Validator, 0)
 	for _, v := range state.Validators {
 		if v.ActivationEligibilityEpoch != FAR_FUTURE_EPOCH &&
-			v.ActivationEpoch >= state.FinalizedEpoch.GetDelayedActivationExitEpoch() {
+			v.ActivationEpoch >= state.FinalizedCheckpoint.Epoch.GetDelayedActivationExitEpoch() {
 			activationQueue = append(activationQueue, v)
 		}
 	}

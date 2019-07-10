@@ -83,7 +83,7 @@ func (state *BeaconState) ValidateIndexedAttestation(indexedAttestation *Indexed
 			ssz.HashTreeRoot(&AttestationDataAndCustodyBit{Data: indexedAttestation.Data, CustodyBit: false}, AttestationDataAndCustodyBitSSZ),
 			ssz.HashTreeRoot(&AttestationDataAndCustodyBit{Data: indexedAttestation.Data, CustodyBit: true}, AttestationDataAndCustodyBitSSZ)},
 		indexedAttestation.Signature,
-		state.GetDomain(DOMAIN_ATTESTATION, indexedAttestation.Data.TargetEpoch),
+		state.GetDomain(DOMAIN_ATTESTATION, indexedAttestation.Data.Target.Epoch),
 	) {
 		return nil
 	}

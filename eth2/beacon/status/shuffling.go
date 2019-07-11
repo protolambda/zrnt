@@ -4,7 +4,6 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon/components"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/shuffling"
-	"sort"
 )
 
 type ShufflingStatus struct {
@@ -17,10 +16,11 @@ func (status *ShufflingStatus) Load(state *BeaconState) {
 	status.Current.Load(state, state.PreviousEpoch())
 }
 
+// With a high amount of shards, or low amount of validators,
+// some shards may not have a committee this epoch.
 type ShufflingEpoch struct {
 	Shuffling       []ValidatorIndex              // the active validator indices, shuffled into their committee
-	Committees      [SHARD_COUNT][]ValidatorIndex // slices of Shuffling, 1 per slot
-	CommitteeSorted [SHARD_COUNT]ValidatorSet     // copy of Committees, with sorted indices for each committee
+	Committees      [SHARD_COUNT][]ValidatorIndex // slices of Shuffling, 1 per slot. Committee can be nil slice.
 }
 
 func (shep *ShufflingEpoch) Load(state *BeaconState, epoch Epoch) {
@@ -46,9 +46,5 @@ func (shep *ShufflingEpoch) Load(state *BeaconState, epoch Epoch) {
 		endOffset := (validatorCount * (index + 1)) / committeeCount
 		committee := shep.Shuffling[startOffset:endOffset]
 		shep.Committees[shard] = committee
-		committeeSorted := make(ValidatorSet, len(committee), len(committee))
-		copy(committeeSorted, committee)
-		sort.Sort(committeeSorted)
-		shep.Committees[shard] = committeeSorted
 	}
 }

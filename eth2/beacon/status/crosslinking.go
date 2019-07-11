@@ -99,6 +99,8 @@ func (crep *CrosslinkingEpoch) Load(state *BeaconState, shuffling *ShufflingEpoc
 		out := &crep.WinningLinks[shard]
 		out.Crosslink = winner.link
 		out.Attesters = winner.attesters
-		sort.Sort(out.Attesters) // validator sets must be sorted
+		if out.Attesters != nil {
+			sort.Sort(out.Attesters) // validator sets must be sorted
+		}
 	}
 }

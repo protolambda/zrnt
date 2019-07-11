@@ -13,6 +13,10 @@ import (
 
 type Transfers []Transfer
 
+func (_ *Transfers) Limit() uint32 {
+	return MAX_TRANSFERS
+}
+
 func (ops Transfers) Process(state *BeaconState) error {
 	// check if all transfers are distinct
 	distinctionCheckSet := make(map[BLSSignature]struct{})

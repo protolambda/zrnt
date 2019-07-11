@@ -11,6 +11,10 @@ import (
 
 type VoluntaryExits []VoluntaryExit
 
+func (_ *VoluntaryExits) Limit() uint32 {
+	return MAX_VOLUNTARY_EXITS
+}
+
 func (ops VoluntaryExits) Process(state *BeaconState) error {
 	for _, op := range ops {
 		if err := op.Process(state); err != nil {

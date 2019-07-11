@@ -8,6 +8,10 @@ import (
 
 type AttesterSlashings []AttesterSlashing
 
+func (_ *AttesterSlashings) Limit() uint32 {
+	return MAX_ATTESTER_SLASHINGS
+}
+
 func (ops AttesterSlashings) Process(state *BeaconState) error {
 	for _, op := range ops {
 		if err := op.Process(state); err != nil {

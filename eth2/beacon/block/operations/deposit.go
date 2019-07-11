@@ -13,6 +13,10 @@ import (
 
 type Deposits []Deposit
 
+func (_ *Deposits) Limit() uint32 {
+	return MAX_DEPOSITS
+}
+
 func (ops Deposits) Process(state *BeaconState) error {
 	depositCount := DepositIndex(len(ops))
 	expectedCount := state.LatestEth1Data.DepositCount - state.DepositIndex
@@ -33,7 +37,7 @@ func (ops Deposits) Process(state *BeaconState) error {
 
 type Deposit struct {
 	// Branch in the deposit tree
-	Proof [DEPOSIT_CONTRACT_TREE_DEPTH]Root
+	Proof [DEPOSIT_CONTRACT_TREE_DEPTH + 1]Root
 	// Data
 	Data DepositData
 }
@@ -45,7 +49,7 @@ func (dep *Deposit) Process(state *BeaconState) error {
 	if !merkle.VerifyMerkleBranch(
 		ssz.HashTreeRoot(&dep.Data, DepositDataSSZ),
 		dep.Proof[:],
-		DEPOSIT_CONTRACT_TREE_DEPTH,
+		DEPOSIT_CONTRACT_TREE_DEPTH + 1,
 		uint64(state.DepositIndex),
 		state.LatestEth1Data.DepositRoot) {
 		return fmt.Errorf("deposit %d merkle proof failed to be verified", state.DepositIndex)

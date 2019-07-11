@@ -10,6 +10,10 @@ import (
 
 type ProposerSlashings []ProposerSlashing
 
+func (_ *ProposerSlashings) Limit() uint32 {
+	return MAX_PROPOSER_SLASHINGS
+}
+
 func (ops ProposerSlashings) Process(state *BeaconState) error {
 	for _, op := range ops {
 		if err := op.Process(state); err != nil {

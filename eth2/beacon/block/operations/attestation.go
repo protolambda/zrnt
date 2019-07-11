@@ -10,6 +10,10 @@ import (
 
 type Attestations []Attestation
 
+func (_ *Attestations) Limit() uint32 {
+	return MAX_ATTESTATIONS
+}
+
 func (ops Attestations) Process(state *BeaconState) error {
 	for _, op := range ops {
 		if err := op.Process(state); err != nil {

@@ -62,6 +62,9 @@ func (transfer *Transfer) Process(state *BeaconState) error {
 	if senderBalance < transfer.Fee {
 		return errors.New("transfer fee is too big")
 	}
+	if senderBalance < transfer.Fee + transfer.Amount {
+		return errors.New("transfer total is too big")
+	}
 	if transfer.Sender == transfer.Recipient {
 		return errors.New("no self-transfers (to enforce >= MIN_DEPOSIT_AMOUNT or zero balance invariant)")
 	}

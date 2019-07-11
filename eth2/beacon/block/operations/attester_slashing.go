@@ -4,7 +4,6 @@ import (
 	"errors"
 	. "github.com/protolambda/zrnt/eth2/beacon/components"
 	. "github.com/protolambda/zrnt/eth2/core"
-	"sort"
 )
 
 type AttesterSlashings []AttesterSlashing
@@ -43,15 +42,10 @@ func (attesterSlashing *AttesterSlashing) Process(state *BeaconState) error {
 	// keep track of effectiveness
 	slashedAny := false
 
-	// indices are trusted (valid range), they have been verified by verify_slashable_attestation(...)
-	indices1 := make(ValidatorSet, 0, len(sa1.CustodyBit0Indices)+len(sa1.CustodyBit1Indices))
-	indices1 = append(indices1, sa1.CustodyBit0Indices...)
-	indices1 = append(indices1, sa1.CustodyBit1Indices...)
-	sort.Sort(indices1)
-	indices2 := make(ValidatorSet, 0, len(sa2.CustodyBit0Indices)+len(sa2.CustodyBit1Indices))
-	indices2 = append(indices2, sa2.CustodyBit0Indices...)
-	indices2 = append(indices2, sa2.CustodyBit1Indices...)
-	sort.Sort(indices2)
+	// the individual custody index sets are already sorted (as verified by ValidateIndexedAttestation)
+	// just merge them in O(n)
+	indices1 := ValidatorSet(sa1.CustodyBit0Indices).MergeDisjoint(ValidatorSet(sa1.CustodyBit1Indices))
+	indices2 := ValidatorSet(sa2.CustodyBit0Indices).MergeDisjoint(ValidatorSet(sa2.CustodyBit1Indices))
 
 	currentEpoch := state.Epoch()
 	// run slashings where applicable
@@ -73,10 +67,10 @@ func IsSlashableAttestationData(a *AttestationData, b *AttestationData) bool {
 
 // Check if a and b have the same target epoch.
 func IsDoubleVote(a *AttestationData, b *AttestationData) bool {
-	return *a != *b && a.TargetEpoch == b.TargetEpoch
+	return *a != *b && a.Target.Epoch == b.Target.Epoch
 }
 
 // Check if a surrounds b, i.E. source(a) < source(b) and target(a) > target(b)
 func IsSurroundVote(a *AttestationData, b *AttestationData) bool {
-	return a.SourceEpoch < b.SourceEpoch && a.TargetEpoch > b.TargetEpoch
+	return a.Source.Epoch < b.Source.Epoch && a.Target.Epoch > b.Target.Epoch
 }

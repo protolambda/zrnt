@@ -42,6 +42,25 @@ func (vs *ValidatorSet) Dedup() {
 	*vs = data[:j+1]
 }
 
+// merges with other disjoint set, producing a new set.
+func (vs ValidatorSet) MergeDisjoint(other ValidatorSet) ValidatorSet {
+	total := len(vs) + len(other)
+	out := make(ValidatorSet, 0, total)
+	a, b := 0, 0
+	for i := 0; i < total; i++ {
+		if a < len(vs) && vs[a] < vs[b] {
+			out = append(out, vs[a])
+			a++
+		} else if b < len(other) && vs[a] > vs[b] {
+			out = append(out, vs[b])
+			b++
+		} else if vs[a] == vs[b] {
+			panic("invalid disjoint sets merge, sets contain equal item")
+		}
+	}
+	return out
+}
+
 // Joins two validator sets: check if there is any overlap
 func (vs ValidatorSet) Intersects(target ValidatorSet) bool {
 	// index for source set side of the zig-zag

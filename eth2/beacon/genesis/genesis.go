@@ -33,7 +33,7 @@ func Genesis(validatorDeposits []Deposit, time Timestamp, eth1Data Eth1Data) *Be
 		}
 	}
 	indices := state.Validators.GetActiveValidatorIndices(GENESIS_EPOCH)
-	genesisActiveIndexRoot := ssz.HashTreeRoot(indices, ValidatorIndexListSSZ)
+	genesisActiveIndexRoot := ssz.HashTreeRoot(indices, RegistryIndicesSSZ)
 	for i := Epoch(0); i < EPOCHS_PER_HISTORICAL_VECTOR; i++ {
 		state.LatestActiveIndexRoots[i] = genesisActiveIndexRoot
 	}

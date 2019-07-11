@@ -23,6 +23,7 @@ type BeaconState struct {
 	ShardRotationState
 	RandaoState
 	ShufflingState
+	CompactCommitteesState
 	SlashingsState
 	AttestationsState
 	CrosslinksState

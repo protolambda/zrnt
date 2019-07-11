@@ -25,7 +25,13 @@ func (state *RegistryState) UpdateEffectiveBalances() {
 	}
 }
 
-var ValidatorIndexListSSZ = zssz.GetSSZ((*[]ValidatorIndex)(nil))
+type RegistryIndices []ValidatorIndex
+
+func (_ *RegistryIndices) Limit() uint32 {
+	return VALIDATOR_REGISTRY_LIMIT
+}
+
+var RegistryIndicesSSZ = zssz.GetSSZ((*RegistryIndices)(nil))
 
 type ValidatorRegistry []*Validator
 
@@ -33,7 +39,7 @@ func (vr ValidatorRegistry) IsValidatorIndex(index ValidatorIndex) bool {
 	return index < ValidatorIndex(len(vr))
 }
 
-func (vr ValidatorRegistry) GetActiveValidatorIndices(epoch Epoch) []ValidatorIndex {
+func (vr ValidatorRegistry) GetActiveValidatorIndices(epoch Epoch) RegistryIndices {
 	res := make([]ValidatorIndex, 0, len(vr))
 	for i, v := range vr {
 		if v.IsActive(epoch) {

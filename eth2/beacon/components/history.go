@@ -1,7 +1,7 @@
 package components
 
 import (
-	"errors"
+	"fmt"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/protolambda/zssz"
@@ -29,16 +29,17 @@ type HistoricalBatch struct {
 }
 
 // Return the block root at the given slot (a recent one)
-func (state *BeaconState) GetBlockRootAtSlot(slot Slot) (Root, error) {
-	if !(slot < state.Slot && slot+SLOTS_PER_HISTORICAL_ROOT <= state.Slot) {
-		return Root{}, errors.New("cannot get block root for given slot")
+func (state *HistoryState) GetBlockRootAtSlot(meta VersioningMeta, slot Slot) (Root, error) {
+	currentSlot := meta.Slot()
+	if !(slot < currentSlot && slot+SLOTS_PER_HISTORICAL_ROOT <= currentSlot) {
+		return Root{}, fmt.Errorf("cannot get block root for given slot %d, current slot is %d", slot, currentSlot)
 	}
 	return state.BlockRoots[slot%SLOTS_PER_HISTORICAL_ROOT], nil
 }
 
 // Return the block root at a recent epoch
-func (state *BeaconState) GetBlockRoot(epoch Epoch) (Root, error) {
-	return state.GetBlockRootAtSlot(epoch.GetStartSlot())
+func (state *HistoryState) GetBlockRoot(meta VersioningMeta, epoch Epoch) (Root, error) {
+	return state.GetBlockRootAtSlot(meta, epoch.GetStartSlot())
 }
 
 func (state *HistoryState) UpdateHistoricalRoots() {

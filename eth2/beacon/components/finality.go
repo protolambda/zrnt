@@ -11,8 +11,8 @@ type FinalityState struct {
 	FinalizedCheckpoint         Checkpoint
 }
 
-func (state *BeaconState) Justify(checkpoint Checkpoint) {
-	epochsAgo := state.Epoch() - checkpoint.Epoch
+func (state *FinalityState) Justify(meta VersioningMeta, checkpoint Checkpoint) {
+	epochsAgo := meta.Epoch() - checkpoint.Epoch
 	state.CurrentJustifiedCheckpoint = checkpoint
 	state.JustificationBits[0] |= 1 << epochsAgo
 }

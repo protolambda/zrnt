@@ -6,16 +6,21 @@ type ShardRotationState struct {
 	StartShard Shard
 }
 
-func (state *BeaconState) GetStartShard(epoch Epoch) Shard {
-	currentEpoch := state.Epoch()
+type StartShardReq interface {
+	VersioningMeta
+	ShardDeltaMeta
+}
+
+func (state *ShardRotationState) GetStartShard(meta StartShardReq, epoch Epoch) Shard {
+	currentEpoch := meta.Epoch()
 	checkEpoch := currentEpoch + 1
 	if epoch > checkEpoch {
 		panic("cannot find start shard for epoch, epoch is too new")
 	}
-	shard := (state.StartShard + state.Validators.GetShardDelta(currentEpoch)) % SHARD_COUNT
+	shard := (state.StartShard + meta.GetShardDelta(currentEpoch)) % SHARD_COUNT
 	for checkEpoch > epoch {
 		checkEpoch--
-		shard = (shard + SHARD_COUNT - state.Validators.GetShardDelta(checkEpoch)) % SHARD_COUNT
+		shard = (shard + SHARD_COUNT - meta.GetShardDelta(checkEpoch)) % SHARD_COUNT
 	}
 	return shard
 }

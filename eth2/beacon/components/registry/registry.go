@@ -2,6 +2,7 @@ package registry
 
 import (
 	. "github.com/protolambda/zrnt/eth2/core"
+	"github.com/protolambda/zrnt/eth2/util/math"
 	"github.com/protolambda/zssz"
 )
 
@@ -56,6 +57,31 @@ func (vr ValidatorRegistry) GetActiveValidatorCount(epoch Epoch) (count uint64) 
 		}
 	}
 	return
+}
+
+func (vr ValidatorRegistry) GetChurnLimit(epoch Epoch) uint64 {
+	return math.MaxU64(MIN_PER_EPOCH_CHURN_LIMIT, vr.GetActiveValidatorCount(epoch)/CHURN_LIMIT_QUOTIENT)
+}
+
+
+func (vr ValidatorRegistry) ExitQueueEnd(epoch Epoch) Epoch {
+	// Compute exit queue epoch
+	exitQueueEnd := epoch.ComputeActivationExitEpoch()
+	for _, v := range vr {
+		if v.ExitEpoch != FAR_FUTURE_EPOCH && v.ExitEpoch > exitQueueEnd {
+			exitQueueEnd = v.ExitEpoch
+		}
+	}
+	exitQueueChurn := uint64(0)
+	for _, v := range vr {
+		if v.ExitEpoch == exitQueueEnd {
+			exitQueueChurn++
+		}
+	}
+	if exitQueueChurn >= vr.GetChurnLimit(epoch) {
+		exitQueueEnd++
+	}
+	return exitQueueEnd
 }
 
 // Return the total balance sum (1 Gwei minimum to avoid divisions by zero.)

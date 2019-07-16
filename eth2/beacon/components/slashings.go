@@ -4,6 +4,14 @@ import (
 	. "github.com/protolambda/zrnt/eth2/core"
 )
 
+type SlashingReq interface {
+	VersioningMeta
+	ValidatorMeta
+	ProposingMeta
+	BalanceMeta
+	ExitMeta
+}
+
 type SlashingsState struct {
 	// Balances slashed at every withdrawal period
 	Slashings [EPOCHS_PER_SLASHINGS_VECTOR]Gwei
@@ -14,22 +22,22 @@ func (state *SlashingsState) ResetSlashings(epoch Epoch) {
 }
 
 // Slash the validator with the given index.
-func (state *BeaconState) SlashValidator(slashedIndex ValidatorIndex, whistleblowerIndex *ValidatorIndex) {
-	currentEpoch := state.Epoch()
-	validator := state.Validators[slashedIndex]
-	state.InitiateValidatorExit(slashedIndex)
+func (state *SlashingsState) SlashValidator(meta SlashingReq, slashedIndex ValidatorIndex, whistleblowerIndex *ValidatorIndex) {
+	currentEpoch := meta.Epoch()
+	validator := meta.Validator(slashedIndex)
+	meta.InitiateValidatorExit(slashedIndex)
 	validator.Slashed = true
 	validator.WithdrawableEpoch = currentEpoch + EPOCHS_PER_SLASHINGS_VECTOR
 	slashedBalance := validator.EffectiveBalance
 	state.Slashings[currentEpoch%EPOCHS_PER_SLASHINGS_VECTOR] += slashedBalance
 
-	propIndex := state.GetBeaconProposerIndex()
+	propIndex := meta.GetBeaconProposerIndex()
 	if whistleblowerIndex == nil {
 		whistleblowerIndex = &propIndex
 	}
 	whistleblowerReward := slashedBalance / WHISTLEBLOWER_REWARD_QUOTIENT
 	proposerReward := whistleblowerReward / PROPOSER_REWARD_QUOTIENT
-	state.Balances.IncreaseBalance(propIndex, proposerReward)
-	state.Balances.IncreaseBalance(*whistleblowerIndex, whistleblowerReward-proposerReward)
-	state.Balances.DecreaseBalance(slashedIndex, whistleblowerReward)
+	meta.IncreaseBalance(propIndex, proposerReward)
+	meta.IncreaseBalance(*whistleblowerIndex, whistleblowerReward-proposerReward)
+	meta.DecreaseBalance(slashedIndex, whistleblowerReward)
 }

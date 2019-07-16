@@ -6,12 +6,20 @@ import (
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
+	"github.com/protolambda/zssz"
 	"sort"
 )
 
+var AttestationDataAndCustodyBitSSZ = zssz.GetSSZ((*AttestationDataAndCustodyBit)(nil))
+
+type AttestationDataAndCustodyBit struct {
+	Data       AttestationData
+	CustodyBit bool // Challengeable bit (SSZ-bool, 1 byte) for the custody of crosslink data
+}
+
 type CommitteeIndices []ValidatorIndex
 
-func (ci *CommitteeIndices) Limit() uint32 {
+func (ci *CommitteeIndices) Limit() uint64 {
 	return MAX_VALIDATORS_PER_COMMITTEE
 }
 

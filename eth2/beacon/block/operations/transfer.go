@@ -38,20 +38,13 @@ func (ops Transfers) Process(state *BeaconState) error {
 var TransferSSZ = zssz.GetSSZ((*Transfer)(nil))
 
 type Transfer struct {
-	// Sender index
-	Sender ValidatorIndex
-	// Recipient index
+	Sender    ValidatorIndex
 	Recipient ValidatorIndex
-	// Amount in Gwei
-	Amount Gwei
-	// Fee in Gwei for block proposer
-	Fee Gwei
-	// Inclusion slot
-	Slot Slot
-	// Sender withdrawal pubkey
-	Pubkey BLSPubkey
-	// Sender signature
-	Signature BLSSignature
+	Amount    Gwei
+	Fee       Gwei
+	Slot      Slot         // Slot at which transfer must be processed
+	Pubkey    BLSPubkey    // Sender withdrawal pubkey
+	Signature BLSSignature // Signature checked against withdrawal pubkey
 }
 
 func (transfer *Transfer) Process(state *BeaconState) error {
@@ -66,7 +59,7 @@ func (transfer *Transfer) Process(state *BeaconState) error {
 	if senderBalance < transfer.Fee {
 		return errors.New("transfer fee is too big")
 	}
-	if senderBalance < transfer.Fee + transfer.Amount {
+	if senderBalance < transfer.Fee+transfer.Amount {
 		return errors.New("transfer total is too big")
 	}
 	if transfer.Sender == transfer.Recipient {

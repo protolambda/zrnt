@@ -36,9 +36,7 @@ func (ops Deposits) Process(state *BeaconState) error {
 }
 
 type Deposit struct {
-	// Branch in the deposit tree
-	Proof [DEPOSIT_CONTRACT_TREE_DEPTH + 1]Root
-	// Data
+	Proof [DEPOSIT_CONTRACT_TREE_DEPTH + 1]Root // Merkle-path to deposit data list root
 	Data DepositData
 }
 

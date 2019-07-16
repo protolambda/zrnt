@@ -13,10 +13,8 @@ type BeaconBlock struct {
 	Slot       Slot
 	ParentRoot Root
 	StateRoot  Root
-	// Body
-	Body BeaconBlockBody
-	// Signature
-	Signature BLSSignature
+	Body       BeaconBlockBody
+	Signature  BLSSignature
 }
 
 func (block *BeaconBlock) Header() *BeaconBlockHeader {

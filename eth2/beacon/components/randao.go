@@ -24,7 +24,7 @@ func (state *RandaoState) GetRandomMix(epoch Epoch) Root {
 }
 
 // Prepare the randao mix for the given epoch by copying over the mix from the privious epoch.
-func (state *BeaconState) PrepareRandao(epoch Epoch) {
+func (state *RandaoState) PrepareRandao(epoch Epoch) {
 	state.RandaoMixes[epoch%EPOCHS_PER_HISTORICAL_VECTOR] = state.GetRandaoMix(epoch.Previous())
 }
 

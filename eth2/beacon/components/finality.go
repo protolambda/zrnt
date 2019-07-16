@@ -19,7 +19,7 @@ func (state *BeaconState) Justify(checkpoint Checkpoint) {
 
 type JustificationBits [1]byte
 
-func (jb *JustificationBits) BitLen() uint32 {
+func (jb *JustificationBits) BitLen() uint64 {
 	return 4
 }
 

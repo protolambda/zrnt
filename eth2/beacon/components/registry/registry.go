@@ -27,8 +27,8 @@ func (state *RegistryState) UpdateEffectiveBalances() {
 
 type RegistryIndices []ValidatorIndex
 
-func (_ *RegistryIndices) Limit() uint32 {
-	return 1 << 31 //TODO VALIDATOR_REGISTRY_LIMIT
+func (_ *RegistryIndices) Limit() uint64 {
+	return VALIDATOR_REGISTRY_LIMIT
 }
 
 var RegistryIndicesSSZ = zssz.GetSSZ((*RegistryIndices)(nil))

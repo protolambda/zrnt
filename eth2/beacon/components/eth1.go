@@ -10,10 +10,16 @@ type Eth1Data struct {
 	BlockHash    Root
 }
 
+type Eth1DataVotes []Eth1Data
+
+func (_ *Eth1DataVotes) Limit() uint64 {
+	return uint64(SLOTS_PER_ETH1_VOTING_PERIOD)
+}
+
 // Ethereum 1.0 chain data
 type Eth1State struct {
 	LatestEth1Data Eth1Data
-	Eth1DataVotes  []Eth1Data
+	Eth1DataVotes  Eth1DataVotes
 	DepositIndex   DepositIndex
 }
 

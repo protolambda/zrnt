@@ -15,10 +15,8 @@ type BeaconBlockHeader struct {
 	Slot       Slot
 	ParentRoot Root
 	StateRoot  Root
-	// Where the body would be, just a root embedded here.
-	BodyRoot Root
-	// Signature
-	Signature BLSSignature
+	BodyRoot   Root // Where the body would be, just a root embedded here.
+	Signature  BLSSignature
 }
 
 func (header *BeaconBlockHeader) Process(state *BeaconState) error {

@@ -27,12 +27,9 @@ func (ops VoluntaryExits) Process(state *BeaconState) error {
 var VoluntaryExitSSZ = zssz.GetSSZ((*VoluntaryExit)(nil))
 
 type VoluntaryExit struct {
-	// Minimum epoch for processing exit
-	Epoch Epoch
-	// Index of the exiting validator
+	Epoch          Epoch // Earliest epoch when voluntary exit can be processed
 	ValidatorIndex ValidatorIndex
-	// Validator signature
-	Signature BLSSignature
+	Signature      BLSSignature
 }
 
 func (exit *VoluntaryExit) Process(state *BeaconState) error {

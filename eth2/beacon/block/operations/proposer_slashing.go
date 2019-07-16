@@ -24,12 +24,9 @@ func (ops ProposerSlashings) Process(state *BeaconState) error {
 }
 
 type ProposerSlashing struct {
-	// Proposer index
 	ProposerIndex ValidatorIndex
-	// First proposal
-	Header1 BeaconBlockHeader
-	// Second proposal
-	Header2 BeaconBlockHeader
+	Header1 BeaconBlockHeader // First proposal
+	Header2 BeaconBlockHeader // Second proposal
 }
 
 func (ps *ProposerSlashing) Process(state *BeaconState) error {

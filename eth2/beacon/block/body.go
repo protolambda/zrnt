@@ -10,8 +10,8 @@ var BeaconBlockBodySSZ = zssz.GetSSZ((*BeaconBlockBody)(nil))
 
 type BeaconBlockBody struct {
 	RandaoBlockData
-	Eth1BlockData
-	Graffiti Root
+	Eth1BlockData // Eth1 data vote
+	Graffiti Root // Arbitrary data
 
 	BlockOperations
 }

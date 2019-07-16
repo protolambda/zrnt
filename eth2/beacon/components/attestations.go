@@ -4,16 +4,8 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon/components/registry"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/math"
-	"github.com/protolambda/zssz"
 	"github.com/protolambda/zssz/bitfields"
 )
-
-var AttestationDataAndCustodyBitSSZ = zssz.GetSSZ((*AttestationDataAndCustodyBit)(nil))
-
-type AttestationDataAndCustodyBit struct {
-	Data       AttestationData
-	CustodyBit bool // Challengeable bit (SSZ-bool, 1 byte) for the custody of crosslink data
-}
 
 type AttestationData struct {
 	// LMD GHOST vote
@@ -29,15 +21,15 @@ type AttestationData struct {
 
 type CommitteeBits []byte
 
-func (cb CommitteeBits) BitLen() uint32 {
+func (cb CommitteeBits) BitLen() uint64 {
 	return bitfields.BitlistLen(cb)
 }
 
-func (cb CommitteeBits) GetBit(i uint32) bool {
+func (cb CommitteeBits) GetBit(i uint64) bool {
 	return bitfields.GetBit(cb, i)
 }
 
-func (cb *CommitteeBits) Limit() uint32 {
+func (cb *CommitteeBits) Limit() uint64 {
 	return MAX_VALIDATORS_PER_COMMITTEE
 }
 
@@ -53,10 +45,10 @@ func (cb CommitteeBits) Or(other CommitteeBits) {
 func (cb CommitteeBits) FilterParticipants(committee []ValidatorIndex) []ValidatorIndex {
 	bitLen := cb.BitLen()
 	out := committee[:0]
-	if bitLen != uint32(len(committee)) {
+	if bitLen != uint64(len(committee)) {
 		panic("committee mismatch, bitfield length does not match")
 	}
-	for i := uint32(0); i < bitLen; i++ {
+	for i := uint64(0); i < bitLen; i++ {
 		if cb.GetBit(i) {
 			out = append(out, committee[i])
 		}
@@ -69,10 +61,10 @@ func (cb CommitteeBits) FilterParticipants(committee []ValidatorIndex) []Validat
 func (cb CommitteeBits) FilterNonParticipants(committee []ValidatorIndex) []ValidatorIndex {
 	bitLen := cb.BitLen()
 	out := committee[:0]
-	if bitLen != uint32(len(committee)) {
+	if bitLen != uint64(len(committee)) {
 		panic("committee mismatch, bitfield length does not match")
 	}
-	for i := uint32(0); i < bitLen; i++ {
+	for i := uint64(0); i < bitLen; i++ {
 		if !cb.GetBit(i) {
 			out = append(out, committee[i])
 		}

@@ -22,9 +22,7 @@ func (ops AttesterSlashings) Process(state *BeaconState) error {
 }
 
 type AttesterSlashing struct {
-	// First attestation
 	Attestation1 IndexedAttestation
-	// Second attestation
 	Attestation2 IndexedAttestation
 }
 

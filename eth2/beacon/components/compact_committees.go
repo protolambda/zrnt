@@ -13,7 +13,7 @@ type CompactCommitteesState struct {
 
 type CommitteePubkeys []BLSPubkey
 
-func (_ *CommitteePubkeys) Limit() uint32 {
+func (_ *CommitteePubkeys) Limit() uint64 {
 	return MAX_VALIDATORS_PER_COMMITTEE
 }
 
@@ -33,7 +33,7 @@ func (cv CompactValidator) EffectiveBalance() Gwei {
 
 type CommitteeCompactValidators []uint64
 
-func (_ *CommitteeCompactValidators) Limit() uint32 {
+func (_ *CommitteeCompactValidators) Limit() uint64 {
 	return MAX_VALIDATORS_PER_COMMITTEE
 }
 

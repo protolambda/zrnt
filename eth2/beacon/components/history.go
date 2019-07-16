@@ -7,11 +7,18 @@ import (
 	"github.com/protolambda/zssz"
 )
 
+// roots of HistoricalBatch
+type HistoricalRoots []Root
+
+func (_ *HistoricalRoots) Limit() uint64 {
+	return HISTORICAL_ROOTS_LIMIT
+}
+
 type HistoryState struct {
 	LatestBlockHeader BeaconBlockHeader
 	BlockRoots        [SLOTS_PER_HISTORICAL_ROOT]Root
 	StateRoots        [SLOTS_PER_HISTORICAL_ROOT]Root
-	HistoricalRoots   []Root // roots of HistoricalBatch
+	HistoricalRoots   HistoricalRoots
 }
 
 var HistoricalBatchSSZ = zssz.GetSSZ((*HistoricalBatch)(nil))

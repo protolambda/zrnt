@@ -6,7 +6,7 @@ type ShardRotationState struct {
 	StartShard Shard
 }
 
-func (state *BeaconState) GetEpochStartShard(epoch Epoch) Shard {
+func (state *BeaconState) GetStartShard(epoch Epoch) Shard {
 	currentEpoch := state.Epoch()
 	checkEpoch := currentEpoch + 1
 	if epoch > checkEpoch {

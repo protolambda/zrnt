@@ -9,11 +9,11 @@ import (
 // Return the beacon proposer index for the current slot
 func (state *BeaconState) GetBeaconProposerIndex() ValidatorIndex {
 	epoch := state.Epoch()
-	committeesPerSlot := state.Validators.GetEpochCommitteeCount(epoch) / uint64(SLOTS_PER_EPOCH)
+	committeesPerSlot := state.Validators.GetCommitteeCount(epoch) / uint64(SLOTS_PER_EPOCH)
 	offset := Shard(committeesPerSlot) * Shard(state.Slot%SLOTS_PER_EPOCH)
-	shard := (state.GetEpochStartShard(epoch) + offset) % SHARD_COUNT
+	shard := (state.GetStartShard(epoch) + offset) % SHARD_COUNT
 	firstCommittee := state.PrecomputedData.GetCrosslinkCommittee(epoch, shard)
-	seed := state.GenerateSeed(epoch)
+	seed := state.GetSeed(epoch)
 	buf := make([]byte, 32+8, 32+8)
 	copy(buf[0:32], seed[:])
 	for i := uint64(0); true; i++ {

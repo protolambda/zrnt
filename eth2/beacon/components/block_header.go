@@ -32,8 +32,9 @@ func (header *BeaconBlockHeader) Process(state *BeaconState) error {
 	state.LatestBlockHeader = BeaconBlockHeader{
 		Slot:       header.Slot,
 		ParentRoot: header.ParentRoot,
+		// state_root: zeroed, overwritten in the next ProcessSlot call
 		BodyRoot:   header.BodyRoot,
-		// note that StateRoot is set to 0. (filled by next process-slot call after block-processing)
+		// signature is always zeroed
 	}
 
 	proposerIndex := state.GetBeaconProposerIndex()

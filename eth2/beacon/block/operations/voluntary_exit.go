@@ -54,6 +54,7 @@ func (exit *VoluntaryExit) Process(state *BeaconState) error {
 	if currentEpoch < validator.ActivationEpoch+PERSISTENT_COMMITTEE_PERIOD {
 		return errors.New("exit is too soon")
 	}
+	// Verify signature
 	if !bls.BlsVerify(
 		validator.Pubkey,
 		ssz.SigningRoot(exit, VoluntaryExitSSZ),

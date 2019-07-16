@@ -15,7 +15,7 @@ func (state *BeaconState) ExitValidator(index ValidatorIndex) {
 	validator := state.Validators[index]
 	// Update validator exit epoch if not previously exited
 	if validator.ExitEpoch == FAR_FUTURE_EPOCH {
-		validator.ExitEpoch = state.Epoch().GetDelayedActivationExitEpoch()
+		validator.ExitEpoch = state.Epoch().ComputeActivationExitEpoch()
 	}
 }
 
@@ -27,7 +27,7 @@ func (state *BeaconState) InitiateValidatorExit(index ValidatorIndex) {
 		return
 	}
 	// Compute exit queue epoch
-	exitQueueEnd := state.Epoch().GetDelayedActivationExitEpoch()
+	exitQueueEnd := state.Epoch().ComputeActivationExitEpoch()
 	for _, v := range state.Validators {
 		if v.ExitEpoch != FAR_FUTURE_EPOCH && v.ExitEpoch > exitQueueEnd {
 			exitQueueEnd = v.ExitEpoch

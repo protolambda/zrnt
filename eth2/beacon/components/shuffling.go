@@ -29,11 +29,10 @@ func (state *BeaconState) UpdateActiveIndexRoot(epoch Epoch) {
 }
 
 // Generate a seed for the given epoch
-func (state *BeaconState) GenerateSeed(epoch Epoch) Root {
+func (state *BeaconState) GetSeed(epoch Epoch) Root {
 	buf := make([]byte, 32*3)
-	mix := state.GetRandomMix(epoch + EPOCHS_PER_HISTORICAL_VECTOR - MIN_SEED_LOOKAHEAD)
+	mix := state.GetRandomMix(epoch + EPOCHS_PER_HISTORICAL_VECTOR - MIN_SEED_LOOKAHEAD) // Avoid underflow
 	copy(buf[0:32], mix[:])
-	// get_active_index_root in spec, but only used once, and the assertion is unnecessary, since epoch input is always trusted
 	activeIndexRoot := state.GetActiveIndexRoot(epoch)
 	copy(buf[32:64], activeIndexRoot[:])
 	binary.LittleEndian.PutUint64(buf[64:], uint64(epoch))

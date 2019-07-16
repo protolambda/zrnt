@@ -64,9 +64,9 @@ func (state *BeaconState) ValidateIndexedAttestation(indexedAttestation *Indexed
 	}
 
 	// Check the last item of the sorted list to be a valid index,
-	// if this one is valid, the others are as well.
+	// if this one is valid, the others are as well, since they are lower.
 	if len(bit0Indices) > 0 && !state.Validators.IsValidatorIndex(bit0Indices[len(bit0Indices)-1]) {
-		return errors.New("index in custody bit 1 indices is invalid")
+		return errors.New("index in custody bit 0 indices is invalid")
 	}
 
 	if len(bit1Indices) > 0 && !state.Validators.IsValidatorIndex(bit1Indices[len(bit1Indices)-1]) {

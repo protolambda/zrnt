@@ -36,5 +36,5 @@ func (state *VersioningState) GetDomain(dom BLSDomainType, messageEpoch Epoch) B
 		v = state.Fork.PreviousVersion
 	}
 	// combine fork version with domain type.
-	return BLSDomain((uint64(v.ToUint32()) << 32) | uint64(dom))
+	return ComputeDomain(dom, v)
 }

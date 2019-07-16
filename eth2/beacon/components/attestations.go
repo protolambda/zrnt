@@ -92,8 +92,8 @@ func (state *AttestationsState) RotateEpochAttestations() {
 
 func (state *BeaconState) GetAttestationSlot(attData *AttestationData) Slot {
 	epoch := attData.Target.Epoch
-	committeeCount := Slot(state.Validators.GetEpochCommitteeCount(epoch))
-	offset := Slot((attData.Crosslink.Shard + SHARD_COUNT - state.GetEpochStartShard(epoch)) % SHARD_COUNT)
+	committeeCount := Slot(state.Validators.GetCommitteeCount(epoch))
+	offset := Slot((attData.Crosslink.Shard + SHARD_COUNT - state.GetStartShard(epoch)) % SHARD_COUNT)
 	return epoch.GetStartSlot() + (offset / (committeeCount / SLOTS_PER_EPOCH))
 }
 
@@ -164,8 +164,11 @@ func (state *BeaconState) AttestationDeltas() *Deltas {
 				deltas.Rewards[i] += baseReward * totalAttestingBalance / totalBalance
 
 				// Inclusion speed bonus
-				deltas.Rewards[status.Proposer] += baseReward / PROPOSER_REWARD_QUOTIENT
-				deltas.Rewards[i] += baseReward * Gwei(MIN_ATTESTATION_INCLUSION_DELAY) / Gwei(status.InclusionDelay)
+				proposerReward := baseReward / PROPOSER_REWARD_QUOTIENT
+				deltas.Rewards[status.Proposer] += proposerReward
+				maxAttesterReward := baseReward - proposerReward
+				inclusionOffset := SLOTS_PER_EPOCH + MIN_ATTESTATION_INCLUSION_DELAY - status.InclusionDelay
+				deltas.Rewards[i] += maxAttesterReward * Gwei(inclusionOffset) / Gwei(SLOTS_PER_EPOCH)
 			} else {
 				//Justification-non-participation R-penalty
 				deltas.Penalties[i] += baseReward

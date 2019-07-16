@@ -70,11 +70,12 @@ func (dep *Deposit) Process(state *BeaconState) error {
 	// Check if it is a known validator that is depositing ("if pubkey not in validator_pubkeys")
 	if valIndex == ValidatorIndexMarker {
 		// only unknown pubkeys need to be verified, others are already trusted
+		// Note: Deposits are valid across forks, thus the deposit domain is retrieved directly from ComputeDomain().
 		if !bls.BlsVerify(
 			dep.Data.Pubkey,
 			ssz.SigningRoot(dep.Data, DepositDataSSZ),
 			dep.Data.Signature,
-			state.GetDomain(DOMAIN_DEPOSIT, state.Epoch())) {
+			ComputeDomain(DOMAIN_DEPOSIT, Version{})) {
 			return errors.New("could not verify BLS signature")
 		}
 

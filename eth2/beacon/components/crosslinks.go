@@ -36,8 +36,8 @@ func (state *BeaconState) CrosslinksDeltas() *Deltas {
 	totalBalanceSqRoot := Gwei(math.IntegerSquareroot(uint64(totalActiveBalance)))
 
 	epoch := state.PreviousEpoch()
-	count := Shard(state.Validators.GetEpochCommitteeCount(epoch))
-	epochStartShard := state.GetEpochStartShard(epoch)
+	count := Shard(state.Validators.GetCommitteeCount(epoch))
+	epochStartShard := state.GetStartShard(epoch)
 	for offset := Shard(0); offset < count; offset++ {
 		shard := (epochStartShard + offset) % SHARD_COUNT
 

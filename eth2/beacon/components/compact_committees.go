@@ -19,6 +19,15 @@ func (_ *CommitteePubkeys) Limit() uint64 {
 
 type CompactValidator uint64
 
+func MakeCompactValidator(index ValidatorIndex, slashed bool, effectiveBalance Gwei) CompactValidator {
+	compactData := CompactValidator(index) << 16
+	if slashed {
+		compactData |= 1 << 15
+	}
+	compactData |= CompactValidator(effectiveBalance / EFFECTIVE_BALANCE_INCREMENT)
+	return compactData
+}
+
 func (cv CompactValidator) Index() ValidatorIndex {
 	return ValidatorIndex(cv >> 16)
 }
@@ -31,7 +40,7 @@ func (cv CompactValidator) EffectiveBalance() Gwei {
 	return Gwei(cv & ((1 << 15) - 1))
 }
 
-type CommitteeCompactValidators []uint64
+type CommitteeCompactValidators []CompactValidator
 
 func (_ *CommitteeCompactValidators) Limit() uint64 {
 	return MAX_VALIDATORS_PER_COMMITTEE
@@ -56,12 +65,8 @@ func (state *BeaconState) GetCompactCommittees(epoch Epoch) *CompactCommittees {
 		for _, index := range committee {
 			v := state.Validators[index]
 			compact.Pubkeys = append(compact.Pubkeys, v.Pubkey)
-			compactData := uint64(index) << 16
-			if v.Slashed {
-				compactData |= 1 << 15
-			}
-			compactData |= uint64(v.EffectiveBalance / EFFECTIVE_BALANCE_INCREMENT)
-			compact.CompactValidators = append(compact.CompactValidators, compactData)
+			compactValidator := MakeCompactValidator(index, v.Slashed, v.EffectiveBalance)
+			compact.CompactValidators = append(compact.CompactValidators, compactValidator)
 		}
 	}
 	return &compacts

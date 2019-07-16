@@ -35,19 +35,21 @@ type RandaoBlockData struct {
 var RandaoEpochSSZ = zssz.GetSSZ((*Epoch)(nil))
 
 func (revealData *RandaoBlockData) Process(state *BeaconState) error {
+	epoch := state.Epoch()
 	propIndex := state.GetBeaconProposerIndex()
 	proposer := state.Validators[propIndex]
 	currentEpoch := state.Epoch()
+	// Verify RANDAO reveal
 	if !bls.BlsVerify(
 		proposer.Pubkey,
-		ssz.HashTreeRoot(state.Epoch(), RandaoEpochSSZ),
+		ssz.HashTreeRoot(epoch, RandaoEpochSSZ),
 		revealData.RandaoReveal,
 		state.GetDomain(DOMAIN_RANDAO, currentEpoch),
 	) {
 		return errors.New("randao invalid")
 	}
-	state.RandaoMixes[state.Epoch()%EPOCHS_PER_HISTORICAL_VECTOR] = XorBytes32(
-		state.GetRandaoMix(currentEpoch),
-		Hash(revealData.RandaoReveal[:]))
+	// Mix in RANDAO reveal
+	mix := XorBytes32(state.GetRandaoMix(currentEpoch), Hash(revealData.RandaoReveal[:]))
+	state.RandaoMixes[epoch%EPOCHS_PER_HISTORICAL_VECTOR] = mix
 	return nil
 }

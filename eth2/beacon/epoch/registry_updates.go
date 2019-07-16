@@ -12,7 +12,7 @@ func ProcessEpochRegistryUpdates(state *BeaconState) {
 	currentEpoch := state.Epoch()
 	for i, v := range state.Validators {
 		if v.ActivationEligibilityEpoch == FAR_FUTURE_EPOCH &&
-			v.EffectiveBalance >= MAX_EFFECTIVE_BALANCE {
+			v.EffectiveBalance == MAX_EFFECTIVE_BALANCE {
 			v.ActivationEligibilityEpoch = currentEpoch
 		}
 		if v.IsActive(currentEpoch) &&
@@ -24,7 +24,7 @@ func ProcessEpochRegistryUpdates(state *BeaconState) {
 	activationQueue := make([]*Validator, 0)
 	for _, v := range state.Validators {
 		if v.ActivationEligibilityEpoch != FAR_FUTURE_EPOCH &&
-			v.ActivationEpoch >= state.FinalizedCheckpoint.Epoch.GetDelayedActivationExitEpoch() {
+			v.ActivationEpoch >= state.FinalizedCheckpoint.Epoch.ComputeActivationExitEpoch() {
 			activationQueue = append(activationQueue, v)
 		}
 	}
@@ -39,7 +39,7 @@ func ProcessEpochRegistryUpdates(state *BeaconState) {
 	}
 	for _, v := range activationQueue[:queueLen] {
 		if v.ActivationEpoch == FAR_FUTURE_EPOCH {
-			v.ActivationEpoch = currentEpoch.GetDelayedActivationExitEpoch()
+			v.ActivationEpoch = currentEpoch.ComputeActivationExitEpoch()
 		}
 	}
 }

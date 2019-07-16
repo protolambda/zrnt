@@ -10,8 +10,8 @@ func ProcessEpochCrosslinks(state *BeaconState) {
 	currentEpoch := state.Epoch()
 	previousEpoch := state.PreviousEpoch()
 	for epoch := previousEpoch; epoch <= currentEpoch; epoch++ {
-		count := state.Validators.GetEpochCommitteeCount(epoch)
-		startShard := state.GetEpochStartShard(epoch)
+		count := state.Validators.GetCommitteeCount(epoch)
+		startShard := state.GetStartShard(epoch)
 		for offset := uint64(0); offset < count; offset++ {
 			shard := (startShard + Shard(offset)) % SHARD_COUNT
 			crosslinkCommittee := state.PrecomputedData.GetCrosslinkCommittee(epoch, shard)

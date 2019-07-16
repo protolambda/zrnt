@@ -32,14 +32,14 @@ func (shep *ShufflingEpoch) Load(state *BeaconState, epoch Epoch) {
 		panic("could not compute shuffling for out of range epoch")
 	}
 
-	seed := state.GenerateSeed(epoch)
+	seed := state.GetSeed(epoch)
 	activeIndices := state.Validators.GetActiveValidatorIndices(epoch)
 	shuffling.UnshuffleList(activeIndices, seed)
 	shep.Shuffling = activeIndices
 
 	validatorCount := uint64(len(activeIndices))
-	committeeCount := state.Validators.GetEpochCommitteeCount(epoch)
-	startShard := state.GetEpochStartShard(epoch)
+	committeeCount := state.Validators.GetCommitteeCount(epoch)
+	startShard := state.GetStartShard(epoch)
 	for shard := Shard(0); shard < SHARD_COUNT; shard++ {
 		index := uint64((shard + SHARD_COUNT - startShard) % SHARD_COUNT)
 		startOffset := (validatorCount * index) / committeeCount

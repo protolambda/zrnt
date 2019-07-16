@@ -33,7 +33,7 @@ func (header *BeaconBlockHeader) Process(state *BeaconState) error {
 		Slot:       header.Slot,
 		ParentRoot: header.ParentRoot,
 		// state_root: zeroed, overwritten in the next ProcessSlot call
-		BodyRoot:   header.BodyRoot,
+		BodyRoot: header.BodyRoot,
 		// signature is always zeroed
 	}
 

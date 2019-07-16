@@ -38,7 +38,7 @@ func (ops Deposits) Process(state *BeaconState) error {
 
 type Deposit struct {
 	Proof [DEPOSIT_CONTRACT_TREE_DEPTH + 1]Root // Merkle-path to deposit data list root
-	Data DepositData
+	Data  DepositData
 }
 
 // Process an Eth1 deposit, registering a validator or increasing its balance.
@@ -48,7 +48,7 @@ func (dep *Deposit) Process(state *BeaconState) error {
 	if !merkle.VerifyMerkleBranch(
 		ssz.HashTreeRoot(&dep.Data, DepositDataSSZ),
 		dep.Proof[:],
-		DEPOSIT_CONTRACT_TREE_DEPTH + 1, // Add 1 for the `List` length mix-in
+		DEPOSIT_CONTRACT_TREE_DEPTH+1, // Add 1 for the `List` length mix-in
 		uint64(state.DepositIndex),
 		state.Eth1Data.DepositRoot) {
 		return fmt.Errorf("deposit %d merkle proof failed to be verified", state.DepositIndex)

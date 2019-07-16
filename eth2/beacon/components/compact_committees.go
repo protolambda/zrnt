@@ -33,7 +33,7 @@ func (cv CompactValidator) Index() ValidatorIndex {
 }
 
 func (cv CompactValidator) Slashed() bool {
-	return (cv >> 15) & 1 == 1
+	return ((cv >> 15) & 1) == 1
 }
 
 func (cv CompactValidator) EffectiveBalance() Gwei {
@@ -47,7 +47,7 @@ func (_ *CommitteeCompactValidators) Limit() uint64 {
 }
 
 type CompactCommittee struct {
-	Pubkeys CommitteePubkeys
+	Pubkeys           CommitteePubkeys
 	CompactValidators CommitteeCompactValidators
 }
 

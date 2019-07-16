@@ -25,9 +25,9 @@ func (ops Attestations) Process(state *BeaconState) error {
 
 type Attestation struct {
 	AggregationBits CommitteeBits
-	Data AttestationData
-	CustodyBits CommitteeBits
-	Signature BLSSignature
+	Data            AttestationData
+	CustodyBits     CommitteeBits
+	Signature       BLSSignature
 }
 
 type ffg struct {
@@ -108,10 +108,10 @@ func (attestation *Attestation) Process(state *BeaconState) error {
 
 	// Cache pending attestation
 	pendingAttestation := &PendingAttestation{
-		Data:                *data,
+		Data:            *data,
 		AggregationBits: attestation.AggregationBits,
-		InclusionDelay:      state.Slot - attestationSlot,
-		ProposerIndex:       state.GetBeaconProposerIndex(),
+		InclusionDelay:  state.Slot - attestationSlot,
+		ProposerIndex:   state.GetBeaconProposerIndex(),
 	}
 	if data.Target.Epoch == currentEpoch {
 		state.CurrentEpochAttestations = append(state.CurrentEpochAttestations, pendingAttestation)

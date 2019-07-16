@@ -62,19 +62,18 @@ func (attestation *Attestation) Process(state *BeaconState) error {
 	var parentCrosslink *Crosslink
 
 	if data.Target.Epoch == currentEpoch {
-		ffgData = ffg{state.CurrentJustifiedCheckpoint.Epoch, state.CurrentJustifiedCheckpoint.Root, currentEpoch}
+		if data.Source.Epoch != state.CurrentJustifiedCheckpoint.Epoch {
+			return errors.New("attestation source epoch does not match current justified checkpoint")
+		}
 		parentCrosslink = &state.CurrentCrosslinks[data.Crosslink.Shard]
 	} else {
-		ffgData = ffg{state.PreviousJustifiedCheckpoint.Epoch, state.PreviousJustifiedCheckpoint.Root, previousEpoch}
+		if data.Source.Epoch != state.PreviousJustifiedCheckpoint.Epoch {
+			return errors.New("attestation source epoch does not match previous justified checkpoint")
+		}
 		parentCrosslink = &state.PreviousCrosslinks[data.Crosslink.Shard]
 	}
 
-	// Check FFG data, crosslink data, and signature
-	// -------------------------------------------------
-	// FFG
-	if ffgData != (ffg{data.Source.Epoch, data.Source.Root, data.Target.Epoch}) {
-		return errors.New("attestation data source fields are invalid")
-	}
+	// Check crosslink against expected parent crosslink
 	if data.Crosslink.ParentRoot != ssz.HashTreeRoot(parentCrosslink, CrosslinkSSZ) {
 		return errors.New("attestation parent crosslink is invalid")
 	}

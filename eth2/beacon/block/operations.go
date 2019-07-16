@@ -14,6 +14,7 @@ type BlockOperations struct {
 	Transfers         Transfers
 }
 
+// TODO continue updating from here in spec
 func (ops *BlockOperations) Process(state *BeaconState) error {
 	if err := ops.ProposerSlashings.Process(state); err != nil {
 		return nil

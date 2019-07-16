@@ -15,7 +15,7 @@ func Genesis(validatorDeposits []Deposit, time Timestamp, eth1Data Eth1Data) *Be
 		},
 		// Ethereum 1.0 chain data
 		Eth1State: Eth1State{
-			LatestEth1Data: eth1Data,
+			Eth1Data: eth1Data,
 		},
 	}
 	// Process genesis deposits

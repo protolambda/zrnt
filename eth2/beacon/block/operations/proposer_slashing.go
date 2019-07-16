@@ -25,8 +25,8 @@ func (ops ProposerSlashings) Process(state *BeaconState) error {
 
 type ProposerSlashing struct {
 	ProposerIndex ValidatorIndex
-	Header1 BeaconBlockHeader // First proposal
-	Header2 BeaconBlockHeader // Second proposal
+	Header1       BeaconBlockHeader // First proposal
+	Header2       BeaconBlockHeader // Second proposal
 }
 
 func (ps *ProposerSlashing) Process(state *BeaconState) error {
@@ -47,9 +47,13 @@ func (ps *ProposerSlashing) Process(state *BeaconState) error {
 		return errors.New("proposer slashing requires proposer to be slashable")
 	}
 	// Signatures are valid
-	if !(bls.BlsVerify(proposer.Pubkey, ssz.SigningRoot(ps.Header1, BeaconBlockHeaderSSZ), ps.Header1.Signature, state.GetDomain(DOMAIN_BEACON_PROPOSER, ps.Header1.Slot.ToEpoch())) &&
-		bls.BlsVerify(proposer.Pubkey, ssz.SigningRoot(ps.Header2, BeaconBlockHeaderSSZ), ps.Header2.Signature, state.GetDomain(DOMAIN_BEACON_PROPOSER, ps.Header2.Slot.ToEpoch()))) {
-		return errors.New("proposer slashing has header with invalid BLS signature")
+	if !bls.BlsVerify(proposer.Pubkey, ssz.SigningRoot(ps.Header1, BeaconBlockHeaderSSZ), ps.Header1.Signature,
+		state.GetDomain(DOMAIN_BEACON_PROPOSER, ps.Header1.Slot.ToEpoch())) {
+		return errors.New("proposer slashing header 1 has invalid BLS signature")
+	}
+	if !bls.BlsVerify(proposer.Pubkey, ssz.SigningRoot(ps.Header2, BeaconBlockHeaderSSZ), ps.Header2.Signature,
+		state.GetDomain(DOMAIN_BEACON_PROPOSER, ps.Header2.Slot.ToEpoch())) {
+		return errors.New("proposer slashing header 2 has invalid BLS signature")
 	}
 	state.SlashValidator(ps.ProposerIndex, nil)
 	return nil

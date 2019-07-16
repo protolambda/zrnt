@@ -18,9 +18,9 @@ func (_ *Eth1DataVotes) Limit() uint64 {
 
 // Ethereum 1.0 chain data
 type Eth1State struct {
-	LatestEth1Data Eth1Data
-	Eth1DataVotes  Eth1DataVotes
-	DepositIndex   DepositIndex
+	Eth1Data      Eth1Data
+	Eth1DataVotes Eth1DataVotes
+	DepositIndex  DepositIndex
 }
 
 // Done at the end of every voting period
@@ -41,7 +41,7 @@ func (data *Eth1BlockData) Process(state *BeaconState) error {
 		}
 	}
 	if count*2 > SLOTS_PER_ETH1_VOTING_PERIOD {
-		state.LatestEth1Data = data.Eth1Data
+		state.Eth1Data = data.Eth1Data
 	}
 	return nil
 }

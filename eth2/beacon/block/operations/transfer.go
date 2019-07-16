@@ -17,6 +17,7 @@ func (_ *Transfers) Limit() uint32 {
 	return MAX_TRANSFERS
 }
 
+// Verifies that there are no duplicate transfers, then processes in-order.
 func (ops Transfers) Process(state *BeaconState) error {
 	// check if all transfers are distinct
 	distinctionCheckSet := make(map[BLSSignature]struct{})

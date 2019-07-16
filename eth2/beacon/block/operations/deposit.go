@@ -17,9 +17,10 @@ func (_ *Deposits) Limit() uint32 {
 	return MAX_DEPOSITS
 }
 
+// Verify that outstanding deposits are processed up to the maximum number of deposits, then process all in order.
 func (ops Deposits) Process(state *BeaconState) error {
 	depositCount := DepositIndex(len(ops))
-	expectedCount := state.LatestEth1Data.DepositCount - state.DepositIndex
+	expectedCount := state.Eth1Data.DepositCount - state.DepositIndex
 	if expectedCount > MAX_DEPOSITS {
 		expectedCount = MAX_DEPOSITS
 	}
@@ -47,9 +48,9 @@ func (dep *Deposit) Process(state *BeaconState) error {
 	if !merkle.VerifyMerkleBranch(
 		ssz.HashTreeRoot(&dep.Data, DepositDataSSZ),
 		dep.Proof[:],
-		DEPOSIT_CONTRACT_TREE_DEPTH + 1,
+		DEPOSIT_CONTRACT_TREE_DEPTH + 1, // Add 1 for the `List` length mix-in
 		uint64(state.DepositIndex),
-		state.LatestEth1Data.DepositRoot) {
+		state.Eth1Data.DepositRoot) {
 		return fmt.Errorf("deposit %d merkle proof failed to be verified", state.DepositIndex)
 	}
 
@@ -69,7 +70,9 @@ func (dep *Deposit) Process(state *BeaconState) error {
 
 	// Check if it is a known validator that is depositing ("if pubkey not in validator_pubkeys")
 	if valIndex == ValidatorIndexMarker {
-		// only unknown pubkeys need to be verified, others are already trusted
+		// Verify the deposit signature (proof of possession) for new validators.
+		// Only unknown pubkeys need to be verified, others are already trusted
+		// Note: The deposit contract does not check signatures.
 		// Note: Deposits are valid across forks, thus the deposit domain is retrieved directly from ComputeDomain().
 		if !bls.BlsVerify(
 			dep.Data.Pubkey,

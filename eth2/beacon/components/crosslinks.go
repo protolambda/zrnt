@@ -8,10 +8,6 @@ import (
 	"sort"
 )
 
-type CrosslinkingData interface {
-	GetWinningCrosslinkAndAttesters(epoch Epoch, shard Shard) (*Crosslink, ValidatorSet)
-}
-
 var CrosslinkSSZ = zssz.GetSSZ((*Crosslink)(nil))
 
 type Crosslink struct {
@@ -28,40 +24,48 @@ type CrosslinksState struct {
 	PreviousCrosslinks [SHARD_COUNT]Crosslink
 }
 
-func (state *BeaconState) CrosslinksDeltas() *Deltas {
-	deltas := NewDeltas(uint64(len(state.Validators)))
+type CrosslinkDeltasReq interface {
+	VersioningMeta
+	RegistrySizeMeta
+	StakingMeta
+	CrosslinkMeta
+	WinningCrosslinkMeta
+}
 
-	totalActiveBalance := state.Validators.GetTotalActiveEffectiveBalance(state.Epoch())
+func (state *CrosslinksState) CrosslinksDeltas(meta CrosslinkDeltasReq) *Deltas {
+	deltas := NewDeltas(meta.ValidatorCount())
+
+	totalActiveBalance := meta.GetTotalActiveEffectiveBalance(meta.Epoch())
 
 	totalBalanceSqRoot := Gwei(math.IntegerSquareroot(uint64(totalActiveBalance)))
 
-	epoch := state.PreviousEpoch()
-	count := Shard(state.Validators.GetCommitteeCount(epoch))
-	epochStartShard := state.GetStartShard(epoch)
+	epoch := meta.PreviousEpoch()
+	count := Shard(meta.GetCommitteeCount(epoch))
+	epochStartShard := meta.GetStartShard(epoch)
 	for offset := Shard(0); offset < count; offset++ {
 		shard := (epochStartShard + offset) % SHARD_COUNT
 
-		crosslinkCommittee := state.PrecomputedData.GetCrosslinkCommittee(epoch, shard)
+		crosslinkCommittee := meta.GetCrosslinkCommittee(epoch, shard)
 		committee := make(ValidatorSet, 0, len(crosslinkCommittee))
 		committee = append(committee, crosslinkCommittee...)
 		sort.Sort(committee)
 
-		_, attestingIndices := state.PrecomputedData.GetWinningCrosslinkAndAttesters(epoch, shard)
-		attestingBalance := state.Validators.GetTotalEffectiveBalanceOf(attestingIndices)
-		totalBalance := state.Validators.GetTotalEffectiveBalanceOf(committee)
+		_, attestingIndices := meta.GetWinningCrosslinkAndAttesters(epoch, shard)
+		attestingBalance := meta.GetTotalEffectiveBalanceOf(attestingIndices)
+		totalBalance := meta.GetTotalEffectiveBalanceOf(committee)
 
 		// reward/penalize using a zig-zag merge join.
 		// ----------------------------------------------------
 		committee.ZigZagJoin(attestingIndices,
 			func(i ValidatorIndex) {
 				// Committee member participated, reward them
-				effectiveBalance := state.Validators[i].EffectiveBalance
+				effectiveBalance := meta.EffectiveBalance(i)
 				baseReward := effectiveBalance * BASE_REWARD_FACTOR / totalBalanceSqRoot / BASE_REWARDS_PER_EPOCH
 
 				deltas.Rewards[i] += baseReward * attestingBalance / totalBalance
 			}, func(i ValidatorIndex) {
 				// Committee member did not participate, penalize them
-				effectiveBalance := state.Validators[i].EffectiveBalance
+				effectiveBalance := meta.EffectiveBalance(i)
 				baseReward := effectiveBalance * BASE_REWARD_FACTOR / totalBalanceSqRoot / BASE_REWARDS_PER_EPOCH
 
 				deltas.Penalties[i] += baseReward

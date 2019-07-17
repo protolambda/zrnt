@@ -34,7 +34,8 @@ type IndexedAttestation struct {
 }
 
 type AttestationValidateReq interface {
-	CompactValidatorMeta
+	RegistrySizeMeta
+	PubkeyMeta
 	VersioningMeta
 }
 

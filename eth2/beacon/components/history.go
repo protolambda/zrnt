@@ -15,7 +15,6 @@ func (_ *HistoricalRoots) Limit() uint64 {
 }
 
 type HistoryState struct {
-	LatestBlockHeader BeaconBlockHeader
 	BlockRoots        [SLOTS_PER_HISTORICAL_ROOT]Root
 	StateRoots        [SLOTS_PER_HISTORICAL_ROOT]Root
 	HistoricalRoots   HistoricalRoots

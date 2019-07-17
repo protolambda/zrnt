@@ -25,6 +25,6 @@ func (state *ShardRotationState) GetStartShard(meta StartShardReq, epoch Epoch) 
 	return shard
 }
 
-func (state *BeaconState) RotateStartShard() {
-	state.StartShard = (state.StartShard + state.Validators.GetShardDelta(state.Epoch())) % SHARD_COUNT
+func (state *ShardRotationState) RotateStartShard(meta StartShardReq) {
+	state.StartShard = (state.StartShard + meta.GetShardDelta(meta.Epoch())) % SHARD_COUNT
 }

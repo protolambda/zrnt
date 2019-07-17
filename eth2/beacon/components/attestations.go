@@ -90,50 +90,31 @@ func (state *AttestationsState) RotateEpochAttestations() {
 	state.CurrentEpochAttestations = nil
 }
 
-func (state *BeaconState) GetAttestationSlot(attData *AttestationData) Slot {
+func (state *AttestationsState) GetAttestationSlot(meta CrosslinkTimingMeta, attData *AttestationData) Slot {
 	epoch := attData.Target.Epoch
-	committeeCount := Slot(state.Validators.GetCommitteeCount(epoch))
-	offset := Slot((attData.Crosslink.Shard + SHARD_COUNT - state.GetStartShard(epoch)) % SHARD_COUNT)
+	committeeCount := Slot(meta.GetCommitteeCount(epoch))
+	offset := Slot((attData.Crosslink.Shard + SHARD_COUNT - meta.GetStartShard(epoch)) % SHARD_COUNT)
 	return epoch.GetStartSlot() + (offset / (committeeCount / SLOTS_PER_EPOCH))
 }
 
-type ValidatorStatusFlag uint64
-
-func (flags ValidatorStatusFlag) HasMarkers(markers ValidatorStatusFlag) bool {
-	return flags&markers == markers
+type AttestationDeltasReq interface {
+	VersioningMeta
+	RegistrySizeMeta
+	StakingMeta
+	AttesterStatusMeta
+	FinalityMeta
 }
 
-const (
-	PrevEpochAttester ValidatorStatusFlag = 1 << iota
-	MatchingHeadAttester
-	PrevEpochBoundaryAttester
-	CurrEpochBoundaryAttester
-	UnslashedAttester
-	EligibleAttester
-)
-
-type ValidatorStatus struct {
-	// no delay (i.e. 0) by default
-	InclusionDelay Slot
-	Proposer       ValidatorIndex
-	Flags          ValidatorStatusFlag
-}
-
-type ValidationData interface {
-	GetValidatorStatus(index ValidatorIndex) ValidatorStatus
-}
-
-func (state *BeaconState) AttestationDeltas() *Deltas {
-	validatorCount := ValidatorIndex(len(state.Validators))
+func AttestationDeltas(meta AttestationDeltasReq) *Deltas {
+	validatorCount := ValidatorIndex(meta.ValidatorCount())
 	deltas := NewDeltas(uint64(validatorCount))
 
-	previousEpoch := state.PreviousEpoch()
+	previousEpoch := meta.PreviousEpoch()
 
 	var totalBalance, totalAttestingBalance, epochBoundaryBalance, matchingHeadBalance Gwei
 	for i := ValidatorIndex(0); i < validatorCount; i++ {
-		status := state.PrecomputedData.GetValidatorStatus(i)
-		v := state.Validators[i]
-		b := v.EffectiveBalance
+		status := meta.GetAttesterStatus(i)
+		b := meta.EffectiveBalance(i)
 		totalBalance += b
 		if status.Flags.HasMarkers(PrevEpochAttester | UnslashedAttester) {
 			totalAttestingBalance += b
@@ -145,17 +126,17 @@ func (state *BeaconState) AttestationDeltas() *Deltas {
 			matchingHeadBalance += b
 		}
 	}
-	previousTotalBalance := state.Validators.GetTotalActiveEffectiveBalance(state.PreviousEpoch())
+	previousTotalBalance := meta.GetTotalActiveEffectiveBalance(meta.PreviousEpoch())
 
 	balanceSqRoot := Gwei(math.IntegerSquareroot(uint64(previousTotalBalance)))
-	finalityDelay := previousEpoch - state.FinalizedCheckpoint.Epoch
+	finalityDelay := previousEpoch - meta.Finalized().Epoch
 
 	for i := ValidatorIndex(0); i < validatorCount; i++ {
-		status := state.PrecomputedData.GetValidatorStatus(i)
+		status := meta.GetAttesterStatus(i)
 		if status.Flags&EligibleAttester != 0 {
 
-			v := state.Validators[i]
-			baseReward := v.EffectiveBalance * BASE_REWARD_FACTOR /
+			effBalance := meta.EffectiveBalance(i)
+			baseReward := effBalance * BASE_REWARD_FACTOR /
 				balanceSqRoot / BASE_REWARDS_PER_EPOCH
 
 			// Expected FFG source
@@ -165,7 +146,7 @@ func (state *BeaconState) AttestationDeltas() *Deltas {
 
 				// Inclusion speed bonus
 				proposerReward := baseReward / PROPOSER_REWARD_QUOTIENT
-				deltas.Rewards[status.Proposer] += proposerReward
+				deltas.Rewards[status.AttestedProposer] += proposerReward
 				maxAttesterReward := baseReward - proposerReward
 				inclusionOffset := SLOTS_PER_EPOCH + MIN_ATTESTATION_INCLUSION_DELAY - status.InclusionDelay
 				deltas.Rewards[i] += maxAttesterReward * Gwei(inclusionOffset) / Gwei(SLOTS_PER_EPOCH)
@@ -196,7 +177,7 @@ func (state *BeaconState) AttestationDeltas() *Deltas {
 			if finalityDelay > MIN_EPOCHS_TO_INACTIVITY_PENALTY {
 				deltas.Penalties[i] += baseReward * BASE_REWARDS_PER_EPOCH
 				if !status.Flags.HasMarkers(MatchingHeadAttester | UnslashedAttester) {
-					deltas.Penalties[i] += v.EffectiveBalance * Gwei(finalityDelay) / INACTIVITY_PENALTY_QUOTIENT
+					deltas.Penalties[i] += effBalance * Gwei(finalityDelay) / INACTIVITY_PENALTY_QUOTIENT
 				}
 			}
 		}

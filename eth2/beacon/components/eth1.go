@@ -28,20 +28,16 @@ func (state *Eth1State) ResetEth1Votes() {
 	state.Eth1DataVotes = make([]Eth1Data, 0)
 }
 
-type Eth1BlockData struct {
-	Eth1Data Eth1Data
-}
-
-func (data *Eth1BlockData) Process(state *BeaconState) error {
-	state.Eth1DataVotes = append(state.Eth1DataVotes, data.Eth1Data)
+func (state *Eth1State) ProcessEth1Vote(data Eth1Data) error {
+	state.Eth1DataVotes = append(state.Eth1DataVotes, data)
 	count := Slot(0)
 	for _, v := range state.Eth1DataVotes {
-		if v == data.Eth1Data {
+		if v == data {
 			count++
 		}
 	}
 	if count*2 > SLOTS_PER_ETH1_VOTING_PERIOD {
-		state.Eth1Data = data.Eth1Data
+		state.Eth1Data = data
 	}
 	return nil
 }

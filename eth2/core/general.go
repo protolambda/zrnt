@@ -15,3 +15,8 @@ func (v Version) ToUint32() uint32 {
 type Shard uint64
 
 type Gwei uint64
+
+type Checkpoint struct {
+	Epoch Epoch
+	Root  Root
+}

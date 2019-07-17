@@ -19,9 +19,19 @@ type BeaconBlockHeader struct {
 	Signature  BLSSignature
 }
 
-func (header *BeaconBlockHeader) Process(state *BeaconState) error {
+type BlockHeaderState struct {
+	LatestBlockHeader BeaconBlockHeader
+}
+
+type BlockHeaderReq interface {
+	VersioningMeta
+	ProposingMeta
+	CompactValidatorMeta
+}
+
+func (state *BlockHeaderState) ProcessBlockHeader(meta BlockHeaderReq, header *BeaconBlockHeader) error {
 	// Verify that the slots match
-	if header.Slot != state.Slot {
+	if header.Slot != meta.Slot() {
 		return errors.New("slot of block does not match slot of state")
 	}
 	// Verify that the parent matches
@@ -37,18 +47,17 @@ func (header *BeaconBlockHeader) Process(state *BeaconState) error {
 		// signature is always zeroed
 	}
 
-	proposerIndex := state.GetBeaconProposerIndex()
-	proposer := state.Validators[proposerIndex]
+	proposerIndex := meta.GetBeaconProposerIndex()
 	// Verify proposer is not slashed
-	if proposer.Slashed {
+	if meta.IsSlashed(proposerIndex) {
 		return errors.New("cannot accept block header from slashed proposer")
 	}
 	// Block signature
 	if !bls.BlsVerify(
-		proposer.Pubkey,
+		meta.Pubkey(proposerIndex),
 		ssz.SigningRoot(header, BeaconBlockHeaderSSZ),
 		header.Signature,
-		state.GetDomain(DOMAIN_BEACON_PROPOSER, state.Epoch())) {
+		meta.GetDomain(DOMAIN_BEACON_PROPOSER, meta.Epoch())) {
 		return errors.New("block signature invalid")
 	}
 	return nil

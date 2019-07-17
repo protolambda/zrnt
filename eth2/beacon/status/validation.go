@@ -7,11 +7,11 @@ import (
 
 // depends on ShufflingStatus
 type ValidationStatus struct {
-	ValidatorStatuses []ValidatorStatus
+	ValidatorStatuses []AttesterStatus
 }
 
 func (status *ValidationStatus) Load(state *BeaconState, shufflingStatus *ShufflingStatus) {
-	status.ValidatorStatuses = make([]ValidatorStatus, len(state.Validators), len(state.Validators))
+	status.ValidatorStatuses = make([]AttesterStatus, len(state.Validators), len(state.Validators))
 
 	previousBoundaryBlockRoot, _ := state.GetBlockRootAtSlot(state.PreviousEpoch().GetStartSlot())
 	currentBoundaryBlockRoot, _ := state.GetBlockRootAtSlot(state.Epoch().GetStartSlot())

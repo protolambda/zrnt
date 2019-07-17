@@ -28,28 +28,29 @@ func (state *RandaoState) PrepareRandao(epoch Epoch) {
 	state.RandaoMixes[epoch%EPOCHS_PER_HISTORICAL_VECTOR] = state.GetRandaoMix(epoch.Previous())
 }
 
-type RandaoBlockData struct {
-	RandaoReveal BLSSignature
-}
-
 var RandaoEpochSSZ = zssz.GetSSZ((*Epoch)(nil))
 
-func (revealData *RandaoBlockData) Process(state *BeaconState) error {
-	epoch := state.Epoch()
-	propIndex := state.GetBeaconProposerIndex()
-	proposer := state.Validators[propIndex]
-	currentEpoch := state.Epoch()
+type RandaoRevealReq interface {
+	VersioningMeta
+	ProposingMeta
+	PubkeyMeta
+}
+
+func (state *RandaoState) ProcessRandaoReveal(meta RandaoRevealReq, reveal BLSSignature) error {
+	epoch := meta.Epoch()
+	propIndex := meta.GetBeaconProposerIndex()
+	proposerPubkey := meta.Pubkey(propIndex)
 	// Verify RANDAO reveal
 	if !bls.BlsVerify(
-		proposer.Pubkey,
+		proposerPubkey,
 		ssz.HashTreeRoot(epoch, RandaoEpochSSZ),
-		revealData.RandaoReveal,
-		state.GetDomain(DOMAIN_RANDAO, currentEpoch),
+		reveal,
+		meta.GetDomain(DOMAIN_RANDAO, epoch),
 	) {
 		return errors.New("randao invalid")
 	}
 	// Mix in RANDAO reveal
-	mix := XorBytes32(state.GetRandaoMix(currentEpoch), Hash(revealData.RandaoReveal[:]))
+	mix := XorBytes32(state.GetRandaoMix(epoch), Hash(reveal[:]))
 	state.RandaoMixes[epoch%EPOCHS_PER_HISTORICAL_VECTOR] = mix
 	return nil
 }

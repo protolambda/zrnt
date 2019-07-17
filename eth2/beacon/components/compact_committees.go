@@ -55,15 +55,20 @@ type CompactCommittees [SHARD_COUNT]CompactCommittee
 
 var CompactCommitteesSSZ = zssz.GetSSZ((*CompactCommittees)(nil))
 
-func (state *BeaconState) GetCompactCommittees(epoch Epoch) *CompactCommittees {
+type CompactCommitteesReq interface {
+	CrosslinkMeta
+	ValidatorMeta
+}
+
+func (state *CompactCommitteesState) GetCompactCommittees(meta CompactCommitteesReq, epoch Epoch) *CompactCommittees {
 	compacts := CompactCommittees{}
 	for shard := Shard(0); shard < SHARD_COUNT; shard++ {
-		committee := state.PrecomputedData.GetCrosslinkCommittee(epoch, shard)
+		committee := meta.GetCrosslinkCommittee(epoch, shard)
 		compact := &compacts[shard]
 		compact.Pubkeys = make(CommitteePubkeys, 0, len(committee))
 		compact.CompactValidators = make(CommitteeCompactValidators, 0, len(committee))
 		for _, index := range committee {
-			v := state.Validators[index]
+			v := meta.Validator(index)
 			compact.Pubkeys = append(compact.Pubkeys, v.Pubkey)
 			compactValidator := MakeCompactValidator(index, v.Slashed, v.EffectiveBalance)
 			compact.CompactValidators = append(compact.CompactValidators, compactValidator)
@@ -72,11 +77,11 @@ func (state *BeaconState) GetCompactCommittees(epoch Epoch) *CompactCommittees {
 	return &compacts
 }
 
-func (state *BeaconState) GetCompactCommittesRoot(epoch Epoch) Root {
-	return ssz.HashTreeRoot(state.GetCompactCommittees(epoch), CompactCommitteesSSZ)
+func (state *CompactCommitteesState) GetCompactCommittesRoot(meta CompactCommitteesReq, epoch Epoch) Root {
+	return ssz.HashTreeRoot(state.GetCompactCommittees(meta, epoch), CompactCommitteesSSZ)
 }
 
-func (state *BeaconState) UpdateCompactCommitteesRoot(epoch Epoch) {
+func (state *CompactCommitteesState) UpdateCompactCommitteesRoot(meta CompactCommitteesReq, epoch Epoch) {
 	position := epoch % EPOCHS_PER_HISTORICAL_VECTOR
-	state.CompactCommitteesRoots[position] = state.GetCompactCommittesRoot(epoch)
+	state.CompactCommitteesRoots[position] = state.GetCompactCommittesRoot(meta, epoch)
 }

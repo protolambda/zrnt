@@ -6,10 +6,6 @@ import (
 	. "github.com/protolambda/zrnt/eth2/util/hashing"
 )
 
-type ShufflingData interface {
-	GetCrosslinkCommittee(epoch Epoch, shard Shard) []ValidatorIndex
-}
-
 // Randomness and committees
 type ShufflingState struct {
 	LatestActiveIndexRoots [EPOCHS_PER_HISTORICAL_VECTOR]Root

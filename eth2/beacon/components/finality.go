@@ -37,8 +37,3 @@ func (jb *JustificationBits) IsJustified(epochsAgo ...Epoch) bool {
 	}
 	return true
 }
-
-type Checkpoint struct {
-	Epoch Epoch
-	Root  Root
-}

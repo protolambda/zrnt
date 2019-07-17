@@ -10,6 +10,7 @@ type ExitMeta interface {
 }
 
 type BalanceMeta interface {
+	GetBalance(index ValidatorIndex) Gwei
 	IncreaseBalance(index ValidatorIndex, v Gwei)
 	DecreaseBalance(index ValidatorIndex, v Gwei)
 }
@@ -21,6 +22,7 @@ type RegistrySizeMeta interface {
 
 type PubkeyMeta interface {
 	Pubkey(index ValidatorIndex) BLSPubkey
+	ValidatorIndex(pubkey BLSPubkey) (index ValidatorIndex, exists bool)
 }
 
 type EffectiveBalanceMeta interface {
@@ -49,6 +51,9 @@ type StakingMeta interface {
 	GetTotalActiveEffectiveBalance(epoch Epoch) Gwei
 }
 
+type SlashingMeta interface {
+
+}
 type ValidatorMeta interface {
 	Validator(index ValidatorIndex) *Validator
 }
@@ -58,6 +63,33 @@ type VersioningMeta interface {
 	Epoch() Epoch
 	PreviousEpoch() Epoch
 	GetDomain(dom BLSDomainType, messageEpoch Epoch) BLSDomain
+}
+
+type Eth1Meta interface {
+	DepositIndex() DepositIndex
+	DepositCount() DepositIndex
+	DepositRoot() Root
+}
+
+type DepositMeta interface {
+	BalanceMeta
+	AddNewValidator(pubkey BLSPubkey, withdrawalCreds Root, balance Gwei)
+	IncrementDepositIndex()
+}
+
+type HeaderMeta interface {
+	// Signing root of latest_block_header
+	GetLatestBlockRoot() Root
+}
+
+type UpdateHeaderMeta interface {
+	StoreHeaderData(slot Slot, parent Root, body Root)
+	UpdateLatestBlockRoot(stateRoot Root) Root
+}
+
+type HistoryUpdateMeta interface {
+	SetRecentRoots(slot Slot, blockRoot Root, stateRoot Root)
+	UpdateHistoricalRoots()
 }
 
 type ProposingMeta interface {

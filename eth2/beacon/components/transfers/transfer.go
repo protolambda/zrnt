@@ -1,9 +1,9 @@
-package operations
+package transfers
 
 import (
 	"errors"
 	"fmt"
-	. "github.com/protolambda/zrnt/eth2/beacon/components"
+	. "github.com/protolambda/zrnt/eth2/beacon/components/meta"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	. "github.com/protolambda/zrnt/eth2/util/hashing"
@@ -11,14 +11,16 @@ import (
 	"github.com/protolambda/zssz"
 )
 
-type Transfers []Transfer
-
-func (_ *Transfers) Limit() uint32 {
-	return MAX_TRANSFERS
+type TransferReq interface {
+	VersioningMeta
+	ProposingMeta
+	RegistrySizeMeta
+	ValidatorMeta
+	BalanceMeta
 }
 
 // Verifies that there are no duplicate transfers, then processes in-order.
-func (ops Transfers) Process(state *BeaconState) error {
+func ProcessTransfers(meta TransferReq, ops []Transfer) error {
 	// check if all transfers are distinct
 	distinctionCheckSet := make(map[BLSSignature]struct{})
 	for i, v := range ops {
@@ -28,8 +30,8 @@ func (ops Transfers) Process(state *BeaconState) error {
 		distinctionCheckSet[v.Signature] = struct{}{}
 	}
 
-	for _, op := range ops {
-		if err := op.Process(state); err != nil {
+	for i := range ops {
+		if err := ops[i].Process(meta); err != nil {
 			return err
 		}
 	}
@@ -48,11 +50,11 @@ type Transfer struct {
 	Signature BLSSignature // Signature checked against withdrawal pubkey
 }
 
-func (transfer *Transfer) Process(state *BeaconState) error {
-	if !state.Validators.IsValidatorIndex(transfer.Sender) {
+func (transfer *Transfer) Process(meta TransferReq) error {
+	if !meta.IsValidIndex(transfer.Sender) {
 		return errors.New("cannot send funds from non-existent validator")
 	}
-	senderBalance := state.Balances[transfer.Sender]
+	senderBalance := meta.GetBalance(transfer.Sender)
 	// Verify the amount and fee aren't individually too big (for anti-overflow purposes)
 	if senderBalance < transfer.Amount {
 		return errors.New("transfer amount is too big")
@@ -68,13 +70,13 @@ func (transfer *Transfer) Process(state *BeaconState) error {
 	}
 	// A transfer is valid in only one slot
 	// (note: combined with unique transfers in a block, this functions as replay protection)
-	if state.Slot != transfer.Slot {
+	if meta.Slot() != transfer.Slot {
 		return errors.New("transfer is not valid in current slot")
 	}
-	sender := state.Validators[transfer.Sender]
+	sender := meta.Validator(transfer.Sender)
 	// Sender must be not yet eligible for activation, withdrawn, or transfer balance over MAX_EFFECTIVE_BALANCE
 	if !(sender.ActivationEligibilityEpoch == FAR_FUTURE_EPOCH ||
-		state.Epoch() >= sender.WithdrawableEpoch ||
+		meta.Epoch() >= sender.WithdrawableEpoch ||
 		(transfer.Amount+transfer.Fee+MAX_EFFECTIVE_BALANCE) <= senderBalance) {
 		return errors.New("transfer sender is not eligible to make a transfer, it has to be withdrawn, or yet to be activated")
 	}
@@ -87,18 +89,18 @@ func (transfer *Transfer) Process(state *BeaconState) error {
 	}
 	// Verify that the signature is valid
 	if !bls.BlsVerify(transfer.Pubkey, ssz.SigningRoot(transfer, TransferSSZ), transfer.Signature,
-		state.GetDomain(DOMAIN_TRANSFER, transfer.Slot.ToEpoch())) {
+		meta.GetDomain(DOMAIN_TRANSFER, transfer.Slot.ToEpoch())) {
 		return errors.New("transfer signature is invalid")
 	}
-	state.Balances.DecreaseBalance(transfer.Sender, transfer.Amount+transfer.Fee)
-	state.Balances.IncreaseBalance(transfer.Recipient, transfer.Amount)
-	propIndex := state.GetBeaconProposerIndex()
-	state.Balances.IncreaseBalance(propIndex, transfer.Fee)
+	meta.DecreaseBalance(transfer.Sender, transfer.Amount+transfer.Fee)
+	meta.IncreaseBalance(transfer.Recipient, transfer.Amount)
+	propIndex := meta.GetBeaconProposerIndex()
+	meta.IncreaseBalance(propIndex, transfer.Fee)
 	// Verify balances are not dust
-	if b := state.Balances[transfer.Sender]; 0 < b && b < MIN_DEPOSIT_AMOUNT {
+	if b := meta.GetBalance(transfer.Sender); 0 < b && b < MIN_DEPOSIT_AMOUNT {
 		return errors.New("transfer is invalid: results in dust on sender address")
 	}
-	if b := state.Balances[transfer.Recipient]; 0 < b && b < MIN_DEPOSIT_AMOUNT {
+	if b := meta.GetBalance(transfer.Recipient); 0 < b && b < MIN_DEPOSIT_AMOUNT {
 		return errors.New("transfer is invalid: results in dust on recipient address")
 	}
 	return nil

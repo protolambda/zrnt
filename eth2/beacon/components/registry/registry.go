@@ -26,6 +26,24 @@ func (state *RegistryState) UpdateEffectiveBalances() {
 	}
 }
 
+func (state *RegistryState) AddNewValidator(pubkey BLSPubkey, withdrawalCreds Root, balance Gwei) {
+	effBalance := balance - (balance % EFFECTIVE_BALANCE_INCREMENT)
+	if effBalance > MAX_EFFECTIVE_BALANCE {
+		effBalance = MAX_EFFECTIVE_BALANCE
+	}
+	validator := &Validator{
+		Pubkey:                     pubkey,
+		WithdrawalCredentials:      withdrawalCreds,
+		ActivationEligibilityEpoch: FAR_FUTURE_EPOCH,
+		ActivationEpoch:            FAR_FUTURE_EPOCH,
+		ExitEpoch:                  FAR_FUTURE_EPOCH,
+		WithdrawableEpoch:          FAR_FUTURE_EPOCH,
+		EffectiveBalance:           effBalance,
+	}
+	state.Validators = append(state.Validators, validator)
+	state.Balances = append(state.Balances, balance)
+}
+
 type RegistryIndices []ValidatorIndex
 
 func (_ *RegistryIndices) Limit() uint64 {
@@ -38,6 +56,17 @@ type ValidatorRegistry []*Validator
 
 func (vr ValidatorRegistry) IsValidatorIndex(index ValidatorIndex) bool {
 	return index < ValidatorIndex(len(vr))
+}
+
+func (vr ValidatorRegistry) ValidatorIndex(pubkey BLSPubkey) (index ValidatorIndex, exists bool) {
+	valIndex := ValidatorIndexMarker
+	for i, v := range vr {
+		if v.Pubkey == pubkey {
+			valIndex = ValidatorIndex(i)
+			break
+		}
+	}
+	return valIndex, valIndex != ValidatorIndexMarker
 }
 
 func (vr ValidatorRegistry) GetActiveValidatorIndices(epoch Epoch) RegistryIndices {

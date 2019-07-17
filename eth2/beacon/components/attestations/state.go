@@ -41,3 +41,11 @@ func (state *AttestationsState) GetAttestationSlot(meta CrosslinkTimingMeta, att
 	offset := Slot((attData.Crosslink.Shard + SHARD_COUNT - meta.GetStartShard(epoch)) % SHARD_COUNT)
 	return epoch.GetStartSlot() + (offset / (committeeCount / SLOTS_PER_EPOCH))
 }
+
+func (state *AttestationsState) AddPendingAttestation(attestation *PendingAttestation) {
+	if attestation.Data.Target.Epoch == currentEpoch {
+		state.CurrentEpochAttestations = append(state.CurrentEpochAttestations, attestation)
+	} else {
+		state.PreviousEpochAttestations = append(state.PreviousEpochAttestations, attestation)
+	}
+}

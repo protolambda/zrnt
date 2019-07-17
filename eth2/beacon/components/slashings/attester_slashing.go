@@ -7,15 +7,19 @@ import (
 	. "github.com/protolambda/zrnt/eth2/core"
 )
 
-type AttesterSlashings []AttesterSlashing
-
-func (_ *AttesterSlashings) Limit() uint32 {
-	return MAX_ATTESTER_SLASHINGS
+type AttesterSlashingReq interface {
+	RegistrySizeMeta
+	PubkeyMeta
+	VersioningMeta
+	ValidatorMeta
+	ProposingMeta
+	BalanceMeta
+	ExitMeta
 }
 
-func (ops AttesterSlashings) Process(state *SlashingsState, meta AttesterSlashingReq) error {
-	for _, op := range ops {
-		if err := state.ProcessAttesterSlashing(meta, &op); err != nil {
+func (state *SlashingsState) ProcessAttesterSlashings(meta AttesterSlashingReq, ops []AttesterSlashing) error {
+	for i := range ops {
+		if err := state.ProcessAttesterSlashing(meta, &ops[i]); err != nil {
 			return err
 		}
 	}
@@ -25,16 +29,6 @@ func (ops AttesterSlashings) Process(state *SlashingsState, meta AttesterSlashin
 type AttesterSlashing struct {
 	Attestation1 IndexedAttestation
 	Attestation2 IndexedAttestation
-}
-
-type AttesterSlashingReq interface {
-	RegistrySizeMeta
-	PubkeyMeta
-	VersioningMeta
-	ValidatorMeta
-	ProposingMeta
-	BalanceMeta
-	ExitMeta
 }
 
 func (state *SlashingsState) ProcessAttesterSlashing(meta AttesterSlashingReq, attesterSlashing *AttesterSlashing) error {

@@ -1,23 +1,24 @@
-package operations
+package exits
 
 import (
 	"errors"
-	. "github.com/protolambda/zrnt/eth2/beacon/components"
+	. "github.com/protolambda/zrnt/eth2/beacon/components/meta"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/protolambda/zssz"
 )
 
-type VoluntaryExits []VoluntaryExit
-
-func (_ *VoluntaryExits) Limit() uint32 {
-	return MAX_VOLUNTARY_EXITS
+type VoluntaryExitReq interface {
+	VersioningMeta
+	RegistrySizeMeta
+	ValidatorMeta
+	ActivationExitMeta
 }
 
-func (ops VoluntaryExits) Process(state *BeaconState) error {
-	for _, op := range ops {
-		if err := op.Process(state); err != nil {
+func ProcessVoluntaryExits(meta VoluntaryExitReq, ops []VoluntaryExit) error {
+	for i := range ops {
+		if err := ProcessVoluntaryExit(meta, &ops[i]); err != nil {
 			return err
 		}
 	}
@@ -32,12 +33,12 @@ type VoluntaryExit struct {
 	Signature      BLSSignature
 }
 
-func (exit *VoluntaryExit) Process(state *BeaconState) error {
-	currentEpoch := state.Epoch()
-	if !state.Validators.IsValidatorIndex(exit.ValidatorIndex) {
+func ProcessVoluntaryExit(meta VoluntaryExitReq, exit *VoluntaryExit) error {
+	currentEpoch := meta.Epoch()
+	if !meta.IsValidIndex(exit.ValidatorIndex) {
 		return errors.New("invalid exit validator index")
 	}
-	validator := state.Validators[exit.ValidatorIndex]
+	validator := meta.Validator(exit.ValidatorIndex)
 	// Verify that the validator is active
 	if !validator.IsActive(currentEpoch) {
 		return errors.New("validator must be active to be able to voluntarily exit")
@@ -59,10 +60,10 @@ func (exit *VoluntaryExit) Process(state *BeaconState) error {
 		validator.Pubkey,
 		ssz.SigningRoot(exit, VoluntaryExitSSZ),
 		exit.Signature,
-		state.GetDomain(DOMAIN_VOLUNTARY_EXIT, exit.Epoch)) {
+		meta.GetDomain(DOMAIN_VOLUNTARY_EXIT, exit.Epoch)) {
 		return errors.New("voluntary exit signature could not be verified")
 	}
 	// Initiate exit
-	state.InitiateValidatorExit(exit.ValidatorIndex)
+	InitiateValidatorExit(meta, exit.ValidatorIndex)
 	return nil
 }

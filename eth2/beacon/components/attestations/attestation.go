@@ -9,15 +9,19 @@ import (
 	"github.com/protolambda/zssz"
 )
 
-type Attestations []Attestation
-
-func (_ *Attestations) Limit() uint32 {
-	return MAX_ATTESTATIONS
+type AttestationReq interface {
+	VersioningMeta
+	CrosslinkCommitteeMeta
+	CrosslinkMeta
+	FinalityMeta
+	RegistrySizeMeta
+	PubkeyMeta
+	ProposingMeta
 }
 
-func (ops Attestations) Process(state *AttestationsState, meta AttestationReq) error {
-	for _, op := range ops {
-		if err := state.ProcessAttestation(meta, &op); err != nil {
+func (state *AttestationsState) ProcessAttestations(meta AttestationReq, ops []Attestation) error {
+	for i := range ops {
+		if err := state.ProcessAttestation(meta, &ops[i]); err != nil {
 			return err
 		}
 	}
@@ -29,16 +33,6 @@ type Attestation struct {
 	Data            AttestationData
 	CustodyBits     CommitteeBits
 	Signature       BLSSignature
-}
-
-type AttestationReq interface {
-	VersioningMeta
-	CrosslinkCommitteeMeta
-	CrosslinkMeta
-	FinalityMeta
-	RegistrySizeMeta
-	PubkeyMeta
-	ProposingMeta
 }
 
 var CrosslinkSSZ = zssz.GetSSZ((*Crosslink)(nil))
@@ -120,11 +114,7 @@ func (state *AttestationsState) ProcessAttestation(meta AttestationReq, attestat
 		InclusionDelay:  currentSlot - attestationSlot,
 		ProposerIndex:   meta.GetBeaconProposerIndex(),
 	}
-	if data.Target.Epoch == currentEpoch {
-		state.CurrentEpochAttestations = append(state.CurrentEpochAttestations, pendingAttestation)
-	} else {
-		state.PreviousEpochAttestations = append(state.PreviousEpochAttestations, pendingAttestation)
-	}
+
 	return nil
 }
 

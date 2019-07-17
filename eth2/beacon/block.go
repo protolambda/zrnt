@@ -1,7 +1,8 @@
-package block
+package beacon
 
 import (
-	. "github.com/protolambda/zrnt/eth2/beacon/components"
+	. "github.com/protolambda/zrnt/eth2/beacon/components/eth1"
+	. "github.com/protolambda/zrnt/eth2/beacon/components/header"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/protolambda/zssz"
@@ -25,4 +26,19 @@ func (block *BeaconBlock) Header() *BeaconBlockHeader {
 		BodyRoot:   ssz.HashTreeRoot(block.Body, BeaconBlockBodySSZ),
 		Signature:  block.Signature,
 	}
+}
+
+var BeaconBlockBodySSZ = zssz.GetSSZ((*BeaconBlockBody)(nil))
+
+type BeaconBlockBody struct {
+	RandaoReveal BLSSignature
+	Eth1Data     Eth1Data // Eth1 data vote
+	Graffiti     Root     // Arbitrary data
+
+	ProposerSlashings ProposerSlashings
+	AttesterSlashings AttesterSlashings
+	Attestations      Attestations
+	Deposits          Deposits
+	VoluntaryExits    VoluntaryExits
+	Transfers         Transfers
 }

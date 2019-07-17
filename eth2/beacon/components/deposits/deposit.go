@@ -1,26 +1,19 @@
-package operations
+package deposits
 
 import (
 	"errors"
 	"fmt"
-	. "github.com/protolambda/zrnt/eth2/beacon/components"
-	. "github.com/protolambda/zrnt/eth2/beacon/components/registry"
+	. "github.com/protolambda/zrnt/eth2/beacon/components/meta"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/merkle"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
-type Deposits []Deposit
-
-func (_ *Deposits) Limit() uint32 {
-	return MAX_DEPOSITS
-}
-
 // Verify that outstanding deposits are processed up to the maximum number of deposits, then process all in order.
-func (ops Deposits) Process(state *BeaconState) error {
+func ProcessDeposits(meta DepositReq, ops []Deposit) error {
 	depositCount := DepositIndex(len(ops))
-	expectedCount := state.Eth1Data.DepositCount - state.DepositIndex
+	expectedCount := meta.DepositCount() - meta.DepositIndex()
 	if expectedCount > MAX_DEPOSITS {
 		expectedCount = MAX_DEPOSITS
 	}
@@ -28,8 +21,8 @@ func (ops Deposits) Process(state *BeaconState) error {
 		return errors.New("block does not contain expected deposits amount")
 	}
 
-	for _, op := range ops {
-		if err := op.Process(state); err != nil {
+	for i := range ops {
+		if err := ProcessDeposit(meta, &ops[i]); err != nil {
 			return err
 		}
 	}
@@ -41,35 +34,36 @@ type Deposit struct {
 	Data  DepositData
 }
 
+type DepositReq interface {
+	PubkeyMeta
+	Eth1Meta
+	DepositMeta
+}
+
 // Process an Eth1 deposit, registering a validator or increasing its balance.
-func (dep *Deposit) Process(state *BeaconState) error {
+func ProcessDeposit(meta DepositReq, dep *Deposit) error {
+	depositIndex := meta.DepositIndex()
 
 	// Verify the Merkle branch
 	if !merkle.VerifyMerkleBranch(
 		ssz.HashTreeRoot(&dep.Data, DepositDataSSZ),
 		dep.Proof[:],
 		DEPOSIT_CONTRACT_TREE_DEPTH+1, // Add 1 for the `List` length mix-in
-		uint64(state.DepositIndex),
-		state.Eth1Data.DepositRoot) {
-		return fmt.Errorf("deposit %d merkle proof failed to be verified", state.DepositIndex)
+		uint64(depositIndex),
+		meta.DepositRoot()) {
+		return fmt.Errorf("deposit %d merkle proof failed to be verified", depositIndex)
 	}
 
 	// Increment the next deposit index we are expecting. Note that this
 	// needs to be done here because while the deposit contract will never
 	// create an invalid Merkle branch, it may admit an invalid deposit
 	// object, and we need to be able to skip over it
-	state.DepositIndex += 1
+	meta.IncrementDepositIndex()
 
-	valIndex := ValidatorIndexMarker
-	for i, v := range state.Validators {
-		if v.Pubkey == dep.Data.Pubkey {
-			valIndex = ValidatorIndex(i)
-			break
-		}
-	}
+	valIndex, exists := meta.ValidatorIndex(dep.Data.Pubkey)
 
 	// Check if it is a known validator that is depositing ("if pubkey not in validator_pubkeys")
-	if valIndex == ValidatorIndexMarker {
+	if !exists {
 		// Verify the deposit signature (proof of possession) for new validators.
 		// Only unknown pubkeys need to be verified, others are already trusted
 		// Note: The deposit contract does not check signatures.
@@ -82,25 +76,12 @@ func (dep *Deposit) Process(state *BeaconState) error {
 			return errors.New("could not verify BLS signature")
 		}
 
-		effBalance := dep.Data.Amount - (dep.Data.Amount % EFFECTIVE_BALANCE_INCREMENT)
-		if effBalance > MAX_EFFECTIVE_BALANCE {
-			effBalance = MAX_EFFECTIVE_BALANCE
-		}
 		// Add validator and balance entries
-		validator := &Validator{
-			Pubkey:                     dep.Data.Pubkey,
-			WithdrawalCredentials:      dep.Data.WithdrawalCredentials,
-			ActivationEligibilityEpoch: FAR_FUTURE_EPOCH,
-			ActivationEpoch:            FAR_FUTURE_EPOCH,
-			ExitEpoch:                  FAR_FUTURE_EPOCH,
-			WithdrawableEpoch:          FAR_FUTURE_EPOCH,
-			EffectiveBalance:           effBalance,
-		}
-		state.Validators = append(state.Validators, validator)
-		state.Balances = append(state.Balances, dep.Data.Amount)
+		meta.AddNewValidator(dep.Data.Pubkey, dep.Data.WithdrawalCredentials, dep.Data.Amount)
+
 	} else {
 		// Increase balance by deposit amount
-		state.Balances.IncreaseBalance(valIndex, dep.Data.Amount)
+		meta.IncreaseBalance(valIndex, dep.Data.Amount)
 	}
 	return nil
 }

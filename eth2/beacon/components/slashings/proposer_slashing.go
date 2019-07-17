@@ -9,15 +9,18 @@ import (
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
-type ProposerSlashings []ProposerSlashing
-
-func (_ *ProposerSlashings) Limit() uint32 {
-	return MAX_PROPOSER_SLASHINGS
+type ProposerSlashingReq interface {
+	VersioningMeta
+	RegistrySizeMeta
+	ValidatorMeta
+	ProposingMeta
+	BalanceMeta
+	ExitMeta
 }
 
-func (ops ProposerSlashings) Process(state *SlashingsState, meta AttesterSlashingReq) error {
-	for _, op := range ops {
-		if err := state.ProcessProposerSlashing(meta, &op); err != nil {
+func (state *SlashingsState) ProcessProposerSlashings(meta AttesterSlashingReq, ops []ProposerSlashing) error {
+	for i := range ops {
+		if err := state.ProcessProposerSlashing(meta, &ops[i]); err != nil {
 			return err
 		}
 	}
@@ -28,15 +31,6 @@ type ProposerSlashing struct {
 	ProposerIndex ValidatorIndex
 	Header1       BeaconBlockHeader // First proposal
 	Header2       BeaconBlockHeader // Second proposal
-}
-
-type ProposerSlashingReq interface {
-	VersioningMeta
-	RegistrySizeMeta
-	ValidatorMeta
-	ProposingMeta
-	BalanceMeta
-	ExitMeta
 }
 
 func (state *SlashingsState) ProcessProposerSlashing(meta ProposerSlashingReq, ps *ProposerSlashing) error {

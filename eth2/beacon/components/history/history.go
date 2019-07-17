@@ -42,6 +42,11 @@ func (state *HistoryState) GetBlockRoot(meta VersioningMeta, epoch Epoch) (Root,
 	return state.GetBlockRootAtSlot(meta, epoch.GetStartSlot())
 }
 
+func (state *HistoryState) SetRecentRoots(slot Slot, blockRoot Root, stateRoot Root) {
+	state.BlockRoots[slot%SLOTS_PER_HISTORICAL_ROOT] = blockRoot
+	state.StateRoots[slot%SLOTS_PER_HISTORICAL_ROOT] = stateRoot
+}
+
 func (state *HistoryState) UpdateHistoricalRoots() {
 	historicalBatch := HistoricalBatch{
 		BlockRoots: state.BlockRoots,

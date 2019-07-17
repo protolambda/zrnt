@@ -1,11 +1,7 @@
 package header
 
 import (
-	"errors"
-	"fmt"
-	. "github.com/protolambda/zrnt/eth2/beacon/components/meta"
 	. "github.com/protolambda/zrnt/eth2/core"
-	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
@@ -13,42 +9,29 @@ type BlockHeaderState struct {
 	LatestBlockHeader BeaconBlockHeader
 }
 
-type BlockHeaderReq interface {
-	VersioningMeta
-	ProposingMeta
-	CompactValidatorMeta
+// Signing root of latest_block_header
+func (state *BlockHeaderState) GetLatestBlockRoot() Root {
+	return ssz.SigningRoot(state.LatestBlockHeader, BeaconBlockHeaderSSZ)
 }
 
-func (state *BlockHeaderState) ProcessBlockHeader(meta BlockHeaderReq, header *BeaconBlockHeader) error {
-	// Verify that the slots match
-	if header.Slot != meta.Slot() {
-		return errors.New("slot of block does not match slot of state")
-	}
-	// Verify that the parent matches
-	if signingRoot := ssz.SigningRoot(state.LatestBlockHeader, BeaconBlockHeaderSSZ); header.ParentRoot != signingRoot {
-		return fmt.Errorf("previous block root %x does not match root %x from latest state block header", header.ParentRoot, signingRoot)
-	}
-	// Save current block as the new latest block
+func (state *BlockHeaderState) StoreHeaderData(slot Slot, parent Root, body Root) {
 	state.LatestBlockHeader = BeaconBlockHeader{
-		Slot:       header.Slot,
-		ParentRoot: header.ParentRoot,
-		// state_root: zeroed, overwritten in the next ProcessSlot call
-		BodyRoot: header.BodyRoot,
+		Slot:       slot,
+		ParentRoot: parent,
+		// state_root: zeroed, overwritten with UpdateStateRoot(), once the post state is available.
+		BodyRoot: body,
 		// signature is always zeroed
 	}
+}
 
-	proposerIndex := meta.GetBeaconProposerIndex()
-	// Verify proposer is not slashed
-	if meta.IsSlashed(proposerIndex) {
-		return errors.New("cannot accept block header from slashed proposer")
+func (state *BlockHeaderState) UpdateLatestBlockRoot(stateRoot Root) Root {
+	// Store latest known state root (for previous slot) in latest_block_header if it is empty
+	if state.LatestBlockHeader.StateRoot == (Root{}) {
+		state.LatestBlockHeader.StateRoot = stateRoot
 	}
-	// Block signature
-	if !bls.BlsVerify(
-		meta.Pubkey(proposerIndex),
-		ssz.SigningRoot(header, BeaconBlockHeaderSSZ),
-		header.Signature,
-		meta.GetDomain(DOMAIN_BEACON_PROPOSER, meta.Epoch())) {
-		return errors.New("block signature invalid")
-	}
-	return nil
+	return ssz.SigningRoot(state.LatestBlockHeader, BeaconBlockHeaderSSZ)
+}
+
+func (state *BlockHeaderState) UpdateStateRoot(root Root) {
+	state.LatestBlockHeader.StateRoot = root
 }

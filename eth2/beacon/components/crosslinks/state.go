@@ -16,7 +16,7 @@ type CrosslinkDeltasReq interface {
 	VersioningMeta
 	RegistrySizeMeta
 	StakingMeta
-	CrosslinkMeta
+	CrosslinkCommitteeMeta
 	WinningCrosslinkMeta
 }
 

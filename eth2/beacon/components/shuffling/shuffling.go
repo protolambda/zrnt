@@ -35,7 +35,7 @@ func (state *ShufflingState) GetSeed(meta RandomnessMeta, epoch Epoch) Root {
 
 type ProposingReq interface {
 	VersioningMeta
-	CrosslinkMeta
+	CrosslinkCommitteeMeta
 	CompactValidatorMeta
 	RandomnessMeta
 }

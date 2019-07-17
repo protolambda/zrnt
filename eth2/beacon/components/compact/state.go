@@ -8,7 +8,7 @@ import (
 )
 
 type CompactCommitteesReq interface {
-	CrosslinkMeta
+	CrosslinkCommitteeMeta
 	ValidatorMeta
 }
 

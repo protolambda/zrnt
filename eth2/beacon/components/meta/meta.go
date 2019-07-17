@@ -30,6 +30,8 @@ type EffectiveBalanceMeta interface {
 
 type FinalityMeta interface {
 	Finalized() Checkpoint
+	CurrentJustified() Checkpoint
+	PreviousJustified() Checkpoint
 }
 
 type AttesterStatusMeta interface {
@@ -88,9 +90,14 @@ type CrosslinkTimingMeta interface {
 	GetCommitteeCount(epoch Epoch) uint64
 }
 
-type CrosslinkMeta interface {
+type CrosslinkCommitteeMeta interface {
 	CrosslinkTimingMeta
 	GetCrosslinkCommittee(epoch Epoch, shard Shard) []ValidatorIndex
+}
+
+type CrosslinkMeta interface {
+	GetCurrentCrosslink(shard Shard) *Crosslink
+	GetPreviousCrosslink(shard Shard) *Crosslink
 }
 
 type WinningCrosslinkMeta interface {

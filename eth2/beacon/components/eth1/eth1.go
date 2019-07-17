@@ -1,8 +1,6 @@
-package components
+package eth1
 
-import (
-	. "github.com/protolambda/zrnt/eth2/core"
-)
+import . "github.com/protolambda/zrnt/eth2/core"
 
 type Eth1Data struct {
 	DepositRoot  Root // Hash-tree-root of DepositData tree.

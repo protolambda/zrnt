@@ -1,23 +1,11 @@
-package components
+package crosslinks
 
 import (
-	. "github.com/protolambda/zrnt/eth2/beacon/components/registry"
+	. "github.com/protolambda/zrnt/eth2/beacon/components/meta"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/math"
-	"github.com/protolambda/zssz"
 	"sort"
 )
-
-var CrosslinkSSZ = zssz.GetSSZ((*Crosslink)(nil))
-
-type Crosslink struct {
-	Shard      Shard
-	ParentRoot Root
-	// Crosslinking data
-	StartEpoch Epoch
-	EndEpoch   Epoch
-	DataRoot   Root
-}
 
 type CrosslinksState struct {
 	CurrentCrosslinks  [SHARD_COUNT]Crosslink

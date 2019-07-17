@@ -1,43 +1,21 @@
-package components
+package compact
 
 import (
+	. "github.com/protolambda/zrnt/eth2/beacon/components/meta"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/protolambda/zssz"
 )
 
-// Randomness and committees
-type CompactCommitteesState struct {
-	CompactCommitteesRoots [EPOCHS_PER_HISTORICAL_VECTOR]Root
+type CompactCommitteesReq interface {
+	CrosslinkMeta
+	ValidatorMeta
 }
 
 type CommitteePubkeys []BLSPubkey
 
 func (_ *CommitteePubkeys) Limit() uint64 {
 	return MAX_VALIDATORS_PER_COMMITTEE
-}
-
-type CompactValidator uint64
-
-func MakeCompactValidator(index ValidatorIndex, slashed bool, effectiveBalance Gwei) CompactValidator {
-	compactData := CompactValidator(index) << 16
-	if slashed {
-		compactData |= 1 << 15
-	}
-	compactData |= CompactValidator(effectiveBalance / EFFECTIVE_BALANCE_INCREMENT)
-	return compactData
-}
-
-func (cv CompactValidator) Index() ValidatorIndex {
-	return ValidatorIndex(cv >> 16)
-}
-
-func (cv CompactValidator) Slashed() bool {
-	return ((cv >> 15) & 1) == 1
-}
-
-func (cv CompactValidator) EffectiveBalance() Gwei {
-	return Gwei(cv & ((1 << 15) - 1))
 }
 
 type CommitteeCompactValidators []CompactValidator
@@ -55,9 +33,9 @@ type CompactCommittees [SHARD_COUNT]CompactCommittee
 
 var CompactCommitteesSSZ = zssz.GetSSZ((*CompactCommittees)(nil))
 
-type CompactCommitteesReq interface {
-	CrosslinkMeta
-	ValidatorMeta
+// Randomness and committees
+type CompactCommitteesState struct {
+	CompactCommitteesRoots [EPOCHS_PER_HISTORICAL_VECTOR]Root
 }
 
 func (state *CompactCommitteesState) GetCompactCommittees(meta CompactCommitteesReq, epoch Epoch) *CompactCommittees {

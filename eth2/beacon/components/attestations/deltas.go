@@ -1,101 +1,10 @@
-package components
+package attestations
 
 import (
-	. "github.com/protolambda/zrnt/eth2/beacon/components/registry"
+	. "github.com/protolambda/zrnt/eth2/beacon/components/meta"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/math"
-	"github.com/protolambda/zssz/bitfields"
 )
-
-type AttestationData struct {
-	// LMD GHOST vote
-	BeaconBlockRoot Root
-
-	// FFG vote
-	Source Checkpoint
-	Target Checkpoint
-
-	// Crosslink vote
-	Crosslink Crosslink
-}
-
-type CommitteeBits []byte
-
-func (cb CommitteeBits) BitLen() uint64 {
-	return bitfields.BitlistLen(cb)
-}
-
-func (cb CommitteeBits) GetBit(i uint64) bool {
-	return bitfields.GetBit(cb, i)
-}
-
-func (cb *CommitteeBits) Limit() uint64 {
-	return MAX_VALIDATORS_PER_COMMITTEE
-}
-
-// Sets the bits to true that are true in other. (in place)
-func (cb CommitteeBits) Or(other CommitteeBits) {
-	for i := 0; i < len(cb); i++ {
-		cb[i] |= other[i]
-	}
-}
-
-// In-place filters a list of committees indices to only keep the bitfield participants.
-// The result is not sorted. Returns the re-sliced filtered participants list.
-func (cb CommitteeBits) FilterParticipants(committee []ValidatorIndex) []ValidatorIndex {
-	bitLen := cb.BitLen()
-	out := committee[:0]
-	if bitLen != uint64(len(committee)) {
-		panic("committee mismatch, bitfield length does not match")
-	}
-	for i := uint64(0); i < bitLen; i++ {
-		if cb.GetBit(i) {
-			out = append(out, committee[i])
-		}
-	}
-	return out
-}
-
-// In-place filters a list of committees indices to only keep the bitfield NON-participants.
-// The result is not sorted. Returns the re-sliced filtered non-participants list.
-func (cb CommitteeBits) FilterNonParticipants(committee []ValidatorIndex) []ValidatorIndex {
-	bitLen := cb.BitLen()
-	out := committee[:0]
-	if bitLen != uint64(len(committee)) {
-		panic("committee mismatch, bitfield length does not match")
-	}
-	for i := uint64(0); i < bitLen; i++ {
-		if !cb.GetBit(i) {
-			out = append(out, committee[i])
-		}
-	}
-	return out
-}
-
-type PendingAttestation struct {
-	AggregationBits CommitteeBits
-	Data            AttestationData
-	InclusionDelay  Slot
-	ProposerIndex   ValidatorIndex
-}
-
-type AttestationsState struct {
-	PreviousEpochAttestations []*PendingAttestation
-	CurrentEpochAttestations  []*PendingAttestation
-}
-
-// Rotate current/previous epoch attestations
-func (state *AttestationsState) RotateEpochAttestations() {
-	state.PreviousEpochAttestations = state.CurrentEpochAttestations
-	state.CurrentEpochAttestations = nil
-}
-
-func (state *AttestationsState) GetAttestationSlot(meta CrosslinkTimingMeta, attData *AttestationData) Slot {
-	epoch := attData.Target.Epoch
-	committeeCount := Slot(meta.GetCommitteeCount(epoch))
-	offset := Slot((attData.Crosslink.Shard + SHARD_COUNT - meta.GetStartShard(epoch)) % SHARD_COUNT)
-	return epoch.GetStartSlot() + (offset / (committeeCount / SLOTS_PER_EPOCH))
-}
 
 type AttestationDeltasReq interface {
 	VersioningMeta

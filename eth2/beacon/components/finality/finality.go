@@ -1,6 +1,7 @@
-package components
+package finality
 
 import (
+	. "github.com/protolambda/zrnt/eth2/beacon/components/meta"
 	. "github.com/protolambda/zrnt/eth2/core"
 )
 

@@ -1,7 +1,8 @@
-package components
+package shuffling
 
 import (
 	"encoding/binary"
+	. "github.com/protolambda/zrnt/eth2/beacon/components/meta"
 	. "github.com/protolambda/zrnt/eth2/core"
 	. "github.com/protolambda/zrnt/eth2/util/hashing"
 )

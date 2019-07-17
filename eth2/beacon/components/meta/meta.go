@@ -1,4 +1,4 @@
-package components
+package meta
 
 import (
 	. "github.com/protolambda/zrnt/eth2/beacon/components/registry"

@@ -1,4 +1,4 @@
-package components
+package deposits
 
 import (
 	. "github.com/protolambda/zrnt/eth2/core"

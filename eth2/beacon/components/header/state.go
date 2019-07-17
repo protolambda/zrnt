@@ -1,23 +1,13 @@
-package components
+package header
 
 import (
 	"errors"
 	"fmt"
+	. "github.com/protolambda/zrnt/eth2/beacon/components/meta"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
-	"github.com/protolambda/zssz"
 )
-
-var BeaconBlockHeaderSSZ = zssz.GetSSZ((*BeaconBlockHeader)(nil))
-
-type BeaconBlockHeader struct {
-	Slot       Slot
-	ParentRoot Root
-	StateRoot  Root
-	BodyRoot   Root // Where the body would be, just a root embedded here.
-	Signature  BLSSignature
-}
 
 type BlockHeaderState struct {
 	LatestBlockHeader BeaconBlockHeader

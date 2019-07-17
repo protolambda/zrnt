@@ -1,6 +1,9 @@
-package components
+package shardrot
 
-import . "github.com/protolambda/zrnt/eth2/core"
+import (
+	. "github.com/protolambda/zrnt/eth2/beacon/components/meta"
+	. "github.com/protolambda/zrnt/eth2/core"
+)
 
 type ShardRotationState struct {
 	StartShard Shard

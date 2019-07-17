@@ -1,9 +1,9 @@
 package registry
 
 import (
+	. "github.com/protolambda/zrnt/eth2/beacon/components/meta"
+	. "github.com/protolambda/zrnt/eth2/beacon/components/validator"
 	. "github.com/protolambda/zrnt/eth2/core"
-	"github.com/protolambda/zrnt/eth2/util/math"
-	"github.com/protolambda/zssz"
 )
 
 // Validator registry
@@ -26,6 +26,19 @@ func (state *RegistryState) UpdateEffectiveBalances() {
 	}
 }
 
+// Initiate the exit of the validator of the given index
+func (state *RegistryState) InitiateValidatorExit(currentEpoch Epoch, index ValidatorIndex) {
+	validator := state.Validators[index]
+	// Return if validator already initiated exit
+	if validator.ExitEpoch != FAR_FUTURE_EPOCH {
+		return
+	}
+
+	// Set validator exit epoch and withdrawable epoch
+	validator.ExitEpoch = state.Validators.ExitQueueEnd(currentEpoch)
+	validator.WithdrawableEpoch = validator.ExitEpoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY
+}
+
 func (state *RegistryState) AddNewValidator(pubkey BLSPubkey, withdrawalCreds Root, balance Gwei) {
 	effBalance := balance - (balance % EFFECTIVE_BALANCE_INCREMENT)
 	if effBalance > MAX_EFFECTIVE_BALANCE {
@@ -44,107 +57,26 @@ func (state *RegistryState) AddNewValidator(pubkey BLSPubkey, withdrawalCreds Ro
 	state.Balances = append(state.Balances, balance)
 }
 
-type RegistryIndices []ValidatorIndex
-
-func (_ *RegistryIndices) Limit() uint64 {
-	return VALIDATOR_REGISTRY_LIMIT
+type RegistryUpdateReq interface {
+	VersioningMeta
+	FinalityMeta
+	ActivationExitMeta
 }
 
-var RegistryIndicesSSZ = zssz.GetSSZ((*RegistryIndices)(nil))
-
-type ValidatorRegistry []*Validator
-
-func (vr ValidatorRegistry) IsValidatorIndex(index ValidatorIndex) bool {
-	return index < ValidatorIndex(len(vr))
-}
-
-func (vr ValidatorRegistry) ValidatorIndex(pubkey BLSPubkey) (index ValidatorIndex, exists bool) {
-	valIndex := ValidatorIndexMarker
-	for i, v := range vr {
-		if v.Pubkey == pubkey {
-			valIndex = ValidatorIndex(i)
-			break
+func (state *RegistryState) ProcessEpochRegistryUpdates(meta RegistryUpdateReq) {
+	// Process activation eligibility and ejections
+	currentEpoch := meta.Epoch()
+	for i, v := range state.Validators {
+		if v.ActivationEligibilityEpoch == FAR_FUTURE_EPOCH &&
+			v.EffectiveBalance == MAX_EFFECTIVE_BALANCE {
+			v.ActivationEligibilityEpoch = currentEpoch
+		}
+		if v.IsActive(currentEpoch) &&
+			v.EffectiveBalance <= EJECTION_BALANCE {
+			state.InitiateValidatorExit(currentEpoch, ValidatorIndex(i))
 		}
 	}
-	return valIndex, valIndex != ValidatorIndexMarker
-}
-
-func (vr ValidatorRegistry) GetActiveValidatorIndices(epoch Epoch) RegistryIndices {
-	res := make([]ValidatorIndex, 0, len(vr))
-	for i, v := range vr {
-		if v.IsActive(epoch) {
-			res = append(res, ValidatorIndex(i))
-		}
-	}
-	return res
-}
-
-func (vr ValidatorRegistry) GetActiveValidatorCount(epoch Epoch) (count uint64) {
-	for _, v := range vr {
-		if v.IsActive(epoch) {
-			count++
-		}
-	}
-	return
-}
-
-func (vr ValidatorRegistry) GetChurnLimit(epoch Epoch) uint64 {
-	return math.MaxU64(MIN_PER_EPOCH_CHURN_LIMIT, vr.GetActiveValidatorCount(epoch)/CHURN_LIMIT_QUOTIENT)
-}
-
-
-func (vr ValidatorRegistry) ExitQueueEnd(epoch Epoch) Epoch {
-	// Compute exit queue epoch
-	exitQueueEnd := epoch.ComputeActivationExitEpoch()
-	for _, v := range vr {
-		if v.ExitEpoch != FAR_FUTURE_EPOCH && v.ExitEpoch > exitQueueEnd {
-			exitQueueEnd = v.ExitEpoch
-		}
-	}
-	exitQueueChurn := uint64(0)
-	for _, v := range vr {
-		if v.ExitEpoch == exitQueueEnd {
-			exitQueueChurn++
-		}
-	}
-	if exitQueueChurn >= vr.GetChurnLimit(epoch) {
-		exitQueueEnd++
-	}
-	return exitQueueEnd
-}
-
-// Return the total balance sum (1 Gwei minimum to avoid divisions by zero.)
-func (vr ValidatorRegistry) GetTotalActiveEffectiveBalance(epoch Epoch) (sum Gwei) {
-	for _, v := range vr {
-		if v.IsActive(epoch) {
-			sum += v.EffectiveBalance
-		}
-	}
-	if sum == 0 {
-		return 1
-	}
-	return sum
-}
-
-// Return the combined effective balance of an array of validators. (1 Gwei minimum to avoid divisions by zero.)
-func (vr ValidatorRegistry) GetTotalEffectiveBalanceOf(indices []ValidatorIndex) (sum Gwei) {
-	for _, vIndex := range indices {
-		sum += vr[vIndex].EffectiveBalance
-	}
-	if sum == 0 {
-		return 1
-	}
-	return sum
-}
-
-// Filters a slice in-place. Only keeps the unslashed validators.
-// If input is sorted, then the result will be sorted.
-func (vr ValidatorRegistry) FilterUnslashed(indices []ValidatorIndex) []ValidatorIndex {
-	unslashed := indices[:0]
-	for _, x := range indices {
-		if !vr[x].Slashed {
-			unslashed = append(unslashed, x)
-		}
-	}
-	return unslashed
+	// Queue validators eligible for activation and not dequeued for activation prior to finalized epoch
+	activationEpoch := meta.Finalized().Epoch.ComputeActivationExitEpoch()
+	state.Validators.ProcessActivationQueue(activationEpoch, currentEpoch)
 }

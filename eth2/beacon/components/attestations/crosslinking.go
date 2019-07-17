@@ -1,21 +1,30 @@
-package status
+package attestations
 
 import (
-	. "github.com/protolambda/zrnt/eth2/beacon/components"
+	. "github.com/protolambda/zrnt/eth2/beacon/components/meta"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
-	"github.com/protolambda/zssz"
 	"sort"
 )
 
-type CrosslinkingStatus struct {
-	Current  CrosslinkingEpoch
-	Previous CrosslinkingEpoch
+type CrosslinkAttestingReq interface {
+	VersioningMeta
+	CrosslinkMeta
+	EffectiveBalanceMeta
+	CrosslinkCommitteeMeta
+	SlashedMeta
 }
 
-func (status *CrosslinkingStatus) Load(state *BeaconState, shufflingStatus *ShufflingStatus) {
-	status.Previous.Load(state, &shufflingStatus.Previous, state.PreviousEpochAttestations)
-	status.Current.Load(state, &shufflingStatus.Current, state.CurrentEpochAttestations)
+type CrosslinkingStatus struct {
+	Previous *CrosslinkingEpoch
+	Current  *CrosslinkingEpoch
+}
+
+func (state *AttestationsState) Load(meta CrosslinkAttestingReq) *CrosslinkingStatus {
+	return &CrosslinkingStatus{
+		Previous: state.LoadCrosslinkEpoch(meta, meta.PreviousEpoch()),
+		Current: state.LoadCrosslinkEpoch(meta, meta.Epoch()),
+	}
 }
 
 type LinkWinner struct {
@@ -33,13 +42,16 @@ type weightedLink struct {
 	attesters []ValidatorIndex
 }
 
-var CrosslinkSSZ = zssz.GetSSZ((*Crosslink)(nil))
+func (state *AttestationsState) LoadCrosslinkEpoch(meta CrosslinkAttestingReq, epoch Epoch) *CrosslinkingEpoch {
+	var crosslinkRoots *[SHARD_COUNT]Root
+	var attestations []*PendingAttestation
 
-func (crep *CrosslinkingEpoch) Load(state *BeaconState, shuffling *ShufflingEpoch, attestations []*PendingAttestation) {
-
-	crosslinkRoots := [SHARD_COUNT]Root{}
-	for shard := Shard(0); shard < SHARD_COUNT; shard++ {
-		crosslinkRoots[shard] = ssz.HashTreeRoot(&state.CurrentCrosslinks[shard], CrosslinkSSZ)
+	if epoch == meta.Epoch() {
+		crosslinkRoots = meta.GetPreviousCrosslinkRoots()
+		attestations = state.PreviousEpochAttestations
+	} else {
+		crosslinkRoots = meta.GetCurrentCrosslinkRoots()
+		attestations = state.CurrentEpochAttestations
 	}
 
 	// Keyed by raw crosslink object. Not too big, and simplifies reduction to unique crosslinks
@@ -66,12 +78,12 @@ func (crep *CrosslinkingEpoch) Load(state *BeaconState, shuffling *ShufflingEpoc
 	participants := make([]ValidatorIndex, 0, MAX_VALIDATORS_PER_COMMITTEE)
 	for k, v := range crosslinkAttesters {
 		shard := k.Shard
-		committee := shuffling.Committees[shard]
-		participants = participants[:0]                                     // reset old slice (re-used in for loop)
-		participants = append(participants, committee...)                   // add committee indices
-		participants = v.FilterParticipants(participants)                   // only keep the participants
-		participants = state.Validators.FilterUnslashed(participants)       // and only those who are not slashed
-		weight := state.Validators.GetTotalEffectiveBalanceOf(participants) // and get their weight
+		committee := meta.GetCrosslinkCommittee(epoch, shard)
+		participants = participants[:0]                         // reset old slice (re-used in for loop)
+		participants = append(participants, committee...)       // add committee indices
+		participants = v.FilterParticipants(participants)       // only keep the participants
+		participants = meta.FilterUnslashed(participants)       // and only those who are not slashed
+		weight := meta.GetTotalEffectiveBalanceOf(participants) // and get their weight
 
 		currentWinner := &winningCrosslinks[shard]
 		isNewWinner := currentWinner.link == nil
@@ -98,6 +110,7 @@ func (crep *CrosslinkingEpoch) Load(state *BeaconState, shuffling *ShufflingEpoc
 		}
 	}
 
+	crep := new(CrosslinkingEpoch)
 	for shard, winner := range winningCrosslinks {
 		out := &crep.WinningLinks[shard]
 		out.Crosslink = winner.link
@@ -106,4 +119,6 @@ func (crep *CrosslinkingEpoch) Load(state *BeaconState, shuffling *ShufflingEpoc
 			sort.Sort(out.Attesters) // validator sets must be sorted
 		}
 	}
+	return crep
 }
+

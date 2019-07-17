@@ -1,19 +1,29 @@
-package status
+package shuffling
 
 import (
-	. "github.com/protolambda/zrnt/eth2/beacon/components"
+	. "github.com/protolambda/zrnt/eth2/beacon/components/meta"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/shuffling"
 )
 
-type ShufflingStatus struct {
-	Current  ShufflingEpoch
-	Previous ShufflingEpoch
+type ShufflingComputeReq interface {
+	VersioningMeta
+	RandomnessMeta
+	ActiveIndicesMeta
+	CrosslinkTimingMeta
 }
 
-func (status *ShufflingStatus) Load(state *BeaconState) {
-	status.Current.Load(state, state.Epoch())
-	status.Current.Load(state, state.PreviousEpoch())
+// TODO: may want to pool this to avoid large allocations in mainnet.
+type ShufflingStatus struct {
+	Previous *ShufflingEpoch
+	Current  *ShufflingEpoch
+}
+
+func (state *ShufflingState) LoadShufflingStatus(meta ShufflingComputeReq) *ShufflingStatus {
+	return &ShufflingStatus{
+		Previous: state.LoadShufflingEpoch(meta, meta.PreviousEpoch()),
+		Current: state.LoadShufflingEpoch(meta, meta.Epoch()),
+	}
 }
 
 // With a high amount of shards, or low amount of validators,
@@ -23,23 +33,24 @@ type ShufflingEpoch struct {
 	Committees [SHARD_COUNT][]ValidatorIndex // slices of Shuffling, 1 per slot. Committee can be nil slice.
 }
 
-func (shep *ShufflingEpoch) Load(state *BeaconState, epoch Epoch) {
-	currentEpoch := state.Epoch()
-	previousEpoch := state.PreviousEpoch()
+func (state *ShufflingState) LoadShufflingEpoch(meta ShufflingComputeReq, epoch Epoch) *ShufflingEpoch {
+	shep := new(ShufflingEpoch)
+	currentEpoch := meta.Epoch()
+	previousEpoch := meta.PreviousEpoch()
 	nextEpoch := currentEpoch + 1
 
 	if !(previousEpoch <= epoch && epoch <= nextEpoch) {
 		panic("could not compute shuffling for out of range epoch")
 	}
 
-	seed := state.GetSeed(epoch)
-	activeIndices := state.Validators.GetActiveValidatorIndices(epoch)
+	seed := state.GetSeed(meta, epoch)
+	activeIndices := meta.GetActiveValidatorIndices(epoch)
 	shuffling.UnshuffleList(activeIndices, seed)
 	shep.Shuffling = activeIndices
 
 	validatorCount := uint64(len(activeIndices))
-	committeeCount := state.Validators.GetCommitteeCount(epoch)
-	startShard := state.GetStartShard(epoch)
+	committeeCount := meta.GetCommitteeCount(epoch)
+	startShard := meta.GetStartShard(epoch)
 	for shard := Shard(0); shard < SHARD_COUNT; shard++ {
 		index := uint64((shard + SHARD_COUNT - startShard) % SHARD_COUNT)
 		startOffset := (validatorCount * index) / committeeCount
@@ -47,4 +58,5 @@ func (shep *ShufflingEpoch) Load(state *BeaconState, epoch Epoch) {
 		committee := shep.Shuffling[startOffset:endOffset]
 		shep.Committees[shard] = committee
 	}
+	return shep
 }

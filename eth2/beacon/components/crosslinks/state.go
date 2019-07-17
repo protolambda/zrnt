@@ -4,6 +4,8 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon/components/meta"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/math"
+	"github.com/protolambda/zrnt/eth2/util/ssz"
+	"github.com/protolambda/zssz"
 	"sort"
 )
 
@@ -12,10 +14,35 @@ type CrosslinksState struct {
 	PreviousCrosslinks [SHARD_COUNT]Crosslink
 }
 
+var CrosslinkSSZ = zssz.GetSSZ((*Crosslink)(nil))
+
+func (state *CrosslinksState) GetCurrentCrosslinkRoots() (out [SHARD_COUNT]Root) {
+	for shard := Shard(0); shard < SHARD_COUNT; shard++ {
+		out[shard] = ssz.HashTreeRoot(&state.CurrentCrosslinks[shard], CrosslinkSSZ)
+	}
+	return
+}
+
+func (state *CrosslinksState) GetPreviousCrosslinkRoots() (out [SHARD_COUNT]Root) {
+	for shard := Shard(0); shard < SHARD_COUNT; shard++ {
+		out[shard] = ssz.HashTreeRoot(&state.PreviousCrosslinks[shard], CrosslinkSSZ)
+	}
+	return
+}
+
+func (state *CrosslinksState) GetCurrentCrosslink(shard Shard) *Crosslink {
+	return &state.CurrentCrosslinks[shard]
+}
+
+func (state *CrosslinksState) GetPreviousCrosslink(shard Shard) *Crosslink {
+	return &state.PreviousCrosslinks[shard]
+}
+
 type CrosslinkDeltasReq interface {
 	VersioningMeta
 	RegistrySizeMeta
 	StakingMeta
+	EffectiveBalanceMeta
 	CrosslinkCommitteeMeta
 	WinningCrosslinkMeta
 }
@@ -23,7 +50,7 @@ type CrosslinkDeltasReq interface {
 func (state *CrosslinksState) CrosslinksDeltas(meta CrosslinkDeltasReq) *Deltas {
 	deltas := NewDeltas(meta.ValidatorCount())
 
-	totalActiveBalance := meta.GetTotalActiveEffectiveBalance(meta.Epoch())
+	totalActiveBalance := meta.GetTotalStakedBalance(meta.Epoch())
 
 	totalBalanceSqRoot := Gwei(math.IntegerSquareroot(uint64(totalActiveBalance)))
 
@@ -60,4 +87,32 @@ func (state *CrosslinksState) CrosslinksDeltas(meta CrosslinkDeltasReq) *Deltas 
 			})
 	}
 	return deltas
+}
+
+type CrosslinkingReq interface {
+	VersioningMeta
+	CrosslinkCommitteeMeta
+	EffectiveBalanceMeta
+	WinningCrosslinkMeta
+	StakingMeta
+}
+
+func (state *CrosslinksState) ProcessEpochCrosslinks(meta CrosslinkingReq) {
+	state.PreviousCrosslinks = state.CurrentCrosslinks
+	currentEpoch := meta.Epoch()
+	previousEpoch := meta.PreviousEpoch()
+	for epoch := previousEpoch; epoch <= currentEpoch; epoch++ {
+		count := meta.GetCommitteeCount(epoch)
+		startShard := meta.GetStartShard(epoch)
+		for offset := uint64(0); offset < count; offset++ {
+			shard := (startShard + Shard(offset)) % SHARD_COUNT
+			crosslinkCommittee := meta.GetCrosslinkCommittee(epoch, shard)
+			winningCrosslink, attestingIndices := meta.GetWinningCrosslinkAndAttesters(epoch, shard)
+			participatingBalance := meta.GetTotalEffectiveBalanceOf(attestingIndices)
+			totalBalance := meta.GetTotalEffectiveBalanceOf(crosslinkCommittee)
+			if 3*participatingBalance >= 2*totalBalance {
+				state.CurrentCrosslinks[shard] = *winningCrosslink
+			}
+		}
+	}
 }

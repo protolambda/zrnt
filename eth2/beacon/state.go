@@ -34,3 +34,10 @@ type BeaconState struct {
 	CrosslinksState
 	FinalityState
 }
+
+// Run and attach precomputed status items
+//func (status *Status) Load(state *BeaconState) {
+//	status.ShufflingStatus.Load(state)
+//	status.CrosslinkingStatus.Load(state, &status.ShufflingStatus)
+//	status.ValidationStatus.Load(state, &status.ShufflingStatus)
+//}

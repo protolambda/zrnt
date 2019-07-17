@@ -1,12 +1,12 @@
 package meta
 
 import (
-	. "github.com/protolambda/zrnt/eth2/beacon/components/registry"
+	"github.com/protolambda/zrnt/eth2/beacon/components/validator"
 	. "github.com/protolambda/zrnt/eth2/core"
 )
 
 type ExitMeta interface {
-	InitiateValidatorExit(index ValidatorIndex)
+	InitiateValidatorExit(currentEpoch Epoch, index ValidatorIndex)
 }
 
 type BalanceMeta interface {
@@ -40,22 +40,33 @@ type AttesterStatusMeta interface {
 	GetAttesterStatus(index ValidatorIndex) AttesterStatus
 }
 
+type SlashedMeta interface {
+	IsSlashed(i ValidatorIndex) bool
+	FilterUnslashed(indices []ValidatorIndex) []ValidatorIndex
+}
+
 type CompactValidatorMeta interface {
 	PubkeyMeta
 	EffectiveBalanceMeta
-	IsSlashed(i ValidatorIndex) bool
+	SlashedMeta
 }
 
 type StakingMeta interface {
-	EffectiveBalanceMeta
-	GetTotalActiveEffectiveBalance(epoch Epoch) Gwei
+	// Staked = Active effective balance
+	GetTotalStakedBalance(epoch Epoch) Gwei
+}
+
+type FFGMeta interface {
+	StakingMeta
+	GetTargetTotalStakedBalance(epoch Epoch) Gwei
 }
 
 type SlashingMeta interface {
-
+	GetIndicesToSlash(withdrawal Epoch) (out []ValidatorIndex)
 }
+
 type ValidatorMeta interface {
-	Validator(index ValidatorIndex) *Validator
+	Validator(index ValidatorIndex) *validator.Validator
 }
 
 type VersioningMeta interface {
@@ -87,6 +98,11 @@ type UpdateHeaderMeta interface {
 	UpdateLatestBlockRoot(stateRoot Root) Root
 }
 
+type HistoryMeta interface {
+	GetBlockRootAtSlot(slot Slot) Root
+	GetBlockRoot(epoch Epoch) Root
+}
+
 type HistoryUpdateMeta interface {
 	SetRecentRoots(slot Slot, blockRoot Root, stateRoot Root)
 	UpdateHistoricalRoots()
@@ -101,9 +117,8 @@ type ActivationExitMeta interface {
 	ExitQueueEnd(epoch Epoch) Epoch
 }
 
-type FullRegistryMeta interface {
-	ValidatorMeta
-	GetActiveValidatorIndices() RegistryIndices
+type ActiveIndicesMeta interface {
+	GetActiveValidatorIndices(epoch Epoch) []ValidatorIndex
 }
 
 type ShardDeltaMeta interface {
@@ -128,6 +143,8 @@ type CrosslinkCommitteeMeta interface {
 }
 
 type CrosslinkMeta interface {
+	GetCurrentCrosslinkRoots() *[SHARD_COUNT]Root
+	GetPreviousCrosslinkRoots() *[SHARD_COUNT]Root
 	GetCurrentCrosslink(shard Shard) *Crosslink
 	GetPreviousCrosslink(shard Shard) *Crosslink
 }

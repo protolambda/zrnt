@@ -1,37 +1,34 @@
-package epoch
+package finality
 
 import (
-	. "github.com/protolambda/zrnt/eth2/beacon/components"
+	. "github.com/protolambda/zrnt/eth2/beacon/components/meta"
 	. "github.com/protolambda/zrnt/eth2/core"
 )
 
-func ProcessEpochJustification(state *BeaconState) {
-	currentEpoch := state.Epoch()
+type JustificationReq interface {
+	VersioningMeta
+	HistoryMeta
+	FFGMeta
+}
+
+func (state *FinalityState) ProcessEpochJustification(meta JustificationReq) {
+	currentEpoch := meta.Epoch()
 	if currentEpoch <= GENESIS_EPOCH+1 {
 		return
 	}
-	previousEpoch := state.PreviousEpoch()
+	previousEpoch := meta.PreviousEpoch()
 
 	// epoch numbers are trusted, no errors
-	previousBoundaryBlockRoot, _ := state.GetBlockRoot(previousEpoch)
-	currentBoundaryBlockRoot, _ := state.GetBlockRoot(currentEpoch)
+	previousBoundaryBlockRoot := meta.GetBlockRoot(previousEpoch)
+	currentBoundaryBlockRoot := meta.GetBlockRoot(currentEpoch)
 
 	// Get the sum balances of the boundary attesters
-	previousEpochBoundaryAttestingBalance := Gwei(0)
-	currentEpochBoundaryAttestingBalance := Gwei(0)
-	for i, v := range state.Validators {
-		vStatus := state.PrecomputedData.GetValidatorStatus(ValidatorIndex(i))
-		if vStatus.Flags.HasMarkers(PrevEpochBoundaryAttester | UnslashedAttester) {
-			previousEpochBoundaryAttestingBalance += v.EffectiveBalance
-		}
-		if vStatus.Flags.HasMarkers(CurrEpochBoundaryAttester | UnslashedAttester) {
-			previousEpochBoundaryAttestingBalance += v.EffectiveBalance
-		}
-	}
+	previousTargetStakedBalance := meta.GetTargetTotalStakedBalance(previousEpoch)
+	currentTargetStakedBalance := meta.GetTargetTotalStakedBalance(currentEpoch)
 
 	// Get the sum balances of the attesters for the epochs
-	previousTotalBalance := state.Validators.GetTotalActiveEffectiveBalance(previousEpoch)
-	currentTotalBalance := state.Validators.GetTotalActiveEffectiveBalance(currentEpoch)
+	previousTotalBalance := meta.GetTotalStakedBalance(previousEpoch)
+	currentTotalBalance := meta.GetTotalStakedBalance(currentEpoch)
 
 	oldPreviousJustified := state.PreviousJustifiedCheckpoint
 	oldCurrentJustified := state.CurrentJustifiedCheckpoint
@@ -41,14 +38,14 @@ func ProcessEpochJustification(state *BeaconState) {
 	state.JustificationBits.NextEpoch()
 
 	// > Justification
-	if previousEpochBoundaryAttestingBalance*3 >= previousTotalBalance*2 {
-		state.Justify(Checkpoint{
+	if previousTargetStakedBalance*3 >= previousTotalBalance*2 {
+		state.Justify(meta, Checkpoint{
 			Epoch: previousEpoch,
 			Root:  previousBoundaryBlockRoot,
 		})
 	}
-	if currentEpochBoundaryAttestingBalance*3 >= currentTotalBalance*2 {
-		state.Justify(Checkpoint{
+	if currentTargetStakedBalance*3 >= currentTotalBalance*2 {
+		state.Justify(meta, Checkpoint{
 			Epoch: currentEpoch,
 			Root:  currentBoundaryBlockRoot,
 		})

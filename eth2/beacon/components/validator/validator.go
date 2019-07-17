@@ -1,4 +1,4 @@
-package registry
+package validator
 
 import (
 	. "github.com/protolambda/zrnt/eth2/core"

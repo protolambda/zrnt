@@ -13,7 +13,7 @@ type VoluntaryExitReq interface {
 	VersioningMeta
 	RegistrySizeMeta
 	ValidatorMeta
-	ActivationExitMeta
+	ExitMeta
 }
 
 func ProcessVoluntaryExits(meta VoluntaryExitReq, ops []VoluntaryExit) error {
@@ -64,6 +64,6 @@ func ProcessVoluntaryExit(meta VoluntaryExitReq, exit *VoluntaryExit) error {
 		return errors.New("voluntary exit signature could not be verified")
 	}
 	// Initiate exit
-	InitiateValidatorExit(meta, exit.ValidatorIndex)
+	meta.InitiateValidatorExit(meta.Epoch(), exit.ValidatorIndex)
 	return nil
 }

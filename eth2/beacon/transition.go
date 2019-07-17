@@ -5,7 +5,6 @@ import (
 	"github.com/protolambda/zrnt/eth2/beacon/components/deposits"
 	"github.com/protolambda/zrnt/eth2/beacon/components/exits"
 	"github.com/protolambda/zrnt/eth2/beacon/components/transfers"
-	"github.com/protolambda/zrnt/eth2/beacon/epoch"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
@@ -49,10 +48,43 @@ func (state *BeaconState) ProcessSlot() {
 	state.SetRecentRoots(state.Slot, previousBlockRoot, latestStateRoot)
 }
 
+func (state *BeaconState) ProcessEpoch() {
+	state.ProcessEpochJustification(state)
+	state.ProcessEpochCrosslinks(state)
+	state.ProcessEpochRewardsAndPenalties(state)
+	state.ProcessEpochRegistryUpdates(state)
+	state.ProcessEpochSlashings(state)
+	state.ProcessEpochFinalUpdates()
+}
+
+func (state *BeaconState) ProcessEpochFinalUpdates() {
+	nextEpoch := state.Epoch() + 1
+
+	// Reset eth1 data votes if it is the end of the voting period.
+	if (state.Slot+1)%SLOTS_PER_ETH1_VOTING_PERIOD == 0 {
+		state.ResetEth1Votes()
+	}
+
+	state.UpdateEffectiveBalances()
+	state.RotateStartShard()
+	state.UpdateActiveIndexRoot(nextEpoch + ACTIVATION_EXIT_DELAY)
+	state.UpdateCompactCommitteesRoot(nextEpoch)
+	state.ResetSlashings(nextEpoch)
+	state.PrepareRandao(nextEpoch)
+
+	// Set historical root accumulator
+	if nextEpoch%SLOTS_PER_HISTORICAL_ROOT.ToEpoch() == 0 {
+		state.UpdateHistoricalRoots()
+	}
+
+	state.RotateEpochAttestations()
+}
+
+
 // Transition the state to the given slot.
 // Returns an error if the slot is older than the state is already at.
 // Mutates the state, does not copy.
-func (state *BeaconState) StateTransitionTo(slot Slot) error {
+func (state *BeaconState) ProcessSlots(slot Slot) error {
 	if state.Slot > slot {
 		return errors.New("cannot transition from pre-state with higher slot than transition target")
 	}
@@ -61,7 +93,7 @@ func (state *BeaconState) StateTransitionTo(slot Slot) error {
 		state.ProcessSlot()
 		// Per-epoch transition happens at the start of the first slot of every epoch.
 		if (state.Slot+1)%SLOTS_PER_EPOCH == 0 {
-			epoch.Transition(state)
+			state.ProcessEpoch()
 		}
 		state.Slot++
 	}
@@ -72,7 +104,7 @@ func (state *BeaconState) StateTransitionTo(slot Slot) error {
 // Returns an error if the slot is older than the state is already at.
 // Mutates the state, does not copy.
 func (state *BeaconState) StateTransition(block *BeaconBlock, verifyStateRoot bool) error {
-	if err := state.StateTransitionTo(block.Slot); err != nil {
+	if err := state.ProcessSlots(block.Slot); err != nil {
 		return err
 	}
 

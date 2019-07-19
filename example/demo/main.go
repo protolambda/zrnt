@@ -2,11 +2,10 @@ package main
 
 import (
 	"encoding/binary"
-	"github.com/protolambda/zrnt/eth2/beacon"
-	. "github.com/protolambda/zrnt/eth2/beacon/block"
-	. "github.com/protolambda/zrnt/eth2/beacon/block/operations"
-	. "github.com/protolambda/zrnt/eth2/beacon/components"
-	"github.com/protolambda/zrnt/eth2/beacon/genesis"
+	. "github.com/protolambda/zrnt/eth2/beacon"
+	. "github.com/protolambda/zrnt/eth2/beacon/deposits"
+	. "github.com/protolambda/zrnt/eth2/beacon/eth1"
+	. "github.com/protolambda/zrnt/eth2/beacon/header"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/hashing"
 	"github.com/protolambda/zrnt/eth2/util/merkle"
@@ -17,8 +16,8 @@ import (
 
 type DepositRoots []Root
 
-func (_ *DepositRoots) Limit() uint32 {
-	return 1 << 10 // TODO
+func (_ *DepositRoots) Limit() uint64 {
+	return 1 << DEPOSIT_CONTRACT_TREE_DEPTH
 }
 
 var DepositRootsSSZ = zssz.GetSSZ((*DepositData)(nil))
@@ -68,11 +67,11 @@ func main() {
 		DepositCount: DepositIndex(len(deposits)),
 		BlockHash:    Root{42}, // deposits are simulated, not from a real Eth1 origin.
 	}
-	state := genesis.Genesis(deposits, genesisTime, eth1Data)
+	state := Genesis(deposits, genesisTime, eth1Data)
 
 	for i := 0; i < 300; i++ {
 		block := SimulateBlock(state, rng)
-		err := beacon.StateTransition(state, block, false)
+		err := state.StateTransition(block, false)
 		if err != nil {
 			panic(err)
 		}
@@ -94,12 +93,10 @@ func SimulateBlock(state *BeaconState, rng *rand.Rand) *BeaconBlock {
 		ParentRoot: parentRoot,
 		StateRoot:  Root{},
 		Body: BeaconBlockBody{
-			RandaoBlockData: RandaoBlockData{RandaoReveal: BLSSignature{4, 2}},
-			Eth1BlockData: Eth1BlockData{
-				Eth1Data: Eth1Data{
-					DepositRoot: Root{0, 1, 3},
-					BlockHash:   Root{4, 5, 6},
-				},
+			RandaoReveal: BLSSignature{4, 2},
+			Eth1Data: Eth1Data{
+				DepositRoot: Root{0, 1, 3},
+				BlockHash:   Root{4, 5, 6},
 			},
 			Graffiti: Root{123},
 			// no operations

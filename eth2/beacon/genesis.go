@@ -1,14 +1,15 @@
-package genesis
+package beacon
 
 import (
-	. "github.com/protolambda/zrnt/eth2/beacon/block/operations"
-	. "github.com/protolambda/zrnt/eth2/beacon/components"
+	. "github.com/protolambda/zrnt/eth2/beacon/components/deposits"
+	. "github.com/protolambda/zrnt/eth2/beacon/components/eth1"
 	. "github.com/protolambda/zrnt/eth2/beacon/components/registry"
+	. "github.com/protolambda/zrnt/eth2/beacon/components/versioning"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
-func Genesis(validatorDeposits []Deposit, time Timestamp, eth1Data Eth1Data) *BeaconState {
+func Genesis(deps []Deposit, time Timestamp, eth1Data Eth1Data) *BeaconState {
 	state := &BeaconState{
 		VersioningState: VersioningState{
 			GenesisTime: time,
@@ -19,9 +20,9 @@ func Genesis(validatorDeposits []Deposit, time Timestamp, eth1Data Eth1Data) *Be
 		},
 	}
 	// Process genesis deposits
-	for _, dep := range validatorDeposits {
+	for i := range deps {
 		// in the rare case someone tries to create a genesis block using invalid data, panic.
-		if err := dep.Process(state); err != nil {
+		if err := ProcessDeposit(state, &deps[i]); err != nil {
 			panic(err)
 		}
 	}

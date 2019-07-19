@@ -36,7 +36,7 @@ func (state *SlashingsState) ProcessAttesterSlashing(meta AttesterSlashingReq, a
 	sa2 := &attesterSlashing.Attestation2
 
 	if !IsSlashableAttestationData(&sa1.Data, &sa2.Data) {
-		return errors.New("attester slashing is has no valid reasoning")
+		return errors.New("attester slashing has no valid reasoning")
 	}
 
 	if err := sa1.Validate(meta); err != nil {

@@ -1,14 +1,12 @@
 package beacon
 
 import (
-	. "github.com/protolambda/zrnt/eth2/beacon/components/eth1"
-	. "github.com/protolambda/zrnt/eth2/beacon/components/header"
+	. "github.com/protolambda/zrnt/eth2/beacon/eth1"
+	. "github.com/protolambda/zrnt/eth2/beacon/header"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/protolambda/zssz"
 )
-
-var BeaconBlockSSZ = zssz.GetSSZ((*BeaconBlock)(nil))
 
 type BeaconBlock struct {
 	Slot       Slot

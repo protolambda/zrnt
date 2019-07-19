@@ -2,9 +2,9 @@ package beacon
 
 import (
 	"errors"
-	"github.com/protolambda/zrnt/eth2/beacon/components/deposits"
-	"github.com/protolambda/zrnt/eth2/beacon/components/exits"
-	"github.com/protolambda/zrnt/eth2/beacon/components/transfers"
+	"github.com/protolambda/zrnt/eth2/beacon/deposits"
+	"github.com/protolambda/zrnt/eth2/beacon/exits"
+	"github.com/protolambda/zrnt/eth2/beacon/transfers"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
@@ -51,10 +51,20 @@ func (state *BeaconState) ProcessSlot() {
 func (state *BeaconState) ProcessEpoch() {
 	state.ProcessEpochJustification(state)
 	state.ProcessEpochCrosslinks(state)
-	state.ProcessEpochRewardsAndPenalties(state)
+	state.ProcessEpochRewardsAndPenalties()
 	state.ProcessEpochRegistryUpdates(state)
 	state.ProcessEpochSlashings(state)
 	state.ProcessEpochFinalUpdates()
+}
+
+func (state *BeaconState) ProcessEpochRewardsAndPenalties() {
+	if state.Epoch() == GENESIS_EPOCH {
+		return
+	}
+	sum := NewDeltas(state.ValidatorCount())
+	sum.Add(state.AttestationDeltas(state))
+	sum.Add(state.CrosslinksDeltas(state))
+	state.ApplyDeltas(sum)
 }
 
 func (state *BeaconState) ProcessEpochFinalUpdates() {
@@ -66,9 +76,9 @@ func (state *BeaconState) ProcessEpochFinalUpdates() {
 	}
 
 	state.UpdateEffectiveBalances()
-	state.RotateStartShard()
-	state.UpdateActiveIndexRoot(nextEpoch + ACTIVATION_EXIT_DELAY)
-	state.UpdateCompactCommitteesRoot(nextEpoch)
+	state.RotateStartShard(state)
+	state.UpdateActiveIndexRoot(state, nextEpoch + ACTIVATION_EXIT_DELAY)
+	state.UpdateCompactCommitteesRoot(state, nextEpoch)
 	state.ResetSlashings(nextEpoch)
 	state.PrepareRandao(nextEpoch)
 
@@ -81,7 +91,7 @@ func (state *BeaconState) ProcessEpochFinalUpdates() {
 }
 
 
-// Transition the state to the given slot.
+// Process the state to the given slot.
 // Returns an error if the slot is older than the state is already at.
 // Mutates the state, does not copy.
 func (state *BeaconState) ProcessSlots(slot Slot) error {

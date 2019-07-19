@@ -1,10 +1,10 @@
 package beacon
 
 import (
-	. "github.com/protolambda/zrnt/eth2/beacon/components/deposits"
-	. "github.com/protolambda/zrnt/eth2/beacon/components/eth1"
-	. "github.com/protolambda/zrnt/eth2/beacon/components/registry"
-	. "github.com/protolambda/zrnt/eth2/beacon/components/versioning"
+	. "github.com/protolambda/zrnt/eth2/beacon/deposits"
+	. "github.com/protolambda/zrnt/eth2/beacon/eth1"
+	. "github.com/protolambda/zrnt/eth2/beacon/registry"
+	. "github.com/protolambda/zrnt/eth2/beacon/versioning"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )

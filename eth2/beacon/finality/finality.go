@@ -12,6 +12,18 @@ type FinalityState struct {
 	FinalizedCheckpoint         Checkpoint
 }
 
+func (state *FinalityState) Finalized() Checkpoint {
+	return state.FinalizedCheckpoint
+}
+
+func (state *FinalityState) PreviousJustified() Checkpoint {
+	return state.PreviousJustifiedCheckpoint
+}
+
+func (state *FinalityState) CurrentJustified() Checkpoint {
+	return state.CurrentJustifiedCheckpoint
+}
+
 func (state *FinalityState) Justify(meta VersioningMeta, checkpoint Checkpoint) {
 	epochsAgo := meta.Epoch() - checkpoint.Epoch
 	state.CurrentJustifiedCheckpoint = checkpoint

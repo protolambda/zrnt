@@ -12,7 +12,7 @@ type JustificationReq interface {
 }
 
 func (state *FinalityState) ProcessEpochJustification(meta JustificationReq) {
-	currentEpoch := meta.Epoch()
+	currentEpoch := meta.CurrentEpoch()
 	if currentEpoch <= GENESIS_EPOCH+1 {
 		return
 	}

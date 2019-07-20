@@ -19,14 +19,19 @@ type VersioningState struct {
 	Fork        Fork
 }
 
+// Get current slot
+func (state *VersioningState) CurrentSlot() Slot {
+	return state.Slot
+}
+
 // Get current epoch
-func (state *VersioningState) Epoch() Epoch {
+func (state *VersioningState) CurrentEpoch() Epoch {
 	return state.Slot.ToEpoch()
 }
 
 // Return previous epoch.
 func (state *VersioningState) PreviousEpoch() Epoch {
-	return state.Epoch().Previous()
+	return state.CurrentEpoch().Previous()
 }
 
 // Return the signature domain (fork version concatenated with domain type) of a message.

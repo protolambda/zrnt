@@ -52,7 +52,7 @@ type CrosslinkDeltasReq interface {
 func (state *CrosslinksState) CrosslinksDeltas(meta CrosslinkDeltasReq) *Deltas {
 	deltas := NewDeltas(meta.ValidatorCount())
 
-	totalActiveBalance := meta.GetTotalStakedBalance(meta.Epoch())
+	totalActiveBalance := meta.GetTotalStakedBalance(meta.CurrentEpoch())
 
 	totalBalanceSqRoot := Gwei(math.IntegerSquareroot(uint64(totalActiveBalance)))
 
@@ -103,7 +103,7 @@ type CrosslinkingReq interface {
 
 func (state *CrosslinksState) ProcessEpochCrosslinks(meta CrosslinkingReq) {
 	state.PreviousCrosslinks = state.CurrentCrosslinks
-	currentEpoch := meta.Epoch()
+	currentEpoch := meta.CurrentEpoch()
 	previousEpoch := meta.PreviousEpoch()
 	for epoch := previousEpoch; epoch <= currentEpoch; epoch++ {
 		count := meta.GetCommitteeCount(epoch)

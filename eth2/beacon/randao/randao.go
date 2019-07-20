@@ -38,7 +38,7 @@ type RandaoRevealReq interface {
 }
 
 func (state *RandaoState) ProcessRandaoReveal(meta RandaoRevealReq, reveal BLSSignature) error {
-	epoch := meta.Epoch()
+	epoch := meta.CurrentEpoch()
 	propIndex := meta.GetBeaconProposerIndex()
 	proposerPubkey := meta.Pubkey(propIndex)
 	// Verify RANDAO reveal

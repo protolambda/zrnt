@@ -98,7 +98,7 @@ func (state *BeaconState) ProcessSlots(slot Slot) error {
 	if state.Slot > slot {
 		return errors.New("cannot transition from pre-state with higher slot than transition target")
 	}
-	// happens at the start of every Slot
+	// happens at the start of every CurrentSlot
 	for state.Slot < slot {
 		state.ProcessSlot()
 		// Per-epoch transition happens at the start of the first slot of every epoch.

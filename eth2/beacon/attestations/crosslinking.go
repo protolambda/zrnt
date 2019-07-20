@@ -23,7 +23,7 @@ type CrosslinkingStatus struct {
 func (state *AttestationsState) LoadCrosslinkingStatus(meta CrosslinkAttestingReq) *CrosslinkingStatus {
 	return &CrosslinkingStatus{
 		Previous: state.LoadCrosslinkEpoch(meta, meta.PreviousEpoch()),
-		Current: state.LoadCrosslinkEpoch(meta, meta.Epoch()),
+		Current: state.LoadCrosslinkEpoch(meta, meta.CurrentEpoch()),
 	}
 }
 
@@ -46,7 +46,7 @@ func (state *AttestationsState) LoadCrosslinkEpoch(meta CrosslinkAttestingReq, e
 	var crosslinkRoots *[SHARD_COUNT]Root
 	var attestations []*PendingAttestation
 
-	if epoch == meta.Epoch() {
+	if epoch == meta.CurrentEpoch() {
 		crosslinkRoots = meta.GetPreviousCrosslinkRoots()
 		attestations = state.PreviousEpochAttestations
 	} else {

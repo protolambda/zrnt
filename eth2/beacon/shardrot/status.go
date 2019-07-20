@@ -29,7 +29,7 @@ type StartShardsReq interface {
 // Load start shards, starting from fromEpoch, until the next epoch (incl.)
 func (state *ShardRotationState) LoadStartShardStatus(meta StartShardsReq, fromEpoch Epoch) *StartShardStatus {
 	res := new(StartShardStatus)
-	currentEpoch := meta.Epoch()
+	currentEpoch := meta.CurrentEpoch()
 	res.LatestStartEpoch = currentEpoch + 1
 	shard := (state.StartShard + state.GetShardDelta(meta, currentEpoch)) % SHARD_COUNT
 	res.StartShards = append(res.StartShards, shard)

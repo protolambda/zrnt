@@ -34,6 +34,10 @@ func (state *ValidatorsState) ValidatorCount() uint64 {
 	return uint64(len(state.Validators))
 }
 
+func (state *ValidatorsState) Validator(index ValidatorIndex) *Validator {
+	return state.Validators[index]
+}
+
 func (state *ValidatorsState) Pubkey(index ValidatorIndex) BLSPubkey {
 	return state.Validators[index].Pubkey
 }
@@ -141,7 +145,7 @@ func (state *ValidatorsState) ProcessActivationQueue(activationEpoch Epoch, curr
 }
 
 // Return the total balance sum (1 Gwei minimum to avoid divisions by zero.)
-func (state *ValidatorsState) GetTotalActiveEffectiveBalance(epoch Epoch) (sum Gwei) {
+func (state *ValidatorsState) GetTotalStakedBalance(epoch Epoch) (sum Gwei) {
 	for _, v := range state.Validators {
 		if v.IsActive(epoch) {
 			sum += v.EffectiveBalance

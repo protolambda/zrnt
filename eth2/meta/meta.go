@@ -70,8 +70,8 @@ type ValidatorMeta interface {
 }
 
 type VersioningMeta interface {
-	Slot() Slot
-	Epoch() Epoch
+	CurrentSlot() Slot
+	CurrentEpoch() Epoch
 	PreviousEpoch() Epoch
 	GetDomain(dom BLSDomainType, messageEpoch Epoch) BLSDomain
 }

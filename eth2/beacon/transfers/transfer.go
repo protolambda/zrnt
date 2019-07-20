@@ -45,7 +45,7 @@ type Transfer struct {
 	Recipient ValidatorIndex
 	Amount    Gwei
 	Fee       Gwei
-	Slot      Slot         // Slot at which transfer must be processed
+	Slot      Slot         // CurrentSlot at which transfer must be processed
 	Pubkey    BLSPubkey    // Sender withdrawal pubkey
 	Signature BLSSignature // Signature checked against withdrawal pubkey
 }
@@ -70,13 +70,13 @@ func (transfer *Transfer) Process(meta TransferReq) error {
 	}
 	// A transfer is valid in only one slot
 	// (note: combined with unique transfers in a block, this functions as replay protection)
-	if meta.Slot() != transfer.Slot {
+	if meta.CurrentSlot() != transfer.Slot {
 		return errors.New("transfer is not valid in current slot")
 	}
 	sender := meta.Validator(transfer.Sender)
 	// Sender must be not yet eligible for activation, withdrawn, or transfer balance over MAX_EFFECTIVE_BALANCE
 	if !(sender.ActivationEligibilityEpoch == FAR_FUTURE_EPOCH ||
-		meta.Epoch() >= sender.WithdrawableEpoch ||
+		meta.CurrentEpoch() >= sender.WithdrawableEpoch ||
 		(transfer.Amount+transfer.Fee+MAX_EFFECTIVE_BALANCE) <= senderBalance) {
 		return errors.New("transfer sender is not eligible to make a transfer, it has to be withdrawn, or yet to be activated")
 	}

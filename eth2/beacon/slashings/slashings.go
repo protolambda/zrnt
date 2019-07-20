@@ -24,7 +24,7 @@ func (state *SlashingsState) ResetSlashings(epoch Epoch) {
 
 // Slash the validator with the given index.
 func (state *SlashingsState) SlashValidator(meta SlashingReq, slashedIndex ValidatorIndex, whistleblowerIndex *ValidatorIndex) {
-	currentEpoch := meta.Epoch()
+	currentEpoch := meta.CurrentEpoch()
 	validator := meta.Validator(slashedIndex)
 	meta.InitiateValidatorExit(currentEpoch, slashedIndex)
 	validator.Slashed = true
@@ -52,7 +52,7 @@ type EpochSlashingReq interface {
 }
 
 func (state *SlashingsState) ProcessEpochSlashings(meta EpochSlashingReq) {
-	currentEpoch := meta.Epoch()
+	currentEpoch := meta.CurrentEpoch()
 	totalBalance := meta.GetTotalStakedBalance(currentEpoch)
 
 	epochIndex := currentEpoch % EPOCHS_PER_SLASHINGS_VECTOR

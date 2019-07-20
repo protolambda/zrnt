@@ -65,7 +65,7 @@ type RegistryUpdateReq interface {
 
 func (state *RegistryState) ProcessEpochRegistryUpdates(meta RegistryUpdateReq) {
 	// Process activation eligibility and ejections
-	currentEpoch := meta.Epoch()
+	currentEpoch := meta.CurrentEpoch()
 	for i, v := range state.Validators {
 		if v.ActivationEligibilityEpoch == FAR_FUTURE_EPOCH &&
 			v.EffectiveBalance == MAX_EFFECTIVE_BALANCE {

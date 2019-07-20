@@ -54,7 +54,7 @@ func (state *SlashingsState) ProcessAttesterSlashing(meta AttesterSlashingReq, a
 	indices1 := ValidatorSet(sa1.CustodyBit0Indices).MergeDisjoint(ValidatorSet(sa1.CustodyBit1Indices))
 	indices2 := ValidatorSet(sa2.CustodyBit0Indices).MergeDisjoint(ValidatorSet(sa2.CustodyBit1Indices))
 
-	currentEpoch := meta.Epoch()
+	currentEpoch := meta.CurrentEpoch()
 	// run slashings where applicable
 	indices1.ZigZagJoin(indices2, func(i ValidatorIndex) {
 		if meta.Validator(i).IsSlashable(currentEpoch) {

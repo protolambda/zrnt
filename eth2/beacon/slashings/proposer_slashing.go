@@ -47,7 +47,7 @@ func (state *SlashingsState) ProcessProposerSlashing(meta ProposerSlashingReq, p
 	}
 	proposer := meta.Validator(ps.ProposerIndex)
 	// Check proposer is slashable
-	if !proposer.IsSlashable(meta.Epoch()) {
+	if !proposer.IsSlashable(meta.CurrentEpoch()) {
 		return errors.New("proposer slashing requires proposer to be slashable")
 	}
 	// Signatures are valid

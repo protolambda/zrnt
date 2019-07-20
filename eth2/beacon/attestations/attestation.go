@@ -42,7 +42,7 @@ func (state *AttestationsState) ProcessAttestation(meta AttestationReq, attestat
 	if data.Crosslink.Shard >= SHARD_COUNT {
 		return errors.New("attestation data is invalid, shard out of range")
 	}
-	currentEpoch := meta.Epoch()
+	currentEpoch := meta.CurrentEpoch()
 	previousEpoch := meta.PreviousEpoch()
 
 	if data.Target.Epoch < previousEpoch {
@@ -51,7 +51,7 @@ func (state *AttestationsState) ProcessAttestation(meta AttestationReq, attestat
 		return errors.New("attestation data is invalid, target is in future")
 	}
 
-	currentSlot := meta.Slot()
+	currentSlot := meta.CurrentSlot()
 	attestationSlot := state.GetAttestationSlot(meta, data)
 	if !(currentSlot <= attestationSlot+SLOTS_PER_EPOCH) {
 		return errors.New("attestation slot is too old")

@@ -27,7 +27,7 @@ func (state *AttestationsState) LoadAttesterStatuses(meta AttesterStatusReq) (ou
 	count := meta.ValidatorCount()
 	out = make(AttesterStatuses, count, count)
 
-	currentEpoch := meta.Epoch()
+	currentEpoch := meta.CurrentEpoch()
 	prevEpoch := meta.PreviousEpoch()
 	previousBoundaryBlockRoot := meta.GetBlockRootAtSlot(prevEpoch.GetStartSlot())
 	//currentBoundaryBlockRoot := meta.GetBlockRootAtSlot(currentEpoch.GetStartSlot())

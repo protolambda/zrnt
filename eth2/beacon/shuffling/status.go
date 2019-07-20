@@ -23,7 +23,7 @@ type ShufflingStatus struct {
 func (state *ShufflingState) LoadShufflingStatus(meta ShufflingComputeReq) *ShufflingStatus {
 	return &ShufflingStatus{
 		Previous: state.LoadShufflingEpoch(meta, meta.PreviousEpoch()),
-		Current: state.LoadShufflingEpoch(meta, meta.Epoch()),
+		Current: state.LoadShufflingEpoch(meta, meta.CurrentEpoch()),
 	}
 }
 
@@ -36,7 +36,7 @@ type ShufflingEpoch struct {
 
 func (state *ShufflingState) LoadShufflingEpoch(meta ShufflingComputeReq, epoch Epoch) *ShufflingEpoch {
 	shep := new(ShufflingEpoch)
-	currentEpoch := meta.Epoch()
+	currentEpoch := meta.CurrentEpoch()
 	previousEpoch := meta.PreviousEpoch()
 	nextEpoch := currentEpoch + 1
 

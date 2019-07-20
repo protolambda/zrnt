@@ -23,5 +23,5 @@ type RotShardReq interface {
 }
 
 func (state *ShardRotationState) RotateStartShard(meta RotShardReq) {
-	state.StartShard = (state.StartShard + state.GetShardDelta(meta, meta.Epoch())) % SHARD_COUNT
+	state.StartShard = (state.StartShard + state.GetShardDelta(meta, meta.CurrentEpoch())) % SHARD_COUNT
 }

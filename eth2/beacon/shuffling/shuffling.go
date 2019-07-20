@@ -13,7 +13,7 @@ type ShufflingState struct {
 	LatestActiveIndexRoots [EPOCHS_PER_HISTORICAL_VECTOR]Root
 }
 
-// Epoch is expected to be between (current_epoch - EPOCHS_PER_HISTORICAL_VECTOR + ACTIVATION_EXIT_DELAY, current_epoch + ACTIVATION_EXIT_DELAY].
+// CurrentEpoch is expected to be between (current_epoch - EPOCHS_PER_HISTORICAL_VECTOR + ACTIVATION_EXIT_DELAY, current_epoch + ACTIVATION_EXIT_DELAY].
 func (state *ShufflingState) GetActiveIndexRoot(epoch Epoch) Root {
 	return state.LatestActiveIndexRoots[epoch%EPOCHS_PER_HISTORICAL_VECTOR]
 }
@@ -45,9 +45,9 @@ type ProposingReq interface {
 
 // Return the beacon proposer index for the current slot
 func (state *ShufflingState) GetBeaconProposerIndex(meta ProposingReq) ValidatorIndex {
-	epoch := meta.Epoch()
+	epoch := meta.CurrentEpoch()
 	committeesPerSlot := meta.GetCommitteeCount(epoch) / uint64(SLOTS_PER_EPOCH)
-	offset := Shard(committeesPerSlot) * Shard(meta.Slot()%SLOTS_PER_EPOCH)
+	offset := Shard(committeesPerSlot) * Shard(meta.CurrentSlot()%SLOTS_PER_EPOCH)
 	shard := (meta.GetStartShard(epoch) + offset) % SHARD_COUNT
 	firstCommittee := meta.GetCrosslinkCommittee(epoch, shard)
 	seed := state.GetSeed(meta, epoch)

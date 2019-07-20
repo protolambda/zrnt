@@ -25,7 +25,7 @@ func (state *FinalityState) CurrentJustified() Checkpoint {
 }
 
 func (state *FinalityState) Justify(meta VersioningMeta, checkpoint Checkpoint) {
-	epochsAgo := meta.Epoch() - checkpoint.Epoch
+	epochsAgo := meta.CurrentEpoch() - checkpoint.Epoch
 	state.CurrentJustifiedCheckpoint = checkpoint
 	state.JustificationBits[0] |= 1 << epochsAgo
 }

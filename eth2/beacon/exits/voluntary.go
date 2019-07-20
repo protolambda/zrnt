@@ -34,7 +34,7 @@ type VoluntaryExit struct {
 }
 
 func ProcessVoluntaryExit(meta VoluntaryExitReq, exit *VoluntaryExit) error {
-	currentEpoch := meta.Epoch()
+	currentEpoch := meta.CurrentEpoch()
 	if !meta.IsValidIndex(exit.ValidatorIndex) {
 		return errors.New("invalid exit validator index")
 	}
@@ -64,6 +64,6 @@ func ProcessVoluntaryExit(meta VoluntaryExitReq, exit *VoluntaryExit) error {
 		return errors.New("voluntary exit signature could not be verified")
 	}
 	// Initiate exit
-	meta.InitiateValidatorExit(meta.Epoch(), exit.ValidatorIndex)
+	meta.InitiateValidatorExit(meta.CurrentEpoch(), exit.ValidatorIndex)
 	return nil
 }

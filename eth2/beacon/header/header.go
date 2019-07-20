@@ -30,7 +30,7 @@ type BeaconBlockHeader struct {
 
 func (header *BeaconBlockHeader) Process(meta BlockHeaderReq) error {
 	// Verify that the slots match
-	if header.Slot != meta.Slot() {
+	if header.Slot != meta.CurrentSlot() {
 		return errors.New("slot of block does not match slot of state")
 	}
 	// Verify that the parent matches
@@ -48,7 +48,7 @@ func (header *BeaconBlockHeader) Process(meta BlockHeaderReq) error {
 		meta.Pubkey(proposerIndex),
 		ssz.SigningRoot(header, BeaconBlockHeaderSSZ),
 		header.Signature,
-		meta.GetDomain(DOMAIN_BEACON_PROPOSER, meta.Epoch())) {
+		meta.GetDomain(DOMAIN_BEACON_PROPOSER, meta.CurrentEpoch())) {
 		return errors.New("block signature invalid")
 	}
 

@@ -13,7 +13,7 @@ import (
 // Verify that outstanding deposits are processed up to the maximum number of deposits, then process all in order.
 func ProcessDeposits(meta DepositReq, ops []Deposit) error {
 	depositCount := DepositIndex(len(ops))
-	expectedCount := meta.DepositCount() - meta.DepositIndex()
+	expectedCount := meta.DepCount() - meta.DepIndex()
 	if expectedCount > MAX_DEPOSITS {
 		expectedCount = MAX_DEPOSITS
 	}
@@ -42,7 +42,7 @@ type DepositReq interface {
 
 // Process an Eth1 deposit, registering a validator or increasing its balance.
 func ProcessDeposit(meta DepositReq, dep *Deposit) error {
-	depositIndex := meta.DepositIndex()
+	depositIndex := meta.DepIndex()
 
 	// Verify the Merkle branch
 	if !merkle.VerifyMerkleBranch(
@@ -50,7 +50,7 @@ func ProcessDeposit(meta DepositReq, dep *Deposit) error {
 		dep.Proof[:],
 		DEPOSIT_CONTRACT_TREE_DEPTH+1, // Add 1 for the `List` length mix-in
 		uint64(depositIndex),
-		meta.DepositRoot()) {
+		meta.DepRoot()) {
 		return fmt.Errorf("deposit %d merkle proof failed to be verified", depositIndex)
 	}
 

@@ -77,14 +77,18 @@ type VersioningMeta interface {
 }
 
 type Eth1Meta interface {
-	DepositIndex() DepositIndex
-	DepositCount() DepositIndex
-	DepositRoot() Root
+	DepIndex() DepositIndex
+	DepCount() DepositIndex
+	DepRoot() Root
+}
+
+type OnboardMeta interface {
+	AddNewValidator(pubkey BLSPubkey, withdrawalCreds Root, balance Gwei)
 }
 
 type DepositMeta interface {
 	BalanceMeta
-	AddNewValidator(pubkey BLSPubkey, withdrawalCreds Root, balance Gwei)
+	OnboardMeta
 	IncrementDepositIndex()
 }
 

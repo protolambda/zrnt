@@ -21,6 +21,22 @@ type Eth1State struct {
 	DepositIndex  DepositIndex
 }
 
+func (state *Eth1State) DepIndex() DepositIndex {
+	return state.DepositIndex
+}
+
+func (state *Eth1State) DepCount() DepositIndex {
+	return state.Eth1Data.DepositCount
+}
+
+func (state *Eth1State) DepRoot() Root {
+	return state.Eth1Data.DepositRoot
+}
+
+func (state *Eth1State) IncrementDepositIndex() {
+	state.DepositIndex += 1
+}
+
 // Done at the end of every voting period
 func (state *Eth1State) ResetEth1Votes() {
 	state.Eth1DataVotes = make([]Eth1Data, 0)

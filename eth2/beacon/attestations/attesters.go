@@ -5,9 +5,17 @@ import (
 	. "github.com/protolambda/zrnt/eth2/meta"
 )
 
+type AttesterStatuses []AttesterStatus
+
+func (ats AttesterStatuses) GetAttesterStatus(index ValidatorIndex) AttesterStatus {
+	return ats[index]
+}
+
 type AttesterStatusReq interface {
 	VersioningMeta
 	RegistrySizeMeta
+	CrosslinkTimingMeta
+	CommitteeCountMeta
 	CrosslinkCommitteeMeta
 	EffectiveBalanceMeta
 	HistoryMeta
@@ -15,9 +23,9 @@ type AttesterStatusReq interface {
 	ActiveIndicesMeta
 }
 
-func (state *AttestationsState) LoadAttesterStatuses(meta AttesterStatusReq) (out []AttesterStatus) {
+func (state *AttestationsState) LoadAttesterStatuses(meta AttesterStatusReq) (out AttesterStatuses) {
 	count := meta.ValidatorCount()
-	out = make([]AttesterStatus, count, count)
+	out = make(AttesterStatuses, count, count)
 
 	currentEpoch := meta.Epoch()
 	prevEpoch := meta.PreviousEpoch()

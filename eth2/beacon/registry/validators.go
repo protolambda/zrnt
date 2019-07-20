@@ -26,8 +26,16 @@ type ValidatorsState struct {
 	Validators ValidatorRegistry
 }
 
-func (state *ValidatorsState) IsValidatorIndex(index ValidatorIndex) bool {
+func (state *ValidatorsState) IsValidIndex(index ValidatorIndex) bool {
 	return index < ValidatorIndex(len(state.Validators))
+}
+
+func (state *ValidatorsState) ValidatorCount() uint64 {
+	return uint64(len(state.Validators))
+}
+
+func (state *ValidatorsState) Pubkey(index ValidatorIndex) BLSPubkey {
+	return state.Validators[index].Pubkey
 }
 
 func (state *ValidatorsState) ValidatorIndex(pubkey BLSPubkey) (index ValidatorIndex, exists bool) {
@@ -127,6 +135,10 @@ func (state *ValidatorsState) GetTotalActiveEffectiveBalance(epoch Epoch) (sum G
 		return 1
 	}
 	return sum
+}
+
+func (state *ValidatorsState) EffectiveBalance(index ValidatorIndex) Gwei {
+	return state.Validators[index].EffectiveBalance
 }
 
 // Return the combined effective balance of an array of validators. (1 Gwei minimum to avoid divisions by zero.)

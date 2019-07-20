@@ -66,6 +66,22 @@ func (state *ValidatorsState) GetActiveValidatorCount(epoch Epoch) (count uint64
 	return
 }
 
+func (state *ValidatorsState) IsSlashed(index ValidatorIndex) bool {
+	return state.Validators[index].Slashed
+}
+
+// Filters a slice in-place. Only keeps the unslashed validators.
+// If input is sorted, then the result will be sorted.
+func (state *ValidatorsState) FilterUnslashed(indices []ValidatorIndex) []ValidatorIndex {
+	unslashed := indices[:0]
+	for _, x := range indices {
+		if !state.Validators[x].Slashed {
+			unslashed = append(unslashed, x)
+		}
+	}
+	return unslashed
+}
+
 func (state *ValidatorsState) GetIndicesToSlash(withdrawal Epoch) (out []ValidatorIndex) {
 	for i, v := range state.Validators {
 		if v.Slashed && withdrawal == v.WithdrawableEpoch {
@@ -150,16 +166,4 @@ func (state *ValidatorsState) SumEffectiveBalanceOf(indices []ValidatorIndex) (s
 		return 1
 	}
 	return sum
-}
-
-// Filters a slice in-place. Only keeps the unslashed validators.
-// If input is sorted, then the result will be sorted.
-func (state *ValidatorsState) FilterUnslashed(indices []ValidatorIndex) []ValidatorIndex {
-	unslashed := indices[:0]
-	for _, x := range indices {
-		if !state.Validators[x].Slashed {
-			unslashed = append(unslashed, x)
-		}
-	}
-	return unslashed
 }

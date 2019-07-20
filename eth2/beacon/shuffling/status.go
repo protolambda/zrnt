@@ -10,6 +10,7 @@ type ShufflingComputeReq interface {
 	VersioningMeta
 	RandomnessMeta
 	ActiveIndicesMeta
+	CommitteeCountMeta
 	CrosslinkTimingMeta
 }
 
@@ -50,11 +51,14 @@ func (state *ShufflingState) LoadShufflingEpoch(meta ShufflingComputeReq, epoch 
 
 	validatorCount := uint64(len(activeIndices))
 	committeeCount := meta.GetCommitteeCount(epoch)
+	if committeeCount > uint64(SHARD_COUNT) {
+		panic("too many committees")
+	}
 	startShard := meta.GetStartShard(epoch)
-	for shard := Shard(0); shard < SHARD_COUNT; shard++ {
-		index := uint64((shard + SHARD_COUNT - startShard) % SHARD_COUNT)
-		startOffset := (validatorCount * index) / committeeCount
-		endOffset := (validatorCount * (index + 1)) / committeeCount
+	for i := uint64(0); i < committeeCount; i++ {
+		shard := startShard + Shard(i)
+		startOffset := (validatorCount * i) / committeeCount
+		endOffset := (validatorCount * (i + 1)) / committeeCount
 		committee := shep.Shuffling[startOffset:endOffset]
 		shep.Committees[shard] = committee
 	}

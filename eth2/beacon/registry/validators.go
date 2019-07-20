@@ -18,24 +18,30 @@ var RegistryIndicesSSZ = zssz.GetSSZ((*RegistryIndices)(nil))
 
 type ValidatorRegistry []*Validator
 
-func (vr ValidatorRegistry) IsValidatorIndex(index ValidatorIndex) bool {
-	return index < ValidatorIndex(len(vr))
+func (_ *ValidatorRegistry) Limit() uint64 {
+	return VALIDATOR_REGISTRY_LIMIT
 }
 
-func (vr ValidatorRegistry) ValidatorIndex(pubkey BLSPubkey) (index ValidatorIndex, exists bool) {
-	valIndex := ValidatorIndexMarker
-	for i, v := range vr {
+type ValidatorsState struct {
+	Validators ValidatorRegistry
+}
+
+func (state *ValidatorsState) IsValidatorIndex(index ValidatorIndex) bool {
+	return index < ValidatorIndex(len(state.Validators))
+}
+
+func (state *ValidatorsState) ValidatorIndex(pubkey BLSPubkey) (index ValidatorIndex, exists bool) {
+	for i, v := range state.Validators {
 		if v.Pubkey == pubkey {
-			valIndex = ValidatorIndex(i)
-			break
+			return ValidatorIndex(i), true
 		}
 	}
-	return valIndex, valIndex != ValidatorIndexMarker
+	return ValidatorIndexMarker, false
 }
 
-func (vr ValidatorRegistry) GetActiveValidatorIndices(epoch Epoch) RegistryIndices {
-	res := make([]ValidatorIndex, 0, len(vr))
-	for i, v := range vr {
+func (state *ValidatorsState) GetActiveValidatorIndices(epoch Epoch) RegistryIndices {
+	res := make([]ValidatorIndex, 0, len(state.Validators))
+	for i, v := range state.Validators {
 		if v.IsActive(epoch) {
 			res = append(res, ValidatorIndex(i))
 		}
@@ -43,8 +49,8 @@ func (vr ValidatorRegistry) GetActiveValidatorIndices(epoch Epoch) RegistryIndic
 	return res
 }
 
-func (vr ValidatorRegistry) GetActiveValidatorCount(epoch Epoch) (count uint64) {
-	for _, v := range vr {
+func (state *ValidatorsState) GetActiveValidatorCount(epoch Epoch) (count uint64) {
+	for _, v := range state.Validators {
 		if v.IsActive(epoch) {
 			count++
 		}
@@ -52,8 +58,8 @@ func (vr ValidatorRegistry) GetActiveValidatorCount(epoch Epoch) (count uint64) 
 	return
 }
 
-func (vr ValidatorRegistry) GetIndicesToSlash(withdrawal Epoch) (out []ValidatorIndex) {
-	for i, v := range vr {
+func (state *ValidatorsState) GetIndicesToSlash(withdrawal Epoch) (out []ValidatorIndex) {
+	for i, v := range state.Validators {
 		if v.Slashed && withdrawal == v.WithdrawableEpoch {
 			out = append(out, ValidatorIndex(i))
 		}
@@ -61,34 +67,34 @@ func (vr ValidatorRegistry) GetIndicesToSlash(withdrawal Epoch) (out []Validator
 	return
 }
 
-func (vr ValidatorRegistry) GetChurnLimit(epoch Epoch) uint64 {
-	return math.MaxU64(MIN_PER_EPOCH_CHURN_LIMIT, vr.GetActiveValidatorCount(epoch)/CHURN_LIMIT_QUOTIENT)
+func (state *ValidatorsState) GetChurnLimit(epoch Epoch) uint64 {
+	return math.MaxU64(MIN_PER_EPOCH_CHURN_LIMIT, state.GetActiveValidatorCount(epoch)/CHURN_LIMIT_QUOTIENT)
 }
 
 
-func (vr ValidatorRegistry) ExitQueueEnd(epoch Epoch) Epoch {
+func (state *ValidatorsState) ExitQueueEnd(epoch Epoch) Epoch {
 	// Compute exit queue epoch
 	exitQueueEnd := epoch.ComputeActivationExitEpoch()
-	for _, v := range vr {
+	for _, v := range state.Validators {
 		if v.ExitEpoch != FAR_FUTURE_EPOCH && v.ExitEpoch > exitQueueEnd {
 			exitQueueEnd = v.ExitEpoch
 		}
 	}
 	exitQueueChurn := uint64(0)
-	for _, v := range vr {
+	for _, v := range state.Validators {
 		if v.ExitEpoch == exitQueueEnd {
 			exitQueueChurn++
 		}
 	}
-	if exitQueueChurn >= vr.GetChurnLimit(epoch) {
+	if exitQueueChurn >= state.GetChurnLimit(epoch) {
 		exitQueueEnd++
 	}
 	return exitQueueEnd
 }
 
-func (vr ValidatorRegistry) ProcessActivationQueue(activationEpoch Epoch, currentEpoch Epoch) {
+func (state *ValidatorsState) ProcessActivationQueue(activationEpoch Epoch, currentEpoch Epoch) {
 	activationQueue := make([]*Validator, 0)
-	for _, v := range vr {
+	for _, v := range state.Validators {
 		if v.ActivationEligibilityEpoch != FAR_FUTURE_EPOCH &&
 			v.ActivationEpoch >= activationEpoch {
 			activationQueue = append(activationQueue, v)
@@ -100,7 +106,7 @@ func (vr ValidatorRegistry) ProcessActivationQueue(activationEpoch Epoch, curren
 	})
 	// Dequeued validators for activation up to churn limit (without resetting activation epoch)
 	queueLen := uint64(len(activationQueue))
-	if churnLimit := vr.GetChurnLimit(currentEpoch); churnLimit < queueLen {
+	if churnLimit := state.GetChurnLimit(currentEpoch); churnLimit < queueLen {
 		queueLen = churnLimit
 	}
 	for _, v := range activationQueue[:queueLen] {
@@ -111,8 +117,8 @@ func (vr ValidatorRegistry) ProcessActivationQueue(activationEpoch Epoch, curren
 }
 
 // Return the total balance sum (1 Gwei minimum to avoid divisions by zero.)
-func (vr ValidatorRegistry) GetTotalActiveEffectiveBalance(epoch Epoch) (sum Gwei) {
-	for _, v := range vr {
+func (state *ValidatorsState) GetTotalActiveEffectiveBalance(epoch Epoch) (sum Gwei) {
+	for _, v := range state.Validators {
 		if v.IsActive(epoch) {
 			sum += v.EffectiveBalance
 		}
@@ -124,9 +130,9 @@ func (vr ValidatorRegistry) GetTotalActiveEffectiveBalance(epoch Epoch) (sum Gwe
 }
 
 // Return the combined effective balance of an array of validators. (1 Gwei minimum to avoid divisions by zero.)
-func (vr ValidatorRegistry) GetTotalEffectiveBalanceOf(indices []ValidatorIndex) (sum Gwei) {
+func (state *ValidatorsState) SumEffectiveBalanceOf(indices []ValidatorIndex) (sum Gwei) {
 	for _, vIndex := range indices {
-		sum += vr[vIndex].EffectiveBalance
+		sum += state.Validators[vIndex].EffectiveBalance
 	}
 	if sum == 0 {
 		return 1
@@ -136,10 +142,10 @@ func (vr ValidatorRegistry) GetTotalEffectiveBalanceOf(indices []ValidatorIndex)
 
 // Filters a slice in-place. Only keeps the unslashed validators.
 // If input is sorted, then the result will be sorted.
-func (vr ValidatorRegistry) FilterUnslashed(indices []ValidatorIndex) []ValidatorIndex {
+func (state *ValidatorsState) FilterUnslashed(indices []ValidatorIndex) []ValidatorIndex {
 	unslashed := indices[:0]
 	for _, x := range indices {
-		if !vr[x].Slashed {
+		if !state.Validators[x].Slashed {
 			unslashed = append(unslashed, x)
 		}
 	}

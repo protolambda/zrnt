@@ -5,6 +5,7 @@ import (
 	. "github.com/protolambda/zrnt/eth2/core"
 	. "github.com/protolambda/zrnt/eth2/meta"
 	. "github.com/protolambda/zrnt/eth2/util/hashing"
+	"github.com/protolambda/zrnt/eth2/util/math"
 )
 
 // Randomness and committees
@@ -36,7 +37,9 @@ func (state *ShufflingState) GetSeed(meta RandomnessMeta, epoch Epoch) Root {
 type ProposingReq interface {
 	VersioningMeta
 	CrosslinkCommitteeMeta
-	CompactValidatorMeta
+	EffectiveBalanceMeta
+	CommitteeCountMeta
+	CrosslinkTimingMeta
 	RandomnessMeta
 }
 
@@ -63,4 +66,19 @@ func (state *ShufflingState) GetBeaconProposerIndex(meta ProposingReq) Validator
 		}
 	}
 	return 0
+}
+
+type CommitteeCountCalc struct {
+	ActiveValidatorCountMeta
+}
+
+// Return the number of committees in one epoch.
+func (meta CommitteeCountCalc) GetCommitteeCount(epoch Epoch) uint64 {
+	activeValidatorCount := meta.GetActiveValidatorCount(epoch)
+	committeesPerSlot := math.MaxU64(1,
+		math.MinU64(
+			uint64(SHARD_COUNT)/uint64(SLOTS_PER_EPOCH),
+			activeValidatorCount/uint64(SLOTS_PER_EPOCH)/TARGET_COMMITTEE_SIZE,
+		))
+	return committeesPerSlot * uint64(SLOTS_PER_EPOCH)
 }

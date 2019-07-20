@@ -20,7 +20,7 @@ type CrosslinkingStatus struct {
 	Current  *CrosslinkingEpoch
 }
 
-func (state *AttestationsState) Load(meta CrosslinkAttestingReq) *CrosslinkingStatus {
+func (state *AttestationsState) LoadCrosslinkingStatus(meta CrosslinkAttestingReq) *CrosslinkingStatus {
 	return &CrosslinkingStatus{
 		Previous: state.LoadCrosslinkEpoch(meta, meta.PreviousEpoch()),
 		Current: state.LoadCrosslinkEpoch(meta, meta.Epoch()),
@@ -79,11 +79,11 @@ func (state *AttestationsState) LoadCrosslinkEpoch(meta CrosslinkAttestingReq, e
 	for k, v := range crosslinkAttesters {
 		shard := k.Shard
 		committee := meta.GetCrosslinkCommittee(epoch, shard)
-		participants = participants[:0]                         // reset old slice (re-used in for loop)
-		participants = append(participants, committee...)       // add committee indices
-		participants = v.FilterParticipants(participants)       // only keep the participants
-		participants = meta.FilterUnslashed(participants)       // and only those who are not slashed
-		weight := meta.GetTotalEffectiveBalanceOf(participants) // and get their weight
+		participants = participants[:0]                    // reset old slice (re-used in for loop)
+		participants = append(participants, committee...)  // add committee indices
+		participants = v.FilterParticipants(participants)  // only keep the participants
+		participants = meta.FilterUnslashed(participants)  // and only those who are not slashed
+		weight := meta.SumEffectiveBalanceOf(participants) // and get their weight
 
 		currentWinner := &winningCrosslinks[shard]
 		isNewWinner := currentWinner.link == nil

@@ -27,7 +27,7 @@ type PubkeyMeta interface {
 
 type EffectiveBalanceMeta interface {
 	EffectiveBalance(index ValidatorIndex) Gwei
-	GetTotalEffectiveBalanceOf(indices []ValidatorIndex) (sum Gwei)
+	SumEffectiveBalanceOf(indices []ValidatorIndex) (sum Gwei)
 }
 
 type FinalityMeta interface {
@@ -117,12 +117,12 @@ type ActivationExitMeta interface {
 	ExitQueueEnd(epoch Epoch) Epoch
 }
 
-type ActiveIndicesMeta interface {
-	GetActiveValidatorIndices(epoch Epoch) []ValidatorIndex
+type ActiveValidatorCountMeta interface {
+	GetActiveValidatorCount(epoch Epoch) uint64
 }
 
-type ShardDeltaMeta interface {
-	GetShardDelta(epoch Epoch) Shard
+type ActiveIndicesMeta interface {
+	GetActiveValidatorIndices(epoch Epoch) []ValidatorIndex
 }
 
 type ActiveIndexRootMeta interface {
@@ -132,13 +132,15 @@ type ActiveIndexRootMeta interface {
 	// ssz.HashTreeRoot(indices, RegistryIndicesSSZ)
 }
 
-type CrosslinkTimingMeta interface {
-	GetStartShard(epoch Epoch) Shard
+type CommitteeCountMeta interface {
 	GetCommitteeCount(epoch Epoch) uint64
 }
 
+type CrosslinkTimingMeta interface {
+	GetStartShard(epoch Epoch) Shard
+}
+
 type CrosslinkCommitteeMeta interface {
-	CrosslinkTimingMeta
 	GetCrosslinkCommittee(epoch Epoch, shard Shard) []ValidatorIndex
 }
 

@@ -8,8 +8,8 @@ import (
 
 // Validator registry
 type RegistryState struct {
-	Validators ValidatorRegistry
-	Balances   Balances
+	ValidatorsState
+	BalancesState
 }
 
 // Update effective balances with hysteresis
@@ -35,7 +35,7 @@ func (state *RegistryState) InitiateValidatorExit(currentEpoch Epoch, index Vali
 	}
 
 	// Set validator exit epoch and withdrawable epoch
-	validator.ExitEpoch = state.Validators.ExitQueueEnd(currentEpoch)
+	validator.ExitEpoch = state.ExitQueueEnd(currentEpoch)
 	validator.WithdrawableEpoch = validator.ExitEpoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY
 }
 
@@ -78,5 +78,5 @@ func (state *RegistryState) ProcessEpochRegistryUpdates(meta RegistryUpdateReq) 
 	}
 	// Queue validators eligible for activation and not dequeued for activation prior to finalized epoch
 	activationEpoch := meta.Finalized().Epoch.ComputeActivationExitEpoch()
-	state.Validators.ProcessActivationQueue(activationEpoch, currentEpoch)
+	state.ProcessActivationQueue(activationEpoch, currentEpoch)
 }

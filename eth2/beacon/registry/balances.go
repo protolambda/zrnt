@@ -6,26 +6,38 @@ import (
 
 type Balances []Gwei
 
-func (bals Balances) IncreaseBalance(index ValidatorIndex, delta Gwei) {
-	bals[index] += delta
+func (_ *Balances) Limit() uint64 {
+	return VALIDATOR_REGISTRY_LIMIT
 }
 
-func (bals Balances) DecreaseBalance(index ValidatorIndex, delta Gwei) {
-	currentBalance := bals[index]
+type BalancesState struct {
+	Balances Balances
+}
+
+func (state *BalancesState) GetBalance(index ValidatorIndex) Gwei {
+	return state.Balances[index]
+}
+
+func (state *BalancesState) IncreaseBalance(index ValidatorIndex, delta Gwei) {
+	state.Balances[index] += delta
+}
+
+func (state *BalancesState) DecreaseBalance(index ValidatorIndex, delta Gwei) {
+	currentBalance := state.Balances[index]
 	// prevent underflow, clip to 0
 	if currentBalance >= delta {
-		bals[index] -= delta
+		state.Balances[index] -= delta
 	} else {
-		bals[index] = 0
+		state.Balances[index] = 0
 	}
 }
 
-func (bals Balances) ApplyDeltas(deltas *Deltas) {
-	if len(deltas.Penalties) != len(bals) || len(deltas.Rewards) != len(bals) {
+func (state *BalancesState) ApplyDeltas(deltas *Deltas) {
+	if len(deltas.Penalties) != len(state.Balances) || len(deltas.Rewards) != len(state.Balances) {
 		panic("cannot apply deltas to balances list with different length")
 	}
-	for i := ValidatorIndex(0); i < ValidatorIndex(len(bals)); i++ {
-		bals.IncreaseBalance(i, deltas.Rewards[i])
-		bals.DecreaseBalance(i, deltas.Penalties[i])
+	for i := ValidatorIndex(0); i < ValidatorIndex(len(state.Balances)); i++ {
+		state.IncreaseBalance(i, deltas.Rewards[i])
+		state.DecreaseBalance(i, deltas.Penalties[i])
 	}
 }

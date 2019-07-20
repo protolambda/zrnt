@@ -44,6 +44,8 @@ type CrosslinkDeltasReq interface {
 	StakingMeta
 	EffectiveBalanceMeta
 	CrosslinkCommitteeMeta
+	CommitteeCountMeta
+	CrosslinkTimingMeta
 	WinningCrosslinkMeta
 }
 
@@ -66,8 +68,8 @@ func (state *CrosslinksState) CrosslinksDeltas(meta CrosslinkDeltasReq) *Deltas 
 		sort.Sort(committee)
 
 		_, attestingIndices := meta.GetWinningCrosslinkAndAttesters(epoch, shard)
-		attestingBalance := meta.GetTotalEffectiveBalanceOf(attestingIndices)
-		totalBalance := meta.GetTotalEffectiveBalanceOf(committee)
+		attestingBalance := meta.SumEffectiveBalanceOf(attestingIndices)
+		totalBalance := meta.SumEffectiveBalanceOf(committee)
 
 		// reward/penalize using a zig-zag merge join.
 		// ----------------------------------------------------
@@ -92,8 +94,10 @@ func (state *CrosslinksState) CrosslinksDeltas(meta CrosslinkDeltasReq) *Deltas 
 type CrosslinkingReq interface {
 	VersioningMeta
 	CrosslinkCommitteeMeta
-	EffectiveBalanceMeta
+	CommitteeCountMeta
+	CrosslinkTimingMeta
 	WinningCrosslinkMeta
+	EffectiveBalanceMeta
 	StakingMeta
 }
 
@@ -108,8 +112,8 @@ func (state *CrosslinksState) ProcessEpochCrosslinks(meta CrosslinkingReq) {
 			shard := (startShard + Shard(offset)) % SHARD_COUNT
 			crosslinkCommittee := meta.GetCrosslinkCommittee(epoch, shard)
 			winningCrosslink, attestingIndices := meta.GetWinningCrosslinkAndAttesters(epoch, shard)
-			participatingBalance := meta.GetTotalEffectiveBalanceOf(attestingIndices)
-			totalBalance := meta.GetTotalEffectiveBalanceOf(crosslinkCommittee)
+			participatingBalance := meta.SumEffectiveBalanceOf(attestingIndices)
+			totalBalance := meta.SumEffectiveBalanceOf(crosslinkCommittee)
 			if 3*participatingBalance >= 2*totalBalance {
 				state.CurrentCrosslinks[shard] = *winningCrosslink
 			}

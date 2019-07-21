@@ -112,6 +112,11 @@ type HistoryUpdateMeta interface {
 	UpdateHistoricalRoots()
 }
 
+type SeedMeta interface {
+	// Retrieve the seed for beacon proposer indices.
+	GetSeed(epoch Epoch) Root
+}
+
 type ProposingMeta interface {
 	GetBeaconProposerIndex() ValidatorIndex
 }
@@ -137,6 +142,7 @@ type ActiveIndexRootMeta interface {
 }
 
 type CommitteeCountMeta interface {
+	// Amount of committees per epoch. Minimum is SLOTS_PER_EPOCH
 	GetCommitteeCount(epoch Epoch) uint64
 }
 

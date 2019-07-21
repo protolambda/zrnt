@@ -1,6 +1,7 @@
 package shuffling
 
 import (
+	. "github.com/protolambda/zrnt/eth2/beacon/seeding"
 	. "github.com/protolambda/zrnt/eth2/core"
 	. "github.com/protolambda/zrnt/eth2/meta"
 	"github.com/protolambda/zrnt/eth2/util/shuffle"
@@ -44,7 +45,9 @@ func (state *ShufflingState) LoadShufflingEpoch(meta ShufflingComputeReq, epoch 
 		panic("could not compute shuffling for out of range epoch")
 	}
 
-	seed := state.GetSeed(meta, epoch)
+	seeder := SeedCalc{RandMeta: meta, ActiveRootMeta: state}
+
+	seed := seeder.GetSeed(epoch)
 	activeIndices := meta.GetActiveValidatorIndices(epoch)
 	shuffle.UnshuffleList(activeIndices, seed)
 	shep.Shuffling = activeIndices

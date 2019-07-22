@@ -11,7 +11,7 @@ import (
 
 type AttestationFeature struct {
 	State *AttestationsState
-	Meta interface {
+	Meta  interface {
 		meta.VersioningMeta
 		meta.CrosslinkCommitteeMeta
 		meta.CrosslinkTimingMeta

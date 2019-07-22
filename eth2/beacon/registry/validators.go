@@ -103,7 +103,6 @@ func (state *ValidatorsState) GetChurnLimit(epoch Epoch) uint64 {
 	return math.MaxU64(MIN_PER_EPOCH_CHURN_LIMIT, state.GetActiveValidatorCount(epoch)/CHURN_LIMIT_QUOTIENT)
 }
 
-
 func (state *ValidatorsState) ExitQueueEnd(epoch Epoch) Epoch {
 	// Compute exit queue epoch
 	exitQueueEnd := epoch.ComputeActivationExitEpoch()

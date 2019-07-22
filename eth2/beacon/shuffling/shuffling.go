@@ -47,7 +47,7 @@ func (f *ShufflingFeature) LoadShufflingStatus() *ShufflingStatus {
 // With a high amount of shards, or low amount of validators,
 // some shards may not have a committee this epoch.
 type ShufflingEpoch struct {
-	Epoch Epoch
+	Epoch      Epoch
 	Shuffling  []ValidatorIndex              // the active validator indices, shuffled into their committee
 	Committees [SHARD_COUNT][]ValidatorIndex // slices of Shuffling, 1 per slot. Committee can be nil slice.
 }

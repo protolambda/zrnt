@@ -9,7 +9,7 @@ import (
 )
 
 type EpochProposerIndices struct {
-	Epoch Epoch
+	Epoch           Epoch
 	ProposerIndices [SLOTS_PER_EPOCH]ValidatorIndex
 }
 
@@ -18,7 +18,7 @@ func (state *EpochProposerIndices) GetBeaconProposerIndex(slot Slot) ValidatorIn
 		panic(fmt.Errorf("slot %d not within range", slot))
 	}
 	start := state.Epoch.GetStartSlot()
-	return state.ProposerIndices[slot - start]
+	return state.ProposerIndices[slot-start]
 }
 
 type ProposingFeature struct {

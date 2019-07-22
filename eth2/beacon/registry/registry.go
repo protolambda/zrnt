@@ -59,7 +59,7 @@ func (state *RegistryState) AddNewValidator(pubkey BLSPubkey, withdrawalCreds Ro
 
 type RegistryFeature struct {
 	State *RegistryState
-	Meta interface {
+	Meta  interface {
 		meta.VersioningMeta
 		meta.FinalityMeta
 		meta.ActivationExitMeta

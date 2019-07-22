@@ -33,7 +33,7 @@ var RandaoEpochSSZ = zssz.GetSSZ((*Epoch)(nil))
 
 type RandaoFeature struct {
 	State *RandaoState
-	Meta interface {
+	Meta  interface {
 		meta.VersioningMeta
 		meta.ProposingMeta
 		meta.PubkeyMeta

@@ -1,6 +1,6 @@
 package compact
 
-import	. "github.com/protolambda/zrnt/eth2/core"
+import . "github.com/protolambda/zrnt/eth2/core"
 
 type CompactValidator uint64
 

@@ -9,7 +9,7 @@ import (
 
 type CrosslinkingFeature struct {
 	State *AttestationsState
-	Meta interface {
+	Meta  interface {
 		meta.VersioningMeta
 		meta.CrosslinkMeta
 		meta.EffectiveBalanceMeta
@@ -124,4 +124,3 @@ func (f *CrosslinkingFeature) LoadCrosslinkEpoch(epoch Epoch) *CrosslinkingEpoch
 	}
 	return crep
 }
-

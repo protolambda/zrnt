@@ -26,7 +26,7 @@ func (state *FinalityState) CurrentJustified() Checkpoint {
 
 type JustificationFeature struct {
 	State *FinalityState
-	Meta interface {
+	Meta  interface {
 		meta.VersioningMeta
 		meta.HistoryMeta
 		meta.StakingMeta

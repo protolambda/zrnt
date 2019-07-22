@@ -42,7 +42,7 @@ func (state *CrosslinksState) GetPreviousCrosslink(shard Shard) *Crosslink {
 
 type CrosslinksFeature struct {
 	State *CrosslinksState
-	Meta interface {
+	Meta  interface {
 		meta.VersioningMeta
 		meta.RegistrySizeMeta
 		meta.StakingMeta

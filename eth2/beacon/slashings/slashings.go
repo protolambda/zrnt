@@ -16,7 +16,7 @@ func (state *SlashingsState) ResetSlashings(epoch Epoch) {
 
 type SlashingFeature struct {
 	State *SlashingsState
-	Meta interface {
+	Meta  interface {
 		meta.VersioningMeta
 		meta.ValidatorMeta
 		meta.ProposingMeta
@@ -58,7 +58,7 @@ func (f *SlashingFeature) ProcessEpochSlashings() {
 	// Compute slashed balances in the current epoch
 	slashings := f.State.Slashings[(epochIndex+1)%EPOCHS_PER_SLASHINGS_VECTOR]
 
-	withdrawableEpoch := currentEpoch+(EPOCHS_PER_SLASHINGS_VECTOR/2)
+	withdrawableEpoch := currentEpoch + (EPOCHS_PER_SLASHINGS_VECTOR / 2)
 
 	for _, index := range f.Meta.GetIndicesToSlash(withdrawableEpoch) {
 		penaltyNumerator := f.Meta.EffectiveBalance(index) / EFFECTIVE_BALANCE_INCREMENT

@@ -12,7 +12,7 @@ import (
 
 type BlockHeaderFeature struct {
 	State *BlockHeaderState
-	Meta interface {
+	Meta  interface {
 		meta.VersioningMeta
 		meta.ProposingMeta
 		meta.PubkeyMeta

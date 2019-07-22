@@ -8,7 +8,7 @@ import (
 
 type ShardRotFeature struct {
 	State *ShardRotationState
-	Meta interface {
+	Meta  interface {
 		meta.VersioningMeta
 		meta.CommitteeCountMeta
 	}
@@ -30,7 +30,7 @@ func (f *ShardRotFeature) RotateStartShard() {
 }
 
 type StartShardStatus struct {
-	StartShards []Shard
+	StartShards      []Shard
 	LatestStartEpoch Epoch
 }
 
@@ -38,10 +38,10 @@ func (status *StartShardStatus) GetStartShard(epoch Epoch) Shard {
 	if epoch > status.LatestStartEpoch {
 		panic("cannot find start shard for epoch, epoch is too new")
 	}
-	if epoch + Epoch(len(status.StartShards)) < status.LatestStartEpoch {
+	if epoch+Epoch(len(status.StartShards)) < status.LatestStartEpoch {
 		panic("cannot find start shard for epoch, epoch is too old")
 	}
-	return status.StartShards[status.LatestStartEpoch - epoch]
+	return status.StartShards[status.LatestStartEpoch-epoch]
 }
 
 // Load start shards, starting from fromEpoch, until the next epoch (incl.)

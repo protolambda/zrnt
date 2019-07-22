@@ -97,7 +97,6 @@ func (state *BeaconState) ProcessEpochFinalUpdates() {
 	state.RotateEpochAttestations()
 }
 
-
 // Process the state to the given slot.
 // Returns an error if the slot is older than the state is already at.
 // Mutates the state, does not copy.

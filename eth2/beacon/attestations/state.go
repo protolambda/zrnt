@@ -36,8 +36,8 @@ func (state *AttestationsState) RotateEpochAttestations() {
 }
 
 type AttestationSlotMeta interface {
-	meta.CrosslinkTimingMeta
-	meta.CommitteeCountMeta
+	meta.CrosslinkTiming
+	meta.CommitteeCount
 }
 
 func (attData *AttestationData) GetAttestationSlot(m AttestationSlotMeta) Slot {

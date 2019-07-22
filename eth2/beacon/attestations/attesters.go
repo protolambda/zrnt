@@ -14,15 +14,15 @@ func (ats AttesterStatuses) GetAttesterStatus(index ValidatorIndex) AttesterStat
 type AttesterStatusFeature struct {
 	State *AttestationsState
 	Meta  interface {
-		meta.VersioningMeta
-		meta.RegistrySizeMeta
-		meta.CrosslinkTimingMeta
-		meta.CommitteeCountMeta
-		meta.CrosslinkCommitteeMeta
-		meta.EffectiveBalanceMeta
-		meta.HistoryMeta
-		meta.SlashedMeta
-		meta.ActiveIndicesMeta
+		meta.Versioning
+		meta.RegistrySize
+		meta.CrosslinkTiming
+		meta.CommitteeCount
+		meta.CrosslinkCommittees
+		meta.EffectiveBalances
+		meta.History
+		meta.SlashedIndices
+		meta.ActiveIndices
 	}
 }
 

@@ -70,6 +70,20 @@ func (state *ValidatorsState) GetActiveValidatorCount(epoch Epoch) (count uint64
 	return
 }
 
+const maxCommitteesPerSlot = uint64(SHARD_COUNT) / uint64(SLOTS_PER_EPOCH)
+
+func CommitteeCount(activeValidators uint64) uint64 {
+	validatorsPerSlot := activeValidators / uint64(SLOTS_PER_EPOCH)
+	committeesPerSlot := validatorsPerSlot / TARGET_COMMITTEE_SIZE
+	if maxCommitteesPerSlot < committeesPerSlot {
+		committeesPerSlot = maxCommitteesPerSlot
+	}
+	if committeesPerSlot == 0 {
+		committeesPerSlot = 1
+	}
+	return committeesPerSlot * uint64(SLOTS_PER_EPOCH)
+}
+
 func (state *ValidatorsState) GetCommitteeCount(epoch Epoch) uint64 {
 	return CommitteeCount(state.GetActiveValidatorCount(epoch))
 }

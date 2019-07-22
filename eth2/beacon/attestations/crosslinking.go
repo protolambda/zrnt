@@ -10,11 +10,11 @@ import (
 type CrosslinkingFeature struct {
 	State *AttestationsState
 	Meta  interface {
-		meta.VersioningMeta
-		meta.CrosslinkMeta
-		meta.EffectiveBalanceMeta
-		meta.CrosslinkCommitteeMeta
-		meta.SlashedMeta
+		meta.Versioning
+		meta.Crosslinks
+		meta.EffectiveBalances
+		meta.CrosslinkCommittees
+		meta.SlashedIndices
 	}
 }
 

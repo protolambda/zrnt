@@ -9,8 +9,8 @@ import (
 type ShardRotFeature struct {
 	State *ShardRotationState
 	Meta  interface {
-		meta.VersioningMeta
-		meta.CommitteeCountMeta
+		meta.Versioning
+		meta.CommitteeCount
 	}
 }
 

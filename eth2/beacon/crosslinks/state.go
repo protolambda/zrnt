@@ -43,14 +43,14 @@ func (state *CrosslinksState) GetPreviousCrosslink(shard Shard) *Crosslink {
 type CrosslinksFeature struct {
 	State *CrosslinksState
 	Meta  interface {
-		meta.VersioningMeta
-		meta.RegistrySizeMeta
-		meta.StakingMeta
-		meta.EffectiveBalanceMeta
-		meta.CrosslinkCommitteeMeta
-		meta.CommitteeCountMeta
-		meta.CrosslinkTimingMeta
-		meta.WinningCrosslinkMeta
+		meta.Versioning
+		meta.RegistrySize
+		meta.Staking
+		meta.EffectiveBalances
+		meta.CrosslinkCommittees
+		meta.CommitteeCount
+		meta.CrosslinkTiming
+		meta.WinningCrosslinks
 	}
 }
 

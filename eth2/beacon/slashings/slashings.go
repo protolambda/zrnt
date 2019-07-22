@@ -17,14 +17,14 @@ func (state *SlashingsState) ResetSlashings(epoch Epoch) {
 type SlashingFeature struct {
 	State *SlashingsState
 	Meta  interface {
-		meta.VersioningMeta
-		meta.ValidatorMeta
-		meta.ProposingMeta
-		meta.BalanceMeta
-		meta.StakingMeta
-		meta.EffectiveBalanceMeta
-		meta.SlashingMeta
-		meta.ExitMeta
+		meta.Versioning
+		meta.Validators
+		meta.Proposers
+		meta.Balance
+		meta.Staking
+		meta.EffectiveBalances
+		meta.Slashing
+		meta.Exits
 	}
 }
 
@@ -32,22 +32,24 @@ type SlashingFeature struct {
 func (f *SlashingFeature) SlashValidator(slashedIndex ValidatorIndex, whistleblowerIndex *ValidatorIndex) {
 	slot := f.Meta.CurrentSlot()
 	currentEpoch := slot.ToEpoch()
+
 	validator := f.Meta.Validator(slashedIndex)
 	f.Meta.InitiateValidatorExit(currentEpoch, slashedIndex)
 	validator.Slashed = true
 	validator.WithdrawableEpoch = currentEpoch + EPOCHS_PER_SLASHINGS_VECTOR
-	slashedBalance := validator.EffectiveBalance
-	f.State.Slashings[currentEpoch%EPOCHS_PER_SLASHINGS_VECTOR] += slashedBalance
+
+	f.State.Slashings[currentEpoch%EPOCHS_PER_SLASHINGS_VECTOR] = validator.EffectiveBalance
+
+	f.Meta.DecreaseBalance(slashedIndex, validator.EffectiveBalance/MIN_SLASHING_PENALTY_QUOTIENT)
 
 	propIndex := f.Meta.GetBeaconProposerIndex(slot)
 	if whistleblowerIndex == nil {
 		whistleblowerIndex = &propIndex
 	}
-	whistleblowerReward := slashedBalance / WHISTLEBLOWER_REWARD_QUOTIENT
+	whistleblowerReward := validator.EffectiveBalance / WHISTLEBLOWER_REWARD_QUOTIENT
 	proposerReward := whistleblowerReward / PROPOSER_REWARD_QUOTIENT
 	f.Meta.IncreaseBalance(propIndex, proposerReward)
 	f.Meta.IncreaseBalance(*whistleblowerIndex, whistleblowerReward-proposerReward)
-	f.Meta.DecreaseBalance(slashedIndex, whistleblowerReward)
 }
 
 func (f *SlashingFeature) ProcessEpochSlashings() {

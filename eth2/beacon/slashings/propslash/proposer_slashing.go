@@ -11,13 +11,13 @@ import (
 
 type PropSlashFeature struct {
 	Meta interface {
-		meta.VersioningMeta
-		meta.RegistrySizeMeta
-		meta.ValidatorMeta
-		meta.ProposingMeta
-		meta.BalanceMeta
-		meta.ExitMeta
-		meta.SlasherMeta
+		meta.Versioning
+		meta.RegistrySize
+		meta.Validators
+		meta.Proposers
+		meta.Balance
+		meta.Exits
+		meta.Slasher
 	}
 }
 

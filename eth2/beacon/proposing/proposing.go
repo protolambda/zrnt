@@ -23,12 +23,12 @@ func (state *EpochProposerIndices) GetBeaconProposerIndex(slot Slot) ValidatorIn
 
 type ProposingFeature struct {
 	Meta interface {
-		meta.VersioningMeta
-		meta.CrosslinkCommitteeMeta
-		meta.EffectiveBalanceMeta
-		meta.CommitteeCountMeta
-		meta.CrosslinkTimingMeta
-		meta.SeedMeta
+		meta.Versioning
+		meta.CrosslinkCommittees
+		meta.EffectiveBalances
+		meta.CommitteeCount
+		meta.CrosslinkTiming
+		meta.EpochSeed
 	}
 }
 

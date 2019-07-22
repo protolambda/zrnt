@@ -9,14 +9,14 @@ import (
 
 type AttestSlashFeature struct {
 	Meta interface {
-		meta.RegistrySizeMeta
-		meta.PubkeyMeta
-		meta.VersioningMeta
-		meta.ValidatorMeta
-		meta.ProposingMeta
-		meta.BalanceMeta
-		meta.SlasherMeta
-		meta.ExitMeta
+		meta.RegistrySize
+		meta.Pubkeys
+		meta.Versioning
+		meta.Validators
+		meta.Proposers
+		meta.Balance
+		meta.Slasher
+		meta.Exits
 	}
 }
 

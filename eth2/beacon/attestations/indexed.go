@@ -35,9 +35,9 @@ type IndexedAttestation struct {
 }
 
 type AttestationValidator interface {
-	meta.RegistrySizeMeta
-	meta.PubkeyMeta
-	meta.VersioningMeta
+	meta.RegistrySize
+	meta.Pubkeys
+	meta.Versioning
 }
 
 // Verify validity of slashable_attestation fields.

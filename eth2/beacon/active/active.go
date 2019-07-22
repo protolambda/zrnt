@@ -8,8 +8,8 @@ import (
 type ActiveRootsFeature struct {
 	State *ActiveState
 	Meta  interface {
-		ActiveValidatorCountMeta
-		ActiveIndicesMeta
+		ActiveValidatorCount
+		ActiveIndices
 	}
 }
 

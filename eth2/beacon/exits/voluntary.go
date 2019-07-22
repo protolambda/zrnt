@@ -11,10 +11,10 @@ import (
 
 type VoluntaryExitFeature struct {
 	Meta interface {
-		meta.VersioningMeta
-		meta.RegistrySizeMeta
-		meta.ValidatorMeta
-		meta.ExitMeta
+		meta.Versioning
+		meta.RegistrySize
+		meta.Validators
+		meta.Exits
 	}
 }
 

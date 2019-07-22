@@ -12,11 +12,11 @@ import (
 
 type DepositFeature struct {
 	Meta interface {
-		meta.PubkeyMeta
-		meta.Eth1Meta
-		meta.BalanceMeta
-		meta.OnboardMeta
-		meta.DepositMeta
+		meta.Pubkeys
+		meta.Deposits
+		meta.Balance
+		meta.Onboarding
+		meta.Depositing
 	}
 }
 

@@ -12,15 +12,15 @@ import (
 type AttestationFeature struct {
 	State *AttestationsState
 	Meta  interface {
-		meta.VersioningMeta
-		meta.CrosslinkCommitteeMeta
-		meta.CrosslinkTimingMeta
-		meta.CommitteeCountMeta
-		meta.CrosslinkMeta
-		meta.FinalityMeta
-		meta.RegistrySizeMeta
-		meta.PubkeyMeta
-		meta.ProposingMeta
+		meta.Versioning
+		meta.CrosslinkCommittees
+		meta.CrosslinkTiming
+		meta.CommitteeCount
+		meta.Crosslinks
+		meta.Finality
+		meta.RegistrySize
+		meta.Pubkeys
+		meta.Proposers
 	}
 }
 

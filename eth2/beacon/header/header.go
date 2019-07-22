@@ -13,12 +13,12 @@ import (
 type BlockHeaderFeature struct {
 	State *BlockHeaderState
 	Meta  interface {
-		meta.VersioningMeta
-		meta.ProposingMeta
-		meta.PubkeyMeta
-		meta.SlashedMeta
-		meta.HeaderMeta
-		meta.UpdateHeaderMeta
+		meta.Versioning
+		meta.Proposers
+		meta.Pubkeys
+		meta.SlashedIndices
+		meta.LatestHeader
+		meta.LatestHeaderUpdate
 	}
 }
 

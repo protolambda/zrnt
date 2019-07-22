@@ -15,18 +15,14 @@ type RandaoState struct {
 	RandaoMixes [EPOCHS_PER_HISTORICAL_VECTOR]Root
 }
 
-func (state *RandaoState) GetRandaoMix(epoch Epoch) Root {
-	return state.RandaoMixes[epoch%EPOCHS_PER_HISTORICAL_VECTOR]
-}
-
 // Provides a source of randomness for the state, for e.g. shuffling
 func (state *RandaoState) GetRandomMix(epoch Epoch) Root {
-	return state.GetRandaoMix(epoch)
+	return state.RandaoMixes[epoch%EPOCHS_PER_HISTORICAL_VECTOR]
 }
 
 // Prepare the randao mix for the given epoch by copying over the mix from the privious epoch.
 func (state *RandaoState) PrepareRandao(epoch Epoch) {
-	state.RandaoMixes[epoch%EPOCHS_PER_HISTORICAL_VECTOR] = state.GetRandaoMix(epoch.Previous())
+	state.RandaoMixes[epoch%EPOCHS_PER_HISTORICAL_VECTOR] = state.GetRandomMix(epoch.Previous())
 }
 
 var RandaoEpochSSZ = zssz.GetSSZ((*Epoch)(nil))
@@ -34,9 +30,9 @@ var RandaoEpochSSZ = zssz.GetSSZ((*Epoch)(nil))
 type RandaoFeature struct {
 	State *RandaoState
 	Meta  interface {
-		meta.VersioningMeta
-		meta.ProposingMeta
-		meta.PubkeyMeta
+		meta.Versioning
+		meta.Proposers
+		meta.Pubkeys
 	}
 }
 
@@ -55,7 +51,7 @@ func (f *RandaoFeature) ProcessRandaoReveal(reveal BLSSignature) error {
 		return errors.New("randao invalid")
 	}
 	// Mix in RANDAO reveal
-	mix := XorBytes32(f.State.GetRandaoMix(epoch), Hash(reveal[:]))
+	mix := XorBytes32(f.State.GetRandomMix(epoch), Hash(reveal[:]))
 	f.State.RandaoMixes[epoch%EPOCHS_PER_HISTORICAL_VECTOR] = mix
 	return nil
 }

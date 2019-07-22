@@ -13,11 +13,11 @@ import (
 
 type TransferFeature struct {
 	Meta interface {
-		meta.VersioningMeta
-		meta.ProposingMeta
-		meta.RegistrySizeMeta
-		meta.ValidatorMeta
-		meta.BalanceMeta
+		meta.Versioning
+		meta.Proposers
+		meta.RegistrySize
+		meta.Validators
+		meta.Balance
 	}
 }
 

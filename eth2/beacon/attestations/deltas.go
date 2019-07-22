@@ -8,12 +8,12 @@ import (
 
 type AttestationDeltasFeature struct {
 	Meta interface {
-		meta.VersioningMeta
-		meta.RegistrySizeMeta
-		meta.StakingMeta
-		meta.EffectiveBalanceMeta
-		meta.AttesterStatusMeta
-		meta.FinalityMeta
+		meta.Versioning
+		meta.RegistrySize
+		meta.Staking
+		meta.EffectiveBalances
+		meta.AttesterStatuses
+		meta.Finality
 	}
 }
 

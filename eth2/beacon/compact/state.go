@@ -40,8 +40,8 @@ func (state *CompactCommitteesState) GetCompactCommitteesRoot(epoch Epoch) Root 
 type CompactCommitteesFeature struct {
 	State *CompactCommitteesState
 	Meta  interface {
-		meta.CrosslinkCommitteeMeta
-		meta.ValidatorMeta
+		meta.CrosslinkCommittees
+		meta.Validators
 	}
 }
 

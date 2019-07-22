@@ -9,11 +9,11 @@ import (
 
 type ShufflingFeature struct {
 	Meta interface {
-		meta.VersioningMeta
-		meta.SeedMeta
-		meta.ActiveIndicesMeta
-		meta.CommitteeCountMeta
-		meta.CrosslinkTimingMeta
+		meta.Versioning
+		meta.EpochSeed
+		meta.ActiveIndices
+		meta.CommitteeCount
+		meta.CrosslinkTiming
 	}
 }
 

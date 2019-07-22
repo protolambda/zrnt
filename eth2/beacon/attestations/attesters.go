@@ -11,33 +11,35 @@ func (ats AttesterStatuses) GetAttesterStatus(index ValidatorIndex) AttesterStat
 	return ats[index]
 }
 
-type AttesterStatusReq interface {
-	VersioningMeta
-	RegistrySizeMeta
-	CrosslinkTimingMeta
-	CommitteeCountMeta
-	CrosslinkCommitteeMeta
-	EffectiveBalanceMeta
-	HistoryMeta
-	SlashedMeta
-	ActiveIndicesMeta
+type AttesterStatusFeature struct {
+	*AttestationsState
+	Meta interface {
+		VersioningMeta
+		RegistrySizeMeta
+		CrosslinkTimingMeta
+		CrosslinkCommitteeMeta
+		EffectiveBalanceMeta
+		HistoryMeta
+		SlashedMeta
+		ActiveIndicesMeta
+	}
 }
 
-func (state *AttestationsState) LoadAttesterStatuses(meta AttesterStatusReq) (out AttesterStatuses) {
-	count := meta.ValidatorCount()
+func (state *AttesterStatusFeature) LoadAttesterStatuses() (out AttesterStatuses) {
+	count := state.Meta.ValidatorCount()
 	out = make(AttesterStatuses, count, count)
 
-	currentEpoch := meta.CurrentEpoch()
-	prevEpoch := meta.PreviousEpoch()
-	previousBoundaryBlockRoot := meta.GetBlockRootAtSlot(prevEpoch.GetStartSlot())
+	currentEpoch := state.Meta.CurrentEpoch()
+	prevEpoch := state.Meta.PreviousEpoch()
+	previousBoundaryBlockRoot := state.Meta.GetBlockRootAtSlot(prevEpoch.GetStartSlot())
 	//currentBoundaryBlockRoot := meta.GetBlockRootAtSlot(currentEpoch.GetStartSlot())
 
 	participants := make([]ValidatorIndex, 0, MAX_VALIDATORS_PER_COMMITTEE)
 	for _, att := range state.PreviousEpochAttestations {
-		attBlockRoot := meta.GetBlockRootAtSlot(state.GetAttestationSlot(meta, &att.Data))
+		attBlockRoot := state.Meta.GetBlockRootAtSlot(state.GetAttestationSlot(&att.Data))
 
 		// attestation-target is already known to be previous-epoch, get it from the pre-computed shuffling directly.
-		committee := meta.GetCrosslinkCommittee(prevEpoch, att.Data.Crosslink.Shard)
+		committee := state.Meta.GetCrosslinkCommittee(prevEpoch, att.Data.Crosslink.Shard)
 
 		participants = participants[:0]                                     // reset old slice (re-used in for loop)
 		participants = append(participants, committee...)                   // add committee indices
@@ -52,7 +54,7 @@ func (state *AttestationsState) LoadAttesterStatuses(meta AttesterStatusReq) (ou
 				status.AttestedProposer = att.ProposerIndex
 			}
 
-			if !meta.IsSlashed(p) {
+			if !state.Meta.IsSlashed(p) {
 				status.Flags |= UnslashedAttester
 			}
 
@@ -73,7 +75,7 @@ func (state *AttestationsState) LoadAttesterStatuses(meta AttesterStatusReq) (ou
 	//if att.Data.Target.Root == currentBoundaryBlockRoot {
 	//	status.Flags |= CurrEpochBoundaryAttester
 	//}
-	for _, index := range meta.GetActiveValidatorIndices(currentEpoch) {
+	for _, index := range state.Meta.GetActiveValidatorIndices(currentEpoch) {
 		out[index].Flags |= EligibleAttester
 	}
 	//// TODO: also consider slashed but non-withdrawn validators?
@@ -87,7 +89,7 @@ func (state *AttestationsState) LoadAttesterStatuses(meta AttesterStatusReq) (ou
 	prevTargetStake := Gwei(0)
 	for i := range out {
 		if out[i].Flags.HasMarkers(EligibleAttester | PrevEpochBoundaryAttester) {
-			prevTargetStake += meta.EffectiveBalance(ValidatorIndex(i))
+			prevTargetStake += state.Meta.EffectiveBalance(ValidatorIndex(i))
 		}
 	}
 	return

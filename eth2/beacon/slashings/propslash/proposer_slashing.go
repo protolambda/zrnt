@@ -1,30 +1,24 @@
-package slashings
+package propslash
 
 import (
 	"errors"
 	. "github.com/protolambda/zrnt/eth2/beacon/header"
 	. "github.com/protolambda/zrnt/eth2/core"
-	. "github.com/protolambda/zrnt/eth2/meta"
+	"github.com/protolambda/zrnt/eth2/meta"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
-type ProposerSlashingReq interface {
-	VersioningMeta
-	RegistrySizeMeta
-	ValidatorMeta
-	ProposingMeta
-	BalanceMeta
-	ExitMeta
-}
-
-func (state *SlashingsState) ProcessProposerSlashings(meta AttesterSlashingReq, ops []ProposerSlashing) error {
-	for i := range ops {
-		if err := state.ProcessProposerSlashing(meta, &ops[i]); err != nil {
-			return err
-		}
+type PropSlashFeature struct {
+	Meta interface {
+		meta.VersioningMeta
+		meta.RegistrySizeMeta
+		meta.ValidatorMeta
+		meta.ProposingMeta
+		meta.BalanceMeta
+		meta.ExitMeta
+		meta.SlasherMeta
 	}
-	return nil
 }
 
 type ProposerSlashing struct {
@@ -33,8 +27,17 @@ type ProposerSlashing struct {
 	Header2       BeaconBlockHeader // Second proposal
 }
 
-func (state *SlashingsState) ProcessProposerSlashing(meta ProposerSlashingReq, ps *ProposerSlashing) error {
-	if !meta.IsValidIndex(ps.ProposerIndex) {
+func (state *PropSlashFeature) ProcessProposerSlashings(ops []ProposerSlashing) error {
+	for i := range ops {
+		if err := state.ProcessProposerSlashing(&ops[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (state *PropSlashFeature) ProcessProposerSlashing(ps *ProposerSlashing) error {
+	if !state.Meta.IsValidIndex(ps.ProposerIndex) {
 		return errors.New("invalid proposer index")
 	}
 	// Verify that the epoch is the same
@@ -45,20 +48,20 @@ func (state *SlashingsState) ProcessProposerSlashing(meta ProposerSlashingReq, p
 	if ps.Header1 == ps.Header2 {
 		return errors.New("proposer slashing requires two different headers")
 	}
-	proposer := meta.Validator(ps.ProposerIndex)
+	proposer := state.Meta.Validator(ps.ProposerIndex)
 	// Check proposer is slashable
-	if !proposer.IsSlashable(meta.CurrentEpoch()) {
+	if !proposer.IsSlashable(state.Meta.CurrentEpoch()) {
 		return errors.New("proposer slashing requires proposer to be slashable")
 	}
 	// Signatures are valid
 	if !bls.BlsVerify(proposer.Pubkey, ssz.SigningRoot(ps.Header1, BeaconBlockHeaderSSZ), ps.Header1.Signature,
-		meta.GetDomain(DOMAIN_BEACON_PROPOSER, ps.Header1.Slot.ToEpoch())) {
+		state.Meta.GetDomain(DOMAIN_BEACON_PROPOSER, ps.Header1.Slot.ToEpoch())) {
 		return errors.New("proposer slashing header 1 has invalid BLS signature")
 	}
 	if !bls.BlsVerify(proposer.Pubkey, ssz.SigningRoot(ps.Header2, BeaconBlockHeaderSSZ), ps.Header2.Signature,
-		meta.GetDomain(DOMAIN_BEACON_PROPOSER, ps.Header2.Slot.ToEpoch())) {
+		state.Meta.GetDomain(DOMAIN_BEACON_PROPOSER, ps.Header2.Slot.ToEpoch())) {
 		return errors.New("proposer slashing header 2 has invalid BLS signature")
 	}
-	state.SlashValidator(meta, ps.ProposerIndex, nil)
+	state.Meta.SlashValidator(ps.ProposerIndex, nil)
 	return nil
 }

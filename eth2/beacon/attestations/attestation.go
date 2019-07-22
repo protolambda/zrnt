@@ -9,19 +9,22 @@ import (
 	"github.com/protolambda/zssz"
 )
 
-type AttestationReq interface {
-	VersioningMeta
-	CrosslinkCommitteeMeta
-	CrosslinkMeta
-	FinalityMeta
-	RegistrySizeMeta
-	PubkeyMeta
-	ProposingMeta
+type AttestationFeature struct {
+	*AttestationsState
+	Meta interface {
+		VersioningMeta
+		CrosslinkCommitteeMeta
+		CrosslinkMeta
+		FinalityMeta
+		RegistrySizeMeta
+		PubkeyMeta
+		ProposingMeta
+	}
 }
 
-func (state *AttestationsState) ProcessAttestations(meta AttestationReq, ops []Attestation) error {
+func (state *AttestationFeature) ProcessAttestations(ops []Attestation) error {
 	for i := range ops {
-		if err := state.ProcessAttestation(meta, &ops[i]); err != nil {
+		if err := state.ProcessAttestation(&ops[i]); err != nil {
 			return err
 		}
 	}
@@ -37,13 +40,13 @@ type Attestation struct {
 
 var crosslinkSSZ = zssz.GetSSZ((*Crosslink)(nil))
 
-func (state *AttestationsState) ProcessAttestation(meta AttestationReq, attestation *Attestation) error {
+func (state *AttestationFeature) ProcessAttestation(attestation *Attestation) error {
 	data := &attestation.Data
 	if data.Crosslink.Shard >= SHARD_COUNT {
 		return errors.New("attestation data is invalid, shard out of range")
 	}
-	currentEpoch := meta.CurrentEpoch()
-	previousEpoch := meta.PreviousEpoch()
+	currentEpoch := state.Meta.CurrentEpoch()
+	previousEpoch := state.Meta.PreviousEpoch()
 
 	if data.Target.Epoch < previousEpoch {
 		return errors.New("attestation data is invalid, target is too far in past")
@@ -51,8 +54,8 @@ func (state *AttestationsState) ProcessAttestation(meta AttestationReq, attestat
 		return errors.New("attestation data is invalid, target is in future")
 	}
 
-	currentSlot := meta.CurrentSlot()
-	attestationSlot := state.GetAttestationSlot(meta, data)
+	currentSlot := state.Meta.CurrentSlot()
+	attestationSlot := state.Meta.GetAttestationSlot(data)
 	if !(currentSlot <= attestationSlot+SLOTS_PER_EPOCH) {
 		return errors.New("attestation slot is too old")
 	}
@@ -63,15 +66,15 @@ func (state *AttestationsState) ProcessAttestation(meta AttestationReq, attestat
 	var parentCrosslink *Crosslink
 
 	if data.Target.Epoch == currentEpoch {
-		if data.Source.Epoch != meta.CurrentJustified().Epoch {
+		if data.Source.Epoch != state.Meta.CurrentJustified().Epoch {
 			return errors.New("attestation source epoch does not match current justified checkpoint")
 		}
-		parentCrosslink = meta.GetCurrentCrosslink(data.Crosslink.Shard)
+		parentCrosslink = state.Meta.GetCurrentCrosslink(data.Crosslink.Shard)
 	} else {
-		if data.Source.Epoch != meta.PreviousJustified().Epoch {
+		if data.Source.Epoch != state.Meta.PreviousJustified().Epoch {
 			return errors.New("attestation source epoch does not match previous justified checkpoint")
 		}
-		parentCrosslink = meta.GetPreviousCrosslink(data.Crosslink.Shard)
+		parentCrosslink = state.Meta.GetPreviousCrosslink(data.Crosslink.Shard)
 	}
 
 	// Check crosslink against expected parent crosslink
@@ -112,7 +115,7 @@ func (state *AttestationsState) ProcessAttestation(meta AttestationReq, attestat
 		Data:            *data,
 		AggregationBits: attestation.AggregationBits,
 		InclusionDelay:  currentSlot - attestationSlot,
-		ProposerIndex:   meta.GetBeaconProposerIndex(),
+		ProposerIndex:   state.Meta.GetBeaconProposerIndex(currentSlot),
 	}
 	if data.Target.Epoch == currentEpoch {
 		state.CurrentEpochAttestations = append(state.CurrentEpochAttestations, pendingAttestation)

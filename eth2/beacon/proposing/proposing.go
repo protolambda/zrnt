@@ -21,20 +21,22 @@ func (state *EpochProposerIndices) GetBeaconProposerIndex(slot Slot) ValidatorIn
 	return state.ProposerIndices[slot - start]
 }
 
-type ProposingReq interface {
-	VersioningMeta
-	CrosslinkCommitteeMeta
-	EffectiveBalanceMeta
-	CommitteeCountMeta
-	CrosslinkTimingMeta
-	SeedMeta
+type ProposingFeature struct {
+	Meta interface {
+		VersioningMeta
+		CrosslinkCommitteeMeta
+		EffectiveBalanceMeta
+		CommitteeCountMeta
+		CrosslinkTimingMeta
+		SeedMeta
+	}
 }
 
 // Return the beacon proposer index for the current slot
-func LoadBeaconProposerIndices(meta ProposingReq) (out EpochProposerIndices) {
-	epoch := meta.CurrentEpoch()
+func (state *ProposingFeature) LoadBeaconProposerIndices() (out EpochProposerIndices) {
+	epoch := state.Meta.CurrentEpoch()
 
-	seed := meta.GetSeed(epoch)
+	seed := state.Meta.GetSeed(epoch)
 	buf := make([]byte, 32+8, 32+8)
 	copy(buf[0:32], seed[:])
 	balanceWeightedProposer := func(committee []ValidatorIndex) ValidatorIndex {
@@ -44,7 +46,7 @@ func LoadBeaconProposerIndices(meta ProposingReq) (out EpochProposerIndices) {
 			for j := uint64(0); j < 32; j++ {
 				randomByte := h[j]
 				candidateIndex := committee[(uint64(epoch)+((i<<5)|j))%uint64(len(committee))]
-				effectiveBalance := meta.EffectiveBalance(candidateIndex)
+				effectiveBalance := state.Meta.EffectiveBalance(candidateIndex)
 				if effectiveBalance*0xff >= MAX_EFFECTIVE_BALANCE*Gwei(randomByte) {
 					return candidateIndex
 				}
@@ -54,14 +56,14 @@ func LoadBeaconProposerIndices(meta ProposingReq) (out EpochProposerIndices) {
 	}
 
 	// A.k.a. committeesPerSlot
-	shardsPerSlot := Shard(meta.GetCommitteeCount(epoch) / uint64(SLOTS_PER_EPOCH))
+	shardsPerSlot := Shard(state.Meta.GetCommitteeCount(epoch) / uint64(SLOTS_PER_EPOCH))
 
-	startShard := meta.GetStartShard(epoch)
+	startShard := state.Meta.GetStartShard(epoch)
 	offset := Shard(0)
 	for i := Slot(0); i < SLOTS_PER_EPOCH; i++ {
 		offset += shardsPerSlot
 		shard := (startShard + offset) % SHARD_COUNT
-		firstCommittee := meta.GetCrosslinkCommittee(epoch, shard)
+		firstCommittee := state.Meta.GetCrosslinkCommittee(epoch, shard)
 		out.ProposerIndices[i] = balanceWeightedProposer(firstCommittee)
 	}
 	return

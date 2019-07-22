@@ -31,22 +31,26 @@ func (state *RandaoState) PrepareRandao(epoch Epoch) {
 
 var RandaoEpochSSZ = zssz.GetSSZ((*Epoch)(nil))
 
-type RandaoRevealReq interface {
-	VersioningMeta
-	ProposingMeta
-	PubkeyMeta
+type RandaoFeature struct {
+	*RandaoState
+	Meta interface {
+		VersioningMeta
+		ProposingMeta
+		PubkeyMeta
+	}
 }
 
-func (state *RandaoState) ProcessRandaoReveal(meta RandaoRevealReq, reveal BLSSignature) error {
-	epoch := meta.CurrentEpoch()
-	propIndex := meta.GetBeaconProposerIndex()
-	proposerPubkey := meta.Pubkey(propIndex)
+func (state *RandaoFeature) ProcessRandaoReveal(reveal BLSSignature) error {
+	slot := state.Meta.CurrentSlot()
+	propIndex := state.Meta.GetBeaconProposerIndex(slot)
+	proposerPubkey := state.Meta.Pubkey(propIndex)
+	epoch := slot.ToEpoch()
 	// Verify RANDAO reveal
 	if !bls.BlsVerify(
 		proposerPubkey,
 		ssz.HashTreeRoot(epoch, RandaoEpochSSZ),
 		reveal,
-		meta.GetDomain(DOMAIN_RANDAO, epoch),
+		state.Meta.GetDomain(DOMAIN_RANDAO, epoch),
 	) {
 		return errors.New("randao invalid")
 	}

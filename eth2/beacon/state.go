@@ -1,6 +1,7 @@
 package beacon
 
 import (
+	. "github.com/protolambda/zrnt/eth2/beacon/active"
 	. "github.com/protolambda/zrnt/eth2/beacon/attestations"
 	. "github.com/protolambda/zrnt/eth2/beacon/compact"
 	. "github.com/protolambda/zrnt/eth2/beacon/crosslinks"
@@ -11,7 +12,6 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon/randao"
 	. "github.com/protolambda/zrnt/eth2/beacon/registry"
 	. "github.com/protolambda/zrnt/eth2/beacon/shardrot"
-	. "github.com/protolambda/zrnt/eth2/beacon/shuffling"
 	. "github.com/protolambda/zrnt/eth2/beacon/slashings"
 	. "github.com/protolambda/zrnt/eth2/beacon/versioning"
 	"github.com/protolambda/zssz"
@@ -27,7 +27,7 @@ type BeaconState struct {
 	RegistryState
 	ShardRotationState
 	RandaoState
-	ShufflingState
+	ActiveState
 	CompactCommitteesState
 	SlashingsState
 	AttestationsState

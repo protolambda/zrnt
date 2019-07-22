@@ -19,10 +19,11 @@ func Genesis(deps []Deposit, time Timestamp, eth1Data Eth1Data) *BeaconState {
 			Eth1Data: eth1Data,
 		},
 	}
+	depProcessor := &DepositFeature{Meta: state}
 	// Process genesis deposits
 	for i := range deps {
 		// in the rare case someone tries to create a genesis block using invalid data, panic.
-		if err := ProcessDeposit(state, &deps[i]); err != nil {
+		if err := depProcessor.ProcessDeposit(&deps[i]); err != nil {
 			panic(err)
 		}
 	}
@@ -33,7 +34,7 @@ func Genesis(deps []Deposit, time Timestamp, eth1Data Eth1Data) *BeaconState {
 			v.ActivationEpoch = GENESIS_EPOCH
 		}
 	}
-	indices := state.Validators.GetActiveValidatorIndices(GENESIS_EPOCH)
+	indices := state.GetActiveValidatorIndices(GENESIS_EPOCH)
 	genesisActiveIndexRoot := ssz.HashTreeRoot(indices, RegistryIndicesSSZ)
 	for i := Epoch(0); i < EPOCHS_PER_HISTORICAL_VECTOR; i++ {
 		state.LatestActiveIndexRoots[i] = genesisActiveIndexRoot

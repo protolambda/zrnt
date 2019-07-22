@@ -80,3 +80,18 @@ const (
 	DOMAIN_VOLUNTARY_EXIT  BLSDomainType = generated.DOMAIN_VOLUNTARY_EXIT
 	DOMAIN_TRANSFER        BLSDomainType = generated.DOMAIN_TRANSFER
 )
+
+const maxCommitteesPerSlot = uint64(SHARD_COUNT) / uint64(SLOTS_PER_EPOCH)
+
+// Return the number of committees in one epoch.
+func CommitteeCount(activeValidators uint64) uint64 {
+	validatorsPerSlot := activeValidators / uint64(SLOTS_PER_EPOCH)
+	committeesPerSlot := validatorsPerSlot / TARGET_COMMITTEE_SIZE
+	if maxCommitteesPerSlot < committeesPerSlot {
+		committeesPerSlot = maxCommitteesPerSlot
+	}
+	if committeesPerSlot == 0 {
+		committeesPerSlot = 1
+	}
+	return committeesPerSlot * uint64(SLOTS_PER_EPOCH)
+}

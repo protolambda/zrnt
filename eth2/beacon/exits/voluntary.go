@@ -9,16 +9,18 @@ import (
 	"github.com/protolambda/zssz"
 )
 
-type VoluntaryExitReq interface {
-	VersioningMeta
-	RegistrySizeMeta
-	ValidatorMeta
-	ExitMeta
+type VoluntaryExitFeature struct {
+	Meta interface {
+		VersioningMeta
+		RegistrySizeMeta
+		ValidatorMeta
+		ExitMeta
+	}
 }
 
-func ProcessVoluntaryExits(meta VoluntaryExitReq, ops []VoluntaryExit) error {
+func (state *VoluntaryExitFeature) ProcessVoluntaryExits(ops []VoluntaryExit) error {
 	for i := range ops {
-		if err := ProcessVoluntaryExit(meta, &ops[i]); err != nil {
+		if err := state.ProcessVoluntaryExit(&ops[i]); err != nil {
 			return err
 		}
 	}
@@ -33,12 +35,12 @@ type VoluntaryExit struct {
 	Signature      BLSSignature
 }
 
-func ProcessVoluntaryExit(meta VoluntaryExitReq, exit *VoluntaryExit) error {
-	currentEpoch := meta.CurrentEpoch()
-	if !meta.IsValidIndex(exit.ValidatorIndex) {
+func (state *VoluntaryExitFeature) ProcessVoluntaryExit(exit *VoluntaryExit) error {
+	currentEpoch := state.Meta.CurrentEpoch()
+	if !state.Meta.IsValidIndex(exit.ValidatorIndex) {
 		return errors.New("invalid exit validator index")
 	}
-	validator := meta.Validator(exit.ValidatorIndex)
+	validator := state.Meta.Validator(exit.ValidatorIndex)
 	// Verify that the validator is active
 	if !validator.IsActive(currentEpoch) {
 		return errors.New("validator must be active to be able to voluntarily exit")
@@ -60,10 +62,10 @@ func ProcessVoluntaryExit(meta VoluntaryExitReq, exit *VoluntaryExit) error {
 		validator.Pubkey,
 		ssz.SigningRoot(exit, VoluntaryExitSSZ),
 		exit.Signature,
-		meta.GetDomain(DOMAIN_VOLUNTARY_EXIT, exit.Epoch)) {
+		state.Meta.GetDomain(DOMAIN_VOLUNTARY_EXIT, exit.Epoch)) {
 		return errors.New("voluntary exit signature could not be verified")
 	}
 	// Initiate exit
-	meta.InitiateValidatorExit(meta.CurrentEpoch(), exit.ValidatorIndex)
+	state.Meta.InitiateValidatorExit(state.Meta.CurrentEpoch(), exit.ValidatorIndex)
 	return nil
 }

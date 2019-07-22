@@ -1,6 +1,8 @@
 package core
 
-import "sort"
+import (
+	"sort"
+)
 
 // Index of a validator, pointing to a validator registry location
 type ValidatorIndex uint64
@@ -8,6 +10,12 @@ type ValidatorIndex uint64
 // Custom constant, not in spec:
 // An impossible high validator index used to mark special internal cases. (all 1s binary)
 const ValidatorIndexMarker = ValidatorIndex(^uint64(0))
+
+type RegistryIndices []ValidatorIndex
+
+func (*RegistryIndices) Limit() uint64 {
+	return VALIDATOR_REGISTRY_LIMIT
+}
 
 // Collection of validators, should always be sorted.
 type ValidatorSet []ValidatorIndex

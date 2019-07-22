@@ -2,37 +2,38 @@ package beacon
 
 import (
 	"errors"
-	"github.com/protolambda/zrnt/eth2/beacon/deposits"
-	"github.com/protolambda/zrnt/eth2/beacon/exits"
-	"github.com/protolambda/zrnt/eth2/beacon/transfers"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
-func (state *BeaconState) ProcessBlock(block *BeaconBlock) error {
-	if err := block.Header().Process(state); err != nil {
+type BlockTransition struct {
+	BlockMeta
+}
+
+func (state *BlockTransition) ProcessBlock(block *BeaconBlock) error {
+	if err := state.ProcessHeader(block.Header()); err != nil {
 		return err
 	}
 	body := &block.Body
-	if err := state.ProcessRandaoReveal(state, body.RandaoReveal); err != nil {
+	if err := state.ProcessRandaoReveal(body.RandaoReveal); err != nil {
 		return err
 	}
 	if err := state.ProcessEth1Vote(body.Eth1Data); err != nil {
 		return err
 	}
-	if err := state.ProcessProposerSlashings(state, body.ProposerSlashings); err != nil {
+	if err := state.ProcessProposerSlashings(body.ProposerSlashings); err != nil {
 		return err
 	}
-	if err := state.ProcessAttesterSlashings(state, body.AttesterSlashings); err != nil {
+	if err := state.ProcessAttesterSlashings(body.AttesterSlashings); err != nil {
 		return err
 	}
-	if err := deposits.ProcessDeposits(state, body.Deposits); err != nil {
+	if err := state.ProcessDeposits(body.Deposits); err != nil {
 		return err
 	}
-	if err := exits.ProcessVoluntaryExits(state, body.VoluntaryExits); err != nil {
+	if err := state.ProcessVoluntaryExits(body.VoluntaryExits); err != nil {
 		return err
 	}
-	if err := transfers.ProcessTransfers(state, body.Transfers); err != nil {
+	if err := state.ProcessTransfers(body.Transfers); err != nil {
 		return err
 	}
 	return nil
@@ -48,15 +49,20 @@ func (state *BeaconState) ProcessSlot() {
 	state.SetRecentRoots(state.Slot, previousBlockRoot, latestStateRoot)
 }
 
-func (state *BeaconState) ProcessEpoch() {
-	state.ProcessEpochJustification(state)
-	state.ProcessEpochCrosslinks(state)
+type EpochTransition struct {
+	EpochMeta
+}
+
+func (state *EpochTransition) ProcessEpoch() {
+	state.ProcessEpochJustification()
+	state.ProcessEpochCrosslinks()
 	state.ProcessEpochRewardsAndPenalties()
-	state.ProcessEpochRegistryUpdates(state)
-	state.ProcessEpochSlashings(state)
+	state.ProcessEpochRegistryUpdates()
+	state.ProcessEpochSlashings()
 	state.ProcessEpochFinalUpdates()
 }
 
+// TODO rewardpenalty feature package
 func (state *BeaconState) ProcessEpochRewardsAndPenalties() {
 	if state.Epoch() == GENESIS_EPOCH {
 		return
@@ -67,6 +73,7 @@ func (state *BeaconState) ProcessEpochRewardsAndPenalties() {
 	state.ApplyDeltas(sum)
 }
 
+// TODO final feature package
 func (state *BeaconState) ProcessEpochFinalUpdates() {
 	nextEpoch := state.Epoch() + 1
 
@@ -77,8 +84,8 @@ func (state *BeaconState) ProcessEpochFinalUpdates() {
 
 	state.UpdateEffectiveBalances()
 	state.RotateStartShard(state)
-	state.UpdateActiveIndexRoot(state, nextEpoch + ACTIVATION_EXIT_DELAY)
-	state.UpdateCompactCommitteesRoot(state, nextEpoch)
+	state.UpdateActiveIndexRoot(nextEpoch + ACTIVATION_EXIT_DELAY)
+	state.UpdateCompactCommitteesRoot(nextEpoch)
 	state.ResetSlashings(nextEpoch)
 	state.PrepareRandao(nextEpoch)
 

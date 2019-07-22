@@ -35,14 +35,16 @@ func (state *AttestationsState) RotateEpochAttestations() {
 	state.CurrentEpochAttestations = nil
 }
 
-type AttestationSlotReq interface {
-	CrosslinkTimingMeta
-	CommitteeCountMeta
+type AttestationSlotFeature struct {
+	Meta interface {
+		CrosslinkTimingMeta
+		CommitteeCountMeta
+	}
 }
 
-func (state *AttestationsState) GetAttestationSlot(meta AttestationSlotReq, attData *AttestationData) Slot {
+func (state *AttestationSlotFeature) GetAttestationSlot(attData *AttestationData) Slot {
 	epoch := attData.Target.Epoch
-	committeeCount := Slot(meta.GetCommitteeCount(epoch))
-	offset := Slot((attData.Crosslink.Shard + SHARD_COUNT - meta.GetStartShard(epoch)) % SHARD_COUNT)
+	committeeCount := Slot(state.Meta.GetCommitteeCount(epoch))
+	offset := Slot((attData.Crosslink.Shard + SHARD_COUNT - state.Meta.GetStartShard(epoch)) % SHARD_COUNT)
 	return epoch.GetStartSlot() + (offset / (committeeCount / SLOTS_PER_EPOCH))
 }

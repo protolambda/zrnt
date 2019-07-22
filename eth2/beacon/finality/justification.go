@@ -2,33 +2,26 @@ package finality
 
 import (
 	. "github.com/protolambda/zrnt/eth2/core"
-	. "github.com/protolambda/zrnt/eth2/meta"
 )
 
-type JustificationReq interface {
-	VersioningMeta
-	HistoryMeta
-	FFGMeta
-}
-
-func (state *FinalityState) ProcessEpochJustification(meta JustificationReq) {
-	currentEpoch := meta.CurrentEpoch()
+func (state *JustificationFeature) ProcessEpochJustification() {
+	currentEpoch := state.Meta.CurrentEpoch()
 	if currentEpoch <= GENESIS_EPOCH+1 {
 		return
 	}
-	previousEpoch := meta.PreviousEpoch()
+	previousEpoch := state.Meta.PreviousEpoch()
 
 	// epoch numbers are trusted, no errors
-	previousBoundaryBlockRoot := meta.GetBlockRoot(previousEpoch)
-	currentBoundaryBlockRoot := meta.GetBlockRoot(currentEpoch)
+	previousBoundaryBlockRoot := state.Meta.GetBlockRoot(previousEpoch)
+	currentBoundaryBlockRoot := state.Meta.GetBlockRoot(currentEpoch)
 
 	// Get the sum balances of the boundary attesters
-	previousTargetStakedBalance := meta.GetTargetTotalStakedBalance(previousEpoch)
-	currentTargetStakedBalance := meta.GetTargetTotalStakedBalance(currentEpoch)
+	previousTargetStakedBalance := state.Meta.GetTargetTotalStakedBalance(previousEpoch)
+	currentTargetStakedBalance := state.Meta.GetTargetTotalStakedBalance(currentEpoch)
 
 	// Get the sum balances of the attesters for the epochs
-	previousTotalBalance := meta.GetTotalStakedBalance(previousEpoch)
-	currentTotalBalance := meta.GetTotalStakedBalance(currentEpoch)
+	previousTotalBalance := state.Meta.GetTotalStakedBalance(previousEpoch)
+	currentTotalBalance := state.Meta.GetTotalStakedBalance(currentEpoch)
 
 	oldPreviousJustified := state.PreviousJustifiedCheckpoint
 	oldCurrentJustified := state.CurrentJustifiedCheckpoint
@@ -39,13 +32,13 @@ func (state *FinalityState) ProcessEpochJustification(meta JustificationReq) {
 
 	// > Justification
 	if previousTargetStakedBalance*3 >= previousTotalBalance*2 {
-		state.Justify(meta, Checkpoint{
+		state.Justify(Checkpoint{
 			Epoch: previousEpoch,
 			Root:  previousBoundaryBlockRoot,
 		})
 	}
 	if currentTargetStakedBalance*3 >= currentTotalBalance*2 {
-		state.Justify(meta, Checkpoint{
+		state.Justify(Checkpoint{
 			Epoch: currentEpoch,
 			Root:  currentBoundaryBlockRoot,
 		})

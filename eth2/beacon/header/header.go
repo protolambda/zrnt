@@ -10,12 +10,16 @@ import (
 	"github.com/protolambda/zssz"
 )
 
-type BlockHeaderReq interface {
-	VersioningMeta
-	ProposingMeta
-	CompactValidatorMeta
-	HeaderMeta
-	UpdateHeaderMeta
+type BlockHeaderFeature struct {
+	*BlockHeaderState
+	Meta interface {
+		VersioningMeta
+		ProposingMeta
+		PubkeyMeta
+		SlashedMeta
+		HeaderMeta
+		UpdateHeaderMeta
+	}
 }
 
 var BeaconBlockHeaderSSZ = zssz.GetSSZ((*BeaconBlockHeader)(nil))
@@ -28,32 +32,39 @@ type BeaconBlockHeader struct {
 	Signature  BLSSignature
 }
 
-func (header *BeaconBlockHeader) Process(meta BlockHeaderReq) error {
+func (state *BlockHeaderFeature) ProcessHeader(header *BeaconBlockHeader) error {
+	currentSlot := state.Meta.CurrentSlot()
 	// Verify that the slots match
-	if header.Slot != meta.CurrentSlot() {
+	if header.Slot != currentSlot {
 		return errors.New("slot of block does not match slot of state")
 	}
 	// Verify that the parent matches
-	if latestRoot := meta.GetLatestBlockRoot(); header.ParentRoot != latestRoot {
+	if latestRoot := state.Meta.GetLatestBlockRoot(); header.ParentRoot != latestRoot {
 		return fmt.Errorf("previous block root %x does not match root %x from latest state block header", header.ParentRoot, latestRoot)
 	}
 
-	proposerIndex := meta.GetBeaconProposerIndex()
+	proposerIndex := state.Meta.GetBeaconProposerIndex(currentSlot)
 	// Verify proposer is not slashed
-	if meta.IsSlashed(proposerIndex) {
+	if state.Meta.IsSlashed(proposerIndex) {
 		return errors.New("cannot accept block header from slashed proposer")
 	}
 	// Block signature
 	if !bls.BlsVerify(
-		meta.Pubkey(proposerIndex),
+		state.Meta.Pubkey(proposerIndex),
 		ssz.SigningRoot(header, BeaconBlockHeaderSSZ),
 		header.Signature,
-		meta.GetDomain(DOMAIN_BEACON_PROPOSER, meta.CurrentEpoch())) {
+		state.Meta.GetDomain(DOMAIN_BEACON_PROPOSER, state.Meta.CurrentEpoch())) {
 		return errors.New("block signature invalid")
 	}
 
 	// Store as the new latest block
-	meta.StoreHeaderData(header.Slot, header.ParentRoot, header.BodyRoot)
+	state.LatestBlockHeader = BeaconBlockHeader{
+		Slot:       header.Slot,
+		ParentRoot: header.ParentRoot,
+		// state_root: zeroed, overwritten with UpdateStateRoot(), once the post state is available.
+		BodyRoot: header.BodyRoot,
+		// signature is always zeroed
+	}
 
 	return nil
 }

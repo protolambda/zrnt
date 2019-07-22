@@ -4,7 +4,8 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon/attestations"
 	. "github.com/protolambda/zrnt/eth2/beacon/deposits"
 	. "github.com/protolambda/zrnt/eth2/beacon/exits"
-	. "github.com/protolambda/zrnt/eth2/beacon/slashings"
+	. "github.com/protolambda/zrnt/eth2/beacon/slashings/attslash"
+	. "github.com/protolambda/zrnt/eth2/beacon/slashings/propslash"
 	. "github.com/protolambda/zrnt/eth2/beacon/transfers"
 	. "github.com/protolambda/zrnt/eth2/core"
 )

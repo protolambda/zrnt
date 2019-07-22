@@ -57,15 +57,18 @@ func (state *RegistryState) AddNewValidator(pubkey BLSPubkey, withdrawalCreds Ro
 	state.Balances = append(state.Balances, balance)
 }
 
-type RegistryUpdateReq interface {
-	VersioningMeta
-	FinalityMeta
-	ActivationExitMeta
+type RegistryFeature struct {
+	*RegistryState
+	Meta interface {
+		VersioningMeta
+		FinalityMeta
+		ActivationExitMeta
+	}
 }
 
-func (state *RegistryState) ProcessEpochRegistryUpdates(meta RegistryUpdateReq) {
+func (state *RegistryFeature) ProcessEpochRegistryUpdates() {
 	// Process activation eligibility and ejections
-	currentEpoch := meta.CurrentEpoch()
+	currentEpoch := state.Meta.CurrentEpoch()
 	for i, v := range state.Validators {
 		if v.ActivationEligibilityEpoch == FAR_FUTURE_EPOCH &&
 			v.EffectiveBalance == MAX_EFFECTIVE_BALANCE {
@@ -77,6 +80,6 @@ func (state *RegistryState) ProcessEpochRegistryUpdates(meta RegistryUpdateReq) 
 		}
 	}
 	// Queue validators eligible for activation and not dequeued for activation prior to finalized epoch
-	activationEpoch := meta.Finalized().Epoch.ComputeActivationExitEpoch()
+	activationEpoch := state.Meta.Finalized().Epoch.ComputeActivationExitEpoch()
 	state.ProcessActivationQueue(activationEpoch, currentEpoch)
 }

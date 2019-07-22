@@ -2,16 +2,8 @@ package slashings
 
 import (
 	. "github.com/protolambda/zrnt/eth2/core"
-	. "github.com/protolambda/zrnt/eth2/meta"
+	"github.com/protolambda/zrnt/eth2/meta"
 )
-
-type SlashingReq interface {
-	VersioningMeta
-	ValidatorMeta
-	ProposingMeta
-	BalanceMeta
-	ExitMeta
-}
 
 type SlashingsState struct {
 	// Balances slashed at every withdrawal period
@@ -22,38 +14,45 @@ func (state *SlashingsState) ResetSlashings(epoch Epoch) {
 	state.Slashings[epoch%EPOCHS_PER_SLASHINGS_VECTOR] = 0
 }
 
+type SlashingFeature struct {
+	*SlashingsState
+	Meta interface {
+		meta.VersioningMeta
+		meta.ValidatorMeta
+		meta.ProposingMeta
+		meta.BalanceMeta
+		meta.StakingMeta
+		meta.EffectiveBalanceMeta
+		meta.SlashingMeta
+		meta.ExitMeta
+	}
+}
+
 // Slash the validator with the given index.
-func (state *SlashingsState) SlashValidator(meta SlashingReq, slashedIndex ValidatorIndex, whistleblowerIndex *ValidatorIndex) {
-	currentEpoch := meta.CurrentEpoch()
-	validator := meta.Validator(slashedIndex)
-	meta.InitiateValidatorExit(currentEpoch, slashedIndex)
+func (state *SlashingFeature) SlashValidator(slashedIndex ValidatorIndex, whistleblowerIndex *ValidatorIndex) {
+	slot := state.Meta.CurrentSlot()
+	currentEpoch := slot.ToEpoch()
+	validator := state.Meta.Validator(slashedIndex)
+	state.Meta.InitiateValidatorExit(currentEpoch, slashedIndex)
 	validator.Slashed = true
 	validator.WithdrawableEpoch = currentEpoch + EPOCHS_PER_SLASHINGS_VECTOR
 	slashedBalance := validator.EffectiveBalance
 	state.Slashings[currentEpoch%EPOCHS_PER_SLASHINGS_VECTOR] += slashedBalance
 
-	propIndex := meta.GetBeaconProposerIndex()
+	propIndex := state.Meta.GetBeaconProposerIndex(slot)
 	if whistleblowerIndex == nil {
 		whistleblowerIndex = &propIndex
 	}
 	whistleblowerReward := slashedBalance / WHISTLEBLOWER_REWARD_QUOTIENT
 	proposerReward := whistleblowerReward / PROPOSER_REWARD_QUOTIENT
-	meta.IncreaseBalance(propIndex, proposerReward)
-	meta.IncreaseBalance(*whistleblowerIndex, whistleblowerReward-proposerReward)
-	meta.DecreaseBalance(slashedIndex, whistleblowerReward)
+	state.Meta.IncreaseBalance(propIndex, proposerReward)
+	state.Meta.IncreaseBalance(*whistleblowerIndex, whistleblowerReward-proposerReward)
+	state.Meta.DecreaseBalance(slashedIndex, whistleblowerReward)
 }
 
-type EpochSlashingReq interface {
-	VersioningMeta
-	StakingMeta
-	EffectiveBalanceMeta
-	BalanceMeta
-	SlashingMeta
-}
-
-func (state *SlashingsState) ProcessEpochSlashings(meta EpochSlashingReq) {
-	currentEpoch := meta.CurrentEpoch()
-	totalBalance := meta.GetTotalStakedBalance(currentEpoch)
+func (state *SlashingFeature) ProcessEpochSlashings() {
+	currentEpoch := state.Meta.CurrentEpoch()
+	totalBalance := state.Meta.GetTotalStakedBalance(currentEpoch)
 
 	epochIndex := currentEpoch % EPOCHS_PER_SLASHINGS_VECTOR
 	// Compute slashed balances in the current epoch
@@ -61,14 +60,14 @@ func (state *SlashingsState) ProcessEpochSlashings(meta EpochSlashingReq) {
 
 	withdrawableEpoch := currentEpoch+(EPOCHS_PER_SLASHINGS_VECTOR/2)
 
-	for _, index := range meta.GetIndicesToSlash(withdrawableEpoch) {
-		penaltyNumerator := meta.EffectiveBalance(index) / EFFECTIVE_BALANCE_INCREMENT
+	for _, index := range state.Meta.GetIndicesToSlash(withdrawableEpoch) {
+		penaltyNumerator := state.Meta.EffectiveBalance(index) / EFFECTIVE_BALANCE_INCREMENT
 		if slashingsWeight := slashings * 3; totalBalance < slashingsWeight {
 			penaltyNumerator *= totalBalance
 		} else {
 			penaltyNumerator *= slashingsWeight
 		}
 		penalty := penaltyNumerator / totalBalance * EFFECTIVE_BALANCE_INCREMENT
-		meta.DecreaseBalance(index, penalty)
+		state.Meta.DecreaseBalance(index, penalty)
 	}
 }

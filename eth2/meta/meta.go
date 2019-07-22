@@ -15,6 +15,18 @@ type BalanceMeta interface {
 	DecreaseBalance(index ValidatorIndex, v Gwei)
 }
 
+type BalanceDeltas interface {
+	ApplyDeltas(deltas *Deltas)
+}
+
+type AttestationDeltas interface {
+	AttestationDeltas() *Deltas
+}
+
+type CrosslinkDeltas interface {
+	CrosslinkDeltas() *Deltas
+}
+
 type RegistrySizeMeta interface {
 	IsValidIndex(index ValidatorIndex) bool
 	ValidatorCount() uint64
@@ -36,6 +48,10 @@ type FinalityMeta interface {
 	PreviousJustified() Checkpoint
 }
 
+type JustificationMeta interface {
+	Justify(checkpoint Checkpoint)
+}
+
 type AttesterStatusMeta interface {
 	GetAttesterStatus(index ValidatorIndex) AttesterStatus
 }
@@ -49,6 +65,7 @@ type CompactValidatorMeta interface {
 	PubkeyMeta
 	EffectiveBalanceMeta
 	SlashedMeta
+	GetCompactCommitteesRoot(epoch Epoch) Root
 }
 
 type StakingMeta interface {
@@ -56,13 +73,16 @@ type StakingMeta interface {
 	GetTotalStakedBalance(epoch Epoch) Gwei
 }
 
-type FFGMeta interface {
-	StakingMeta
+type TargetStakingMeta interface {
 	GetTargetTotalStakedBalance(epoch Epoch) Gwei
 }
 
 type SlashingMeta interface {
 	GetIndicesToSlash(withdrawal Epoch) (out []ValidatorIndex)
+}
+
+type SlasherMeta interface {
+	SlashValidator(slashedIndex ValidatorIndex, whistleblowerIndex *ValidatorIndex)
 }
 
 type ValidatorMeta interface {
@@ -87,8 +107,6 @@ type OnboardMeta interface {
 }
 
 type DepositMeta interface {
-	BalanceMeta
-	OnboardMeta
 	IncrementDepositIndex()
 }
 
@@ -98,7 +116,6 @@ type HeaderMeta interface {
 }
 
 type UpdateHeaderMeta interface {
-	StoreHeaderData(slot Slot, parent Root, body Root)
 	UpdateLatestBlockRoot(stateRoot Root) Root
 }
 
@@ -109,7 +126,7 @@ type HistoryMeta interface {
 
 type HistoryUpdateMeta interface {
 	SetRecentRoots(slot Slot, blockRoot Root, stateRoot Root)
-	UpdateHistoricalRoots()
+	UpdateStateRoot(root Root)
 }
 
 type SeedMeta interface {
@@ -118,7 +135,7 @@ type SeedMeta interface {
 }
 
 type ProposingMeta interface {
-	GetBeaconProposerIndex() ValidatorIndex
+	GetBeaconProposerIndex(slot Slot) ValidatorIndex
 }
 
 type ActivationExitMeta interface {
@@ -126,19 +143,21 @@ type ActivationExitMeta interface {
 	ExitQueueEnd(epoch Epoch) Epoch
 }
 
+type ActivationMeta interface {
+	ProcessActivationQueue(activationEpoch Epoch, currentEpoch Epoch)
+}
+
 type ActiveValidatorCountMeta interface {
 	GetActiveValidatorCount(epoch Epoch) uint64
 }
 
 type ActiveIndicesMeta interface {
-	GetActiveValidatorIndices(epoch Epoch) []ValidatorIndex
+	GetActiveValidatorIndices(epoch Epoch) RegistryIndices
+	ComputeActiveIndexRoot(epoch Epoch) Root
 }
 
 type ActiveIndexRootMeta interface {
 	GetActiveIndexRoot(epoch Epoch) Root
-	// TODO
-	// indices := state.Validators.GetActiveValidatorIndices(epoch)
-	// ssz.HashTreeRoot(indices, RegistryIndicesSSZ)
 }
 
 type CommitteeCountMeta interface {
@@ -148,6 +167,10 @@ type CommitteeCountMeta interface {
 
 type CrosslinkTimingMeta interface {
 	GetStartShard(epoch Epoch) Shard
+}
+
+type ShardRotMeta interface {
+	GetShardDelta(epoch Epoch) Shard
 }
 
 type CrosslinkCommitteeMeta interface {
@@ -167,5 +190,18 @@ type WinningCrosslinkMeta interface {
 
 type RandomnessMeta interface {
 	GetRandomMix(epoch Epoch) Root
-	// epoch + EPOCHS_PER_HISTORICAL_VECTOR - MIN_SEED_LOOKAHEAD) // Avoid underflow
+	// epoch + EPOCHS_PER_HISTORICAL_VECTOR - MIN_SEED_LOOKAHEAD) // TODO Avoid underflow
+}
+
+// TODO: split up?
+type FinalUpdates interface {
+	ResetEth1Votes()
+	UpdateEffectiveBalances()
+	RotateStartShard()
+	UpdateActiveIndexRoot(epoch Epoch)
+	UpdateCompactCommitteesRoot(epoch Epoch)
+	ResetSlashings(epoch Epoch)
+	PrepareRandao(epoch Epoch)
+	UpdateHistoricalRoots()
+	RotateEpochAttestations()
 }

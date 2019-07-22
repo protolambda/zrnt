@@ -1,25 +1,28 @@
-package slashings
+package attslash
 
 import (
 	"errors"
 	. "github.com/protolambda/zrnt/eth2/beacon/attestations"
 	. "github.com/protolambda/zrnt/eth2/core"
-	. "github.com/protolambda/zrnt/eth2/meta"
+	"github.com/protolambda/zrnt/eth2/meta"
 )
 
-type AttesterSlashingReq interface {
-	RegistrySizeMeta
-	PubkeyMeta
-	VersioningMeta
-	ValidatorMeta
-	ProposingMeta
-	BalanceMeta
-	ExitMeta
+type AttestSlashFeature struct {
+	Meta interface {
+		meta.RegistrySizeMeta
+		meta.PubkeyMeta
+		meta.VersioningMeta
+		meta.ValidatorMeta
+		meta.ProposingMeta
+		meta.BalanceMeta
+		meta.SlasherMeta
+		meta.ExitMeta
+	}
 }
 
-func (state *SlashingsState) ProcessAttesterSlashings(meta AttesterSlashingReq, ops []AttesterSlashing) error {
+func (state *AttestSlashFeature) ProcessAttesterSlashings(ops []AttesterSlashing) error {
 	for i := range ops {
-		if err := state.ProcessAttesterSlashing(meta, &ops[i]); err != nil {
+		if err := state.ProcessAttesterSlashing(&ops[i]); err != nil {
 			return err
 		}
 	}
@@ -31,7 +34,7 @@ type AttesterSlashing struct {
 	Attestation2 IndexedAttestation
 }
 
-func (state *SlashingsState) ProcessAttesterSlashing(meta AttesterSlashingReq, attesterSlashing *AttesterSlashing) error {
+func (state *AttestSlashFeature) ProcessAttesterSlashing(attesterSlashing *AttesterSlashing) error {
 	sa1 := &attesterSlashing.Attestation1
 	sa2 := &attesterSlashing.Attestation2
 
@@ -39,10 +42,10 @@ func (state *SlashingsState) ProcessAttesterSlashing(meta AttesterSlashingReq, a
 		return errors.New("attester slashing has no valid reasoning")
 	}
 
-	if err := sa1.Validate(meta); err != nil {
+	if err := sa1.Validate(state.Meta); err != nil {
 		return errors.New("attestation 1 of attester slashing cannot be verified")
 	}
-	if err := sa2.Validate(meta); err != nil {
+	if err := sa2.Validate(state.Meta); err != nil {
 		return errors.New("attestation 2 of attester slashing cannot be verified")
 	}
 
@@ -54,11 +57,11 @@ func (state *SlashingsState) ProcessAttesterSlashing(meta AttesterSlashingReq, a
 	indices1 := ValidatorSet(sa1.CustodyBit0Indices).MergeDisjoint(ValidatorSet(sa1.CustodyBit1Indices))
 	indices2 := ValidatorSet(sa2.CustodyBit0Indices).MergeDisjoint(ValidatorSet(sa2.CustodyBit1Indices))
 
-	currentEpoch := meta.CurrentEpoch()
+	currentEpoch := state.Meta.CurrentEpoch()
 	// run slashings where applicable
 	indices1.ZigZagJoin(indices2, func(i ValidatorIndex) {
-		if meta.Validator(i).IsSlashable(currentEpoch) {
-			state.SlashValidator(meta, i, nil)
+		if state.Meta.Validator(i).IsSlashable(currentEpoch) {
+			state.Meta.SlashValidator(i, nil)
 			slashedAny = true
 		}
 	}, nil)

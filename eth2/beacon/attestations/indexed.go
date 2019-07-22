@@ -34,14 +34,16 @@ type IndexedAttestation struct {
 	Signature BLSSignature
 }
 
-type AttestationValidateReq interface {
-	RegistrySizeMeta
-	PubkeyMeta
-	VersioningMeta
+type AttestationValidateFeature struct {
+	Meta interface {
+		RegistrySizeMeta
+		PubkeyMeta
+		VersioningMeta
+	}
 }
 
 // Verify validity of slashable_attestation fields.
-func (indexedAttestation *IndexedAttestation) Validate(meta AttestationValidateReq) error {
+func (state *AttestationValidateFeature) Validate(indexedAttestation *IndexedAttestation) error {
 	// wrap it in validator-sets. Does not sort it, but does make checking if it is a lot easier.
 	bit0Indices := ValidatorSet(indexedAttestation.CustodyBit0Indices)
 	bit1Indices := ValidatorSet(indexedAttestation.CustodyBit1Indices)
@@ -72,21 +74,21 @@ func (indexedAttestation *IndexedAttestation) Validate(meta AttestationValidateR
 
 	// Check the last item of the sorted list to be a valid index,
 	// if this one is valid, the others are as well, since they are lower.
-	if len(bit0Indices) > 0 && !meta.IsValidIndex(bit0Indices[len(bit0Indices)-1]) {
+	if len(bit0Indices) > 0 && !state.Meta.IsValidIndex(bit0Indices[len(bit0Indices)-1]) {
 		return errors.New("index in custody bit 0 indices is invalid")
 	}
 
-	if len(bit1Indices) > 0 && !meta.IsValidIndex(bit1Indices[len(bit1Indices)-1]) {
+	if len(bit1Indices) > 0 && !state.Meta.IsValidIndex(bit1Indices[len(bit1Indices)-1]) {
 		return errors.New("index in custody bit 1 indices is invalid")
 	}
 
 	custodyBit0Pubkeys := make([]BLSPubkey, 0)
 	for _, i := range bit0Indices {
-		custodyBit0Pubkeys = append(custodyBit0Pubkeys, meta.Pubkey(i))
+		custodyBit0Pubkeys = append(custodyBit0Pubkeys, state.Meta.Pubkey(i))
 	}
 	custodyBit1Pubkeys := make([]BLSPubkey, 0)
 	for _, i := range bit1Indices {
-		custodyBit1Pubkeys = append(custodyBit1Pubkeys, meta.Pubkey(i))
+		custodyBit1Pubkeys = append(custodyBit1Pubkeys, state.Meta.Pubkey(i))
 	}
 
 	// don't trust, verify
@@ -98,7 +100,7 @@ func (indexedAttestation *IndexedAttestation) Validate(meta AttestationValidateR
 			ssz.HashTreeRoot(&AttestationDataAndCustodyBit{Data: indexedAttestation.Data, CustodyBit: false}, AttestationDataAndCustodyBitSSZ),
 			ssz.HashTreeRoot(&AttestationDataAndCustodyBit{Data: indexedAttestation.Data, CustodyBit: true}, AttestationDataAndCustodyBitSSZ)},
 		indexedAttestation.Signature,
-		meta.GetDomain(DOMAIN_ATTESTATION, indexedAttestation.Data.Target.Epoch),
+		state.Meta.GetDomain(DOMAIN_ATTESTATION, indexedAttestation.Data.Target.Epoch),
 	) {
 		return nil
 	}

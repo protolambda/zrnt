@@ -7,12 +7,15 @@ import (
 	"sort"
 )
 
-type CrosslinkAttestingReq interface {
-	VersioningMeta
-	CrosslinkMeta
-	EffectiveBalanceMeta
-	CrosslinkCommitteeMeta
-	SlashedMeta
+type CrosslinkingFeature struct {
+	*AttestationsState
+	Meta interface {
+		VersioningMeta
+		CrosslinkMeta
+		EffectiveBalanceMeta
+		CrosslinkCommitteeMeta
+		SlashedMeta
+	}
 }
 
 type CrosslinkingStatus struct {
@@ -20,10 +23,10 @@ type CrosslinkingStatus struct {
 	Current  *CrosslinkingEpoch
 }
 
-func (state *AttestationsState) LoadCrosslinkingStatus(meta CrosslinkAttestingReq) *CrosslinkingStatus {
+func (state *CrosslinkingFeature) LoadCrosslinkingStatus() *CrosslinkingStatus {
 	return &CrosslinkingStatus{
-		Previous: state.LoadCrosslinkEpoch(meta, meta.PreviousEpoch()),
-		Current: state.LoadCrosslinkEpoch(meta, meta.CurrentEpoch()),
+		Previous: state.LoadCrosslinkEpoch(state.Meta.PreviousEpoch()),
+		Current: state.LoadCrosslinkEpoch(state.Meta.CurrentEpoch()),
 	}
 }
 
@@ -42,15 +45,15 @@ type weightedLink struct {
 	attesters []ValidatorIndex
 }
 
-func (state *AttestationsState) LoadCrosslinkEpoch(meta CrosslinkAttestingReq, epoch Epoch) *CrosslinkingEpoch {
+func (state *CrosslinkingFeature) LoadCrosslinkEpoch(epoch Epoch) *CrosslinkingEpoch {
 	var crosslinkRoots *[SHARD_COUNT]Root
 	var attestations []*PendingAttestation
 
-	if epoch == meta.CurrentEpoch() {
-		crosslinkRoots = meta.GetPreviousCrosslinkRoots()
+	if epoch == state.Meta.CurrentEpoch() {
+		crosslinkRoots = state.Meta.GetPreviousCrosslinkRoots()
 		attestations = state.PreviousEpochAttestations
 	} else {
-		crosslinkRoots = meta.GetCurrentCrosslinkRoots()
+		crosslinkRoots = state.Meta.GetCurrentCrosslinkRoots()
 		attestations = state.CurrentEpochAttestations
 	}
 
@@ -78,12 +81,12 @@ func (state *AttestationsState) LoadCrosslinkEpoch(meta CrosslinkAttestingReq, e
 	participants := make([]ValidatorIndex, 0, MAX_VALIDATORS_PER_COMMITTEE)
 	for k, v := range crosslinkAttesters {
 		shard := k.Shard
-		committee := meta.GetCrosslinkCommittee(epoch, shard)
+		committee := state.Meta.GetCrosslinkCommittee(epoch, shard)
 		participants = participants[:0]                    // reset old slice (re-used in for loop)
 		participants = append(participants, committee...)  // add committee indices
 		participants = v.FilterParticipants(participants)  // only keep the participants
-		participants = meta.FilterUnslashed(participants)  // and only those who are not slashed
-		weight := meta.SumEffectiveBalanceOf(participants) // and get their weight
+		participants = state.Meta.FilterUnslashed(participants)  // and only those who are not slashed
+		weight := state.Meta.SumEffectiveBalanceOf(participants) // and get their weight
 
 		currentWinner := &winningCrosslinks[shard]
 		isNewWinner := currentWinner.link == nil

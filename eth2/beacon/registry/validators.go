@@ -4,15 +4,10 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon/validator"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/math"
+	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/protolambda/zssz"
 	"sort"
 )
-
-type RegistryIndices []ValidatorIndex
-
-func (_ *RegistryIndices) Limit() uint64 {
-	return VALIDATOR_REGISTRY_LIMIT
-}
 
 var RegistryIndicesSSZ = zssz.GetSSZ((*RegistryIndices)(nil))
 
@@ -61,6 +56,11 @@ func (state *ValidatorsState) GetActiveValidatorIndices(epoch Epoch) RegistryInd
 	return res
 }
 
+func (state *ValidatorsState) ComputeActiveIndexRoot(epoch Epoch) Root {
+	indices := state.GetActiveValidatorIndices(epoch)
+	return ssz.HashTreeRoot(indices, RegistryIndicesSSZ)
+}
+
 func (state *ValidatorsState) GetActiveValidatorCount(epoch Epoch) (count uint64) {
 	for _, v := range state.Validators {
 		if v.IsActive(epoch) {
@@ -68,6 +68,10 @@ func (state *ValidatorsState) GetActiveValidatorCount(epoch Epoch) (count uint64
 		}
 	}
 	return
+}
+
+func (state *ValidatorsState) GetCommitteeCount(epoch Epoch) uint64 {
+	return CommitteeCount(state.GetActiveValidatorCount(epoch))
 }
 
 func (state *ValidatorsState) IsSlashed(index ValidatorIndex) bool {

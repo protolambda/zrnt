@@ -24,8 +24,26 @@ func (state *FinalityState) CurrentJustified() Checkpoint {
 	return state.CurrentJustifiedCheckpoint
 }
 
-func (state *FinalityState) Justify(meta VersioningMeta, checkpoint Checkpoint) {
-	epochsAgo := meta.CurrentEpoch() - checkpoint.Epoch
+type JustificationFeature struct {
+	*FinalityState
+	Meta interface {
+		VersioningMeta
+		HistoryMeta
+		StakingMeta
+		TargetStakingMeta
+	}
+}
+
+func (state *JustificationFeature) Justify(checkpoint Checkpoint) {
+	currentEpoch := state.Meta.CurrentEpoch()
+	if currentEpoch < checkpoint.Epoch {
+		panic("cannot justify future epochs")
+	}
+	epochsAgo := currentEpoch - checkpoint.Epoch
+	if epochsAgo >= Epoch(state.JustificationBits.BitLen()) {
+		panic("cannot justify history past justification bitfield length")
+	}
+
 	state.CurrentJustifiedCheckpoint = checkpoint
 	state.JustificationBits[0] |= 1 << epochsAgo
 }

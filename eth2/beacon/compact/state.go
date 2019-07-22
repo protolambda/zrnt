@@ -7,9 +7,12 @@ import (
 	"github.com/protolambda/zssz"
 )
 
-type CompactCommitteesReq interface {
-	CrosslinkCommitteeMeta
-	ValidatorMeta
+type CompactCommitteesFeature struct {
+	*CompactCommitteesState
+	Meta interface {
+		CrosslinkCommitteeMeta
+		ValidatorMeta
+	}
 }
 
 type CommitteePubkeys []BLSPubkey
@@ -38,15 +41,19 @@ type CompactCommitteesState struct {
 	CompactCommitteesRoots [EPOCHS_PER_HISTORICAL_VECTOR]Root
 }
 
-func (state *CompactCommitteesState) GetCompactCommittees(meta CompactCommitteesReq, epoch Epoch) *CompactCommittees {
+func (state *CompactCommitteesState) GetCompactCommitteesRoot(epoch Epoch) Root {
+	return state.CompactCommitteesRoots[epoch % EPOCHS_PER_HISTORICAL_VECTOR]
+}
+
+func (state *CompactCommitteesFeature) GetCompactCommittees(epoch Epoch) *CompactCommittees {
 	compacts := CompactCommittees{}
 	for shard := Shard(0); shard < SHARD_COUNT; shard++ {
-		committee := meta.GetCrosslinkCommittee(epoch, shard)
+		committee := state.Meta.GetCrosslinkCommittee(epoch, shard)
 		compact := &compacts[shard]
 		compact.Pubkeys = make(CommitteePubkeys, 0, len(committee))
 		compact.CompactValidators = make(CommitteeCompactValidators, 0, len(committee))
 		for _, index := range committee {
-			v := meta.Validator(index)
+			v := state.Meta.Validator(index)
 			compact.Pubkeys = append(compact.Pubkeys, v.Pubkey)
 			compactValidator := MakeCompactValidator(index, v.Slashed, v.EffectiveBalance)
 			compact.CompactValidators = append(compact.CompactValidators, compactValidator)
@@ -55,11 +62,11 @@ func (state *CompactCommitteesState) GetCompactCommittees(meta CompactCommittees
 	return &compacts
 }
 
-func (state *CompactCommitteesState) GetCompactCommittesRoot(meta CompactCommitteesReq, epoch Epoch) Root {
-	return ssz.HashTreeRoot(state.GetCompactCommittees(meta, epoch), CompactCommitteesSSZ)
+func (state *CompactCommitteesFeature) ComputeCompactCommitteesRoot(epoch Epoch) Root {
+	return ssz.HashTreeRoot(state.GetCompactCommittees(epoch), CompactCommitteesSSZ)
 }
 
-func (state *CompactCommitteesState) UpdateCompactCommitteesRoot(meta CompactCommitteesReq, epoch Epoch) {
+func (state *CompactCommitteesFeature) UpdateCompactCommitteesRoot(epoch Epoch) {
 	position := epoch % EPOCHS_PER_HISTORICAL_VECTOR
-	state.CompactCommitteesRoots[position] = state.GetCompactCommittesRoot(meta, epoch)
+	state.CompactCommitteesRoots[position] = state.ComputeCompactCommitteesRoot(epoch)
 }

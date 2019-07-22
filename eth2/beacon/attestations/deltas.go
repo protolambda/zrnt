@@ -6,25 +6,27 @@ import (
 	"github.com/protolambda/zrnt/eth2/util/math"
 )
 
-type AttestationDeltasReq interface {
-	VersioningMeta
-	RegistrySizeMeta
-	StakingMeta
-	EffectiveBalanceMeta
-	AttesterStatusMeta
-	FinalityMeta
+type AttestationDeltasFeature struct {
+	Meta interface {
+		VersioningMeta
+		RegistrySizeMeta
+		StakingMeta
+		EffectiveBalanceMeta
+		AttesterStatusMeta
+		FinalityMeta
+	}
 }
 
-func AttestationDeltas(meta AttestationDeltasReq) *Deltas {
-	validatorCount := ValidatorIndex(meta.ValidatorCount())
+func (state *AttestationDeltasFeature) AttestationDeltas() *Deltas {
+	validatorCount := ValidatorIndex(state.Meta.ValidatorCount())
 	deltas := NewDeltas(uint64(validatorCount))
 
-	previousEpoch := meta.PreviousEpoch()
+	previousEpoch := state.Meta.PreviousEpoch()
 
 	var totalBalance, totalAttestingBalance, epochBoundaryBalance, matchingHeadBalance Gwei
 	for i := ValidatorIndex(0); i < validatorCount; i++ {
-		status := meta.GetAttesterStatus(i)
-		b := meta.EffectiveBalance(i)
+		status := state.Meta.GetAttesterStatus(i)
+		b := state.Meta.EffectiveBalance(i)
 		totalBalance += b
 		if status.Flags.HasMarkers(PrevEpochAttester | UnslashedAttester) {
 			totalAttestingBalance += b
@@ -36,16 +38,16 @@ func AttestationDeltas(meta AttestationDeltasReq) *Deltas {
 			matchingHeadBalance += b
 		}
 	}
-	previousTotalBalance := meta.GetTotalStakedBalance(meta.PreviousEpoch())
+	previousTotalBalance := state.Meta.GetTotalStakedBalance(previousEpoch)
 
 	balanceSqRoot := Gwei(math.IntegerSquareroot(uint64(previousTotalBalance)))
-	finalityDelay := previousEpoch - meta.Finalized().Epoch
+	finalityDelay := previousEpoch - state.Meta.Finalized().Epoch
 
 	for i := ValidatorIndex(0); i < validatorCount; i++ {
-		status := meta.GetAttesterStatus(i)
+		status := state.Meta.GetAttesterStatus(i)
 		if status.Flags&EligibleAttester != 0 {
 
-			effBalance := meta.EffectiveBalance(i)
+			effBalance := state.Meta.EffectiveBalance(i)
 			baseReward := effBalance * BASE_REWARD_FACTOR /
 				balanceSqRoot / BASE_REWARDS_PER_EPOCH
 

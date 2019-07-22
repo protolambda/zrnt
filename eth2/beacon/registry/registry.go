@@ -57,6 +57,10 @@ func (state *RegistryState) AddNewValidator(pubkey BLSPubkey, withdrawalCreds Ro
 	state.Balances = append(state.Balances, balance)
 }
 
+type RegistryUpdateEpochProcess interface {
+	ProcessEpochRegistryUpdates()
+}
+
 type RegistryFeature struct {
 	State *RegistryState
 	Meta  interface {

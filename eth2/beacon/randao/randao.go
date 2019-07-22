@@ -10,6 +10,10 @@ import (
 	"github.com/protolambda/zssz"
 )
 
+type RandaoProcessor interface {
+	ProcessRandaoReveal(reveal BLSSignature) error
+}
+
 // Randomness and committees
 type RandaoState struct {
 	RandaoMixes [EPOCHS_PER_HISTORICAL_VECTOR]Root

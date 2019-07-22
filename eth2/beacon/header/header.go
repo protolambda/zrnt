@@ -10,6 +10,10 @@ import (
 	"github.com/protolambda/zssz"
 )
 
+type HeaderProcessor interface {
+	ProcessHeader(header *BeaconBlockHeader) error
+}
+
 type BlockHeaderFeature struct {
 	State *BlockHeaderState
 	Meta  interface {

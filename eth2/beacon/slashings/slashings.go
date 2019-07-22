@@ -14,6 +14,10 @@ func (state *SlashingsState) ResetSlashings(epoch Epoch) {
 	state.Slashings[epoch%EPOCHS_PER_SLASHINGS_VECTOR] = 0
 }
 
+type SlashingsEpochProcess interface {
+	ProcessEpochSlashings()
+}
+
 type SlashingFeature struct {
 	State *SlashingsState
 	Meta  interface {

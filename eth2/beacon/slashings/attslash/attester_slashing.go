@@ -7,6 +7,11 @@ import (
 	"github.com/protolambda/zrnt/eth2/meta"
 )
 
+type AttesterSlashingProcessor interface {
+	ProcessAttesterSlashings(ops []AttesterSlashing) error
+	ProcessAttesterSlashing(attesterSlashing *AttesterSlashing) error
+}
+
 type AttestSlashFeature struct {
 	Meta interface {
 		meta.RegistrySize

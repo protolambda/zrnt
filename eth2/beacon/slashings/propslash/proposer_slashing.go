@@ -9,6 +9,11 @@ import (
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
+type ProposerSlashingProcessor interface {
+	ProcessProposerSlashings(ops []ProposerSlashing) error
+	ProcessProposerSlashing(ps *ProposerSlashing) error
+}
+
 type PropSlashFeature struct {
 	Meta interface {
 		meta.Versioning

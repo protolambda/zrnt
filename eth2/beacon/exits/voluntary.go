@@ -9,6 +9,11 @@ import (
 	"github.com/protolambda/zssz"
 )
 
+type VoluntaryExitProcessor interface {
+	ProcessVoluntaryExits(ops []VoluntaryExit) error
+	ProcessVoluntaryExit(exit *VoluntaryExit) error
+}
+
 type VoluntaryExitFeature struct {
 	Meta interface {
 		meta.Versioning

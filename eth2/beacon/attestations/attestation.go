@@ -9,6 +9,11 @@ import (
 	"github.com/protolambda/zssz"
 )
 
+type AttestationProcessor interface {
+	ProcessAttestations(ops []Attestation) error
+	ProcessAttestation(attestation *Attestation) error
+}
+
 type AttestationFeature struct {
 	State *AttestationsState
 	Meta  interface {

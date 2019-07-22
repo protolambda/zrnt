@@ -221,15 +221,3 @@ type Randao interface {
 type Randomness interface {
 	GetRandomMix(epoch Epoch) Root
 }
-
-type FinalUpdates interface {
-	Eth1Voting
-	EffectiveBalancesUpdate
-	ShardRotation
-	ActiveIndexRootsUpdate
-	CompactCommitteesUpdate
-	SlashingHistory
-	Randao
-	HistoryUpdate
-	EpochAttestations
-}

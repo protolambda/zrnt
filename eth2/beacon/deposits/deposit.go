@@ -10,6 +10,11 @@ import (
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
+type DepositProcessor interface {
+	ProcessDeposits(ops []Deposit) error
+	ProcessDeposit(dep *Deposit) error
+}
+
 type DepositFeature struct {
 	Meta interface {
 		meta.Pubkeys

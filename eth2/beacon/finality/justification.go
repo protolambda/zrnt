@@ -4,6 +4,10 @@ import (
 	. "github.com/protolambda/zrnt/eth2/core"
 )
 
+type JustificationEpochProcess interface {
+	ProcessEpochJustification()
+}
+
 func (f *JustificationFeature) ProcessEpochJustification() {
 	currentEpoch := f.Meta.CurrentEpoch()
 	if currentEpoch <= GENESIS_EPOCH+1 {

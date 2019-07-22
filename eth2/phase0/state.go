@@ -1,4 +1,4 @@
-package beacon
+package phase0
 
 import (
 	. "github.com/protolambda/zrnt/eth2/beacon/active"
@@ -14,6 +14,8 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon/shardrot"
 	. "github.com/protolambda/zrnt/eth2/beacon/slashings"
 	. "github.com/protolambda/zrnt/eth2/beacon/versioning"
+	. "github.com/protolambda/zrnt/eth2/core"
+	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/protolambda/zssz"
 )
 
@@ -35,9 +37,6 @@ type BeaconState struct {
 	FinalityState
 }
 
-// Run and attach precomputed status items
-//func (status *Status) Load(state *BeaconState) {
-//	status.ShufflingStatus.Load(state)
-//	status.CrosslinkingStatus.Load(state, &status.ShufflingStatus)
-//	status.ValidationStatus.Load(state, &status.ShufflingStatus)
-//}
+func (state *BeaconState) StateRoot() Root {
+	return ssz.HashTreeRoot(state, BeaconStateSSZ)
+}

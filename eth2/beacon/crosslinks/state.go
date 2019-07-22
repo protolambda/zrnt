@@ -9,6 +9,10 @@ import (
 	"sort"
 )
 
+type CrosslinksEpochProcess interface {
+	ProcessEpochCrosslinks()
+}
+
 type CrosslinksState struct {
 	CurrentCrosslinks  [SHARD_COUNT]Crosslink
 	PreviousCrosslinks [SHARD_COUNT]Crosslink

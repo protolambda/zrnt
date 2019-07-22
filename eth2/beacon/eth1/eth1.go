@@ -2,6 +2,10 @@ package eth1
 
 import . "github.com/protolambda/zrnt/eth2/core"
 
+type Eth1VoteProcessor interface {
+	ProcessEth1Vote(data Eth1Data) error
+}
+
 type Eth1Data struct {
 	DepositRoot  Root // Hash-tree-root of DepositData tree.
 	DepositCount DepositIndex

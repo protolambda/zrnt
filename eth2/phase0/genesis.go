@@ -1,4 +1,4 @@
-package beacon
+package phase0
 
 import (
 	. "github.com/protolambda/zrnt/eth2/beacon/deposits"

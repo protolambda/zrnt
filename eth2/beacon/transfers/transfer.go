@@ -11,6 +11,11 @@ import (
 	"github.com/protolambda/zssz"
 )
 
+type TransferProcessor interface {
+	ProcessTransfers(ops []Transfer) error
+	ProcessTransfer(transfer *Transfer) error
+}
+
 type TransferFeature struct {
 	Meta interface {
 		meta.Versioning

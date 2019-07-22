@@ -20,9 +20,9 @@ type AttestSlashFeature struct {
 	}
 }
 
-func (state *AttestSlashFeature) ProcessAttesterSlashings(ops []AttesterSlashing) error {
+func (f *AttestSlashFeature) ProcessAttesterSlashings(ops []AttesterSlashing) error {
 	for i := range ops {
-		if err := state.ProcessAttesterSlashing(&ops[i]); err != nil {
+		if err := f.ProcessAttesterSlashing(&ops[i]); err != nil {
 			return err
 		}
 	}
@@ -34,7 +34,7 @@ type AttesterSlashing struct {
 	Attestation2 IndexedAttestation
 }
 
-func (state *AttestSlashFeature) ProcessAttesterSlashing(attesterSlashing *AttesterSlashing) error {
+func (f *AttestSlashFeature) ProcessAttesterSlashing(attesterSlashing *AttesterSlashing) error {
 	sa1 := &attesterSlashing.Attestation1
 	sa2 := &attesterSlashing.Attestation2
 
@@ -42,10 +42,10 @@ func (state *AttestSlashFeature) ProcessAttesterSlashing(attesterSlashing *Attes
 		return errors.New("attester slashing has no valid reasoning")
 	}
 
-	if err := sa1.Validate(state.Meta); err != nil {
+	if err := sa1.Validate(f.Meta); err != nil {
 		return errors.New("attestation 1 of attester slashing cannot be verified")
 	}
-	if err := sa2.Validate(state.Meta); err != nil {
+	if err := sa2.Validate(f.Meta); err != nil {
 		return errors.New("attestation 2 of attester slashing cannot be verified")
 	}
 
@@ -57,11 +57,11 @@ func (state *AttestSlashFeature) ProcessAttesterSlashing(attesterSlashing *Attes
 	indices1 := ValidatorSet(sa1.CustodyBit0Indices).MergeDisjoint(ValidatorSet(sa1.CustodyBit1Indices))
 	indices2 := ValidatorSet(sa2.CustodyBit0Indices).MergeDisjoint(ValidatorSet(sa2.CustodyBit1Indices))
 
-	currentEpoch := state.Meta.CurrentEpoch()
+	currentEpoch := f.Meta.CurrentEpoch()
 	// run slashings where applicable
 	indices1.ZigZagJoin(indices2, func(i ValidatorIndex) {
-		if state.Meta.Validator(i).IsSlashable(currentEpoch) {
-			state.Meta.SlashValidator(i, nil)
+		if f.Meta.Validator(i).IsSlashable(currentEpoch) {
+			f.Meta.SlashValidator(i, nil)
 			slashedAny = true
 		}
 	}, nil)

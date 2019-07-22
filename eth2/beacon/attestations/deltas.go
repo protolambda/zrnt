@@ -2,31 +2,31 @@ package attestations
 
 import (
 	. "github.com/protolambda/zrnt/eth2/core"
-	. "github.com/protolambda/zrnt/eth2/meta"
+	"github.com/protolambda/zrnt/eth2/meta"
 	"github.com/protolambda/zrnt/eth2/util/math"
 )
 
 type AttestationDeltasFeature struct {
 	Meta interface {
-		VersioningMeta
-		RegistrySizeMeta
-		StakingMeta
-		EffectiveBalanceMeta
-		AttesterStatusMeta
-		FinalityMeta
+		meta.VersioningMeta
+		meta.RegistrySizeMeta
+		meta.StakingMeta
+		meta.EffectiveBalanceMeta
+		meta.AttesterStatusMeta
+		meta.FinalityMeta
 	}
 }
 
-func (state *AttestationDeltasFeature) AttestationDeltas() *Deltas {
-	validatorCount := ValidatorIndex(state.Meta.ValidatorCount())
+func (f *AttestationDeltasFeature) AttestationDeltas() *Deltas {
+	validatorCount := ValidatorIndex(f.Meta.ValidatorCount())
 	deltas := NewDeltas(uint64(validatorCount))
 
-	previousEpoch := state.Meta.PreviousEpoch()
+	previousEpoch := f.Meta.PreviousEpoch()
 
 	var totalBalance, totalAttestingBalance, epochBoundaryBalance, matchingHeadBalance Gwei
 	for i := ValidatorIndex(0); i < validatorCount; i++ {
-		status := state.Meta.GetAttesterStatus(i)
-		b := state.Meta.EffectiveBalance(i)
+		status := f.Meta.GetAttesterStatus(i)
+		b := f.Meta.EffectiveBalance(i)
 		totalBalance += b
 		if status.Flags.HasMarkers(PrevEpochAttester | UnslashedAttester) {
 			totalAttestingBalance += b
@@ -38,16 +38,16 @@ func (state *AttestationDeltasFeature) AttestationDeltas() *Deltas {
 			matchingHeadBalance += b
 		}
 	}
-	previousTotalBalance := state.Meta.GetTotalStakedBalance(previousEpoch)
+	previousTotalBalance := f.Meta.GetTotalStakedBalance(previousEpoch)
 
 	balanceSqRoot := Gwei(math.IntegerSquareroot(uint64(previousTotalBalance)))
-	finalityDelay := previousEpoch - state.Meta.Finalized().Epoch
+	finalityDelay := previousEpoch - f.Meta.Finalized().Epoch
 
 	for i := ValidatorIndex(0); i < validatorCount; i++ {
-		status := state.Meta.GetAttesterStatus(i)
+		status := f.Meta.GetAttesterStatus(i)
 		if status.Flags&EligibleAttester != 0 {
 
-			effBalance := state.Meta.EffectiveBalance(i)
+			effBalance := f.Meta.EffectiveBalance(i)
 			baseReward := effBalance * BASE_REWARD_FACTOR /
 				balanceSqRoot / BASE_REWARDS_PER_EPOCH
 

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	. "github.com/protolambda/zrnt/eth2/core"
-	. "github.com/protolambda/zrnt/eth2/meta"
+	"github.com/protolambda/zrnt/eth2/meta"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/merkle"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
@@ -12,18 +12,18 @@ import (
 
 type DepositFeature struct {
 	Meta interface {
-		PubkeyMeta
-		Eth1Meta
-		BalanceMeta
-		OnboardMeta
-		DepositMeta
+		meta.PubkeyMeta
+		meta.Eth1Meta
+		meta.BalanceMeta
+		meta.OnboardMeta
+		meta.DepositMeta
 	}
 }
 
 // Verify that outstanding deposits are processed up to the maximum number of deposits, then process all in order.
-func (state *DepositFeature) ProcessDeposits(ops []Deposit) error {
+func (f *DepositFeature) ProcessDeposits(ops []Deposit) error {
 	depositCount := DepositIndex(len(ops))
-	expectedCount := state.Meta.DepCount() - state.Meta.DepIndex()
+	expectedCount := f.Meta.DepCount() - f.Meta.DepIndex()
 	if expectedCount > MAX_DEPOSITS {
 		expectedCount = MAX_DEPOSITS
 	}
@@ -32,7 +32,7 @@ func (state *DepositFeature) ProcessDeposits(ops []Deposit) error {
 	}
 
 	for i := range ops {
-		if err := state.ProcessDeposit(&ops[i]); err != nil {
+		if err := f.ProcessDeposit(&ops[i]); err != nil {
 			return err
 		}
 	}
@@ -45,8 +45,8 @@ type Deposit struct {
 }
 
 // Process an Eth1 deposit, registering a validator or increasing its balance.
-func (state *DepositFeature) ProcessDeposit(dep *Deposit) error {
-	depositIndex := state.Meta.DepIndex()
+func (f *DepositFeature) ProcessDeposit(dep *Deposit) error {
+	depositIndex := f.Meta.DepIndex()
 
 	// Verify the Merkle branch
 	if !merkle.VerifyMerkleBranch(
@@ -54,7 +54,7 @@ func (state *DepositFeature) ProcessDeposit(dep *Deposit) error {
 		dep.Proof[:],
 		DEPOSIT_CONTRACT_TREE_DEPTH+1, // Add 1 for the `List` length mix-in
 		uint64(depositIndex),
-		state.Meta.DepRoot()) {
+		f.Meta.DepRoot()) {
 		return fmt.Errorf("deposit %d merkle proof failed to be verified", depositIndex)
 	}
 
@@ -62,9 +62,9 @@ func (state *DepositFeature) ProcessDeposit(dep *Deposit) error {
 	// needs to be done here because while the deposit contract will never
 	// create an invalid Merkle branch, it may admit an invalid deposit
 	// object, and we need to be able to skip over it
-	state.Meta.IncrementDepositIndex()
+	f.Meta.IncrementDepositIndex()
 
-	valIndex, exists := state.Meta.ValidatorIndex(dep.Data.Pubkey)
+	valIndex, exists := f.Meta.ValidatorIndex(dep.Data.Pubkey)
 
 	// Check if it is a known validator that is depositing ("if pubkey not in validator_pubkeys")
 	if !exists {
@@ -81,11 +81,11 @@ func (state *DepositFeature) ProcessDeposit(dep *Deposit) error {
 		}
 
 		// Add validator and balance entries
-		state.Meta.AddNewValidator(dep.Data.Pubkey, dep.Data.WithdrawalCredentials, dep.Data.Amount)
+		f.Meta.AddNewValidator(dep.Data.Pubkey, dep.Data.WithdrawalCredentials, dep.Data.Amount)
 
 	} else {
 		// Increase balance by deposit amount
-		state.Meta.IncreaseBalance(valIndex, dep.Data.Amount)
+		f.Meta.IncreaseBalance(valIndex, dep.Data.Amount)
 	}
 	return nil
 }

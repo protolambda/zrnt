@@ -2,15 +2,15 @@ package shardrot
 
 import (
 	. "github.com/protolambda/zrnt/eth2/core"
-	. "github.com/protolambda/zrnt/eth2/meta"
+	"github.com/protolambda/zrnt/eth2/meta"
 	"github.com/protolambda/zrnt/eth2/util/math"
 )
 
 type ShardRotFeature struct {
-	*ShardRotationState
+	State *ShardRotationState
 	Meta interface {
-		VersioningMeta
-		CommitteeCountMeta
+		meta.VersioningMeta
+		meta.CommitteeCountMeta
 	}
 }
 
@@ -19,14 +19,14 @@ type ShardRotationState struct {
 }
 
 // Return the number of shards to increment state.StartShard during epoch
-func (state *ShardRotFeature) GetShardDelta(epoch Epoch) Shard {
+func (f *ShardRotFeature) GetShardDelta(epoch Epoch) Shard {
 	return Shard(math.MinU64(
-		state.Meta.GetCommitteeCount(epoch),
+		f.Meta.GetCommitteeCount(epoch),
 		uint64(SHARD_COUNT-(SHARD_COUNT/Shard(SLOTS_PER_EPOCH)))))
 }
 
-func (state *ShardRotFeature) RotateStartShard() {
-	state.StartShard = (state.StartShard + state.GetShardDelta(state.Meta.CurrentEpoch())) % SHARD_COUNT
+func (f *ShardRotFeature) RotateStartShard() {
+	f.State.StartShard = (f.State.StartShard + f.GetShardDelta(f.Meta.CurrentEpoch())) % SHARD_COUNT
 }
 
 type StartShardStatus struct {
@@ -45,11 +45,11 @@ func (status *StartShardStatus) GetStartShard(epoch Epoch) Shard {
 }
 
 // Load start shards, starting from fromEpoch, until the next epoch (incl.)
-func (state *ShardRotFeature) LoadStartShardStatus(fromEpoch Epoch) *StartShardStatus {
+func (f *ShardRotFeature) LoadStartShardStatus(fromEpoch Epoch) *StartShardStatus {
 	res := new(StartShardStatus)
-	currentEpoch := state.Meta.CurrentEpoch()
+	currentEpoch := f.Meta.CurrentEpoch()
 	res.LatestStartEpoch = currentEpoch + 1
-	shard := (state.StartShard + state.GetShardDelta(currentEpoch)) % SHARD_COUNT
+	shard := (f.State.StartShard + f.GetShardDelta(currentEpoch)) % SHARD_COUNT
 	res.StartShards = append(res.StartShards, shard)
 	diff := currentEpoch
 	if fromEpoch < currentEpoch {
@@ -57,7 +57,7 @@ func (state *ShardRotFeature) LoadStartShardStatus(fromEpoch Epoch) *StartShardS
 	}
 	for i := Epoch(0); i <= diff; i++ {
 		epoch := currentEpoch - i
-		shard = (shard + SHARD_COUNT - state.GetShardDelta(epoch)) % SHARD_COUNT
+		shard = (shard + SHARD_COUNT - f.GetShardDelta(epoch)) % SHARD_COUNT
 		res.StartShards = append(res.StartShards, shard)
 	}
 	return res

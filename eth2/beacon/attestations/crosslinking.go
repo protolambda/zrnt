@@ -2,19 +2,19 @@ package attestations
 
 import (
 	. "github.com/protolambda/zrnt/eth2/core"
-	. "github.com/protolambda/zrnt/eth2/meta"
+	"github.com/protolambda/zrnt/eth2/meta"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"sort"
 )
 
 type CrosslinkingFeature struct {
-	*AttestationsState
+	State *AttestationsState
 	Meta interface {
-		VersioningMeta
-		CrosslinkMeta
-		EffectiveBalanceMeta
-		CrosslinkCommitteeMeta
-		SlashedMeta
+		meta.VersioningMeta
+		meta.CrosslinkMeta
+		meta.EffectiveBalanceMeta
+		meta.CrosslinkCommitteeMeta
+		meta.SlashedMeta
 	}
 }
 
@@ -23,10 +23,10 @@ type CrosslinkingStatus struct {
 	Current  *CrosslinkingEpoch
 }
 
-func (state *CrosslinkingFeature) LoadCrosslinkingStatus() *CrosslinkingStatus {
+func (f *CrosslinkingFeature) LoadCrosslinkingStatus() *CrosslinkingStatus {
 	return &CrosslinkingStatus{
-		Previous: state.LoadCrosslinkEpoch(state.Meta.PreviousEpoch()),
-		Current: state.LoadCrosslinkEpoch(state.Meta.CurrentEpoch()),
+		Previous: f.LoadCrosslinkEpoch(f.Meta.PreviousEpoch()),
+		Current:  f.LoadCrosslinkEpoch(f.Meta.CurrentEpoch()),
 	}
 }
 
@@ -45,16 +45,16 @@ type weightedLink struct {
 	attesters []ValidatorIndex
 }
 
-func (state *CrosslinkingFeature) LoadCrosslinkEpoch(epoch Epoch) *CrosslinkingEpoch {
+func (f *CrosslinkingFeature) LoadCrosslinkEpoch(epoch Epoch) *CrosslinkingEpoch {
 	var crosslinkRoots *[SHARD_COUNT]Root
 	var attestations []*PendingAttestation
 
-	if epoch == state.Meta.CurrentEpoch() {
-		crosslinkRoots = state.Meta.GetPreviousCrosslinkRoots()
-		attestations = state.PreviousEpochAttestations
+	if epoch == f.Meta.CurrentEpoch() {
+		crosslinkRoots = f.Meta.GetPreviousCrosslinkRoots()
+		attestations = f.State.PreviousEpochAttestations
 	} else {
-		crosslinkRoots = state.Meta.GetCurrentCrosslinkRoots()
-		attestations = state.CurrentEpochAttestations
+		crosslinkRoots = f.Meta.GetCurrentCrosslinkRoots()
+		attestations = f.State.CurrentEpochAttestations
 	}
 
 	// Keyed by raw crosslink object. Not too big, and simplifies reduction to unique crosslinks
@@ -81,12 +81,12 @@ func (state *CrosslinkingFeature) LoadCrosslinkEpoch(epoch Epoch) *CrosslinkingE
 	participants := make([]ValidatorIndex, 0, MAX_VALIDATORS_PER_COMMITTEE)
 	for k, v := range crosslinkAttesters {
 		shard := k.Shard
-		committee := state.Meta.GetCrosslinkCommittee(epoch, shard)
-		participants = participants[:0]                    // reset old slice (re-used in for loop)
-		participants = append(participants, committee...)  // add committee indices
-		participants = v.FilterParticipants(participants)  // only keep the participants
-		participants = state.Meta.FilterUnslashed(participants)  // and only those who are not slashed
-		weight := state.Meta.SumEffectiveBalanceOf(participants) // and get their weight
+		committee := f.Meta.GetCrosslinkCommittee(epoch, shard)
+		participants = participants[:0]                      // reset old slice (re-used in for loop)
+		participants = append(participants, committee...)    // add committee indices
+		participants = v.FilterParticipants(participants)    // only keep the participants
+		participants = f.Meta.FilterUnslashed(participants)  // and only those who are not slashed
+		weight := f.Meta.SumEffectiveBalanceOf(participants) // and get their weight
 
 		currentWinner := &winningCrosslinks[shard]
 		isNewWinner := currentWinner.link == nil

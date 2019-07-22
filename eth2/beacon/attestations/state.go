@@ -2,7 +2,7 @@ package attestations
 
 import (
 	. "github.com/protolambda/zrnt/eth2/core"
-	. "github.com/protolambda/zrnt/eth2/meta"
+	"github.com/protolambda/zrnt/eth2/meta"
 )
 
 type AttestationData struct {
@@ -35,16 +35,14 @@ func (state *AttestationsState) RotateEpochAttestations() {
 	state.CurrentEpochAttestations = nil
 }
 
-type AttestationSlotFeature struct {
-	Meta interface {
-		CrosslinkTimingMeta
-		CommitteeCountMeta
-	}
+type AttestationSlotMeta interface {
+	meta.CrosslinkTimingMeta
+	meta.CommitteeCountMeta
 }
 
-func (state *AttestationSlotFeature) GetAttestationSlot(attData *AttestationData) Slot {
+func (attData *AttestationData) GetAttestationSlot(m AttestationSlotMeta) Slot {
 	epoch := attData.Target.Epoch
-	committeeCount := Slot(state.Meta.GetCommitteeCount(epoch))
-	offset := Slot((attData.Crosslink.Shard + SHARD_COUNT - state.Meta.GetStartShard(epoch)) % SHARD_COUNT)
+	committeeCount := Slot(m.GetCommitteeCount(epoch))
+	offset := Slot((attData.Crosslink.Shard + SHARD_COUNT - m.GetStartShard(epoch)) % SHARD_COUNT)
 	return epoch.GetStartSlot() + (offset / (committeeCount / SLOTS_PER_EPOCH))
 }

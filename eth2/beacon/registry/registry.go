@@ -3,7 +3,7 @@ package registry
 import (
 	. "github.com/protolambda/zrnt/eth2/beacon/validator"
 	. "github.com/protolambda/zrnt/eth2/core"
-	. "github.com/protolambda/zrnt/eth2/meta"
+	"github.com/protolambda/zrnt/eth2/meta"
 )
 
 // Validator registry
@@ -58,28 +58,28 @@ func (state *RegistryState) AddNewValidator(pubkey BLSPubkey, withdrawalCreds Ro
 }
 
 type RegistryFeature struct {
-	*RegistryState
+	State *RegistryState
 	Meta interface {
-		VersioningMeta
-		FinalityMeta
-		ActivationExitMeta
+		meta.VersioningMeta
+		meta.FinalityMeta
+		meta.ActivationExitMeta
 	}
 }
 
-func (state *RegistryFeature) ProcessEpochRegistryUpdates() {
+func (f *RegistryFeature) ProcessEpochRegistryUpdates() {
 	// Process activation eligibility and ejections
-	currentEpoch := state.Meta.CurrentEpoch()
-	for i, v := range state.Validators {
+	currentEpoch := f.Meta.CurrentEpoch()
+	for i, v := range f.State.Validators {
 		if v.ActivationEligibilityEpoch == FAR_FUTURE_EPOCH &&
 			v.EffectiveBalance == MAX_EFFECTIVE_BALANCE {
 			v.ActivationEligibilityEpoch = currentEpoch
 		}
 		if v.IsActive(currentEpoch) &&
 			v.EffectiveBalance <= EJECTION_BALANCE {
-			state.InitiateValidatorExit(currentEpoch, ValidatorIndex(i))
+			f.State.InitiateValidatorExit(currentEpoch, ValidatorIndex(i))
 		}
 	}
 	// Queue validators eligible for activation and not dequeued for activation prior to finalized epoch
-	activationEpoch := state.Meta.Finalized().Epoch.ComputeActivationExitEpoch()
-	state.ProcessActivationQueue(activationEpoch, currentEpoch)
+	activationEpoch := f.Meta.Finalized().Epoch.ComputeActivationExitEpoch()
+	f.State.ProcessActivationQueue(activationEpoch, currentEpoch)
 }

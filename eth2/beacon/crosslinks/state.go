@@ -2,7 +2,7 @@ package crosslinks
 
 import (
 	. "github.com/protolambda/zrnt/eth2/core"
-	. "github.com/protolambda/zrnt/eth2/meta"
+	"github.com/protolambda/zrnt/eth2/meta"
 	"github.com/protolambda/zrnt/eth2/util/math"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/protolambda/zssz"
@@ -41,53 +41,53 @@ func (state *CrosslinksState) GetPreviousCrosslink(shard Shard) *Crosslink {
 }
 
 type CrosslinksFeature struct {
-	*CrosslinksState
+	State *CrosslinksState
 	Meta interface {
-		VersioningMeta
-		RegistrySizeMeta
-		StakingMeta
-		EffectiveBalanceMeta
-		CrosslinkCommitteeMeta
-		CommitteeCountMeta
-		CrosslinkTimingMeta
-		WinningCrosslinkMeta
+		meta.VersioningMeta
+		meta.RegistrySizeMeta
+		meta.StakingMeta
+		meta.EffectiveBalanceMeta
+		meta.CrosslinkCommitteeMeta
+		meta.CommitteeCountMeta
+		meta.CrosslinkTimingMeta
+		meta.WinningCrosslinkMeta
 	}
 }
 
-func (state *CrosslinksFeature) CrosslinkDeltas() *Deltas {
-	deltas := NewDeltas(state.Meta.ValidatorCount())
+func (f *CrosslinksFeature) CrosslinkDeltas() *Deltas {
+	deltas := NewDeltas(f.Meta.ValidatorCount())
 
-	totalActiveBalance := state.Meta.GetTotalStakedBalance(state.Meta.CurrentEpoch())
+	totalActiveBalance := f.Meta.GetTotalStakedBalance(f.Meta.CurrentEpoch())
 
 	totalBalanceSqRoot := Gwei(math.IntegerSquareroot(uint64(totalActiveBalance)))
 
-	epoch := state.Meta.PreviousEpoch()
-	count := Shard(state.Meta.GetCommitteeCount(epoch))
-	epochStartShard := state.Meta.GetStartShard(epoch)
+	epoch := f.Meta.PreviousEpoch()
+	count := Shard(f.Meta.GetCommitteeCount(epoch))
+	epochStartShard := f.Meta.GetStartShard(epoch)
 	for offset := Shard(0); offset < count; offset++ {
 		shard := (epochStartShard + offset) % SHARD_COUNT
 
-		crosslinkCommittee := state.Meta.GetCrosslinkCommittee(epoch, shard)
+		crosslinkCommittee := f.Meta.GetCrosslinkCommittee(epoch, shard)
 		committee := make(ValidatorSet, 0, len(crosslinkCommittee))
 		committee = append(committee, crosslinkCommittee...)
 		sort.Sort(committee)
 
-		_, attestingIndices := state.Meta.GetWinningCrosslinkAndAttesters(epoch, shard)
-		attestingBalance := state.Meta.SumEffectiveBalanceOf(attestingIndices)
-		totalBalance := state.Meta.SumEffectiveBalanceOf(committee)
+		_, attestingIndices := f.Meta.GetWinningCrosslinkAndAttesters(epoch, shard)
+		attestingBalance := f.Meta.SumEffectiveBalanceOf(attestingIndices)
+		totalBalance := f.Meta.SumEffectiveBalanceOf(committee)
 
 		// reward/penalize using a zig-zag merge join.
 		// ----------------------------------------------------
 		committee.ZigZagJoin(attestingIndices,
 			func(i ValidatorIndex) {
 				// Committee member participated, reward them
-				effectiveBalance := state.Meta.EffectiveBalance(i)
+				effectiveBalance := f.Meta.EffectiveBalance(i)
 				baseReward := effectiveBalance * BASE_REWARD_FACTOR / totalBalanceSqRoot / BASE_REWARDS_PER_EPOCH
 
 				deltas.Rewards[i] += baseReward * attestingBalance / totalBalance
 			}, func(i ValidatorIndex) {
 				// Committee member did not participate, penalize them
-				effectiveBalance := state.Meta.EffectiveBalance(i)
+				effectiveBalance := f.Meta.EffectiveBalance(i)
 				baseReward := effectiveBalance * BASE_REWARD_FACTOR / totalBalanceSqRoot / BASE_REWARDS_PER_EPOCH
 
 				deltas.Penalties[i] += baseReward
@@ -96,21 +96,21 @@ func (state *CrosslinksFeature) CrosslinkDeltas() *Deltas {
 	return deltas
 }
 
-func (state *CrosslinksFeature) ProcessEpochCrosslinks() {
-	state.PreviousCrosslinks = state.CurrentCrosslinks
-	currentEpoch := state.Meta.CurrentEpoch()
-	previousEpoch := state.Meta.PreviousEpoch()
+func (f *CrosslinksFeature) ProcessEpochCrosslinks() {
+	f.State.PreviousCrosslinks = f.State.CurrentCrosslinks
+	currentEpoch := f.Meta.CurrentEpoch()
+	previousEpoch := f.Meta.PreviousEpoch()
 	for epoch := previousEpoch; epoch <= currentEpoch; epoch++ {
-		count := state.Meta.GetCommitteeCount(epoch)
-		startShard := state.Meta.GetStartShard(epoch)
+		count := f.Meta.GetCommitteeCount(epoch)
+		startShard := f.Meta.GetStartShard(epoch)
 		for offset := uint64(0); offset < count; offset++ {
 			shard := (startShard + Shard(offset)) % SHARD_COUNT
-			crosslinkCommittee := state.Meta.GetCrosslinkCommittee(epoch, shard)
-			winningCrosslink, attestingIndices := state.Meta.GetWinningCrosslinkAndAttesters(epoch, shard)
-			participatingBalance := state.Meta.SumEffectiveBalanceOf(attestingIndices)
-			totalBalance := state.Meta.SumEffectiveBalanceOf(crosslinkCommittee)
+			crosslinkCommittee := f.Meta.GetCrosslinkCommittee(epoch, shard)
+			winningCrosslink, attestingIndices := f.Meta.GetWinningCrosslinkAndAttesters(epoch, shard)
+			participatingBalance := f.Meta.SumEffectiveBalanceOf(attestingIndices)
+			totalBalance := f.Meta.SumEffectiveBalanceOf(crosslinkCommittee)
 			if 3*participatingBalance >= 2*totalBalance {
-				state.CurrentCrosslinks[shard] = *winningCrosslink
+				f.State.CurrentCrosslinks[shard] = *winningCrosslink
 			}
 		}
 	}

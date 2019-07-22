@@ -22,7 +22,7 @@ type TransferFeature struct {
 }
 
 // Verifies that there are no duplicate transfers, then processes in-order.
-func (state *TransferFeature) ProcessTransfers(ops []Transfer) error {
+func (f *TransferFeature) ProcessTransfers(ops []Transfer) error {
 	// check if all transfers are distinct
 	distinctionCheckSet := make(map[BLSSignature]struct{})
 	for i, v := range ops {
@@ -33,7 +33,7 @@ func (state *TransferFeature) ProcessTransfers(ops []Transfer) error {
 	}
 
 	for i := range ops {
-		if err := state.ProcessTransfer(&ops[i]); err != nil {
+		if err := f.ProcessTransfer(&ops[i]); err != nil {
 			return err
 		}
 	}
@@ -52,11 +52,11 @@ type Transfer struct {
 	Signature BLSSignature // Signature checked against withdrawal pubkey
 }
 
-func (state *TransferFeature) ProcessTransfer(transfer *Transfer) error {
-	if !state.Meta.IsValidIndex(transfer.Sender) {
+func (f *TransferFeature) ProcessTransfer(transfer *Transfer) error {
+	if !f.Meta.IsValidIndex(transfer.Sender) {
 		return errors.New("cannot send funds from non-existent validator")
 	}
-	senderBalance := state.Meta.GetBalance(transfer.Sender)
+	senderBalance := f.Meta.GetBalance(transfer.Sender)
 	// Verify the amount and fee aren't individually too big (for anti-overflow purposes)
 	if senderBalance < transfer.Amount {
 		return errors.New("transfer amount is too big")
@@ -70,16 +70,16 @@ func (state *TransferFeature) ProcessTransfer(transfer *Transfer) error {
 	if transfer.Sender == transfer.Recipient {
 		return errors.New("no self-transfers (to enforce >= MIN_DEPOSIT_AMOUNT or zero balance invariant)")
 	}
-	currentSlot := state.Meta.CurrentSlot()
+	currentSlot := f.Meta.CurrentSlot()
 	// A transfer is valid in only one slot
 	// (note: combined with unique transfers in a block, this functions as replay protection)
 	if currentSlot != transfer.Slot {
 		return errors.New("transfer is not valid in current slot")
 	}
-	sender := state.Meta.Validator(transfer.Sender)
+	sender := f.Meta.Validator(transfer.Sender)
 	// Sender must be not yet eligible for activation, withdrawn, or transfer balance over MAX_EFFECTIVE_BALANCE
 	if !(sender.ActivationEligibilityEpoch == FAR_FUTURE_EPOCH ||
-		state.Meta.CurrentEpoch() >= sender.WithdrawableEpoch ||
+		f.Meta.CurrentEpoch() >= sender.WithdrawableEpoch ||
 		(transfer.Amount+transfer.Fee+MAX_EFFECTIVE_BALANCE) <= senderBalance) {
 		return errors.New("transfer sender is not eligible to make a transfer, it has to be withdrawn, or yet to be activated")
 	}
@@ -92,18 +92,18 @@ func (state *TransferFeature) ProcessTransfer(transfer *Transfer) error {
 	}
 	// Verify that the signature is valid
 	if !bls.BlsVerify(transfer.Pubkey, ssz.SigningRoot(transfer, TransferSSZ), transfer.Signature,
-		state.Meta.GetDomain(DOMAIN_TRANSFER, transfer.Slot.ToEpoch())) {
+		f.Meta.GetDomain(DOMAIN_TRANSFER, transfer.Slot.ToEpoch())) {
 		return errors.New("transfer signature is invalid")
 	}
-	state.Meta.DecreaseBalance(transfer.Sender, transfer.Amount+transfer.Fee)
-	state.Meta.IncreaseBalance(transfer.Recipient, transfer.Amount)
-	propIndex := state.Meta.GetBeaconProposerIndex(currentSlot)
-	state.Meta.IncreaseBalance(propIndex, transfer.Fee)
+	f.Meta.DecreaseBalance(transfer.Sender, transfer.Amount+transfer.Fee)
+	f.Meta.IncreaseBalance(transfer.Recipient, transfer.Amount)
+	propIndex := f.Meta.GetBeaconProposerIndex(currentSlot)
+	f.Meta.IncreaseBalance(propIndex, transfer.Fee)
 	// Verify balances are not dust
-	if b := state.Meta.GetBalance(transfer.Sender); 0 < b && b < MIN_DEPOSIT_AMOUNT {
+	if b := f.Meta.GetBalance(transfer.Sender); 0 < b && b < MIN_DEPOSIT_AMOUNT {
 		return errors.New("transfer is invalid: results in dust on sender address")
 	}
-	if b := state.Meta.GetBalance(transfer.Recipient); 0 < b && b < MIN_DEPOSIT_AMOUNT {
+	if b := f.Meta.GetBalance(transfer.Recipient); 0 < b && b < MIN_DEPOSIT_AMOUNT {
 		return errors.New("transfer is invalid: results in dust on recipient address")
 	}
 	return nil

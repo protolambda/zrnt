@@ -27,17 +27,17 @@ type ProposerSlashing struct {
 	Header2       BeaconBlockHeader // Second proposal
 }
 
-func (state *PropSlashFeature) ProcessProposerSlashings(ops []ProposerSlashing) error {
+func (f *PropSlashFeature) ProcessProposerSlashings(ops []ProposerSlashing) error {
 	for i := range ops {
-		if err := state.ProcessProposerSlashing(&ops[i]); err != nil {
+		if err := f.ProcessProposerSlashing(&ops[i]); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (state *PropSlashFeature) ProcessProposerSlashing(ps *ProposerSlashing) error {
-	if !state.Meta.IsValidIndex(ps.ProposerIndex) {
+func (f *PropSlashFeature) ProcessProposerSlashing(ps *ProposerSlashing) error {
+	if !f.Meta.IsValidIndex(ps.ProposerIndex) {
 		return errors.New("invalid proposer index")
 	}
 	// Verify that the epoch is the same
@@ -48,20 +48,20 @@ func (state *PropSlashFeature) ProcessProposerSlashing(ps *ProposerSlashing) err
 	if ps.Header1 == ps.Header2 {
 		return errors.New("proposer slashing requires two different headers")
 	}
-	proposer := state.Meta.Validator(ps.ProposerIndex)
+	proposer := f.Meta.Validator(ps.ProposerIndex)
 	// Check proposer is slashable
-	if !proposer.IsSlashable(state.Meta.CurrentEpoch()) {
+	if !proposer.IsSlashable(f.Meta.CurrentEpoch()) {
 		return errors.New("proposer slashing requires proposer to be slashable")
 	}
 	// Signatures are valid
 	if !bls.BlsVerify(proposer.Pubkey, ssz.SigningRoot(ps.Header1, BeaconBlockHeaderSSZ), ps.Header1.Signature,
-		state.Meta.GetDomain(DOMAIN_BEACON_PROPOSER, ps.Header1.Slot.ToEpoch())) {
+		f.Meta.GetDomain(DOMAIN_BEACON_PROPOSER, ps.Header1.Slot.ToEpoch())) {
 		return errors.New("proposer slashing header 1 has invalid BLS signature")
 	}
 	if !bls.BlsVerify(proposer.Pubkey, ssz.SigningRoot(ps.Header2, BeaconBlockHeaderSSZ), ps.Header2.Signature,
-		state.Meta.GetDomain(DOMAIN_BEACON_PROPOSER, ps.Header2.Slot.ToEpoch())) {
+		f.Meta.GetDomain(DOMAIN_BEACON_PROPOSER, ps.Header2.Slot.ToEpoch())) {
 		return errors.New("proposer slashing header 2 has invalid BLS signature")
 	}
-	state.Meta.SlashValidator(ps.ProposerIndex, nil)
+	f.Meta.SlashValidator(ps.ProposerIndex, nil)
 	return nil
 }

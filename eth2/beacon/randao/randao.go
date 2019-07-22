@@ -3,7 +3,7 @@ package randao
 import (
 	"errors"
 	. "github.com/protolambda/zrnt/eth2/core"
-	. "github.com/protolambda/zrnt/eth2/meta"
+	"github.com/protolambda/zrnt/eth2/meta"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	. "github.com/protolambda/zrnt/eth2/util/hashing"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
@@ -32,30 +32,30 @@ func (state *RandaoState) PrepareRandao(epoch Epoch) {
 var RandaoEpochSSZ = zssz.GetSSZ((*Epoch)(nil))
 
 type RandaoFeature struct {
-	*RandaoState
+	State *RandaoState
 	Meta interface {
-		VersioningMeta
-		ProposingMeta
-		PubkeyMeta
+		meta.VersioningMeta
+		meta.ProposingMeta
+		meta.PubkeyMeta
 	}
 }
 
-func (state *RandaoFeature) ProcessRandaoReveal(reveal BLSSignature) error {
-	slot := state.Meta.CurrentSlot()
-	propIndex := state.Meta.GetBeaconProposerIndex(slot)
-	proposerPubkey := state.Meta.Pubkey(propIndex)
+func (f *RandaoFeature) ProcessRandaoReveal(reveal BLSSignature) error {
+	slot := f.Meta.CurrentSlot()
+	propIndex := f.Meta.GetBeaconProposerIndex(slot)
+	proposerPubkey := f.Meta.Pubkey(propIndex)
 	epoch := slot.ToEpoch()
 	// Verify RANDAO reveal
 	if !bls.BlsVerify(
 		proposerPubkey,
 		ssz.HashTreeRoot(epoch, RandaoEpochSSZ),
 		reveal,
-		state.Meta.GetDomain(DOMAIN_RANDAO, epoch),
+		f.Meta.GetDomain(DOMAIN_RANDAO, epoch),
 	) {
 		return errors.New("randao invalid")
 	}
 	// Mix in RANDAO reveal
-	mix := XorBytes32(state.GetRandaoMix(epoch), Hash(reveal[:]))
-	state.RandaoMixes[epoch%EPOCHS_PER_HISTORICAL_VECTOR] = mix
+	mix := XorBytes32(f.State.GetRandaoMix(epoch), Hash(reveal[:]))
+	f.State.RandaoMixes[epoch%EPOCHS_PER_HISTORICAL_VECTOR] = mix
 	return nil
 }

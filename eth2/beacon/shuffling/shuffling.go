@@ -3,17 +3,17 @@ package shuffling
 import (
 	"fmt"
 	. "github.com/protolambda/zrnt/eth2/core"
-	. "github.com/protolambda/zrnt/eth2/meta"
+	"github.com/protolambda/zrnt/eth2/meta"
 	"github.com/protolambda/zrnt/eth2/util/shuffle"
 )
 
 type ShufflingFeature struct {
 	Meta interface {
-		VersioningMeta
-		SeedMeta
-		ActiveIndicesMeta
-		CommitteeCountMeta
-		CrosslinkTimingMeta
+		meta.VersioningMeta
+		meta.SeedMeta
+		meta.ActiveIndicesMeta
+		meta.CommitteeCountMeta
+		meta.CrosslinkTimingMeta
 	}
 }
 
@@ -37,10 +37,10 @@ func (shs *ShufflingStatus) GetCrosslinkCommittee(epoch Epoch, shard Shard) []Va
 	}
 }
 
-func (state *ShufflingFeature) LoadShufflingStatus() *ShufflingStatus {
+func (f *ShufflingFeature) LoadShufflingStatus() *ShufflingStatus {
 	return &ShufflingStatus{
-		Previous: state.LoadShufflingEpoch(state.Meta.PreviousEpoch()),
-		Current: state.LoadShufflingEpoch(state.Meta.CurrentEpoch()),
+		Previous: f.LoadShufflingEpoch(f.Meta.PreviousEpoch()),
+		Current:  f.LoadShufflingEpoch(f.Meta.CurrentEpoch()),
 	}
 }
 
@@ -52,29 +52,29 @@ type ShufflingEpoch struct {
 	Committees [SHARD_COUNT][]ValidatorIndex // slices of Shuffling, 1 per slot. Committee can be nil slice.
 }
 
-func (state *ShufflingFeature) LoadShufflingEpoch(epoch Epoch) *ShufflingEpoch {
+func (f *ShufflingFeature) LoadShufflingEpoch(epoch Epoch) *ShufflingEpoch {
 	shep := &ShufflingEpoch{
 		Epoch: epoch,
 	}
-	currentEpoch := state.Meta.CurrentEpoch()
-	previousEpoch := state.Meta.PreviousEpoch()
+	currentEpoch := f.Meta.CurrentEpoch()
+	previousEpoch := f.Meta.PreviousEpoch()
 	nextEpoch := currentEpoch + 1
 
 	if !(previousEpoch <= epoch && epoch <= nextEpoch) {
 		panic("could not compute shuffling for out of range epoch")
 	}
 
-	seed := state.Meta.GetSeed(epoch)
-	activeIndices := state.Meta.GetActiveValidatorIndices(epoch)
+	seed := f.Meta.GetSeed(epoch)
+	activeIndices := f.Meta.GetActiveValidatorIndices(epoch)
 	shuffle.UnshuffleList(activeIndices, seed)
 	shep.Shuffling = activeIndices
 
 	validatorCount := uint64(len(activeIndices))
-	committeeCount := state.Meta.GetCommitteeCount(epoch)
+	committeeCount := f.Meta.GetCommitteeCount(epoch)
 	if committeeCount > uint64(SHARD_COUNT) {
 		panic("too many committees")
 	}
-	startShard := state.Meta.GetStartShard(epoch)
+	startShard := f.Meta.GetStartShard(epoch)
 	for i := uint64(0); i < committeeCount; i++ {
 		shard := startShard + Shard(i)
 		startOffset := (validatorCount * i) / committeeCount

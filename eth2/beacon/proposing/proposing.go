@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	. "github.com/protolambda/zrnt/eth2/core"
-	. "github.com/protolambda/zrnt/eth2/meta"
+	"github.com/protolambda/zrnt/eth2/meta"
 	. "github.com/protolambda/zrnt/eth2/util/hashing"
 )
 
@@ -23,20 +23,20 @@ func (state *EpochProposerIndices) GetBeaconProposerIndex(slot Slot) ValidatorIn
 
 type ProposingFeature struct {
 	Meta interface {
-		VersioningMeta
-		CrosslinkCommitteeMeta
-		EffectiveBalanceMeta
-		CommitteeCountMeta
-		CrosslinkTimingMeta
-		SeedMeta
+		meta.VersioningMeta
+		meta.CrosslinkCommitteeMeta
+		meta.EffectiveBalanceMeta
+		meta.CommitteeCountMeta
+		meta.CrosslinkTimingMeta
+		meta.SeedMeta
 	}
 }
 
 // Return the beacon proposer index for the current slot
-func (state *ProposingFeature) LoadBeaconProposerIndices() (out EpochProposerIndices) {
-	epoch := state.Meta.CurrentEpoch()
+func (f *ProposingFeature) LoadBeaconProposerIndices() (out EpochProposerIndices) {
+	epoch := f.Meta.CurrentEpoch()
 
-	seed := state.Meta.GetSeed(epoch)
+	seed := f.Meta.GetSeed(epoch)
 	buf := make([]byte, 32+8, 32+8)
 	copy(buf[0:32], seed[:])
 	balanceWeightedProposer := func(committee []ValidatorIndex) ValidatorIndex {
@@ -46,7 +46,7 @@ func (state *ProposingFeature) LoadBeaconProposerIndices() (out EpochProposerInd
 			for j := uint64(0); j < 32; j++ {
 				randomByte := h[j]
 				candidateIndex := committee[(uint64(epoch)+((i<<5)|j))%uint64(len(committee))]
-				effectiveBalance := state.Meta.EffectiveBalance(candidateIndex)
+				effectiveBalance := f.Meta.EffectiveBalance(candidateIndex)
 				if effectiveBalance*0xff >= MAX_EFFECTIVE_BALANCE*Gwei(randomByte) {
 					return candidateIndex
 				}
@@ -56,14 +56,14 @@ func (state *ProposingFeature) LoadBeaconProposerIndices() (out EpochProposerInd
 	}
 
 	// A.k.a. committeesPerSlot
-	shardsPerSlot := Shard(state.Meta.GetCommitteeCount(epoch) / uint64(SLOTS_PER_EPOCH))
+	shardsPerSlot := Shard(f.Meta.GetCommitteeCount(epoch) / uint64(SLOTS_PER_EPOCH))
 
-	startShard := state.Meta.GetStartShard(epoch)
+	startShard := f.Meta.GetStartShard(epoch)
 	offset := Shard(0)
 	for i := Slot(0); i < SLOTS_PER_EPOCH; i++ {
 		offset += shardsPerSlot
 		shard := (startShard + offset) % SHARD_COUNT
-		firstCommittee := state.Meta.GetCrosslinkCommittee(epoch, shard)
+		firstCommittee := f.Meta.GetCrosslinkCommittee(epoch, shard)
 		out.ProposerIndices[i] = balanceWeightedProposer(firstCommittee)
 	}
 	return

@@ -3,7 +3,7 @@ package exits
 import (
 	"errors"
 	. "github.com/protolambda/zrnt/eth2/core"
-	. "github.com/protolambda/zrnt/eth2/meta"
+	"github.com/protolambda/zrnt/eth2/meta"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/protolambda/zssz"
@@ -11,16 +11,16 @@ import (
 
 type VoluntaryExitFeature struct {
 	Meta interface {
-		VersioningMeta
-		RegistrySizeMeta
-		ValidatorMeta
-		ExitMeta
+		meta.VersioningMeta
+		meta.RegistrySizeMeta
+		meta.ValidatorMeta
+		meta.ExitMeta
 	}
 }
 
-func (state *VoluntaryExitFeature) ProcessVoluntaryExits(ops []VoluntaryExit) error {
+func (f *VoluntaryExitFeature) ProcessVoluntaryExits(ops []VoluntaryExit) error {
 	for i := range ops {
-		if err := state.ProcessVoluntaryExit(&ops[i]); err != nil {
+		if err := f.ProcessVoluntaryExit(&ops[i]); err != nil {
 			return err
 		}
 	}
@@ -35,12 +35,12 @@ type VoluntaryExit struct {
 	Signature      BLSSignature
 }
 
-func (state *VoluntaryExitFeature) ProcessVoluntaryExit(exit *VoluntaryExit) error {
-	currentEpoch := state.Meta.CurrentEpoch()
-	if !state.Meta.IsValidIndex(exit.ValidatorIndex) {
+func (f *VoluntaryExitFeature) ProcessVoluntaryExit(exit *VoluntaryExit) error {
+	currentEpoch := f.Meta.CurrentEpoch()
+	if !f.Meta.IsValidIndex(exit.ValidatorIndex) {
 		return errors.New("invalid exit validator index")
 	}
-	validator := state.Meta.Validator(exit.ValidatorIndex)
+	validator := f.Meta.Validator(exit.ValidatorIndex)
 	// Verify that the validator is active
 	if !validator.IsActive(currentEpoch) {
 		return errors.New("validator must be active to be able to voluntarily exit")
@@ -62,10 +62,10 @@ func (state *VoluntaryExitFeature) ProcessVoluntaryExit(exit *VoluntaryExit) err
 		validator.Pubkey,
 		ssz.SigningRoot(exit, VoluntaryExitSSZ),
 		exit.Signature,
-		state.Meta.GetDomain(DOMAIN_VOLUNTARY_EXIT, exit.Epoch)) {
+		f.Meta.GetDomain(DOMAIN_VOLUNTARY_EXIT, exit.Epoch)) {
 		return errors.New("voluntary exit signature could not be verified")
 	}
 	// Initiate exit
-	state.Meta.InitiateValidatorExit(state.Meta.CurrentEpoch(), exit.ValidatorIndex)
+	f.Meta.InitiateValidatorExit(f.Meta.CurrentEpoch(), exit.ValidatorIndex)
 	return nil
 }

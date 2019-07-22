@@ -2,7 +2,7 @@ package finality
 
 import (
 	. "github.com/protolambda/zrnt/eth2/core"
-	. "github.com/protolambda/zrnt/eth2/meta"
+	"github.com/protolambda/zrnt/eth2/meta"
 )
 
 type FinalityState struct {
@@ -25,27 +25,27 @@ func (state *FinalityState) CurrentJustified() Checkpoint {
 }
 
 type JustificationFeature struct {
-	*FinalityState
+	State *FinalityState
 	Meta interface {
-		VersioningMeta
-		HistoryMeta
-		StakingMeta
-		TargetStakingMeta
+		meta.VersioningMeta
+		meta.HistoryMeta
+		meta.StakingMeta
+		meta.TargetStakingMeta
 	}
 }
 
-func (state *JustificationFeature) Justify(checkpoint Checkpoint) {
-	currentEpoch := state.Meta.CurrentEpoch()
+func (f *JustificationFeature) Justify(checkpoint Checkpoint) {
+	currentEpoch := f.Meta.CurrentEpoch()
 	if currentEpoch < checkpoint.Epoch {
 		panic("cannot justify future epochs")
 	}
 	epochsAgo := currentEpoch - checkpoint.Epoch
-	if epochsAgo >= Epoch(state.JustificationBits.BitLen()) {
+	if epochsAgo >= Epoch(f.State.JustificationBits.BitLen()) {
 		panic("cannot justify history past justification bitfield length")
 	}
 
-	state.CurrentJustifiedCheckpoint = checkpoint
-	state.JustificationBits[0] |= 1 << epochsAgo
+	f.State.CurrentJustifiedCheckpoint = checkpoint
+	f.State.JustificationBits[0] |= 1 << epochsAgo
 }
 
 type JustificationBits [1]byte

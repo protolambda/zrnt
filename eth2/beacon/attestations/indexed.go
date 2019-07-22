@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	. "github.com/protolambda/zrnt/eth2/core"
-	. "github.com/protolambda/zrnt/eth2/meta"
+	"github.com/protolambda/zrnt/eth2/meta"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/protolambda/zssz"
@@ -34,16 +34,14 @@ type IndexedAttestation struct {
 	Signature BLSSignature
 }
 
-type AttestationValidateFeature struct {
-	Meta interface {
-		RegistrySizeMeta
-		PubkeyMeta
-		VersioningMeta
-	}
+type AttestationValidator interface {
+	meta.RegistrySizeMeta
+	meta.PubkeyMeta
+	meta.VersioningMeta
 }
 
 // Verify validity of slashable_attestation fields.
-func (state *AttestationValidateFeature) Validate(indexedAttestation *IndexedAttestation) error {
+func (indexedAttestation *IndexedAttestation) Validate(m AttestationValidator) error {
 	// wrap it in validator-sets. Does not sort it, but does make checking if it is a lot easier.
 	bit0Indices := ValidatorSet(indexedAttestation.CustodyBit0Indices)
 	bit1Indices := ValidatorSet(indexedAttestation.CustodyBit1Indices)
@@ -74,21 +72,21 @@ func (state *AttestationValidateFeature) Validate(indexedAttestation *IndexedAtt
 
 	// Check the last item of the sorted list to be a valid index,
 	// if this one is valid, the others are as well, since they are lower.
-	if len(bit0Indices) > 0 && !state.Meta.IsValidIndex(bit0Indices[len(bit0Indices)-1]) {
+	if len(bit0Indices) > 0 && !m.IsValidIndex(bit0Indices[len(bit0Indices)-1]) {
 		return errors.New("index in custody bit 0 indices is invalid")
 	}
 
-	if len(bit1Indices) > 0 && !state.Meta.IsValidIndex(bit1Indices[len(bit1Indices)-1]) {
+	if len(bit1Indices) > 0 && !m.IsValidIndex(bit1Indices[len(bit1Indices)-1]) {
 		return errors.New("index in custody bit 1 indices is invalid")
 	}
 
 	custodyBit0Pubkeys := make([]BLSPubkey, 0)
 	for _, i := range bit0Indices {
-		custodyBit0Pubkeys = append(custodyBit0Pubkeys, state.Meta.Pubkey(i))
+		custodyBit0Pubkeys = append(custodyBit0Pubkeys, m.Pubkey(i))
 	}
 	custodyBit1Pubkeys := make([]BLSPubkey, 0)
 	for _, i := range bit1Indices {
-		custodyBit1Pubkeys = append(custodyBit1Pubkeys, state.Meta.Pubkey(i))
+		custodyBit1Pubkeys = append(custodyBit1Pubkeys, m.Pubkey(i))
 	}
 
 	// don't trust, verify
@@ -100,7 +98,7 @@ func (state *AttestationValidateFeature) Validate(indexedAttestation *IndexedAtt
 			ssz.HashTreeRoot(&AttestationDataAndCustodyBit{Data: indexedAttestation.Data, CustodyBit: false}, AttestationDataAndCustodyBitSSZ),
 			ssz.HashTreeRoot(&AttestationDataAndCustodyBit{Data: indexedAttestation.Data, CustodyBit: true}, AttestationDataAndCustodyBitSSZ)},
 		indexedAttestation.Signature,
-		state.Meta.GetDomain(DOMAIN_ATTESTATION, indexedAttestation.Data.Target.Epoch),
+		m.GetDomain(DOMAIN_ATTESTATION, indexedAttestation.Data.Target.Epoch),
 	) {
 		return nil
 	}

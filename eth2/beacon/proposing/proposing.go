@@ -33,7 +33,7 @@ type ProposingFeature struct {
 }
 
 // Return the beacon proposer index for the current slot
-func (f *ProposingFeature) LoadBeaconProposerIndices() (out EpochProposerIndices) {
+func (f *ProposingFeature) LoadBeaconProposerIndices() (out *EpochProposerIndices) {
 	epoch := f.Meta.CurrentEpoch()
 
 	seed := f.Meta.GetSeed(epoch)
@@ -54,6 +54,8 @@ func (f *ProposingFeature) LoadBeaconProposerIndices() (out EpochProposerIndices
 		}
 		panic("random (but balance-biased) infinite scrolling through a committee should always find a proposer")
 	}
+
+	out = new(EpochProposerIndices)
 
 	// A.k.a. committeesPerSlot
 	shardsPerSlot := Shard(f.Meta.GetCommitteeCount(epoch) / uint64(SLOTS_PER_EPOCH))

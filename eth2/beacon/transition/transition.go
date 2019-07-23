@@ -13,8 +13,8 @@ type BlockInput interface {
 
 type TransitionFeature struct {
 	Meta interface {
-		Slot() Slot
-		NextSlot()
+		CurrentSlot() Slot
+		IncrementSlot()
 		ProcessSlot()
 		ProcessEpoch()
 		StateRoot() Root
@@ -26,14 +26,14 @@ type TransitionFeature struct {
 // Mutates the state, does not copy.
 func (f *TransitionFeature) ProcessSlots(slot Slot) {
 	// happens at the start of every CurrentSlot
-	for f.Meta.Slot() < slot {
+	for f.Meta.CurrentSlot() < slot {
 		f.Meta.ProcessSlot()
 		// Per-epoch transition happens at the start of the first slot of every epoch.
 		// (with the slot still at the end of the last epoch)
-		if slot := f.Meta.Slot(); (slot+1).ToEpoch() != slot.ToEpoch() {
+		if slot := f.Meta.CurrentSlot(); (slot+1).ToEpoch() != slot.ToEpoch() {
 			f.Meta.ProcessEpoch()
 		}
-		f.Meta.NextSlot()
+		f.Meta.IncrementSlot()
 	}
 }
 
@@ -41,7 +41,7 @@ func (f *TransitionFeature) ProcessSlots(slot Slot) {
 // Returns an error if the slot is older than the state is already at.
 // Mutates the state, does not copy.
 func (f *TransitionFeature) StateTransition(block BlockInput, verifyStateRoot bool) error {
-	if f.Meta.Slot() > block.Slot() {
+	if f.Meta.CurrentSlot() > block.Slot() {
 		return errors.New("cannot transition from pre-state with higher slot than transition target")
 	}
 	f.ProcessSlots(block.Slot())

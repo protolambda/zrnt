@@ -61,7 +61,7 @@ type RegistryUpdateEpochProcess interface {
 	ProcessEpochRegistryUpdates()
 }
 
-type RegistryFeature struct {
+type RegistryUpdatesFeature struct {
 	State *RegistryState
 	Meta  interface {
 		meta.Versioning
@@ -70,7 +70,7 @@ type RegistryFeature struct {
 	}
 }
 
-func (f *RegistryFeature) ProcessEpochRegistryUpdates() {
+func (f *RegistryUpdatesFeature) ProcessEpochRegistryUpdates() {
 	// Process activation eligibility and ejections
 	currentEpoch := f.Meta.CurrentEpoch()
 	for i, v := range f.State.Validators {

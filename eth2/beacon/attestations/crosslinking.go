@@ -1,6 +1,7 @@
 package attestations
 
 import (
+	"fmt"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/meta"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
@@ -23,6 +24,19 @@ type CrosslinkingStatus struct {
 	Current  *CrosslinkingEpoch
 }
 
+func (s *CrosslinkingStatus) GetWinningCrosslinkAndAttesters(epoch Epoch, shard Shard) (*Crosslink, ValidatorSet) {
+	if s.Previous.Epoch == epoch {
+		winner := &s.Previous.WinningLinks[shard]
+		return winner.Crosslink, winner.Attesters
+	} else if s.Current.Epoch == epoch {
+		winner := &s.Current.WinningLinks[shard]
+		return winner.Crosslink, winner.Attesters
+	} else {
+		panic(fmt.Errorf("cannot get winning crosslink " +
+			"for out of range epoch %d (current epoch: %d)", epoch, s.Current.Epoch))
+	}
+}
+
 func (f *CrosslinkingFeature) LoadCrosslinkingStatus() *CrosslinkingStatus {
 	return &CrosslinkingStatus{
 		Previous: f.LoadCrosslinkEpoch(f.Meta.PreviousEpoch()),
@@ -36,6 +50,7 @@ type LinkWinner struct {
 }
 
 type CrosslinkingEpoch struct {
+	Epoch Epoch
 	WinningLinks [SHARD_COUNT]LinkWinner
 }
 
@@ -113,7 +128,7 @@ func (f *CrosslinkingFeature) LoadCrosslinkEpoch(epoch Epoch) *CrosslinkingEpoch
 		}
 	}
 
-	crep := new(CrosslinkingEpoch)
+	crep := &CrosslinkingEpoch{Epoch: epoch}
 	for shard, winner := range winningCrosslinks {
 		out := &crep.WinningLinks[shard]
 		out.Crosslink = winner.link

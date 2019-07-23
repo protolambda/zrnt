@@ -9,10 +9,6 @@ import (
 	"sort"
 )
 
-type CrosslinksEpochProcess interface {
-	ProcessEpochCrosslinks()
-}
-
 type CrosslinksState struct {
 	CurrentCrosslinks  [SHARD_COUNT]Crosslink
 	PreviousCrosslinks [SHARD_COUNT]Crosslink
@@ -44,7 +40,7 @@ func (state *CrosslinksState) GetPreviousCrosslink(shard Shard) *Crosslink {
 	return &state.PreviousCrosslinks[shard]
 }
 
-type CrosslinksFeature struct {
+type CrosslinkDeltasFeature struct {
 	State *CrosslinksState
 	Meta  interface {
 		meta.Versioning
@@ -58,7 +54,7 @@ type CrosslinksFeature struct {
 	}
 }
 
-func (f *CrosslinksFeature) CrosslinkDeltas() *Deltas {
+func (f *CrosslinkDeltasFeature) CrosslinkDeltas() *Deltas {
 	deltas := NewDeltas(f.Meta.ValidatorCount())
 
 	totalActiveBalance := f.Meta.GetTotalStakedBalance(f.Meta.CurrentEpoch())
@@ -98,6 +94,22 @@ func (f *CrosslinksFeature) CrosslinkDeltas() *Deltas {
 			})
 	}
 	return deltas
+}
+
+type CrosslinksEpochProcess interface {
+	ProcessEpochCrosslinks()
+}
+
+type CrosslinksFeature struct {
+	State *CrosslinksState
+	Meta  interface {
+		meta.Versioning
+		meta.EffectiveBalances
+		meta.CrosslinkCommittees
+		meta.CommitteeCount
+		meta.CrosslinkTiming
+		meta.WinningCrosslinks
+	}
 }
 
 func (f *CrosslinksFeature) ProcessEpochCrosslinks() {

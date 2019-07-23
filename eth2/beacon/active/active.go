@@ -1,4 +1,4 @@
-package shuffling
+package active
 
 import (
 	. "github.com/protolambda/zrnt/eth2/core"

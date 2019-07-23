@@ -40,3 +40,7 @@ type BeaconState struct {
 func (state *BeaconState) StateRoot() Root {
 	return ssz.HashTreeRoot(state, BeaconStateSSZ)
 }
+
+func (state *BeaconState) IncrementSlot() {
+	state.Slot++
+}

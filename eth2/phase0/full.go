@@ -1,4 +1,4 @@
-package full
+package phase0
 
 import (
 	. "github.com/protolambda/zrnt/eth2/beacon/active"
@@ -22,13 +22,12 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon/slashings/propslash"
 	. "github.com/protolambda/zrnt/eth2/beacon/transfers"
 	. "github.com/protolambda/zrnt/eth2/beacon/transition"
-	"github.com/protolambda/zrnt/eth2/phase0"
 )
 
 // Full feature set for phase 0
 type FullFeatures struct {
 	// All base features a state has
-	*phase0.BeaconState
+	*BeaconState
 
 	ShardRotFeature
 	*StartShardStatus
@@ -73,12 +72,12 @@ type FullFeatures struct {
 	TransferFeature
 	VoluntaryExitFeature
 
-	phase0.SlotProcessFeature
-	phase0.EpochProcessFeature
+	SlotProcessFeature
+	EpochProcessFeature
 	TransitionFeature
 }
 
-func (f *FullFeatures) Load(state *phase0.BeaconState) {
+func (f *FullFeatures) Load(state *BeaconState) {
 	// The con of heavy composition: it needs to be hooked up at the upper abstraction level
 	// for cross references through interfaces to work.
 

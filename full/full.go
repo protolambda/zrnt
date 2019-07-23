@@ -26,7 +26,7 @@ import (
 )
 
 // Full feature set for phase 0
-type FullPhase0 struct {
+type FullFeatures struct {
 	// All base features a state has
 	*phase0.BeaconState
 
@@ -78,7 +78,7 @@ type FullPhase0 struct {
 	TransitionFeature
 }
 
-func (f *FullPhase0) Load(state *phase0.BeaconState) {
+func (f *FullFeatures) Load(state *phase0.BeaconState) {
 	// The con of heavy composition: it needs to be hooked up at the upper abstraction level
 	// for cross references through interfaces to work.
 
@@ -87,28 +87,49 @@ func (f *FullPhase0) Load(state *phase0.BeaconState) {
 
 	// hook up features
 	f.ShufflingFeature.Meta = f
+
 	f.AttesterStatusFeature.State = &f.AttestationsState
 	f.AttesterStatusFeature.Meta = f
+	f.AttesterStatusFeature.State = &f.AttestationsState
 	f.CrosslinkingFeature.Meta = f
+	f.CrosslinkingFeature.State = &f.AttestationsState
+
 	f.ShardRotFeature.Meta = f
+	f.ShardRotFeature.State = &f.ShardRotationState
+
 	f.ActiveRootsFeature.Meta = f
+	f.ActiveRootsFeature.State = &f.ActiveState
+
 	f.CompactCommitteesFeature.Meta = f
+	f.CompactCommitteesFeature.State = &f.CompactCommitteesState
+
 	f.CrosslinkDeltasFeature.Meta = f
+	f.CrosslinkDeltasFeature.State = &f.CrosslinksState
 	f.AttestationDeltasFeature.Meta = f
+
 	f.SeedFeature.Meta = f
 	f.ProposingFeature.Meta = f
+
 	// TODO: disabled for now, need to implement "meta.TargetStaking"
 	//f.JustificationFeature.Meta = f
+	f.JustificationFeature.State = &f.FinalityState
 	f.CrosslinksFeature.Meta = f
+	f.CrosslinksFeature.State = &f.CrosslinksState
 	f.RewardsAndPenaltiesFeature.Meta = f
 	f.RegistryUpdatesFeature.Meta = f
+	f.RegistryUpdatesFeature.State = &f.RegistryState
 	f.SlashingFeature.Meta = f
+	f.SlashingFeature.State = &f.SlashingsState
 	f.FinalUpdateFeature.Meta = f
 
 	f.RandaoFeature.Meta = f
+	f.RandaoFeature.State = &f.RandaoState
+
 	f.BlockHeaderFeature.Meta = f
+	f.BlockHeaderFeature.State = &f.BlockHeaderState
 
 	f.AttestationFeature.Meta = f
+	f.AttestationFeature.State = &f.AttestationsState
 	f.AttestSlashFeature.Meta = f
 	f.PropSlashFeature.Meta = f
 	f.DepositFeature.Meta = f
@@ -118,15 +139,13 @@ func (f *FullPhase0) Load(state *phase0.BeaconState) {
 	f.SlotProcessFeature.Meta = f
 	f.EpochProcessFeature.Meta = f
 	f.TransitionFeature.Meta = f
-	// TODO hook states too
-	// ...
 
 	// pre-compute the data!
 	// TODO: could re-use some pre-computed data from older states, worth benchmarking
-	// TODO decide on some looback time, or load it dynamically
+	// TODO decide on some lookback time, or load it dynamically
 	f.StartShardStatus = f.ShardRotFeature.LoadStartShardStatus(f.CurrentEpoch() - 20)
 	f.ShufflingStatus = f.ShufflingFeature.LoadShufflingStatus()
-	f.AttesterStatuses = f.AttesterStatusFeature.LoadAttesterStatuses()
 	f.CrosslinkingStatus = f.CrosslinkingFeature.LoadCrosslinkingStatus()
+	f.AttesterStatuses = f.AttesterStatusFeature.LoadAttesterStatuses()
 	f.EpochProposerIndices = f.LoadBeaconProposerIndices()
 }

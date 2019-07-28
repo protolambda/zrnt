@@ -12,36 +12,36 @@ import (
 
 type ProposerSlashings []ProposerSlashing
 
-func (*ProposerSlashings) Limit() uint32 {
+func (*ProposerSlashings) Limit() uint64 {
 	return MAX_PROPOSER_SLASHINGS
 }
 
 type AttesterSlashings []AttesterSlashing
 
-func (*AttesterSlashings) Limit() uint32 {
+func (*AttesterSlashings) Limit() uint64 {
 	return MAX_ATTESTER_SLASHINGS
 }
 
 type Attestations []Attestation
 
-func (*Attestations) Limit() uint32 {
+func (*Attestations) Limit() uint64 {
 	return MAX_ATTESTATIONS
 }
 
 type Deposits []Deposit
 
-func (*Deposits) Limit() uint32 {
+func (*Deposits) Limit() uint64 {
 	return MAX_DEPOSITS
 }
 
 type Transfers []Transfer
 
-func (*Transfers) Limit() uint32 {
+func (*Transfers) Limit() uint64 {
 	return MAX_TRANSFERS
 }
 
 type VoluntaryExits []VoluntaryExit
 
-func (*VoluntaryExits) Limit() uint32 {
+func (*VoluntaryExits) Limit() uint64 {
 	return MAX_VOLUNTARY_EXITS
 }

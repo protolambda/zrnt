@@ -24,9 +24,15 @@ type PendingAttestation struct {
 	ProposerIndex   ValidatorIndex
 }
 
+type EpochPendingAttestations []*PendingAttestation
+
+func (*EpochPendingAttestations) Limit() uint64 {
+	return MAX_ATTESTATIONS * uint64(SLOTS_PER_EPOCH)
+}
+
 type AttestationsState struct {
-	PreviousEpochAttestations []*PendingAttestation
-	CurrentEpochAttestations  []*PendingAttestation
+	PreviousEpochAttestations EpochPendingAttestations
+	CurrentEpochAttestations  EpochPendingAttestations
 }
 
 // Rotate current/previous epoch attestations

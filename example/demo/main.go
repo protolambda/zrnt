@@ -2,25 +2,17 @@ package main
 
 import (
 	"encoding/binary"
-	. "github.com/protolambda/zrnt/eth2/beacon"
 	. "github.com/protolambda/zrnt/eth2/beacon/deposits"
 	. "github.com/protolambda/zrnt/eth2/beacon/eth1"
 	. "github.com/protolambda/zrnt/eth2/beacon/header"
 	. "github.com/protolambda/zrnt/eth2/core"
+	. "github.com/protolambda/zrnt/eth2/phase0"
 	"github.com/protolambda/zrnt/eth2/util/hashing"
-	"github.com/protolambda/zrnt/eth2/util/merkle"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
-	"github.com/protolambda/zssz"
+	"github.com/protolambda/zssz/htr"
+	"github.com/protolambda/zssz/merkle"
 	"math/rand"
 )
-
-type DepositRoots []Root
-
-func (_ *DepositRoots) Limit() uint64 {
-	return 1 << DEPOSIT_CONTRACT_TREE_DEPTH
-}
-
-var DepositRootsSSZ = zssz.GetSSZ((*DepositData)(nil))
 
 func main() {
 
@@ -56,23 +48,31 @@ func main() {
 		deposits = append(deposits, dep)
 		depRoots = append(depRoots, depLeafHash)
 	}
-	for i := 0; i < len(deposits); i++ {
-		proof := merkle.ConstructProof(depRoots, uint64(i), uint8(DEPOSIT_CONTRACT_TREE_DEPTH))
-		copy(deposits[i].Proof[:DEPOSIT_CONTRACT_TREE_DEPTH], proof)
-		binary.LittleEndian.PutUint64(deposits[i].Proof[DEPOSIT_CONTRACT_TREE_DEPTH][:], uint64(len(deposits)))
+	hashFn := htr.HashFn(hashing.GetHashFn())
+	leaf := func(i uint64) []byte {
+		return depRoots[i][:]
+	}
+	for i := uint64(0); i < uint64(len(deposits)); i++ {
+		proof := merkle.ConstructProof(hashFn, i+1, 1<<DEPOSIT_CONTRACT_TREE_DEPTH, leaf, i)
+		for j := 0; j < DEPOSIT_CONTRACT_TREE_DEPTH; j++ {
+			copy(deposits[i].Proof[j][:], proof[j][:])
+		}
+		binary.LittleEndian.PutUint64(deposits[i].Proof[DEPOSIT_CONTRACT_TREE_DEPTH][:], i+1)
 	}
 
-	eth1Data := Eth1Data{
-		DepositRoot:  ssz.HashTreeRoot(depRoots, DepositRootsSSZ),
-		DepositCount: DepositIndex(len(deposits)),
-		BlockHash:    Root{42}, // deposits are simulated, not from a real Eth1 origin.
+	state, err := GenesisFromEth1(Root{42}, genesisTime, deposits)
+	if err != nil {
+		panic(err)
 	}
-	state := Genesis(deposits, genesisTime, eth1Data)
 
+	full := &FullFeatures{}
+	blockProc := &BlockProcessFeature{}
 	for i := 0; i < 300; i++ {
 		block := SimulateBlock(state, rng)
-		err := state.StateTransition(block, false)
-		if err != nil {
+		full.Load(state)
+		blockProc.Block = block
+		blockProc.Meta = full
+		if err := full.StateTransition(blockProc, false); err != nil {
 			panic(err)
 		}
 	}
@@ -86,7 +86,6 @@ func SimulateBlock(state *BeaconState, rng *rand.Rand) *BeaconBlock {
 	prevHeader.StateRoot = ssz.HashTreeRoot(state, BeaconStateSSZ)
 	// get root of previous block
 	parentRoot := ssz.HashTreeRoot(prevHeader, BeaconBlockHeaderSSZ)
-
 
 	block := &BeaconBlock{
 		Slot:       state.Slot + 1 + Slot(rng.Intn(5)),

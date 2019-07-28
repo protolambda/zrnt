@@ -40,7 +40,7 @@ func main() {
 			Data: DepositData{
 				Pubkey:                pubKey,
 				WithdrawalCredentials: withdrawCreds,
-				Amount:                Gwei(100),
+				Amount:                MAX_EFFECTIVE_BALANCE,
 				Signature:             BLSSignature{1, 2, 3}, // BLS not yet implemented
 			},
 		}

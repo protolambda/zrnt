@@ -21,12 +21,12 @@ func main() {
 	rng := rand.New(rand.NewSource(0xDEADBEEF))
 
 	genesisTime := Timestamp(1222333444)
-	genesisValidatorCount := 100
+	genesisValidatorCount := uint64(100)
 
 	privKeys := make([][32]byte, 0, genesisValidatorCount)
 	deposits := make([]Deposit, 0, genesisValidatorCount)
 	depRoots := make(DepositRoots, 0, genesisValidatorCount)
-	for i := 0; i < genesisValidatorCount; i++ {
+	for i := uint64(0); i < genesisValidatorCount; i++ {
 		// create a random 32 byte private key. We're not using real crypto yet.
 		privKey := [32]byte{}
 		rng.Read(privKey[:])
@@ -53,10 +53,13 @@ func main() {
 	leaf := func(i uint64) []byte {
 		return depRoots[i][:]
 	}
-	for i := uint64(0); i < uint64(len(deposits)); i++ {
+	for i := uint64(0); i < genesisValidatorCount; i++ {
 		proof := merkle.ConstructProof(hashFn, i+1, 1<<DEPOSIT_CONTRACT_TREE_DEPTH, leaf, i)
 		for j := 0; j < DEPOSIT_CONTRACT_TREE_DEPTH; j++ {
 			copy(deposits[i].Proof[j][:], proof[j][:])
+		}
+		if i % (genesisValidatorCount / 100) == 0 {
+			fmt.Printf("constructed dep root for %d validators\n", i)
 		}
 		binary.LittleEndian.PutUint64(deposits[i].Proof[DEPOSIT_CONTRACT_TREE_DEPTH][:], i+1)
 	}

@@ -76,8 +76,8 @@ func (f *ProposingFeature) LoadBeaconProposerIndices(epoch Epoch) (out *EpochPro
 	startShard := f.Meta.GetStartShard(epoch)
 	offset := Shard(0)
 	for i := Slot(0); i < SLOTS_PER_EPOCH; i++ {
-		offset += shardsPerSlot
 		shard := (startShard + offset) % SHARD_COUNT
+		offset += shardsPerSlot
 		firstCommittee := f.Meta.GetCrosslinkCommittee(epoch, shard)
 		out[i] = balanceWeightedProposer(firstCommittee)
 	}

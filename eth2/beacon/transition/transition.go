@@ -13,6 +13,7 @@ type BlockInput interface {
 
 type TransitionFeature struct {
 	Meta interface {
+		PrepareEpoch()
 		CurrentSlot() Slot
 		IncrementSlot()
 		ProcessSlot()
@@ -30,10 +31,15 @@ func (f *TransitionFeature) ProcessSlots(slot Slot) {
 		f.Meta.ProcessSlot()
 		// Per-epoch transition happens at the start of the first slot of every epoch.
 		// (with the slot still at the end of the last epoch)
-		if slot := f.Meta.CurrentSlot(); (slot+1).ToEpoch() != slot.ToEpoch() {
+		currentSlot := f.Meta.CurrentSlot()
+		isEpochEnd := (currentSlot+1).ToEpoch() != currentSlot.ToEpoch()
+		if isEpochEnd {
 			f.Meta.ProcessEpoch()
 		}
 		f.Meta.IncrementSlot()
+		if isEpochEnd {
+			f.Meta.PrepareEpoch()
+		}
 	}
 }
 

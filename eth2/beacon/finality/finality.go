@@ -30,7 +30,6 @@ type JustificationFeature struct {
 		meta.Versioning
 		meta.History
 		meta.Staking
-		meta.TargetStaking
 	}
 }
 

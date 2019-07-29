@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/binary"
+	"fmt"
 	. "github.com/protolambda/zrnt/eth2/beacon/deposits"
 	. "github.com/protolambda/zrnt/eth2/beacon/eth1"
 	. "github.com/protolambda/zrnt/eth2/beacon/header"
@@ -65,18 +66,19 @@ func main() {
 		panic(err)
 	}
 
-	full := &FullFeatures{}
+	full := FullFeaturedState(state)
+	full.LoadPrecomputedData()
+
 	blockProc := &BlockProcessFeature{}
+	blockProc.Meta = full
 	for i := 0; i < 300; i++ {
 		block := SimulateBlock(state, rng)
-		full.Load(state)
 		blockProc.Block = block
-		blockProc.Meta = full
 		if err := full.StateTransition(blockProc, false); err != nil {
 			panic(err)
 		}
+		fmt.Printf("processed to block #%d (slot %d)\n", i, block.Slot)
 	}
-
 }
 
 func SimulateBlock(state *BeaconState, rng *rand.Rand) *BeaconBlock {
@@ -85,12 +87,12 @@ func SimulateBlock(state *BeaconState, rng *rand.Rand) *BeaconBlock {
 	// stub state root
 	prevHeader.StateRoot = ssz.HashTreeRoot(state, BeaconStateSSZ)
 	// get root of previous block
-	parentRoot := ssz.HashTreeRoot(prevHeader, BeaconBlockHeaderSSZ)
+	parentRoot := ssz.SigningRoot(prevHeader, BeaconBlockHeaderSSZ)
 
 	block := &BeaconBlock{
 		Slot:       state.Slot + 1 + Slot(rng.Intn(5)),
 		ParentRoot: parentRoot,
-		StateRoot:  Root{},
+		StateRoot:  Root{}, // verifyStateRoot = false in the transition call.
 		Body: BeaconBlockBody{
 			RandaoReveal: BLSSignature{4, 2},
 			Eth1Data: Eth1Data{

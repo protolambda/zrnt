@@ -5,10 +5,30 @@ import (
 	"github.com/protolambda/zrnt/eth2/meta"
 )
 
-type AttesterStatuses []AttesterStatus
+type AttestersData struct {
+	Epoch          Epoch
+	Statuses       []AttesterStatus
+	TotalStake     Gwei
+	PrevTotalStake EpochStake
+	CurrTotalStake EpochStake
+}
 
-func (ats AttesterStatuses) GetAttesterStatus(index ValidatorIndex) AttesterStatus {
-	return ats[index]
+func (atd AttestersData) GetAttesterStatus(index ValidatorIndex) AttesterStatus {
+	return atd.Statuses[index]
+}
+
+func (atd AttestersData) GetTotalStake() Gwei {
+	return atd.TotalStake
+}
+
+func (atd AttestersData) GetTotalEpochStake(epoch Epoch) EpochStake {
+	if epoch == atd.Epoch {
+		return atd.CurrTotalStake
+	} else if epoch == atd.Epoch.Previous() {
+		return atd.PrevTotalStake
+	} else {
+		panic("epoch out of computed range")
+	}
 }
 
 type AttesterStatusFeature struct {
@@ -23,74 +43,98 @@ type AttesterStatusFeature struct {
 		meta.History
 		meta.SlashedIndices
 		meta.ActiveIndices
+		meta.ValidatorEpochData
 	}
 }
 
-func (f *AttesterStatusFeature) LoadAttesterStatuses() (out AttesterStatuses) {
+func (f *AttesterStatusFeature) LoadAttesterStatuses() (out *AttestersData) {
 	count := f.Meta.ValidatorCount()
-	out = make(AttesterStatuses, count, count)
 
 	currentEpoch := f.Meta.CurrentEpoch()
 	prevEpoch := f.Meta.PreviousEpoch()
-	previousBoundaryBlockRoot := f.Meta.GetBlockRootAtSlot(prevEpoch.GetStartSlot())
-	//currentBoundaryBlockRoot := meta.GetBlockRootAtSlot(currentEpoch.GetStartSlot())
 
-	participants := make([]ValidatorIndex, 0, MAX_VALIDATORS_PER_COMMITTEE)
-	for _, att := range f.State.PreviousEpochAttestations {
-		attBlockRoot := f.Meta.GetBlockRootAtSlot(att.Data.GetAttestationSlot(f.Meta))
+	out = &AttestersData{
+		Epoch:    currentEpoch,
+		Statuses: make([]AttesterStatus, count, count),
+	}
 
-		// attestation-target is already known to be previous-epoch, get it from the pre-computed shuffling directly.
-		committee := f.Meta.GetCrosslinkCommittee(prevEpoch, att.Data.Crosslink.Shard)
+	for i := ValidatorIndex(0); i < ValidatorIndex(len(out.Statuses)); i++ {
+		status := &out.Statuses[i]
+		if !f.Meta.IsSlashed(i) {
+			status.Flags |= UnslashedAttester
+		}
+		if f.Meta.IsActive(i, currentEpoch) {
+			out.TotalStake += f.Meta.EffectiveBalance(i)
+			status.Flags |= EligibleAttester
+		} else if f.Meta.IsSlashed(i) && prevEpoch+1 < f.Meta.WithdrawableEpoch(i) {
+			status.Flags |= EligibleAttester
+		}
+	}
 
-		participants = participants[:0]                                     // reset old slice (re-used in for loop)
-		participants = append(participants, committee...)                   // add committee indices
-		participants = att.AggregationBits.FilterParticipants(participants) // only keep the participants
-		for _, p := range participants {
+	processEpoch := func(
+		attestations []*PendingAttestation, epoch Epoch,
+		sourceFlag, targetFlag, headFlag AttesterFlag) {
 
-			status := &out[p]
+		targetBlockRoot := f.Meta.GetBlockRootAtSlot(epoch.GetStartSlot())
+		participants := make([]ValidatorIndex, 0, MAX_VALIDATORS_PER_COMMITTEE)
+		for _, att := range attestations {
+			attBlockRoot := f.Meta.GetBlockRootAtSlot(att.Data.GetAttestationSlot(f.Meta))
 
-			// If the attestation is the earliest, i.e. has the biggest delay
-			if status.InclusionDelay < att.InclusionDelay {
-				status.InclusionDelay = att.InclusionDelay
-				status.AttestedProposer = att.ProposerIndex
-			}
+			// attestation-target is already known to be this epoch, get it from the pre-computed shuffling directly.
+			committee := f.Meta.GetCrosslinkCommittee(epoch, att.Data.Crosslink.Shard)
 
-			if !f.Meta.IsSlashed(p) {
-				status.Flags |= UnslashedAttester
-			}
+			participants = participants[:0]                                     // reset old slice (re-used in for loop)
+			participants = append(participants, committee...)                   // add committee indices
+			participants = att.AggregationBits.FilterParticipants(participants) // only keep the participants
+			for _, p := range participants {
 
-			// remember the participant as one of the good validators
-			status.Flags |= PrevEpochAttester
+				status := &out.Statuses[p]
 
-			// If the attestation is for the boundary:
-			if att.Data.Target.Root == previousBoundaryBlockRoot {
-				status.Flags |= PrevEpochBoundaryAttester
-			}
-			// If the attestation is for the head (att the time of attestation):
-			if att.Data.BeaconBlockRoot == attBlockRoot {
-				status.Flags |= MatchingHeadAttester
+				// If the attestation is the earliest, i.e. has the biggest delay
+				if status.InclusionDelay < att.InclusionDelay {
+					status.InclusionDelay = att.InclusionDelay
+					status.AttestedProposer = att.ProposerIndex
+				}
+
+				// remember the participant as one of the good validators
+				status.Flags |= sourceFlag
+
+				// If the attestation is for the boundary:
+				if att.Data.Target.Root == targetBlockRoot {
+					status.Flags |= targetFlag
+				}
+				// If the attestation is for the head (att the time of attestation):
+				if att.Data.BeaconBlockRoot == attBlockRoot {
+					status.Flags |= headFlag
+				}
 			}
 		}
 	}
-	// TODO
-	//if att.Data.Target.Root == currentBoundaryBlockRoot {
-	//	status.Flags |= CurrEpochBoundaryAttester
-	//}
-	for _, index := range f.Meta.GetActiveValidatorIndices(currentEpoch) {
-		out[index].Flags |= EligibleAttester
-	}
-	//// TODO: also consider slashed but non-withdrawn validators?
-	//for i := 0; i < count; i++ {
-	//	v := state.Validators[i]
-	//	vStatus := &status.ValidatorStatuses[i]
-	//	if v.Slashed && currentEpoch < v.WithdrawableEpoch {
-	//		vStatus.Flags |= EligibleAttester
-	//	}
-	//}
-	prevTargetStake := Gwei(0)
-	for i := range out {
-		if out[i].Flags.HasMarkers(EligibleAttester | PrevEpochBoundaryAttester) {
-			prevTargetStake += f.Meta.EffectiveBalance(ValidatorIndex(i))
+	processEpoch(f.State.PreviousEpochAttestations, prevEpoch,
+		PrevSourceAttester, PrevTargetAttester, PrevHeadAttester)
+	processEpoch(f.State.CurrentEpochAttestations, currentEpoch,
+		CurrSourceAttester, CurrTargetAttester, CurrHeadAttester)
+
+	for i := range out.Statuses {
+		status := &out.Statuses[i]
+		b := f.Meta.EffectiveBalance(ValidatorIndex(i))
+		if status.Flags.HasMarkers(PrevSourceAttester | UnslashedAttester) {
+			out.PrevTotalStake.SourceBalance += b
+		}
+		if status.Flags.HasMarkers(PrevTargetAttester | UnslashedAttester) {
+			out.PrevTotalStake.TargetBalance += b
+		}
+		if status.Flags.HasMarkers(PrevHeadAttester | UnslashedAttester) {
+			out.PrevTotalStake.HeadBalance += b
+		}
+		if status.Flags.HasMarkers(CurrSourceAttester | UnslashedAttester) {
+			out.CurrTotalStake.SourceBalance += b
+		}
+		if status.Flags.HasMarkers(CurrTargetAttester | UnslashedAttester) {
+			out.CurrTotalStake.TargetBalance += b
+		}
+		if status.Flags.HasMarkers(CurrHeadAttester | UnslashedAttester) {
+			out.CurrTotalStake.HeadBalance += b
 		}
 	}
 	return

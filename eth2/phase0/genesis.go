@@ -57,8 +57,9 @@ func GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit) (*Beaco
 	}
 	// Now that validators are activated, we can load the full feature set.
 	// Committees will now be pre-computed.
-	full := &FullFeatures{}
-	full.Load(state)
+	full := FullFeaturedState(state)
+	// pre-compute the committee data
+	full.LoadPrecomputedData()
 	// Populate active_index_roots and compact_committees_roots
 	activeIndexRoot := full.ComputeActiveIndexRoot(GENESIS_EPOCH)
 	committeeRoot := full.ComputeCompactCommitteesRoot(GENESIS_EPOCH)

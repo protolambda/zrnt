@@ -21,6 +21,7 @@ type ShufflingFeature struct {
 type ShufflingStatus struct {
 	Previous *ShufflingEpoch
 	Current  *ShufflingEpoch
+	Next     *ShufflingEpoch
 }
 
 func (shs *ShufflingStatus) GetCrosslinkCommittee(epoch Epoch, shard Shard) []ValidatorIndex {
@@ -28,19 +29,27 @@ func (shs *ShufflingStatus) GetCrosslinkCommittee(epoch Epoch, shard Shard) []Va
 		// sanity check for development, method should only used for previous and current epoch.
 		panic(fmt.Errorf("crosslink committee retrieval: out of range shard: %d", shard))
 	}
-	if epoch == shs.Current.Epoch {
-		return shs.Current.Committees[shard]
-	} else if epoch == shs.Previous.Epoch {
+
+	if epoch == shs.Previous.Epoch {
 		return shs.Previous.Committees[shard]
+	} else if epoch == shs.Current.Epoch {
+		return shs.Current.Committees[shard]
+	} else if epoch == shs.Next.Epoch {
+		return shs.Next.Committees[shard]
 	} else {
 		panic(fmt.Errorf("crosslink committee retrieval: out of range epoch: %d", epoch))
 	}
 }
 
 func (f *ShufflingFeature) LoadShufflingStatus() *ShufflingStatus {
+	currentEpoch := f.Meta.CurrentEpoch()
+	previousEpoch := f.Meta.PreviousEpoch()
+	nextEpoch := currentEpoch + 1
+
 	return &ShufflingStatus{
-		Previous: f.LoadShufflingEpoch(f.Meta.PreviousEpoch()),
-		Current:  f.LoadShufflingEpoch(f.Meta.CurrentEpoch()),
+		Previous: f.LoadShufflingEpoch(currentEpoch),
+		Current:  f.LoadShufflingEpoch(previousEpoch),
+		Next:     f.LoadShufflingEpoch(nextEpoch),
 	}
 }
 
@@ -76,7 +85,7 @@ func (f *ShufflingFeature) LoadShufflingEpoch(epoch Epoch) *ShufflingEpoch {
 	}
 	startShard := f.Meta.GetStartShard(epoch)
 	for i := uint64(0); i < committeeCount; i++ {
-		shard := startShard + Shard(i)
+		shard := (startShard + Shard(i)) % SHARD_COUNT
 		startOffset := (validatorCount * i) / committeeCount
 		endOffset := (validatorCount * (i + 1)) / committeeCount
 		committee := shep.Shuffling[startOffset:endOffset]

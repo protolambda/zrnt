@@ -36,13 +36,13 @@ type FullFeatures struct {
 	*ShufflingStatus
 
 	AttesterStatusFeature
-	AttesterStatuses
+	*AttestersData
 
 	CrosslinkingFeature
 	*CrosslinkingStatus
 
 	ProposingFeature
-	*EpochProposerIndices
+	*ProposersData
 
 	// Data computation to serve light clients
 	ActiveRootsFeature       // roots of past active indices lists
@@ -77,9 +77,29 @@ type FullFeatures struct {
 	TransitionFeature
 }
 
-func (f *FullFeatures) Load(state *BeaconState) {
+func (f *FullFeatures) LoadPrecomputedData() {
+	// TODO: could re-use some pre-computed data from older states, worth benchmarking
+	// TODO decide on some lookback time, or load it dynamically
+	f.StartShardStatus = f.ShardRotFeature.LoadStartShardStatus(f.CurrentEpoch() - 20)
+	f.ShufflingStatus = f.ShufflingFeature.LoadShufflingStatus()
+	f.CrosslinkingStatus = f.CrosslinkingFeature.LoadCrosslinkingStatus()
+	f.AttestersData = f.AttesterStatusFeature.LoadAttesterStatuses()
+	f.ProposersData = f.LoadBeaconProposersData()
+
+}
+func (f *FullFeatures) RotateEpochData() {
+	// TODO: rotate data where possible (e.g. shuffling) instead of plain overwriting
+	f.LoadPrecomputedData()
+}
+
+func (f *FullFeatures) PrepareEpoch() {
+	f.RotateEpochData()
+}
+
+func FullFeaturedState(state *BeaconState) *FullFeatures  {
 	// The con of heavy composition: it needs to be hooked up at the upper abstraction level
 	// for cross references through interfaces to work.
+	f := new(FullFeatures)
 
 	// add state
 	f.BeaconState = state
@@ -110,7 +130,7 @@ func (f *FullFeatures) Load(state *BeaconState) {
 	f.ProposingFeature.Meta = f
 
 	// TODO: disabled for now, need to implement "meta.TargetStaking"
-	//f.JustificationFeature.Meta = f
+	f.JustificationFeature.Meta = f
 	f.JustificationFeature.State = &f.FinalityState
 	f.CrosslinksFeature.Meta = f
 	f.CrosslinksFeature.State = &f.CrosslinksState
@@ -139,12 +159,5 @@ func (f *FullFeatures) Load(state *BeaconState) {
 	f.EpochProcessFeature.Meta = f
 	f.TransitionFeature.Meta = f
 
-	// pre-compute the data!
-	// TODO: could re-use some pre-computed data from older states, worth benchmarking
-	// TODO decide on some lookback time, or load it dynamically
-	f.StartShardStatus = f.ShardRotFeature.LoadStartShardStatus(f.CurrentEpoch() - 20)
-	f.ShufflingStatus = f.ShufflingFeature.LoadShufflingStatus()
-	f.CrosslinkingStatus = f.CrosslinkingFeature.LoadCrosslinkingStatus()
-	f.AttesterStatuses = f.AttesterStatusFeature.LoadAttesterStatuses()
-	f.EpochProposerIndices = f.LoadBeaconProposerIndices()
+	return f
 }

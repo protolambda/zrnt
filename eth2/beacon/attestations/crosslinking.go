@@ -65,11 +65,11 @@ func (f *CrosslinkingFeature) LoadCrosslinkEpoch(epoch Epoch) *CrosslinkingEpoch
 	var attestations []*PendingAttestation
 
 	if epoch == f.Meta.CurrentEpoch() {
-		crosslinkRoots = f.Meta.GetPreviousCrosslinkRoots()
-		attestations = f.State.PreviousEpochAttestations
-	} else {
 		crosslinkRoots = f.Meta.GetCurrentCrosslinkRoots()
 		attestations = f.State.CurrentEpochAttestations
+	} else {
+		crosslinkRoots = f.Meta.GetPreviousCrosslinkRoots()
+		attestations = f.State.PreviousEpochAttestations
 	}
 
 	// Keyed by raw crosslink object. Not too big, and simplifies reduction to unique crosslinks

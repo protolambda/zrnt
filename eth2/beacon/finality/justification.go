@@ -15,17 +15,13 @@ func (f *JustificationFeature) ProcessEpochJustification() {
 	}
 	previousEpoch := f.Meta.PreviousEpoch()
 
-	// epoch numbers are trusted, no errors
-	previousBoundaryBlockRoot := f.Meta.GetBlockRoot(previousEpoch)
-	currentBoundaryBlockRoot := f.Meta.GetBlockRoot(currentEpoch)
+	// stake = effective balances of active validators
+	// Get the total stake of the epoch attesters
+	prevTargetStake := f.Meta.GetTotalEpochStake(previousEpoch)
+	currTargetStake := f.Meta.GetTotalEpochStake(currentEpoch)
 
-	// Get the sum balances of the boundary attesters
-	previousTargetStakedBalance := f.Meta.GetTargetTotalStakedBalance(previousEpoch)
-	currentTargetStakedBalance := f.Meta.GetTargetTotalStakedBalance(currentEpoch)
-
-	// Get the sum balances of the attesters for the epochs
-	previousTotalBalance := f.Meta.GetTotalStakedBalance(previousEpoch)
-	currentTotalBalance := f.Meta.GetTotalStakedBalance(currentEpoch)
+	// Get the total current stake
+	totalStake := f.Meta.GetTotalStake()
 
 	oldPreviousJustified := f.State.PreviousJustifiedCheckpoint
 	oldCurrentJustified := f.State.CurrentJustifiedCheckpoint
@@ -35,16 +31,16 @@ func (f *JustificationFeature) ProcessEpochJustification() {
 	f.State.JustificationBits.NextEpoch()
 
 	// > Justification
-	if previousTargetStakedBalance*3 >= previousTotalBalance*2 {
+	if prevTargetStake.TargetBalance*3 >= totalStake*2 {
 		f.Justify(Checkpoint{
 			Epoch: previousEpoch,
-			Root:  previousBoundaryBlockRoot,
+			Root:  f.Meta.GetBlockRoot(previousEpoch),
 		})
 	}
-	if currentTargetStakedBalance*3 >= currentTotalBalance*2 {
+	if currTargetStake.TargetBalance*3 >= totalStake*2 {
 		f.Justify(Checkpoint{
 			Epoch: currentEpoch,
-			Root:  currentBoundaryBlockRoot,
+			Root:  f.Meta.GetBlockRoot(currentEpoch),
 		})
 	}
 

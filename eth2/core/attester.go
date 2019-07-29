@@ -7,10 +7,14 @@ func (flags AttesterFlag) HasMarkers(markers AttesterFlag) bool {
 }
 
 const (
-	PrevEpochAttester AttesterFlag = 1 << iota
-	MatchingHeadAttester
-	PrevEpochBoundaryAttester
-	CurrEpochBoundaryAttester
+	PrevSourceAttester AttesterFlag = 1 << iota
+	PrevTargetAttester
+	PrevHeadAttester
+
+	CurrSourceAttester
+	CurrTargetAttester
+	CurrHeadAttester
+
 	UnslashedAttester
 	EligibleAttester
 )

@@ -8,17 +8,23 @@ import (
 	. "github.com/protolambda/zrnt/eth2/util/hashing"
 )
 
-type EpochProposerIndices struct {
-	Epoch           Epoch
-	ProposerIndices [SLOTS_PER_EPOCH]ValidatorIndex
+type EpochProposerIndices [SLOTS_PER_EPOCH]ValidatorIndex
+
+type ProposersData struct {
+	Epoch   Epoch
+	Current *EpochProposerIndices
+	Next    *EpochProposerIndices
 }
 
-func (state *EpochProposerIndices) GetBeaconProposerIndex(slot Slot) ValidatorIndex {
-	if slot.ToEpoch() != state.Epoch {
+func (state *ProposersData) GetBeaconProposerIndex(slot Slot) ValidatorIndex {
+	epoch := slot.ToEpoch()
+	if epoch == state.Epoch {
+		return state.Current[slot-state.Epoch.GetStartSlot()]
+	} else if epoch == state.Epoch+1 {
+		return state.Next[slot-(state.Epoch + 1).GetStartSlot()]
+	} else {
 		panic(fmt.Errorf("slot %d not within range", slot))
 	}
-	start := state.Epoch.GetStartSlot()
-	return state.ProposerIndices[slot-start]
 }
 
 type ProposingFeature struct {
@@ -32,10 +38,17 @@ type ProposingFeature struct {
 	}
 }
 
-// Return the beacon proposer index for the current slot
-func (f *ProposingFeature) LoadBeaconProposerIndices() (out *EpochProposerIndices) {
-	epoch := f.Meta.CurrentEpoch()
+func (f *ProposingFeature) LoadBeaconProposersData() (out *ProposersData) {
+	currentEpoch := f.Meta.CurrentEpoch()
+	return &ProposersData{
+		Epoch:   currentEpoch,
+		Current: f.LoadBeaconProposerIndices(currentEpoch),
+		Next:    f.LoadBeaconProposerIndices(currentEpoch + 1),
+	}
+}
 
+// Return the beacon proposer index for the current slot
+func (f *ProposingFeature) LoadBeaconProposerIndices(epoch Epoch) (out *EpochProposerIndices) {
 	seed := f.Meta.GetSeed(epoch)
 	buf := make([]byte, 32+8, 32+8)
 	copy(buf[0:32], seed[:])
@@ -66,7 +79,7 @@ func (f *ProposingFeature) LoadBeaconProposerIndices() (out *EpochProposerIndice
 		offset += shardsPerSlot
 		shard := (startShard + offset) % SHARD_COUNT
 		firstCommittee := f.Meta.GetCrosslinkCommittee(epoch, shard)
-		out.ProposerIndices[i] = balanceWeightedProposer(firstCommittee)
+		out[i] = balanceWeightedProposer(firstCommittee)
 	}
 	return
 }

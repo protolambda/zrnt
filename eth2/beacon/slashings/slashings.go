@@ -58,7 +58,7 @@ func (f *SlashingFeature) SlashValidator(slashedIndex ValidatorIndex, whistleblo
 
 func (f *SlashingFeature) ProcessEpochSlashings() {
 	currentEpoch := f.Meta.CurrentEpoch()
-	totalBalance := f.Meta.GetTotalStakedBalance(currentEpoch)
+	totalBalance := f.Meta.GetTotalStake()
 
 	epochIndex := currentEpoch % EPOCHS_PER_SLASHINGS_VECTOR
 	// Compute slashed balances in the current epoch

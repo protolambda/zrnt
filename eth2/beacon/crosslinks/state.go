@@ -57,7 +57,7 @@ type CrosslinkDeltasFeature struct {
 func (f *CrosslinkDeltasFeature) CrosslinkDeltas() *Deltas {
 	deltas := NewDeltas(f.Meta.ValidatorCount())
 
-	totalActiveBalance := f.Meta.GetTotalStakedBalance(f.Meta.CurrentEpoch())
+	totalActiveBalance := f.Meta.GetTotalStake()
 
 	totalBalanceSqRoot := Gwei(math.IntegerSquareroot(uint64(totalActiveBalance)))
 

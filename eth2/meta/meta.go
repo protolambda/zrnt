@@ -82,11 +82,8 @@ type CompactCommitteesUpdate interface {
 
 type Staking interface {
 	// Staked = Active effective balance
-	GetTotalStakedBalance(epoch Epoch) Gwei
-}
-
-type TargetStaking interface {
-	GetTargetTotalStakedBalance(epoch Epoch) Gwei
+	GetTotalStake() Gwei
+	GetTotalEpochStake(epoch Epoch) EpochStake
 }
 
 type Slashing interface {
@@ -172,7 +169,12 @@ type ActiveValidatorCount interface {
 	GetActiveValidatorCount(epoch Epoch) uint64
 }
 
+type ValidatorEpochData interface {
+	WithdrawableEpoch(index ValidatorIndex) Epoch
+}
+
 type ActiveIndices interface {
+	IsActive(index ValidatorIndex, epoch Epoch) bool
 	GetActiveValidatorIndices(epoch Epoch) RegistryIndices
 	ComputeActiveIndexRoot(epoch Epoch) Root
 }

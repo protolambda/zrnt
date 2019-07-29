@@ -46,6 +46,14 @@ func (state *ValidatorsState) ValidatorIndex(pubkey BLSPubkey) (index ValidatorI
 	return ValidatorIndexMarker, false
 }
 
+func (state *ValidatorsState) WithdrawableEpoch(index ValidatorIndex) Epoch {
+	return state.Validators[index].WithdrawableEpoch
+}
+
+func (state *ValidatorsState) IsActive(index ValidatorIndex, epoch Epoch) bool {
+	return state.Validators[index].IsActive(epoch)
+}
+
 func (state *ValidatorsState) GetActiveValidatorIndices(epoch Epoch) RegistryIndices {
 	res := make([]ValidatorIndex, 0, len(state.Validators))
 	for i, v := range state.Validators {

@@ -1,4 +1,4 @@
-package main
+package demo
 
 import (
 	"encoding/binary"
@@ -13,15 +13,16 @@ import (
 	"github.com/protolambda/zssz/htr"
 	"github.com/protolambda/zssz/merkle"
 	"math/rand"
+	"testing"
 )
 
-func main() {
+func BenchmarkDemoRun(b *testing.B) {
 
 	// RNG used to create simulated blocks
 	rng := rand.New(rand.NewSource(0xDEADBEEF))
 
 	genesisTime := Timestamp(1222333444)
-	genesisValidatorCount := uint64(100)
+	genesisValidatorCount := uint64(1000)
 
 	privKeys := make([][32]byte, 0, genesisValidatorCount)
 	deposits := make([]Deposit, 0, genesisValidatorCount)
@@ -71,13 +72,17 @@ func main() {
 
 	blockProc := &BlockProcessFeature{}
 	blockProc.Meta = state
-	for i := 0; i < 300; i++ {
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
 		block := SimulateBlock(state.BeaconState, rng)
 		blockProc.Block = block
 		if err := state.StateTransition(blockProc, false); err != nil {
 			panic(err)
 		}
-		fmt.Printf("processed to block #%d (slot %d)\n", i, block.Slot)
+		if i % 100 == 0 {
+			b.Logf("processed to block #%d (slot %d)\n", i, block.Slot)
+		}
 	}
 }
 
@@ -97,6 +102,7 @@ func SimulateBlock(state *BeaconState, rng *rand.Rand) *BeaconBlock {
 			RandaoReveal: BLSSignature{4, 2},
 			Eth1Data: Eth1Data{
 				DepositRoot: Root{0, 1, 3},
+				DepositCount: DepositIndex(len(state.Validators)),
 				BlockHash:   Root{4, 5, 6},
 			},
 			Graffiti: Root{123},

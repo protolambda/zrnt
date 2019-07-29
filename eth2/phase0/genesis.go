@@ -47,6 +47,13 @@ func GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit) (*FullF
 			return nil, err
 		}
 	}
+	return InitState(state), nil
+}
+
+
+// After creating a state and onboarding validators,
+// process the new validators as genesis-validators, and initialize other state variables.
+func InitState(state *BeaconState) *FullFeaturedState {
 	// Process activations
 	state.UpdateEffectiveBalances()
 	for _, v := range state.Validators {
@@ -67,5 +74,5 @@ func GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit) (*FullF
 		state.LatestActiveIndexRoots[i] = activeIndexRoot
 		state.CompactCommitteesRoots[i] = committeeRoot
 	}
-	return full, nil
+	return full
 }

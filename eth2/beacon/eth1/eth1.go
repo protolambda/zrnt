@@ -1,6 +1,9 @@
 package eth1
 
-import . "github.com/protolambda/zrnt/eth2/core"
+import (
+	"errors"
+	. "github.com/protolambda/zrnt/eth2/core"
+)
 
 type Eth1VoteProcessor interface {
 	ProcessEth1Vote(data Eth1Data) error
@@ -43,19 +46,28 @@ func (state *Eth1State) IncrementDepositIndex() {
 
 // Done at the end of every voting period
 func (state *Eth1State) ResetEth1Votes() {
-	state.Eth1DataVotes = make([]Eth1Data, 0)
+	if Slot(cap(state.Eth1DataVotes)) <= SLOTS_PER_ETH1_VOTING_PERIOD {
+		state.Eth1DataVotes = make([]Eth1Data, 0, SLOTS_PER_ETH1_VOTING_PERIOD)
+	} else {
+		state.Eth1DataVotes = state.Eth1DataVotes[:0]
+	}
 }
 
 func (state *Eth1State) ProcessEth1Vote(data Eth1Data) error {
-	state.Eth1DataVotes = append(state.Eth1DataVotes, data)
-	count := Slot(0)
-	for _, v := range state.Eth1DataVotes {
-		if v == data {
-			count++
-		}
+	if Slot(len(state.Eth1DataVotes)) >= SLOTS_PER_ETH1_VOTING_PERIOD {
+		return errors.New("cannot process Eth1 vote, already voted maximum times")
 	}
-	if count*2 > SLOTS_PER_ETH1_VOTING_PERIOD {
-		state.Eth1Data = data
+	state.Eth1DataVotes = append(state.Eth1DataVotes, data)
+	if len(state.Eth1DataVotes) > int(SLOTS_PER_ETH1_VOTING_PERIOD >> 1) {
+		count := Slot(0)
+		for i := range state.Eth1DataVotes {
+			if state.Eth1DataVotes[i] == data {
+				count++
+			}
+		}
+		if (count << 1) > SLOTS_PER_ETH1_VOTING_PERIOD {
+			state.Eth1Data = data
+		}
 	}
 	return nil
 }

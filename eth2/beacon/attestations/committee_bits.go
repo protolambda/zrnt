@@ -15,6 +15,10 @@ func (cb CommitteeBits) GetBit(i uint64) bool {
 	return bitfields.GetBit(cb, i)
 }
 
+func (cb CommitteeBits) SetBit(i uint64, v bool) {
+	bitfields.SetBit(cb, i, v)
+}
+
 func (cb *CommitteeBits) Limit() uint64 {
 	return MAX_VALIDATORS_PER_COMMITTEE
 }

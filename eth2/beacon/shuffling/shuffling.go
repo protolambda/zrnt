@@ -19,9 +19,9 @@ type ShufflingFeature struct {
 
 // TODO: may want to pool this to avoid large allocations in mainnet.
 type ShufflingStatus struct {
-	Previous *ShufflingEpoch
-	Current  *ShufflingEpoch
-	Next     *ShufflingEpoch
+	PreviousShuffling *ShufflingEpoch
+	CurrentShuffling  *ShufflingEpoch
+	NextShuffling     *ShufflingEpoch
 }
 
 func (shs *ShufflingStatus) GetCrosslinkCommittee(epoch Epoch, shard Shard) []ValidatorIndex {
@@ -30,12 +30,12 @@ func (shs *ShufflingStatus) GetCrosslinkCommittee(epoch Epoch, shard Shard) []Va
 		panic(fmt.Errorf("crosslink committee retrieval: out of range shard: %d", shard))
 	}
 
-	if epoch == shs.Previous.Epoch {
-		return shs.Previous.Committees[shard]
-	} else if epoch == shs.Current.Epoch {
-		return shs.Current.Committees[shard]
-	} else if epoch == shs.Next.Epoch {
-		return shs.Next.Committees[shard]
+	if epoch == shs.PreviousShuffling.Epoch {
+		return shs.PreviousShuffling.Committees[shard]
+	} else if epoch == shs.CurrentShuffling.Epoch {
+		return shs.CurrentShuffling.Committees[shard]
+	} else if epoch == shs.NextShuffling.Epoch {
+		return shs.NextShuffling.Committees[shard]
 	} else {
 		panic(fmt.Errorf("crosslink committee retrieval: out of range epoch: %d", epoch))
 	}
@@ -47,9 +47,9 @@ func (f *ShufflingFeature) LoadShufflingStatus() *ShufflingStatus {
 	nextEpoch := currentEpoch + 1
 
 	return &ShufflingStatus{
-		Previous: f.LoadShufflingEpoch(currentEpoch),
-		Current:  f.LoadShufflingEpoch(previousEpoch),
-		Next:     f.LoadShufflingEpoch(nextEpoch),
+		PreviousShuffling: f.LoadShufflingEpoch(currentEpoch),
+		CurrentShuffling:  f.LoadShufflingEpoch(previousEpoch),
+		NextShuffling:     f.LoadShufflingEpoch(nextEpoch),
 	}
 }
 

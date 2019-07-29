@@ -17,7 +17,7 @@ func (_ *DepositRoots) Limit() uint64 {
 
 var DepositRootsSSZ = zssz.GetSSZ((*DepositRoots)(nil))
 
-func GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit) (*BeaconState, error) {
+func GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit) (*FullFeaturedState, error) {
 	state := &BeaconState{
 		VersioningState: VersioningState{
 			GenesisTime: time,
@@ -57,7 +57,7 @@ func GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit) (*Beaco
 	}
 	// Now that validators are activated, we can load the full feature set.
 	// Committees will now be pre-computed.
-	full := FullFeaturedState(state)
+	full := NewFullFeaturedState(state)
 	// pre-compute the committee data
 	full.LoadPrecomputedData()
 	// Populate active_index_roots and compact_committees_roots
@@ -67,5 +67,5 @@ func GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit) (*Beaco
 		state.LatestActiveIndexRoots[i] = activeIndexRoot
 		state.CompactCommitteesRoots[i] = committeeRoot
 	}
-	return state, nil
+	return full, nil
 }

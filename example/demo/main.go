@@ -66,15 +66,12 @@ func main() {
 		panic(err)
 	}
 
-	full := FullFeaturedState(state)
-	full.LoadPrecomputedData()
-
 	blockProc := &BlockProcessFeature{}
-	blockProc.Meta = full
+	blockProc.Meta = state
 	for i := 0; i < 300; i++ {
-		block := SimulateBlock(state, rng)
+		block := SimulateBlock(state.BeaconState, rng)
 		blockProc.Block = block
-		if err := full.StateTransition(blockProc, false); err != nil {
+		if err := state.StateTransition(blockProc, false); err != nil {
 			panic(err)
 		}
 		fmt.Printf("processed to block #%d (slot %d)\n", i, block.Slot)

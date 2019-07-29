@@ -25,7 +25,7 @@ import (
 )
 
 // Full feature set for phase 0
-type FullFeatures struct {
+type FullFeaturedState struct {
 	// All base features a state has
 	*BeaconState
 
@@ -77,7 +77,7 @@ type FullFeatures struct {
 	TransitionFeature
 }
 
-func (f *FullFeatures) LoadPrecomputedData() {
+func (f *FullFeaturedState) LoadPrecomputedData() {
 	// TODO: could re-use some pre-computed data from older states, worth benchmarking
 	// TODO decide on some lookback time, or load it dynamically
 	f.StartShardStatus = f.ShardRotFeature.LoadStartShardStatus(f.CurrentEpoch() - 20)
@@ -87,19 +87,19 @@ func (f *FullFeatures) LoadPrecomputedData() {
 	f.ProposersData = f.LoadBeaconProposersData()
 
 }
-func (f *FullFeatures) RotateEpochData() {
+func (f *FullFeaturedState) RotateEpochData() {
 	// TODO: rotate data where possible (e.g. shuffling) instead of plain overwriting
 	f.LoadPrecomputedData()
 }
 
-func (f *FullFeatures) PrepareEpoch() {
+func (f *FullFeaturedState) PrepareEpoch() {
 	f.RotateEpochData()
 }
 
-func FullFeaturedState(state *BeaconState) *FullFeatures  {
+func NewFullFeaturedState(state *BeaconState) *FullFeaturedState {
 	// The con of heavy composition: it needs to be hooked up at the upper abstraction level
 	// for cross references through interfaces to work.
-	f := new(FullFeatures)
+	f := new(FullFeaturedState)
 
 	// add state
 	f.BeaconState = state

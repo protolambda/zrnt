@@ -38,6 +38,8 @@ func (f *AttestationFeature) ProcessAttestations(ops []Attestation) error {
 	return nil
 }
 
+var AttestationSSZ = zssz.GetSSZ((*Attestation)(nil))
+
 type Attestation struct {
 	AggregationBits CommitteeBits
 	Data            AttestationData

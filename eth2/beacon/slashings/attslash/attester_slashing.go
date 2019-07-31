@@ -5,6 +5,7 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon/attestations"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/meta"
+	"github.com/protolambda/zssz"
 )
 
 type AttesterSlashingProcessor interface {
@@ -33,6 +34,8 @@ func (f *AttestSlashFeature) ProcessAttesterSlashings(ops []AttesterSlashing) er
 	}
 	return nil
 }
+
+var AttesterSlashingSSZ = zssz.GetSSZ((*AttesterSlashing)(nil))
 
 type AttesterSlashing struct {
 	Attestation1 IndexedAttestation

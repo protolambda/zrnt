@@ -15,6 +15,8 @@ import (
 	"github.com/protolambda/zssz"
 )
 
+var BeaconBlockSSZ = zssz.GetSSZ((*BeaconBlock)(nil))
+
 type BeaconBlock struct {
 	Slot       Slot
 	ParentRoot Root
@@ -87,6 +89,9 @@ func (f *BlockProcessFeature) Process() error {
 		return err
 	}
 	if err := f.Meta.ProcessAttesterSlashings(body.AttesterSlashings); err != nil {
+		return err
+	}
+	if err := f.Meta.ProcessAttestations(body.Attestations); err != nil {
 		return err
 	}
 	if err := f.Meta.ProcessDeposits(body.Deposits); err != nil {

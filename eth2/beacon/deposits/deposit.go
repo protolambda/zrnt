@@ -8,6 +8,7 @@ import (
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/merkle"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
+	"github.com/protolambda/zssz"
 )
 
 type DepositProcessor interface {
@@ -43,6 +44,8 @@ func (f *DepositFeature) ProcessDeposits(ops []Deposit) error {
 	}
 	return nil
 }
+
+var DepositSSZ = zssz.GetSSZ((*Deposit)(nil))
 
 type Deposit struct {
 	Proof [DEPOSIT_CONTRACT_TREE_DEPTH + 1]Root // Merkle-path to deposit data list root

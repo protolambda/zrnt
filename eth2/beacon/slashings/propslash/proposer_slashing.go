@@ -7,6 +7,7 @@ import (
 	"github.com/protolambda/zrnt/eth2/meta"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
+	"github.com/protolambda/zssz"
 )
 
 type ProposerSlashingProcessor interface {
@@ -25,6 +26,8 @@ type PropSlashFeature struct {
 		meta.Slasher
 	}
 }
+
+var ProposerSlashingSSZ = zssz.GetSSZ((*ProposerSlashing)(nil))
 
 type ProposerSlashing struct {
 	ProposerIndex ValidatorIndex

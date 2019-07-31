@@ -1,25 +1,18 @@
-package operations
+package epoch_processing
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon/epoch_processing"
-	. "github.com/protolambda/zrnt/tests/spec/test_util"
+	"github.com/protolambda/zrnt/eth2/core"
+	"github.com/protolambda/zrnt/eth2/phase0"
+	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"testing"
 )
 
-type RegistryUpdatesTestCase struct {
-	StateTransitionTestBase `mapstructure:",squash"`
-}
-
-func (testCase *RegistryUpdatesTestCase) Process() error {
-	epoch.ProcessEpochRegistryUpdates(testCase.Pre)
-	return nil
-}
-
-func (testCase *RegistryUpdatesTestCase) Run(t *testing.T) {
-	RunTest(t, testCase)
-}
-
 func TestRegistryUpdates(t *testing.T) {
-	RunSuitesInPath("epoch_processing/registry_updates/",
-		func(raw interface{}) (interface{}, interface{}) { return new(RegistryUpdatesTestCase), raw }, t)
+	test_util.RunHandler(t, "epoch_processing/registry_updates/",
+		MakeRunner(func(t *testing.T, testCase TestCase) {
+			state := phase0.NewFullFeaturedState(testCase.Pre)
+			state.LoadPrecomputedData()
+			state.ProcessEpochRegistryUpdates()
+			testCase.TestCondition(t)
+		}), core.PRESET_NAME)
 }

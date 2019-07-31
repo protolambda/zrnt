@@ -1,25 +1,19 @@
-package operations
+package epoch_processing
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon/epoch_processing"
-	. "github.com/protolambda/zrnt/tests/spec/test_util"
+	"github.com/protolambda/zrnt/eth2/core"
+	"github.com/protolambda/zrnt/eth2/phase0"
+	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"testing"
 )
 
-type CrosslinksTestCase struct {
-	StateTransitionTestBase `mapstructure:",squash"`
-}
-
-func (testCase *CrosslinksTestCase) Process() error {
-	epoch.ProcessEpochCrosslinks(testCase.Pre)
-	return nil
-}
-
-func (testCase *CrosslinksTestCase) Run(t *testing.T) {
-	RunTest(t, testCase)
-}
 
 func TestCrosslinks(t *testing.T) {
-	RunSuitesInPath("epoch_processing/crosslinks/",
-		func(raw interface{}) (interface{}, interface{}) { return new(CrosslinksTestCase), raw }, t)
+	test_util.RunHandler(t, "epoch_processing/crosslinks/",
+		MakeRunner(func(t *testing.T, testCase TestCase) {
+			state := phase0.NewFullFeaturedState(testCase.Pre)
+			state.LoadPrecomputedData()
+			state.ProcessEpochCrosslinks()
+			testCase.TestCondition(t)
+		}), core.PRESET_NAME)
 }

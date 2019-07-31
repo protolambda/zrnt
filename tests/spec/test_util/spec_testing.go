@@ -28,7 +28,13 @@ type NamedTestCase struct {
 	Name string
 }
 
-type TestPartReader func(name string) (r io.Reader, size uint64)
+type TestPart interface {
+	io.Reader
+	io.Closer
+	Size() (uint64, error)
+}
+
+type TestPartReader func(name string) TestPart
 
 // Runs a test case
 type CaseRunner func(t *testing.T, readPart TestPartReader)
@@ -37,6 +43,19 @@ type CaseRunner func(t *testing.T, readPart TestPartReader)
 func Check(t *testing.T, err error) {
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+type testPartFile struct {
+	*os.File
+}
+
+func (p *testPartFile) Size() (uint64, error) {
+	partInfo, err := p.Stat()
+	if err != nil {
+		return 0, err
+	} else {
+		return uint64(partInfo.Size()), nil
 	}
 }
 
@@ -65,16 +84,11 @@ func RunHandler(t *testing.T, handlerPath string, caseRunner CaseRunner, config 
 	}
 
 	runTest := func(t *testing.T, path string) {
-		partReader := func(name string) (r io.Reader, size uint64) {
+		partReader := func(name string) TestPart {
 			partPath := filepath.Join(path, name)
-			partInfo, err := os.Stat(partPath)
-			Check(t, err)
-			// get the size
-			size = uint64(partInfo.Size())
 			f, err := os.Open(partPath)
 			Check(t, err)
-			r = f
-			return
+			return &testPartFile{File: f}
 		}
 		caseRunner(t, partReader)
 	}

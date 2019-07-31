@@ -1,26 +1,27 @@
 package operations
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon"
-	"github.com/protolambda/zrnt/eth2/beacon/block_processing"
-	. "github.com/protolambda/zrnt/tests/spec/test_util"
+	"github.com/protolambda/zrnt/eth2/beacon/transfers"
+	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"testing"
 )
 
 type TransferTestCase struct {
-	Transfer                *beacon.Transfer
-	StateTransitionTestBase `mapstructure:",squash"`
+	test_util.BaseTransitionTest
+	Transfer *transfers.Transfer
 }
 
-func (testCase *TransferTestCase) Process() error {
-	return block_processing.ProcessTransfer(testCase.Pre, testCase.Transfer)
+func (c *TransferTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
+	c.BaseTransitionTest.Load(t, readPart)
+	c.LoadSSZ(t, "transfer", c.Transfer, transfers.TransferSSZ, readPart)
 }
 
-func (testCase *TransferTestCase) Run(t *testing.T) {
-	RunTest(t, testCase)
+func (c *TransferTestCase) Run() error {
+	state := c.Prepare()
+	return state.ProcessTransfer(c.Transfer)
 }
 
 func TestTransfer(t *testing.T) {
-	RunSuitesInPath("operations/transfer/",
-		func(raw interface{}) (interface{}, interface{}) { return new(TransferTestCase), raw }, t)
+	test_util.RunTransitionTest(t, "operations", "transfer",
+		func() test_util.TransitionTest {return new(TransferTestCase)})
 }

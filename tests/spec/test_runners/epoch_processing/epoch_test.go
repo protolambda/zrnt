@@ -20,7 +20,11 @@ func (c *EpochTest) Run() error {
 
 func NewEpochTest(fn stateFn) test_util.TransitionCaseMaker {
 	return func() test_util.TransitionTest {
-		return &EpochTest{fn: fn}
+		return &EpochTest{fn: func(state *phase0.FullFeaturedState) {
+			// End the epoch, pre-computing all the necessary data for the transition.
+			state.EndEpoch()
+			fn(state)
+		}}
 	}
 }
 

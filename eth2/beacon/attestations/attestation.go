@@ -76,13 +76,13 @@ func (f *AttestationFeature) ProcessAttestation(attestation *Attestation) error 
 	var parentCrosslink *Crosslink
 
 	if data.Target.Epoch == currentEpoch {
-		if data.Source.Epoch != f.Meta.CurrentJustified().Epoch {
-			return errors.New("attestation source epoch does not match current justified checkpoint")
+		if data.Source != f.Meta.CurrentJustified() {
+			return errors.New("attestation source does not match current justified checkpoint")
 		}
 		parentCrosslink = f.Meta.GetCurrentCrosslink(data.Crosslink.Shard)
 	} else {
-		if data.Source.Epoch != f.Meta.PreviousJustified().Epoch {
-			return errors.New("attestation source epoch does not match previous justified checkpoint")
+		if data.Source != f.Meta.PreviousJustified() {
+			return errors.New("attestation source does not match previous justified checkpoint")
 		}
 		parentCrosslink = f.Meta.GetPreviousCrosslink(data.Crosslink.Shard)
 	}

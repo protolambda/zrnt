@@ -1,32 +1,51 @@
 package sanity
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon"
-	"github.com/protolambda/zrnt/eth2/beacon/transition"
-	. "github.com/protolambda/zrnt/tests/spec/test_util"
+	"fmt"
+	"github.com/protolambda/zrnt/eth2/phase0"
+	"github.com/protolambda/zrnt/tests/spec/test_util"
+	"gopkg.in/yaml.v2"
 	"testing"
 )
 
 type BlocksTestCase struct {
-	Blocks                  []*beacon.BeaconBlock
-	StateTransitionTestBase `mapstructure:",squash"`
+	test_util.BaseTransitionTest
+	Blocks []*phase0.BeaconBlock
 }
 
-func (testCase *BlocksTestCase) Process() error {
-	for _, block := range testCase.Blocks {
-		// TODO: mark block number in error? (Maybe with Go 1.13, coming out soon, supporting wrapped errors)
-		if err := transition.StateTransition(testCase.Pre, block, true); err != nil {
+type BlocksCountMeta struct {
+	BlocksCount uint64 `yaml:"blocks_count"`
+}
+
+func (c *BlocksTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
+	c.BaseTransitionTest.Load(t, readPart)
+	p := readPart("meta.yaml")
+	dec := yaml.NewDecoder(p)
+	m := &BlocksCountMeta{}
+	test_util.Check(t, dec.Decode(&m))
+	test_util.Check(t, p.Close())
+	loadBlock := func(i uint64) *phase0.BeaconBlock {
+		dst := new(phase0.BeaconBlock)
+		c.LoadSSZ(t, fmt.Sprintf("blocks_%d", i), dst, phase0.BeaconBlockSSZ, readPart)
+		return dst
+	}
+	for i := uint64(0); i < m.BlocksCount; i++ {
+		c.Blocks = append(c.Blocks, loadBlock(i))
+	}
+}
+
+func (c *BlocksTestCase) Run() error {
+	state := c.Prepare()
+	for _, b := range c.Blocks {
+		blockProc := &phase0.BlockProcessFeature{Block: b, Meta: state}
+		if err := state.StateTransition(blockProc, true); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (testCase *BlocksTestCase) Run(t *testing.T) {
-	RunTest(t, testCase)
-}
-
 func TestBlocks(t *testing.T) {
-	RunSuitesInPath("sanity/blocks/",
-		func(raw interface{}) (interface{}, interface{}) { return new(BlocksTestCase), raw }, t)
+	test_util.RunTransitionTest(t, "sanity", "blocks",
+		func() test_util.TransitionTest {return new(BlocksTestCase)})
 }

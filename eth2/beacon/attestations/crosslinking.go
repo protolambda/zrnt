@@ -61,16 +61,14 @@ type weightedLink struct {
 }
 
 func (f *CrosslinkingFeature) LoadCrosslinkEpoch(epoch Epoch) *CrosslinkingEpoch {
-	var crosslinkRoots *[SHARD_COUNT]Root
 	var attestations []*PendingAttestation
-
 	if epoch == f.Meta.CurrentEpoch() {
-		crosslinkRoots = f.Meta.GetCurrentCrosslinkRoots()
 		attestations = f.State.CurrentEpochAttestations
 	} else {
-		crosslinkRoots = f.Meta.GetPreviousCrosslinkRoots()
 		attestations = f.State.PreviousEpochAttestations
 	}
+
+	crosslinkRoots := f.Meta.GetCurrentCrosslinkRoots()
 
 	// Keyed by raw crosslink object. Not too big, and simplifies reduction to unique crosslinks
 	// For shards with no attestations available, the value will be a nil slice.

@@ -61,7 +61,7 @@ func (jb *JustificationBits) NextEpoch() {
 
 func (jb *JustificationBits) IsJustified(epochsAgo ...Epoch) bool {
 	for _, t := range epochsAgo {
-		if jb[0]&(1<<t) != 0 {
+		if jb[0]&(1<<t) == 0 {
 			return false
 		}
 	}

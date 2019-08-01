@@ -47,19 +47,19 @@ func (f *JustificationFeature) ProcessEpochJustification() {
 	// > Finalization
 	bits := f.State.JustificationBits
 	// The 2nd/3rd/4th most recent epochs are all justified, the 2nd using the 4th as source
-	if bits.IsJustified(1, 2, 3) && f.State.PreviousJustifiedCheckpoint.Epoch+3 == currentEpoch {
+	if bits.IsJustified(1, 2, 3) && oldPreviousJustified.Epoch+3 == currentEpoch {
 		f.State.FinalizedCheckpoint = oldPreviousJustified
 	}
 	// The 2nd/3rd most recent epochs are both justified, the 2nd using the 3rd as source
-	if bits.IsJustified(1, 2) && f.State.PreviousJustifiedCheckpoint.Epoch+2 == currentEpoch {
+	if bits.IsJustified(1, 2) && oldPreviousJustified.Epoch+2 == currentEpoch {
 		f.State.FinalizedCheckpoint = oldPreviousJustified
 	}
 	// The 1st/2nd/3rd most recent epochs are all justified, the 1st using the 3rd as source
-	if bits.IsJustified(0, 1, 2) && f.State.CurrentJustifiedCheckpoint.Epoch+2 == currentEpoch {
+	if bits.IsJustified(0, 1, 2) && oldCurrentJustified.Epoch+2 == currentEpoch {
 		f.State.FinalizedCheckpoint = oldCurrentJustified
 	}
 	// The 1st/2nd most recent epochs are both justified, the 1st using the 2nd as source
-	if bits.IsJustified(0, 1) && f.State.CurrentJustifiedCheckpoint.Epoch+1 == currentEpoch {
+	if bits.IsJustified(0, 1) && oldCurrentJustified.Epoch+1 == currentEpoch {
 		f.State.FinalizedCheckpoint = oldCurrentJustified
 	}
 }

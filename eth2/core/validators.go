@@ -56,14 +56,21 @@ func (vs ValidatorSet) MergeDisjoint(other ValidatorSet) ValidatorSet {
 	out := make(ValidatorSet, 0, total)
 	a, b := 0, 0
 	for i := 0; i < total; i++ {
-		if a < len(vs) && vs[a] < vs[b] {
-			out = append(out, vs[a])
-			a++
-		} else if b < len(other) && vs[a] > vs[b] {
-			out = append(out, vs[b])
-			b++
-		} else if vs[a] == vs[b] {
-			panic("invalid disjoint sets merge, sets contain equal item")
+		if a < len(vs) {
+			if b >= len(other) || vs[a] < other[b] {
+				out = append(out, vs[a])
+				a++
+				continue
+			} else if vs[a] == other[b] {
+				panic("invalid disjoint sets merge, sets contain equal item")
+			}
+		}
+		if b < len(other) {
+			if b < len(other) && (a >= len(vs) || vs[a] > other[b]) {
+				out = append(out, other[b])
+				b++
+				continue
+			}
 		}
 	}
 	return out

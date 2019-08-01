@@ -7,6 +7,7 @@ import (
 	"github.com/protolambda/zrnt/eth2/meta"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/protolambda/zssz"
+	"sort"
 )
 
 type AttestationProcessor interface {
@@ -164,6 +165,12 @@ func (attestation *Attestation) ConvertToIndexed(committee []ValidatorIndex) (*I
 			}
 		}
 	}
+	sort.Slice(bit0s, func(i int, j int) bool {
+		return bit0s[i] < bit0s[j]
+	})
+	sort.Slice(bit1s, func(i int, j int) bool {
+		return bit1s[i] < bit1s[j]
+	})
 
 	return &IndexedAttestation{
 		CustodyBit0Indices: bit0s,

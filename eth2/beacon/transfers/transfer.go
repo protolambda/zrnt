@@ -59,7 +59,10 @@ type Transfer struct {
 
 func (f *TransferFeature) ProcessTransfer(transfer *Transfer) error {
 	if !f.Meta.IsValidIndex(transfer.Sender) {
-		return errors.New("cannot send funds from non-existent validator")
+		return errors.New("cannot send funds from non-existent sender")
+	}
+	if !f.Meta.IsValidIndex(transfer.Recipient) {
+		return errors.New("cannot send funds to non-existent recipient")
 	}
 	senderBalance := f.Meta.GetBalance(transfer.Sender)
 	// Verify the amount and fee aren't individually too big (for anti-overflow purposes)

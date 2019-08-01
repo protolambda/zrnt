@@ -25,7 +25,9 @@ type CrosslinkingStatus struct {
 }
 
 func (s *CrosslinkingStatus) GetWinningCrosslinkAndAttesters(epoch Epoch, shard Shard) (*Crosslink, ValidatorSet) {
-	if s.Previous.Epoch == epoch {
+	if s == nil || s.Previous == nil || s.Current == nil {
+		panic("crosslinking data is not loaded")
+	} else if s.Previous.Epoch == epoch {
 		winner := &s.Previous.WinningLinks[shard]
 		return winner.Crosslink, winner.Attesters
 	} else if s.Current.Epoch == epoch {

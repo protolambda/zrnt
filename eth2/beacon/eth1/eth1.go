@@ -58,7 +58,7 @@ func (state *Eth1State) ProcessEth1Vote(data Eth1Data) error {
 		return errors.New("cannot process Eth1 vote, already voted maximum times")
 	}
 	state.Eth1DataVotes = append(state.Eth1DataVotes, data)
-	if len(state.Eth1DataVotes) > int(SLOTS_PER_ETH1_VOTING_PERIOD >> 1) {
+	if (Slot(len(state.Eth1DataVotes)) << 1) > SLOTS_PER_ETH1_VOTING_PERIOD {
 		count := Slot(0)
 		for i := range state.Eth1DataVotes {
 			if state.Eth1DataVotes[i] == data {

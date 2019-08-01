@@ -82,17 +82,21 @@ func (f *FullFeaturedState) LoadPrecomputedData() {
 	// TODO decide on some lookback time, or load it dynamically
 	f.StartShardStatus = f.ShardRotFeature.LoadStartShardStatus(f.CurrentEpoch() - 20)
 	f.ShufflingStatus = f.ShufflingFeature.LoadShufflingStatus()
-	f.CrosslinkingStatus = f.CrosslinkingFeature.LoadCrosslinkingStatus()
 	f.AttestersData = f.AttesterStatusFeature.LoadAttesterStatuses()
 	f.ProposersData = f.LoadBeaconProposersData()
-
 }
+
 func (f *FullFeaturedState) RotateEpochData() {
 	// TODO: rotate data where possible (e.g. shuffling) instead of plain overwriting
 	f.LoadPrecomputedData()
 }
 
-func (f *FullFeaturedState) PrepareEpoch() {
+func (f *FullFeaturedState) EndEpoch() {
+	// Load winning crosslinks for this past epoch
+	f.CrosslinkingStatus = f.CrosslinkingFeature.LoadCrosslinkingStatus()
+}
+
+func (f *FullFeaturedState) StartEpoch() {
 	f.RotateEpochData()
 }
 

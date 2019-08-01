@@ -10,7 +10,7 @@ import (
 )
 
 type BaseTransitionTest struct {
-	Pre  phase0.BeaconState
+	Pre  *phase0.BeaconState
 	Post *phase0.BeaconState
 }
 
@@ -19,7 +19,7 @@ func (c *BaseTransitionTest) ExpectingFailure() bool {
 }
 
 func (c *BaseTransitionTest) Prepare() *phase0.FullFeaturedState {
-	state := phase0.NewFullFeaturedState(&c.Pre)
+	state := phase0.NewFullFeaturedState(c.Pre)
 	state.LoadPrecomputedData()
 	return state
 }
@@ -38,7 +38,10 @@ func (c *BaseTransitionTest) LoadSSZ(t *testing.T, name string, dst interface{},
 }
 
 func (c *BaseTransitionTest) Load(t *testing.T, readPart TestPartReader) {
-	c.LoadSSZ(t, "pre", &c.Pre, phase0.BeaconStateSSZ, readPart)
+	pre := new(phase0.BeaconState)
+	if c.LoadSSZ(t, "pre", pre, phase0.BeaconStateSSZ, readPart) {
+		c.Pre = pre
+	}
 	post := new(phase0.BeaconState)
 	if c.LoadSSZ(t, "post", post, phase0.BeaconStateSSZ, readPart) {
 		c.Post = post
@@ -49,7 +52,7 @@ func (c *BaseTransitionTest) Check(t *testing.T) {
 	if c.ExpectingFailure() {
 		t.Errorf("was expecting failure, but no error was raised")
 	} else if diff, equal := messagediff.PrettyDiff(c.Pre, c.Post, messagediff.SliceWeakEmptyOption{}); !equal {
-		t.Fatalf("end result does not match expectation!\n%s", diff)
+		t.Errorf("end result does not match expectation!\n%s", diff)
 	}
 }
 

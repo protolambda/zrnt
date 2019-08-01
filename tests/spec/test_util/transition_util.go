@@ -10,12 +10,12 @@ import (
 )
 
 type BaseTransitionTest struct {
-	Pre  *phase0.BeaconState
-	Post *phase0.BeaconState
+	Pre  phase0.BeaconState
+	Post phase0.BeaconState
 }
 
 func (c *BaseTransitionTest) Prepare() *phase0.FullFeaturedState {
-	state := phase0.NewFullFeaturedState(c.Pre)
+	state := phase0.NewFullFeaturedState(&c.Pre)
 	state.LoadPrecomputedData()
 	return state
 }
@@ -29,8 +29,8 @@ func (c *BaseTransitionTest) LoadSSZ(t *testing.T, name string, dst interface{},
 }
 
 func (c *BaseTransitionTest) Load(t *testing.T, readPart TestPartReader) {
-	c.LoadSSZ(t, "pre", c.Pre, phase0.BeaconStateSSZ, readPart)
-	c.LoadSSZ(t, "post", c.Post, phase0.BeaconStateSSZ, readPart)
+	c.LoadSSZ(t, "pre", &c.Pre, phase0.BeaconStateSSZ, readPart)
+	c.LoadSSZ(t, "post", &c.Post, phase0.BeaconStateSSZ, readPart)
 }
 
 func (c *BaseTransitionTest) Check(t *testing.T) {

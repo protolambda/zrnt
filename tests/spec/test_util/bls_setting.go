@@ -17,13 +17,17 @@ type BLSMeta struct {
 
 func HandleBLS(testRunner CaseRunner) CaseRunner {
 	return func(t *testing.T, readPart TestPartReader) {
-		r, _ := readPart("meta.yaml")
-		meta := BLSMeta{}
-		dec := yaml.NewDecoder(r)
-		Check(t, dec.Decode(meta))
-		// TODO: change to environment check once BLS is supported by ZRNT
-		if meta.BlsSetting == BlsRequired {
-			t.Skip("skipping BLS-only test")
+		part := readPart("meta.yaml")
+		if part.Exists() {
+			meta := BLSMeta{}
+			dec := yaml.NewDecoder(part)
+			Check(t, dec.Decode(meta))
+			Check(t, part.Close())
+			// TODO: change to environment check once BLS is supported by ZRNT
+			if meta.BlsSetting == BlsRequired {
+				t.Skip("skipping BLS-only test")
+				return
+			}
 		}
 		testRunner(t, readPart)
 	}

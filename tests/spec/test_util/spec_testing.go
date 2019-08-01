@@ -32,6 +32,7 @@ type TestPart interface {
 	io.Reader
 	io.Closer
 	Size() (uint64, error)
+	Exists() bool
 }
 
 type TestPartReader func(name string) TestPart
@@ -59,6 +60,10 @@ func (p *testPartFile) Size() (uint64, error) {
 	}
 }
 
+func (p *testPartFile) Exists() bool {
+	return p.File != nil
+}
+
 func RunHandler(t *testing.T, handlerPath string, caseRunner CaseRunner, config string) {
 	// general config is allowed
 	if config != core.PRESET_NAME && config != "general" {
@@ -69,7 +74,8 @@ func RunHandler(t *testing.T, handlerPath string, caseRunner CaseRunner, config 
 	// get the current path, go to the root, and get the tests path
 	_, filename, _, _ := runtime.Caller(0)
 	basepath := filepath.Dir(filepath.Dir(filename))
-	handlerAbsPath := filepath.Join(basepath, "eth2.0-spec-tests", "tests", config, filepath.FromSlash(handlerPath))
+	handlerAbsPath := filepath.Join(basepath, "eth2.0-spec-tests", "tests",
+		config, "phase0", filepath.FromSlash(handlerPath))
 
 	forEachDir := func(t *testing.T, path string, callItem func(t *testing.T, path string)) {
 		items, err := ioutil.ReadDir(path)
@@ -86,9 +92,13 @@ func RunHandler(t *testing.T, handlerPath string, caseRunner CaseRunner, config 
 	runTest := func(t *testing.T, path string) {
 		partReader := func(name string) TestPart {
 			partPath := filepath.Join(path, name)
-			f, err := os.Open(partPath)
-			Check(t, err)
-			return &testPartFile{File: f}
+			if _, err := os.Stat(partPath); os.IsNotExist(err) {
+				return &testPartFile{File: nil}
+			} else {
+				f, err := os.Open(partPath)
+				Check(t, err)
+				return &testPartFile{File: f}
+			}
 		}
 		caseRunner(t, partReader)
 	}

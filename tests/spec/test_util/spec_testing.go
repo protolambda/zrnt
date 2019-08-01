@@ -65,8 +65,6 @@ func (p *testPartFile) Exists() bool {
 }
 
 func RunHandler(t *testing.T, handlerPath string, caseRunner CaseRunner, config string) {
-	t.Parallel()
-
 	// general config is allowed
 	if config != core.PRESET_NAME && config != "general" {
 		t.Logf("Config %s does not match current config %s, " +
@@ -111,5 +109,8 @@ func RunHandler(t *testing.T, handlerPath string, caseRunner CaseRunner, config 
 		forEachDir(t, path, runTest)
 	}
 
-	forEachDir(t, handlerAbsPath, runSuite)
+	t.Run(handlerPath, func(t *testing.T) {
+		t.Parallel()
+		forEachDir(t, handlerAbsPath, runSuite)
+	})
 }

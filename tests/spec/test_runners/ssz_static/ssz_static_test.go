@@ -3,15 +3,26 @@ package ssz_static
 import (
 	"bufio"
 	"bytes"
-	"fmt"
-	"github.com/protolambda/messagediff"
-	. "github.com/protolambda/zrnt/eth2/beacon"
+	"encoding/hex"
+	"github.com/protolambda/zrnt/eth2/beacon/attestations"
+	"github.com/protolambda/zrnt/eth2/beacon/deposits"
+	"github.com/protolambda/zrnt/eth2/beacon/eth1"
+	"github.com/protolambda/zrnt/eth2/beacon/exits"
+	"github.com/protolambda/zrnt/eth2/beacon/header"
+	"github.com/protolambda/zrnt/eth2/beacon/history"
+	"github.com/protolambda/zrnt/eth2/beacon/slashings/attslash"
+	"github.com/protolambda/zrnt/eth2/beacon/slashings/propslash"
+	"github.com/protolambda/zrnt/eth2/beacon/transfers"
+	"github.com/protolambda/zrnt/eth2/beacon/validator"
+	"github.com/protolambda/zrnt/eth2/beacon/versioning"
 	. "github.com/protolambda/zrnt/eth2/core"
+	"github.com/protolambda/zrnt/eth2/phase0"
 	"github.com/protolambda/zrnt/eth2/util/hashing"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"github.com/protolambda/zssz"
 	"github.com/protolambda/zssz/htr"
 	"github.com/protolambda/zssz/types"
+	"gopkg.in/yaml.v2"
 	"testing"
 )
 
@@ -19,17 +30,25 @@ type SSZStaticTestCase struct {
 	TypeName string
 
 	SSZ        types.SSZ
-	EmptyValue interface{}
+	Value      interface{}
+	Serialized []byte
 
-	Value       interface{}
-	Serialized  Bytes
 	Root        Root
 	SigningRoot Root
 }
 
 func (testCase *SSZStaticTestCase) Run(t *testing.T) {
-	t.Run(testCase.TypeName, func(t *testing.T) {
-		t.Run("encode", func(t *testing.T) {
+	// deserialization is the pre-requisite
+	{
+		r := bytes.NewReader(testCase.Serialized)
+		if err := zssz.Decode(r, uint64(len(testCase.Serialized)), testCase.Value, testCase.SSZ); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	t.Run("serialization", func(t *testing.T) {
+		var data []byte
+		{
 			var buf bytes.Buffer
 			bufWriter := bufio.NewWriter(&buf)
 			if err := zssz.Encode(bufWriter, testCase.Value, testCase.SSZ); err != nil {
@@ -40,103 +59,136 @@ func (testCase *SSZStaticTestCase) Run(t *testing.T) {
 				t.Error(err)
 				return
 			}
-			data := buf.Bytes()
-			if len(data) != len(testCase.Serialized) {
+			data = buf.Bytes()
+		}
+
+		if len(data) != len(testCase.Serialized) {
+			b := Bytes(data)
+			t.Errorf("encoded data has different length: %d (spec) <-> %d (zrnt)\nspec: %x\nzrnt: %x", len(testCase.Serialized), len(data), testCase.Serialized, b)
+			return
+		}
+		for i := 0; i < len(data); i++ {
+			if data[i] != testCase.Serialized[i] {
 				b := Bytes(data)
-				t.Errorf("encoded data has different length: %d (spec) <-> %d (zrnt)\nspec: %x\nzrnt: %x", len(testCase.Serialized), len(data), testCase.Serialized, b)
+				t.Errorf("byte i: %d differs: %d (spec) <-> %d (zrnt)\nspec: %x\nzrnt: %x", i, testCase.Serialized[i], data[i], testCase.Serialized, b)
 				return
-			}
-			for i := 0; i < len(data); i++ {
-				if data[i] != testCase.Serialized[i] {
-					b := Bytes(data)
-					t.Errorf("byte i: %d differs: %d (spec) <-> %d (zrnt)\nspec: %x\nzrnt: %x", i, testCase.Serialized[i], data[i], testCase.Serialized, b)
-					return
-				}
-			}
-		})
-		t.Run("decode", func(t *testing.T) {
-			r := bytes.NewReader(testCase.Serialized)
-			if err := zssz.Decode(r, uint32(len(testCase.Serialized)), testCase.EmptyValue, testCase.SSZ); err != nil {
-				t.Fatal(err)
-			}
-			if diff, equal := messagediff.PrettyDiff(testCase.EmptyValue, testCase.Value, messagediff.SliceWeakEmptyOption{}); !equal {
-				t.Errorf("decode result does not match expectation!\n%s", diff)
-				return
-			}
-		})
-		t.Run("hash_tree_root", func(t *testing.T) {
-			hfn := hashing.GetHashFn()
-			root := Root(zssz.HashTreeRoot(htr.HashFn(hfn), testCase.Value, testCase.SSZ))
-			if root != testCase.Root {
-				t.Errorf("hash-tree-roots differ: %x (spec) <-> %x (zrnt)", testCase.Root, root)
-				return
-			}
-		})
-		if testCase.SigningRoot != (Root{}) {
-			signedSSZ, ok := testCase.SSZ.(types.SignedSSZ)
-			if ok {
-				t.Run("signing_root", func(t *testing.T) {
-					hfn := hashing.GetHashFn()
-					root := Root(zssz.SigningRoot(htr.HashFn(hfn), testCase.Value, signedSSZ))
-					if root != testCase.SigningRoot {
-						t.Errorf("signing-roots differ: %x (spec) <-> %x (zrnt)", testCase.SigningRoot, root)
-					}
-				})
 			}
 		}
 	})
+
+	t.Run("hash_tree_root", func(t *testing.T) {
+		hfn := hashing.GetHashFn()
+		root := Root(zssz.HashTreeRoot(htr.HashFn(hfn), testCase.Value, testCase.SSZ))
+		if root != testCase.Root {
+			t.Errorf("hash-tree-roots differ: %x (spec) <-> %x (zrnt)", testCase.Root, root)
+			return
+		}
+	})
+
+	if testCase.SigningRoot != (Root{}) {
+		signedSSZ, ok := testCase.SSZ.(types.SignedSSZ)
+		if ok {
+			t.Run("signing_root", func(t *testing.T) {
+				hfn := hashing.GetHashFn()
+				root := Root(zssz.SigningRoot(htr.HashFn(hfn), testCase.Value, signedSSZ))
+				if root != testCase.SigningRoot {
+					t.Errorf("signing-roots differ: %x (spec) <-> %x (zrnt)", testCase.SigningRoot, root)
+				}
+			})
+		}
+	}
 }
 
 type ObjAllocator func() interface{}
 
 type ObjData struct {
-	Alloc ObjAllocator
-	SSZ   types.SSZ
+	TypeName string
+	Alloc    ObjAllocator
 }
 
-var objs = map[string]*ObjData{
-	"Fork":                         {Alloc: func() interface{} { return new(Fork) }},
-	"Crosslink":                    {Alloc: func() interface{} { return new(Crosslink) }},
-	"Eth1Data":                     {Alloc: func() interface{} { return new(Eth1Data) }},
-	"AttestationData":              {Alloc: func() interface{} { return new(AttestationData) }},
-	"AttestationDataAndCustodyBit": {Alloc: func() interface{} { return new(AttestationDataAndCustodyBit) }},
-	"IndexedAttestation":           {Alloc: func() interface{} { return new(IndexedAttestation) }},
-	"DepositData":                  {Alloc: func() interface{} { return new(DepositData) }},
-	"BeaconBlockHeader":            {Alloc: func() interface{} { return new(BeaconBlockHeader) }},
-	"Validator":                    {Alloc: func() interface{} { return new(Validator) }},
-	"PendingAttestation":           {Alloc: func() interface{} { return new(PendingAttestation) }},
-	"HistoricalBatch":              {Alloc: func() interface{} { return new(HistoricalBatch) }},
-	"ProposerSlashing":             {Alloc: func() interface{} { return new(ProposerSlashing) }},
-	"AttesterSlashing":             {Alloc: func() interface{} { return new(AttesterSlashing) }},
-	"Attestation":                  {Alloc: func() interface{} { return new(Attestation) }},
-	"Deposit":                      {Alloc: func() interface{} { return new(Deposit) }},
-	"VoluntaryExit":                {Alloc: func() interface{} { return new(VoluntaryExit) }},
-	"Transfer":                     {Alloc: func() interface{} { return new(Transfer) }},
-	"BeaconBlockBody":              {Alloc: func() interface{} { return new(BeaconBlockBody) }},
-	"BeaconBlock":                  {Alloc: func() interface{} { return new(BeaconBlock) }},
-	"BeaconState":                  {Alloc: func() interface{} { return new(BeaconState) }},
+var objs = []*ObjData{
+	{TypeName: "Fork", Alloc: func() interface{} { return new(versioning.Fork) }},
+	{TypeName: "Crosslink", Alloc: func() interface{} { return new(Crosslink) }},
+	{TypeName: "Eth1Data", Alloc: func() interface{} { return new(eth1.Eth1Data) }},
+	{TypeName: "AttestationData", Alloc: func() interface{} { return new(attestations.AttestationData) }},
+	{TypeName: "AttestationDataAndCustodyBit", Alloc: func() interface{} { return new(attestations.AttestationDataAndCustodyBit) }},
+	{TypeName: "IndexedAttestation", Alloc: func() interface{} { return new(attestations.IndexedAttestation) }},
+	{TypeName: "DepositData", Alloc: func() interface{} { return new(deposits.DepositData) }},
+	{TypeName: "BeaconBlockHeader", Alloc: func() interface{} { return new(header.BeaconBlockHeader) }},
+	{TypeName: "Validator", Alloc: func() interface{} { return new(validator.Validator) }},
+	{TypeName: "PendingAttestation", Alloc: func() interface{} { return new(attestations.PendingAttestation) }},
+	{TypeName: "HistoricalBatch", Alloc: func() interface{} { return new(history.HistoricalBatch) }},
+	{TypeName: "ProposerSlashing", Alloc: func() interface{} { return new(propslash.ProposerSlashing) }},
+	{TypeName: "AttesterSlashing", Alloc: func() interface{} { return new(attslash.AttesterSlashing) }},
+	{TypeName: "Attestation", Alloc: func() interface{} { return new(attestations.Attestation) }},
+	{TypeName: "Deposit", Alloc: func() interface{} { return new(deposits.Deposit) }},
+	{TypeName: "VoluntaryExit", Alloc: func() interface{} { return new(exits.VoluntaryExit) }},
+	{TypeName: "Transfer", Alloc: func() interface{} { return new(transfers.Transfer) }},
+	{TypeName: "BeaconBlockBody", Alloc: func() interface{} { return new(phase0.BeaconBlockBody) }},
+	{TypeName: "BeaconBlock", Alloc: func() interface{} { return new(phase0.BeaconBlock) }},
+	{TypeName: "BeaconState", Alloc: func() interface{} { return new(phase0.BeaconState) }},
 }
 
-func init() {
-	for _, o := range objs {
-		o.SSZ = zssz.GetSSZ(o.Alloc())
-	}
+type RootsYAML struct {
+	Root        string `yaml:"root"`
+	SigningRoot string `yaml:"signing_root"`
+}
+
+func (obj *ObjData) RunHandler(t *testing.T) {
+	test_util.RunHandler(t, "ssz_static/"+obj.TypeName, func(t *testing.T, readPart test_util.TestPartReader) {
+		c := &SSZStaticTestCase{
+			TypeName: obj.TypeName,
+		}
+
+		// Allocate an empty value to decode into later for testing.
+		c.Value = obj.Alloc()
+
+		// Get the SSZ type
+		c.SSZ = zssz.GetSSZ(c.Value)
+
+		// Load the SSZ encoded data as a bytes array. The test will serialize it both ways.
+		{
+			p := readPart("serialized.ssz")
+			size, err := p.Size()
+			test_util.Check(t, err)
+			buf := new(bytes.Buffer)
+			n, err := buf.ReadFrom(p)
+			test_util.Check(t, err)
+			test_util.Check(t, p.Close())
+			if uint64(n) != size {
+				t.Errorf("could not read full serialized data")
+			}
+			c.Serialized = buf.Bytes()
+		}
+
+		{
+			// TODO: is going to be renamed to roots.yaml
+			p := readPart("meta.yaml")
+			dec := yaml.NewDecoder(p)
+			roots := &RootsYAML{}
+			test_util.Check(t, dec.Decode(roots))
+			test_util.Check(t, p.Close())
+			{
+				root, err := hex.DecodeString(roots.Root[2:])
+				test_util.Check(t, err)
+				copy(c.Root[:], root)
+			}
+			if len(roots.SigningRoot) >= 2 {
+				root, err := hex.DecodeString(roots.SigningRoot[2:])
+				test_util.Check(t, err)
+				copy(c.SigningRoot[:], root)
+			}
+		}
+
+		// Run the test case
+		c.Run(t)
+
+	}, PRESET_NAME)
 }
 
 func TestSSZStatic(t *testing.T) {
-	test_util.RunSuitesInPath("ssz_static/core/",
-		func(raw interface{}) (interface{}, interface{}) {
-			data := raw.(map[string]interface{})
-			for name, sszData := range data {
-				objData, ok := objs[name]
-				if !ok {
-					panic(fmt.Sprintf("unknown ssz object type: %s", name))
-				}
-				testCase := &SSZStaticTestCase{TypeName: name, SSZ: objData.SSZ}
-				testCase.Value = objData.Alloc()
-				testCase.EmptyValue = objData.Alloc()
-				return testCase, sszData
-			}
-			return nil, nil
-		}, t)
+	t.Parallel()
+	for _, o := range objs {
+		o.RunHandler(t)
+	}
 }

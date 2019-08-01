@@ -8,17 +8,17 @@ import (
 
 type TransferTestCase struct {
 	test_util.BaseTransitionTest
-	Transfer *transfers.Transfer
+	Transfer transfers.Transfer
 }
 
 func (c *TransferTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
 	c.BaseTransitionTest.Load(t, readPart)
-	c.LoadSSZ(t, "transfer", c.Transfer, transfers.TransferSSZ, readPart)
+	c.LoadSSZ(t, "transfer", &c.Transfer, transfers.TransferSSZ, readPart)
 }
 
 func (c *TransferTestCase) Run() error {
 	state := c.Prepare()
-	return state.ProcessTransfer(c.Transfer)
+	return state.ProcessTransfer(&c.Transfer)
 }
 
 func TestTransfer(t *testing.T) {

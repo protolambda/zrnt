@@ -8,17 +8,17 @@ import (
 
 type VoluntaryExitTestCase struct {
 	test_util.BaseTransitionTest
-	VoluntaryExit *exits.VoluntaryExit
+	VoluntaryExit exits.VoluntaryExit
 }
 
 func (c *VoluntaryExitTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
 	c.BaseTransitionTest.Load(t, readPart)
-	c.LoadSSZ(t, "voluntary_exit", c.VoluntaryExit, exits.VoluntaryExitSSZ, readPart)
+	c.LoadSSZ(t, "voluntary_exit", &c.VoluntaryExit, exits.VoluntaryExitSSZ, readPart)
 }
 
 func (c *VoluntaryExitTestCase) Run() error {
 	state := c.Prepare()
-	return state.ProcessVoluntaryExit(c.VoluntaryExit)
+	return state.ProcessVoluntaryExit(&c.VoluntaryExit)
 }
 
 func TestVoluntaryExit(t *testing.T) {

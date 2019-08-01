@@ -8,17 +8,17 @@ import (
 
 type AttesterSlashingTestCase struct {
 	test_util.BaseTransitionTest
-	AttesterSlashing *attslash.AttesterSlashing
+	AttesterSlashing attslash.AttesterSlashing
 }
 
 func (c *AttesterSlashingTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
 	c.BaseTransitionTest.Load(t, readPart)
-	c.LoadSSZ(t, "attester_slashing", c.AttesterSlashing, attslash.AttesterSlashingSSZ, readPart)
+	c.LoadSSZ(t, "attester_slashing", &c.AttesterSlashing, attslash.AttesterSlashingSSZ, readPart)
 }
 
 func (c *AttesterSlashingTestCase) Run() error {
 	state := c.Prepare()
-	return state.ProcessAttesterSlashing(c.AttesterSlashing)
+	return state.ProcessAttesterSlashing(&c.AttesterSlashing)
 }
 
 func TestAttesterSlashing(t *testing.T) {

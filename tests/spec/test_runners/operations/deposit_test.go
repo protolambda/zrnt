@@ -8,17 +8,17 @@ import (
 
 type DepositTestCase struct {
 	test_util.BaseTransitionTest
-	Deposit *deposits.Deposit
+	Deposit deposits.Deposit
 }
 
 func (c *DepositTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
 	c.BaseTransitionTest.Load(t, readPart)
-	c.LoadSSZ(t, "deposit", c.Deposit, deposits.DepositSSZ, readPart)
+	c.LoadSSZ(t, "deposit", &c.Deposit, deposits.DepositSSZ, readPart)
 }
 
 func (c *DepositTestCase) Run() error {
 	state := c.Prepare()
-	return state.ProcessDeposit(c.Deposit)
+	return state.ProcessDeposit(&c.Deposit)
 }
 
 func TestDeposit(t *testing.T) {

@@ -21,7 +21,7 @@ func HandleBLS(testRunner CaseRunner) CaseRunner {
 		if part.Exists() {
 			meta := BLSMeta{}
 			dec := yaml.NewDecoder(part)
-			Check(t, dec.Decode(meta))
+			Check(t, dec.Decode(&meta))
 			Check(t, part.Close())
 			// TODO: change to environment check once BLS is supported by ZRNT
 			if meta.BlsSetting == BlsRequired {

@@ -113,7 +113,7 @@ func NewFullFeaturedState(state *BeaconState) *FullFeaturedState {
 
 	f.AttesterStatusFeature.State = &f.AttestationsState
 	f.AttesterStatusFeature.Meta = f
-	f.AttesterStatusFeature.State = &f.AttestationsState
+
 	f.CrosslinkingFeature.Meta = f
 	f.CrosslinkingFeature.State = &f.AttestationsState
 

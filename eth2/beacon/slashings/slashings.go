@@ -59,18 +59,19 @@ func (f *SlashingFeature) SlashValidator(slashedIndex ValidatorIndex, whistleblo
 }
 
 func (f *SlashingFeature) ProcessEpochSlashings() {
-	currentEpoch := f.Meta.CurrentEpoch()
 	totalBalance := f.Meta.GetTotalStake()
 
-	epochIndex := currentEpoch % EPOCHS_PER_SLASHINGS_VECTOR
-	// Compute slashed balances in the current epoch
-	slashings := f.State.Slashings[(epochIndex+1)%EPOCHS_PER_SLASHINGS_VECTOR]
+	slashingsSum := Gwei(0)
+	for _, s := range f.State.Slashings {
+		slashingsSum += s
+	}
 
-	withdrawableEpoch := currentEpoch + (EPOCHS_PER_SLASHINGS_VECTOR / 2)
+	withdrawableEpoch := f.Meta.CurrentEpoch() + (EPOCHS_PER_SLASHINGS_VECTOR / 2)
 
 	for _, index := range f.Meta.GetIndicesToSlash(withdrawableEpoch) {
+		// Factored out from penalty numerator to avoid uint64 overflow
 		penaltyNumerator := f.Meta.EffectiveBalance(index) / EFFECTIVE_BALANCE_INCREMENT
-		if slashingsWeight := slashings * 3; totalBalance < slashingsWeight {
+		if slashingsWeight := slashingsSum * 3; totalBalance < slashingsWeight {
 			penaltyNumerator *= totalBalance
 		} else {
 			penaltyNumerator *= slashingsWeight

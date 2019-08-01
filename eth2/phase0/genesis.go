@@ -71,7 +71,7 @@ func InitState(state *BeaconState) *FullFeaturedState {
 	activeIndexRoot := full.ComputeActiveIndexRoot(GENESIS_EPOCH)
 	committeeRoot := full.ComputeCompactCommitteesRoot(GENESIS_EPOCH)
 	for i := Epoch(0); i < EPOCHS_PER_HISTORICAL_VECTOR; i++ {
-		state.LatestActiveIndexRoots[i] = activeIndexRoot
+		state.ActiveIndexRoots[i] = activeIndexRoot
 		state.CompactCommitteesRoots[i] = committeeRoot
 	}
 	return full

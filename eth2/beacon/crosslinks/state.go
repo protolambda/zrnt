@@ -10,8 +10,8 @@ import (
 )
 
 type CrosslinksState struct {
-	CurrentCrosslinks  [SHARD_COUNT]Crosslink
 	PreviousCrosslinks [SHARD_COUNT]Crosslink
+	CurrentCrosslinks  [SHARD_COUNT]Crosslink
 }
 
 var CrosslinkSSZ = zssz.GetSSZ((*Crosslink)(nil))

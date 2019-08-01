@@ -41,11 +41,14 @@ func (c *BaseTransitionTest) Load(t *testing.T, readPart TestPartReader) {
 	pre := new(phase0.BeaconState)
 	if c.LoadSSZ(t, "pre", pre, phase0.BeaconStateSSZ, readPart) {
 		c.Pre = pre
+	} else {
+		t.Fatalf("failed to load pre state")
 	}
 	post := new(phase0.BeaconState)
 	if c.LoadSSZ(t, "post", post, phase0.BeaconStateSSZ, readPart) {
 		c.Post = post
 	}
+	// post state is optional, no error if not present.
 }
 
 func (c *BaseTransitionTest) Check(t *testing.T) {

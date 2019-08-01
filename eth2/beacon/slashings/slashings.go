@@ -40,9 +40,11 @@ func (f *SlashingFeature) SlashValidator(slashedIndex ValidatorIndex, whistleblo
 	validator := f.Meta.Validator(slashedIndex)
 	f.Meta.InitiateValidatorExit(currentEpoch, slashedIndex)
 	validator.Slashed = true
-	validator.WithdrawableEpoch = currentEpoch + EPOCHS_PER_SLASHINGS_VECTOR
+	if w := currentEpoch + EPOCHS_PER_SLASHINGS_VECTOR; w > validator.WithdrawableEpoch {
+		validator.WithdrawableEpoch = w
+	}
 
-	f.State.Slashings[currentEpoch%EPOCHS_PER_SLASHINGS_VECTOR] = validator.EffectiveBalance
+	f.State.Slashings[currentEpoch%EPOCHS_PER_SLASHINGS_VECTOR] += validator.EffectiveBalance
 
 	f.Meta.DecreaseBalance(slashedIndex, validator.EffectiveBalance/MIN_SLASHING_PENALTY_QUOTIENT)
 

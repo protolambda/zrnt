@@ -14,10 +14,10 @@ import (
 
 type InitializationTestCase struct {
 	GenesisState  *phase0.BeaconState
-	ExpectedState  *phase0.BeaconState
+	ExpectedState *phase0.BeaconState
 	Eth1Timestamp Timestamp
 	Eth1BlockHash Root
-	Deposits []deposits.Deposit
+	Deposits      []deposits.Deposit
 }
 
 type DepositsCountMeta struct {
@@ -76,7 +76,7 @@ func (c *InitializationTestCase) ExpectingFailure() bool {
 	return c.ExpectedState == nil
 }
 
-func (c *InitializationTestCase) Check(t *testing.T){
+func (c *InitializationTestCase) Check(t *testing.T) {
 	if c.ExpectingFailure() {
 		t.Errorf("was expecting failure, but no error was raised")
 	} else if diff, equal := messagediff.PrettyDiff(c.GenesisState, c.ExpectedState, messagediff.SliceWeakEmptyOption{}); !equal {

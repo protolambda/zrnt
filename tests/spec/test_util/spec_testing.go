@@ -78,6 +78,11 @@ func RunHandler(t *testing.T, handlerPath string, caseRunner CaseRunner, config 
 		config, "phase0", filepath.FromSlash(handlerPath))
 
 	forEachDir := func(t *testing.T, path string, callItem func(t *testing.T, path string)) {
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			t.Skipf("missing tests: %s", path)
+		} else {
+			Check(t, err)
+		}
 		items, err := ioutil.ReadDir(path)
 		Check(t, err)
 		for _, item := range items {

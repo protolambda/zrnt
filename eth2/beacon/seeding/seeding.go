@@ -17,8 +17,8 @@ type SeedFeature struct {
 // Generate a seed for the given epoch
 func (f *SeedFeature) GetSeed(epoch Epoch) Root {
 	buf := make([]byte, 32*3)
-	if epoch >= MIN_SEED_LOOKAHEAD { // Avoid underflow
-		mix := f.Meta.GetRandomMix(epoch - MIN_SEED_LOOKAHEAD)
+	if epoch > MIN_SEED_LOOKAHEAD { // Avoid underflow
+		mix := f.Meta.GetRandomMix(epoch - MIN_SEED_LOOKAHEAD - 1)
 		copy(buf[0:32], mix[:])
 	}
 	activeIndexRoot := f.Meta.GetActiveIndexRoot(epoch)

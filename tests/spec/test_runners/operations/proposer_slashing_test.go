@@ -13,7 +13,7 @@ type ProposerSlashingTestCase struct {
 
 func (c *ProposerSlashingTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
 	c.BaseTransitionTest.Load(t, readPart)
-	c.LoadSSZ(t, "proposer_slashing", &c.ProposerSlashing, propslash.ProposerSlashingSSZ, readPart)
+	test_util.LoadSSZ(t, "proposer_slashing", &c.ProposerSlashing, propslash.ProposerSlashingSSZ, readPart)
 }
 
 func (c *ProposerSlashingTestCase) Run() error {

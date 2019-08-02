@@ -3,6 +3,7 @@ package phase0
 import (
 	. "github.com/protolambda/zrnt/eth2/beacon/deposits"
 	. "github.com/protolambda/zrnt/eth2/beacon/eth1"
+	"github.com/protolambda/zrnt/eth2/beacon/header"
 	. "github.com/protolambda/zrnt/eth2/beacon/versioning"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
@@ -20,7 +21,7 @@ var DepositRootsSSZ = zssz.GetSSZ((*DepositRoots)(nil))
 func GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit) (*FullFeaturedState, error) {
 	state := &BeaconState{
 		VersioningState: VersioningState{
-			GenesisTime: time,
+			GenesisTime: time - (time % SECONDS_PER_DAY) + (2 * SECONDS_PER_DAY),
 		},
 		// Ethereum 1.0 chain data
 		Eth1State: Eth1State{
@@ -28,6 +29,11 @@ func GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit) (*FullF
 				DepositRoot:  Root{}, // incrementally overwritten during deposit processing
 				DepositCount: DepositIndex(len(deps)),
 				BlockHash:    eth1BlockHash,
+			},
+		},
+		BlockHeaderState: header.BlockHeaderState{
+			LatestBlockHeader: header.BeaconBlockHeader{
+				BodyRoot: ssz.HashTreeRoot(BeaconBlockBody{}, BeaconBlockBodySSZ),
 			},
 		},
 	}

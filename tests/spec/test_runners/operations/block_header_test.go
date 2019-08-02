@@ -15,7 +15,7 @@ type BlockHeaderTestCase struct {
 func (c *BlockHeaderTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
 	c.BaseTransitionTest.Load(t, readPart)
 	b := phase0.BeaconBlock{}
-	c.LoadSSZ(t, "block", &b, phase0.BeaconBlockSSZ, readPart)
+	test_util.LoadSSZ(t, "block", &b, phase0.BeaconBlockSSZ, readPart)
 	c.BlockHeader = b.Header()
 }
 

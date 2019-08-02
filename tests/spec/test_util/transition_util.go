@@ -4,8 +4,6 @@ import (
 	"github.com/protolambda/messagediff"
 	"github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/phase0"
-	"github.com/protolambda/zssz"
-	"github.com/protolambda/zssz/types"
 	"testing"
 )
 
@@ -24,28 +22,15 @@ func (c *BaseTransitionTest) Prepare() *phase0.FullFeaturedState {
 	return state
 }
 
-func (c *BaseTransitionTest) LoadSSZ(t *testing.T, name string, dst interface{}, ssz types.SSZ, readPart TestPartReader) bool {
-	p := readPart(name + ".ssz")
-	if p.Exists() {
-		size, err := p.Size()
-		Check(t, err)
-		Check(t, zssz.Decode(p, size, dst, ssz))
-		Check(t, p.Close())
-		return true
-	} else {
-		return false
-	}
-}
-
 func (c *BaseTransitionTest) Load(t *testing.T, readPart TestPartReader) {
 	pre := new(phase0.BeaconState)
-	if c.LoadSSZ(t, "pre", pre, phase0.BeaconStateSSZ, readPart) {
+	if LoadSSZ(t, "pre", pre, phase0.BeaconStateSSZ, readPart) {
 		c.Pre = pre
 	} else {
 		t.Fatalf("failed to load pre state")
 	}
 	post := new(phase0.BeaconState)
-	if c.LoadSSZ(t, "post", post, phase0.BeaconStateSSZ, readPart) {
+	if LoadSSZ(t, "post", post, phase0.BeaconStateSSZ, readPart) {
 		c.Post = post
 	}
 	// post state is optional, no error if not present.

@@ -26,7 +26,7 @@ func (c *BlocksTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
 	test_util.Check(t, p.Close())
 	loadBlock := func(i uint64) *phase0.BeaconBlock {
 		dst := new(phase0.BeaconBlock)
-		c.LoadSSZ(t, fmt.Sprintf("blocks_%d", i), dst, phase0.BeaconBlockSSZ, readPart)
+		test_util.LoadSSZ(t, fmt.Sprintf("blocks_%d", i), dst, phase0.BeaconBlockSSZ, readPart)
 		return dst
 	}
 	for i := uint64(0); i < m.BlocksCount; i++ {

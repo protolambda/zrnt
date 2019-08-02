@@ -13,7 +13,7 @@ type TransferTestCase struct {
 
 func (c *TransferTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
 	c.BaseTransitionTest.Load(t, readPart)
-	c.LoadSSZ(t, "transfer", &c.Transfer, transfers.TransferSSZ, readPart)
+	test_util.LoadSSZ(t, "transfer", &c.Transfer, transfers.TransferSSZ, readPart)
 }
 
 func (c *TransferTestCase) Run() error {

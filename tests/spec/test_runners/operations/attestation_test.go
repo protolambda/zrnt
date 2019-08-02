@@ -13,7 +13,7 @@ type AttestationTestCase struct {
 
 func (c *AttestationTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
 	c.BaseTransitionTest.Load(t, readPart)
-	c.LoadSSZ(t, "attestation", &c.Attestation, attestations.AttestationSSZ, readPart)
+	test_util.LoadSSZ(t, "attestation", &c.Attestation, attestations.AttestationSSZ, readPart)
 }
 
 func (c *AttestationTestCase) Run() error {

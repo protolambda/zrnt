@@ -13,7 +13,7 @@ type DepositTestCase struct {
 
 func (c *DepositTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
 	c.BaseTransitionTest.Load(t, readPart)
-	c.LoadSSZ(t, "deposit", &c.Deposit, deposits.DepositSSZ, readPart)
+	test_util.LoadSSZ(t, "deposit", &c.Deposit, deposits.DepositSSZ, readPart)
 }
 
 func (c *DepositTestCase) Run() error {

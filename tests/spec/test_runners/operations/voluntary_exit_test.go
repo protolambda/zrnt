@@ -13,7 +13,7 @@ type VoluntaryExitTestCase struct {
 
 func (c *VoluntaryExitTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
 	c.BaseTransitionTest.Load(t, readPart)
-	c.LoadSSZ(t, "voluntary_exit", &c.VoluntaryExit, exits.VoluntaryExitSSZ, readPart)
+	test_util.LoadSSZ(t, "voluntary_exit", &c.VoluntaryExit, exits.VoluntaryExitSSZ, readPart)
 }
 
 func (c *VoluntaryExitTestCase) Run() error {

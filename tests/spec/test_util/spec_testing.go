@@ -3,6 +3,8 @@ package test_util
 import (
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/core"
+	"github.com/protolambda/zssz"
+	"github.com/protolambda/zssz/types"
 	"io"
 	"io/ioutil"
 	"os"
@@ -17,15 +19,6 @@ type ConfigMismatchError struct {
 
 func (confErr ConfigMismatchError) Error() string {
 	return fmt.Sprintf("cannot load suite for config: %s, current config is: %s", confErr.Config, core.PRESET_NAME)
-}
-
-type TestCase interface {
-	Run(t *testing.T)
-}
-
-type NamedTestCase struct {
-	TestCase
-	Name string
 }
 
 type TestPart interface {
@@ -117,4 +110,17 @@ func RunHandler(t *testing.T, handlerPath string, caseRunner CaseRunner, config 
 		t.Parallel()
 		forEachDir(t, handlerAbsPath, runSuite)
 	})
+}
+
+func LoadSSZ(t *testing.T, name string, dst interface{}, ssz types.SSZ, readPart TestPartReader) bool {
+	p := readPart(name + ".ssz")
+	if p.Exists() {
+		size, err := p.Size()
+		Check(t, err)
+		Check(t, zssz.Decode(p, size, dst, ssz))
+		Check(t, p.Close())
+		return true
+	} else {
+		return false
+	}
 }

@@ -7,6 +7,7 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon/versioning"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
+	constant_presets "github.com/protolambda/zrnt/presets/generated"
 	"github.com/protolambda/zssz"
 )
 
@@ -80,4 +81,14 @@ func InitState(state *BeaconState) *FullFeaturedState {
 		state.CompactCommitteesRoots[i] = committeeRoot
 	}
 	return full
+}
+
+func IsValidGenesisState(state *BeaconState) bool {
+	if state.GenesisTime < MIN_GENESIS_TIME {
+		return false
+	}
+	if state.GetActiveValidatorCount(GENESIS_EPOCH) < constant_presets.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT {
+		return false
+	}
+	return true
 }

@@ -6,7 +6,7 @@ import (
 )
 
 type SlotProcessFeature struct {
-	Meta interface{
+	Meta interface {
 		StateRoot() Root
 		meta.Versioning
 		meta.LatestHeaderUpdate

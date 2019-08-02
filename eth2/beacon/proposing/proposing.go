@@ -21,7 +21,7 @@ func (state *ProposersData) GetBeaconProposerIndex(slot Slot) ValidatorIndex {
 	if epoch == state.Epoch {
 		return state.Current[slot-state.Epoch.GetStartSlot()]
 	} else if epoch == state.Epoch+1 {
-		return state.Next[slot-(state.Epoch + 1).GetStartSlot()]
+		return state.Next[slot-(state.Epoch+1).GetStartSlot()]
 	} else {
 		panic(fmt.Errorf("slot %d not within range", slot))
 	}

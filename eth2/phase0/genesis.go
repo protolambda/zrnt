@@ -25,9 +25,9 @@ func GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit) (*FullF
 		// Ethereum 1.0 chain data
 		Eth1State: Eth1State{
 			Eth1Data: Eth1Data{
-				DepositRoot: Root{}, // incrementally overwritten during deposit processing
+				DepositRoot:  Root{}, // incrementally overwritten during deposit processing
 				DepositCount: DepositIndex(len(deps)),
-				BlockHash: eth1BlockHash,
+				BlockHash:    eth1BlockHash,
 			},
 		},
 	}
@@ -49,7 +49,6 @@ func GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit) (*FullF
 	}
 	return InitState(state), nil
 }
-
 
 // After creating a state and onboarding validators,
 // process the new validators as genesis-validators, and initialize other state variables.

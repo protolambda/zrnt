@@ -23,5 +23,5 @@ func (c *TransferTestCase) Run() error {
 
 func TestTransfer(t *testing.T) {
 	test_util.RunTransitionTest(t, "operations", "transfer",
-		func() test_util.TransitionTest {return new(TransferTestCase)})
+		func() test_util.TransitionTest { return new(TransferTestCase) })
 }

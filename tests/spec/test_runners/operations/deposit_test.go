@@ -23,5 +23,5 @@ func (c *DepositTestCase) Run() error {
 
 func TestDeposit(t *testing.T) {
 	test_util.RunTransitionTest(t, "operations", "deposit",
-		func() test_util.TransitionTest {return new(DepositTestCase)})
+		func() test_util.TransitionTest { return new(DepositTestCase) })
 }

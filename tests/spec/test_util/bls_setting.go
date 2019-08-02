@@ -12,7 +12,7 @@ const (
 )
 
 type BLSMeta struct {
-	BlsSetting  int `yaml:"bls_setting"`
+	BlsSetting int `yaml:"bls_setting"`
 }
 
 func HandleBLS(testRunner CaseRunner) CaseRunner {

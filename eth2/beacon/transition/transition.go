@@ -33,7 +33,7 @@ func (f *TransitionFeature) ProcessSlots(slot Slot) {
 		// Per-epoch transition happens at the start of the first slot of every epoch.
 		// (with the slot still at the end of the last epoch)
 		currentSlot := f.Meta.CurrentSlot()
-		isEpochEnd := (currentSlot+1).ToEpoch() != currentSlot.ToEpoch()
+		isEpochEnd := (currentSlot + 1).ToEpoch() != currentSlot.ToEpoch()
 		if isEpochEnd {
 			f.Meta.EndEpoch()
 			f.Meta.ProcessEpoch()

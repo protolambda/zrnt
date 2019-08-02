@@ -47,5 +47,5 @@ func (c *BlocksTestCase) Run() error {
 
 func TestBlocks(t *testing.T) {
 	test_util.RunTransitionTest(t, "sanity", "blocks",
-		func() test_util.TransitionTest {return new(BlocksTestCase)})
+		func() test_util.TransitionTest { return new(BlocksTestCase) })
 }

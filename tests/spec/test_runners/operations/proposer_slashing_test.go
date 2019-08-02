@@ -23,5 +23,5 @@ func (c *ProposerSlashingTestCase) Run() error {
 
 func TestProposerSlashing(t *testing.T) {
 	test_util.RunTransitionTest(t, "operations", "proposer_slashing",
-		func() test_util.TransitionTest {return new(ProposerSlashingTestCase)})
+		func() test_util.TransitionTest { return new(ProposerSlashingTestCase) })
 }

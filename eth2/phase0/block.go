@@ -52,7 +52,7 @@ type BeaconBlockBody struct {
 
 type BlockProcessFeature struct {
 	Block *BeaconBlock
-	Meta interface {
+	Meta  interface {
 		HeaderProcessor
 		Eth1VoteProcessor
 		AttestationProcessor

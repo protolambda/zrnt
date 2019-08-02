@@ -18,4 +18,3 @@ func VerifyMerkleBranch(leaf Root, branch []Root, depth uint64, index uint64, ro
 	}
 	return value == root
 }
-

@@ -40,7 +40,6 @@ type TestPartReader func(name string) TestPart
 // Runs a test case
 type CaseRunner func(t *testing.T, readPart TestPartReader)
 
-
 func Check(t *testing.T, err error) {
 	if err != nil {
 		t.Fatal(err)
@@ -67,7 +66,7 @@ func (p *testPartFile) Exists() bool {
 func RunHandler(t *testing.T, handlerPath string, caseRunner CaseRunner, config string) {
 	// general config is allowed
 	if config != core.PRESET_NAME && config != "general" {
-		t.Logf("Config %s does not match current config %s, " +
+		t.Logf("Config %s does not match current config %s, "+
 			"skipping handler %s", config, core.PRESET_NAME, handlerPath)
 	}
 
@@ -109,7 +108,7 @@ func RunHandler(t *testing.T, handlerPath string, caseRunner CaseRunner, config 
 		caseRunner(t, partReader)
 	}
 
-	runSuite := func (t *testing.T, path string) {
+	runSuite := func(t *testing.T, path string) {
 		t.Parallel()
 		forEachDir(t, path, runTest)
 	}

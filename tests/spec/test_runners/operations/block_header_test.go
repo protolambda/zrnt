@@ -26,5 +26,5 @@ func (c *BlockHeaderTestCase) Run() error {
 
 func TestBlockHeader(t *testing.T) {
 	test_util.RunTransitionTest(t, "operations", "block_header",
-		func() test_util.TransitionTest {return new(BlockHeaderTestCase)})
+		func() test_util.TransitionTest { return new(BlockHeaderTestCase) })
 }

@@ -23,5 +23,5 @@ func (c *AttesterSlashingTestCase) Run() error {
 
 func TestAttesterSlashing(t *testing.T) {
 	test_util.RunTransitionTest(t, "operations", "attester_slashing",
-		func() test_util.TransitionTest {return new(AttesterSlashingTestCase)})
+		func() test_util.TransitionTest { return new(AttesterSlashingTestCase) })
 }

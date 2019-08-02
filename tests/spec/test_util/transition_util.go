@@ -69,7 +69,7 @@ type TransitionTest interface {
 type TransitionCaseMaker func() TransitionTest
 
 func RunTransitionTest(t *testing.T, runnerName string, handlerName string, mkr TransitionCaseMaker) {
-	RunHandler(t, runnerName + "/"+handlerName,
+	RunHandler(t, runnerName+"/"+handlerName,
 		HandleBLS(func(t *testing.T, readPart TestPartReader) {
 			c := mkr()
 			c.Load(t, readPart)

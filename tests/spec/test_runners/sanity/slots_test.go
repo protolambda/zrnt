@@ -28,5 +28,5 @@ func (c *SlotsTestCase) Run() error {
 
 func TestSlots(t *testing.T) {
 	test_util.RunTransitionTest(t, "sanity", "slots",
-		func() test_util.TransitionTest {return new(SlotsTestCase)})
+		func() test_util.TransitionTest { return new(SlotsTestCase) })
 }

@@ -23,5 +23,5 @@ func (c *AttestationTestCase) Run() error {
 
 func TestAttestation(t *testing.T) {
 	test_util.RunTransitionTest(t, "operations", "attestation",
-		func() test_util.TransitionTest {return new(AttestationTestCase)})
+		func() test_util.TransitionTest { return new(AttestationTestCase) })
 }

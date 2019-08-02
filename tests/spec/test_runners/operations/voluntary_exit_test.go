@@ -23,5 +23,5 @@ func (c *VoluntaryExitTestCase) Run() error {
 
 func TestVoluntaryExit(t *testing.T) {
 	test_util.RunTransitionTest(t, "operations", "voluntary_exit",
-		func() test_util.TransitionTest {return new(VoluntaryExitTestCase)})
+		func() test_util.TransitionTest { return new(VoluntaryExitTestCase) })
 }

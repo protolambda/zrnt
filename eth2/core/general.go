@@ -19,7 +19,7 @@ type Gwei uint64
 type EpochStake struct {
 	SourceBalance Gwei
 	TargetBalance Gwei
-	HeadBalance Gwei
+	HeadBalance   Gwei
 }
 
 type Checkpoint struct {

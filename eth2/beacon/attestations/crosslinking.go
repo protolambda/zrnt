@@ -34,7 +34,7 @@ func (s *CrosslinkingStatus) GetWinningCrosslinkAndAttesters(epoch Epoch, shard 
 		winner := &s.Current.WinningLinks[shard]
 		return winner.Crosslink, winner.Attesters
 	} else {
-		panic(fmt.Errorf("cannot get winning crosslink " +
+		panic(fmt.Errorf("cannot get winning crosslink "+
 			"for out of range epoch %d (current epoch: %d)", epoch, s.Current.Epoch))
 	}
 }
@@ -52,7 +52,7 @@ type LinkWinner struct {
 }
 
 type CrosslinkingEpoch struct {
-	Epoch Epoch
+	Epoch        Epoch
 	WinningLinks [SHARD_COUNT]LinkWinner
 }
 

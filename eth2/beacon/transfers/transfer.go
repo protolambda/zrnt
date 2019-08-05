@@ -75,9 +75,6 @@ func (f *TransferFeature) ProcessTransfer(transfer *Transfer) error {
 	if senderBalance < transfer.Fee+transfer.Amount {
 		return errors.New("transfer total is too big")
 	}
-	if transfer.Sender == transfer.Recipient {
-		return errors.New("no self-transfers (to enforce >= MIN_DEPOSIT_AMOUNT or zero balance invariant)")
-	}
 	currentSlot := f.Meta.CurrentSlot()
 	// A transfer is valid in only one slot
 	// (note: combined with unique transfers in a block, this functions as replay protection)

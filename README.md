@@ -2,59 +2,70 @@
 
 A minimal Go implementation of the ETH 2.0 spec, by @protolambda.
 
-The goal of this project is to have a Go version of the Python based spec:
+The goal of this project is to have a Go version of the Python based spec,
+ to enable use cases that are out of reach for unoptimized Python.
 
-- Executable version
-- Comparable with Python version (through diffing state dumps and running spec-tests)
-- fast enough for fuzzing
-- avoids inefficiencies of spec
-- minimal and easy to understand
+Think of: 
+- Realtime use in test-network monitoring, fast enough to verify full network activity.
+- A much higher fuzzing speed, to explore for new bugs.
+- Not affected nearly as much when scaling to mainnet, or a future 1024 shards.
 
-## Structure
+## Structure of `eth2`
 
-### Core
+### `core`
 
 The core package consists of basic data-types, and all constants.
-These are easily imported with a `.` to write clean code:
+These can be imported with a `.` for brevity, as the name says: these are a core part of the framework ZRNT provides.
 
 ```go
 import . "github.com/protolambda/zrnt/eth2/core"
 ```
 
+### `meta`
 
-### Beacon
+This package defines the interfaces for `eth2` functionality, some of which know multiple implementations.
+These implementations can freely use pre-computed data, or light-client logic, to implement the specific functions.
+
+
+### `beacon`
 
 The beacon-chain package, the primary focus for Phase-0 of the ETH 2.0 roadmap.
 
 [The beacon-chain specs can be found here.](https://github.com/ethereum/eth2.0-specs/blob/dev/specs/core/0_beacon-chain.md)
 
-To use the ZRNT beacon package (with `.` import for minimal code):
-```go
-import . "github.com/protolambda/zrnt/eth2/beacon"
-```
+Features are split in different packages, and are generally composed as:
+- A `State` struct: to embed in a bigger struct, like `phase0.BeaconState`, to implement the given state with.
+- A `Feature` struct: combines `meta` information to a feature-specific state, to transition this state, while fully isolated from the other features.
+  - This is optional, some features do not require any `meta` information, and consist of just a `State`.
 
-The beacon-chain consists of 2 transition types:
+Then, there are several `Status` types, data that is pre-computed by other features, to provide `meta` information with.
 
-- **Block transition** (occasional, can fork) `eth2/beacon/transition/block_transition.go`
-  - Sub transitions: `func(state *beacon.BeaconState, block *beacon.BeaconBlock) error` (mutates state, error because they can be rejected)
+### `phase0`
 
-- **Epoch transition** (every 64 slots, big change) `eth2/beacon/transition/epoch_transition.go`
-   - Sub transitions: `func(state *beacon.BeaconState)` (mutates state)
+The beacon-chain consists of 3 transition types:
 
-And, every slot there is a smaller state-change that updates the caches in the state: `eth2/beacon/transition/state_caching.go`
+- **Block transition** (occasional, can fork) `eth2/beacon/phase0/block.go > BlockProcessFeature.Process() error`
+- **Epoch transition** (every 64 slots, big change) `eth2/beacon/phase0/epoch.go > EpochProcessFeature.Process()`
+- **Slot transition** (every slot, small change) `eth2/beacon/phase0/slot.go > SlotProcessFeature.Process()`
 
+The transition between those is standardized in `eth2/beacon/transition/transition.go > StateTransition(block BlockInput, verifyStateRoot bool) error`
+
+The different parts of the transition can be implemented by composing the different `State` and `Feature` structs to provide the necessary `meta` for the transition.
+In between forks, this `meta` can be a special implementation to deal with differences. Or a custom implementation to introduce new features and sub-transitions with.
 
 #### Genesis
 
-A genesis state is created with `eth2/beacon/genesis`.
+A genesis state is created with `eth2/beacon/phase0/genesis.go > GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit) (*FullFeaturedState, error)`.
+This creates a fully featured phase0 state.
 
-From here, a set of slot transitions, a block transition, and possibly an epoch transition, are applied for every block `eth2/beacon/transition`.
+From here, a set of slot transitions, block transitions, and epoch transitions, are applied to run the chain.
+See `eth2/beacon/transition`.
 
-### Shard
+### `shard`
 
 Planned package, new type of chain introduced in Phase-1.
 
-### Util
+### `util`
 
 Hashing, merkleization, and other utils can be found in `eth2/util`.
 
@@ -66,7 +77,6 @@ SSZ is provided by ZRNT-SSZ (ZSSZ), optimized for speed: [`github.com/protolambd
 
 This repo is still a work-in-progress.
 
-More states and transition testing is coming SOON :tm:
 
 ### Building
 

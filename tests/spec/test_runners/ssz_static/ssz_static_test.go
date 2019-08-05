@@ -162,8 +162,7 @@ func (obj *ObjData) RunHandler(t *testing.T) {
 		}
 
 		{
-			// TODO: is going to be renamed to roots.yaml
-			p := readPart("meta.yaml")
+			p := readPart("roots.yaml")
 			dec := yaml.NewDecoder(p)
 			roots := &RootsYAML{}
 			test_util.Check(t, dec.Decode(roots))

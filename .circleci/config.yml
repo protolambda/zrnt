@@ -24,7 +24,7 @@ jobs:
 
       - restore_cache:
           keys:
-            - spec-tests-v0_7_1
+            - spec-tests-v0_8_2
 
       - run:
           name: Update spec tests cache
@@ -35,14 +35,14 @@ jobs:
             git lfs version
             git fetch origin
             git status
-            git checkout v0.7.1
+            git checkout v0.8.2
 
       - run:
           name: Run unit tests and generate coverage reports
           command: TEST_OUT_DIR=$TEST_RESULTS make test
 
       - save_cache:
-          key: spec-tests-v0_7_1
+          key: spec-tests-v0_8_2
           paths:
             - tests/spec/eth2.0-spec-tests
 
@@ -53,8 +53,6 @@ jobs:
 
       - codecov/upload:
           file: /tmp/test-results/coverage.out
-
-      # TODO implement demo-run (e.g. 1000 simulated blocks from genesis)
 
       - store_artifacts: # upload test summary for display in Artifacts
           path: /tmp/test-results

@@ -12,6 +12,13 @@ var Hash HashFn = sha256.Sum256
 // Hashes the input, and returns the hash as a byte slice
 type HashFn func(input []byte) [32]byte
 
+func (h HashFn) Combi(left [32]byte, right [32]byte) [32]byte {
+	v := [64]byte{}
+	copy(v[:32], left[:])
+	copy(v[32:], right[:])
+	return h(v[:])
+}
+
 type NewHashFn func() HashFn
 
 // re-uses the sha256 working variables for each new call of a allocated hash-function.

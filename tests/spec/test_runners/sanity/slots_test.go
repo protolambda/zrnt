@@ -1,30 +1,32 @@
 package sanity
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon/transition"
 	. "github.com/protolambda/zrnt/eth2/core"
-	. "github.com/protolambda/zrnt/tests/spec/test_util"
+	"github.com/protolambda/zrnt/tests/spec/test_util"
+	"gopkg.in/yaml.v2"
 	"testing"
 )
 
 type SlotsTestCase struct {
-	Slots                   Slot
-	StateTransitionTestBase `mapstructure:",squash"`
+	test_util.BaseTransitionTest
+	Slots Slot
 }
 
-func (testCase *SlotsTestCase) Process() error {
-	// TODO: mark block number in error? (Maybe with Go 1.13, coming out soon, supporting wrapped errors)
-	if err := transition.StateTransitionTo(testCase.Pre, testCase.Pre.Slot+testCase.Slots); err != nil {
-		return err
-	}
+func (c *SlotsTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
+	c.BaseTransitionTest.Load(t, readPart)
+	p := readPart("slots.yaml")
+	dec := yaml.NewDecoder(p)
+	test_util.Check(t, dec.Decode(&c.Slots))
+	test_util.Check(t, p.Close())
+}
+
+func (c *SlotsTestCase) Run() error {
+	state := c.Prepare()
+	state.ProcessSlots(state.Slot + c.Slots)
 	return nil
 }
 
-func (testCase *SlotsTestCase) Run(t *testing.T) {
-	RunTest(t, testCase)
-}
-
 func TestSlots(t *testing.T) {
-	RunSuitesInPath("sanity/slots/",
-		func(raw interface{}) (interface{}, interface{}) { return new(SlotsTestCase), raw }, t)
+	test_util.RunTransitionTest(t, "sanity", "slots",
+		func() test_util.TransitionTest { return new(SlotsTestCase) })
 }

@@ -1,26 +1,27 @@
 package operations
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon"
-	"github.com/protolambda/zrnt/eth2/beacon/block_processing"
-	. "github.com/protolambda/zrnt/tests/spec/test_util"
+	"github.com/protolambda/zrnt/eth2/beacon/slashings/attslash"
+	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"testing"
 )
 
 type AttesterSlashingTestCase struct {
-	AttesterSlashing        *beacon.AttesterSlashing
-	StateTransitionTestBase `mapstructure:",squash"`
+	test_util.BaseTransitionTest
+	AttesterSlashing attslash.AttesterSlashing
 }
 
-func (testCase *AttesterSlashingTestCase) Process() error {
-	return block_processing.ProcessAttesterSlashing(testCase.Pre, testCase.AttesterSlashing)
+func (c *AttesterSlashingTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
+	c.BaseTransitionTest.Load(t, readPart)
+	test_util.LoadSSZ(t, "attester_slashing", &c.AttesterSlashing, attslash.AttesterSlashingSSZ, readPart)
 }
 
-func (testCase *AttesterSlashingTestCase) Run(t *testing.T) {
-	RunTest(t, testCase)
+func (c *AttesterSlashingTestCase) Run() error {
+	state := c.Prepare()
+	return state.ProcessAttesterSlashing(&c.AttesterSlashing)
 }
 
 func TestAttesterSlashing(t *testing.T) {
-	RunSuitesInPath("operations/attester_slashing/",
-		func(raw interface{}) (interface{}, interface{}) { return new(AttesterSlashingTestCase), raw }, t)
+	test_util.RunTransitionTest(t, "operations", "attester_slashing",
+		func() test_util.TransitionTest { return new(AttesterSlashingTestCase) })
 }

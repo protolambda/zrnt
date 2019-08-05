@@ -1,26 +1,27 @@
 package operations
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon"
-	"github.com/protolambda/zrnt/eth2/beacon/block_processing"
-	. "github.com/protolambda/zrnt/tests/spec/test_util"
+	"github.com/protolambda/zrnt/eth2/beacon/exits"
+	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"testing"
 )
 
 type VoluntaryExitTestCase struct {
-	VoluntaryExit           *beacon.VoluntaryExit
-	StateTransitionTestBase `mapstructure:",squash"`
+	test_util.BaseTransitionTest
+	VoluntaryExit exits.VoluntaryExit
 }
 
-func (testCase *VoluntaryExitTestCase) Process() error {
-	return block_processing.ProcessVoluntaryExit(testCase.Pre, testCase.VoluntaryExit)
+func (c *VoluntaryExitTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
+	c.BaseTransitionTest.Load(t, readPart)
+	test_util.LoadSSZ(t, "voluntary_exit", &c.VoluntaryExit, exits.VoluntaryExitSSZ, readPart)
 }
 
-func (testCase *VoluntaryExitTestCase) Run(t *testing.T) {
-	RunTest(t, testCase)
+func (c *VoluntaryExitTestCase) Run() error {
+	state := c.Prepare()
+	return state.ProcessVoluntaryExit(&c.VoluntaryExit)
 }
 
 func TestVoluntaryExit(t *testing.T) {
-	RunSuitesInPath("operations/voluntary_exit/",
-		func(raw interface{}) (interface{}, interface{}) { return new(VoluntaryExitTestCase), raw }, t)
+	test_util.RunTransitionTest(t, "operations", "voluntary_exit",
+		func() test_util.TransitionTest { return new(VoluntaryExitTestCase) })
 }

@@ -1,26 +1,27 @@
 package operations
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon"
-	"github.com/protolambda/zrnt/eth2/beacon/block_processing"
-	. "github.com/protolambda/zrnt/tests/spec/test_util"
+	"github.com/protolambda/zrnt/eth2/beacon/deposits"
+	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"testing"
 )
 
 type DepositTestCase struct {
-	Deposit                 *beacon.Deposit
-	StateTransitionTestBase `mapstructure:",squash"`
+	test_util.BaseTransitionTest
+	Deposit deposits.Deposit
 }
 
-func (testCase *DepositTestCase) Process() error {
-	return block_processing.ProcessDeposit(testCase.Pre, testCase.Deposit)
+func (c *DepositTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
+	c.BaseTransitionTest.Load(t, readPart)
+	test_util.LoadSSZ(t, "deposit", &c.Deposit, deposits.DepositSSZ, readPart)
 }
 
-func (testCase *DepositTestCase) Run(t *testing.T) {
-	RunTest(t, testCase)
+func (c *DepositTestCase) Run() error {
+	state := c.Prepare()
+	return state.ProcessDeposit(&c.Deposit)
 }
 
 func TestDeposit(t *testing.T) {
-	RunSuitesInPath("operations/deposit/",
-		func(raw interface{}) (interface{}, interface{}) { return new(DepositTestCase), raw }, t)
+	test_util.RunTransitionTest(t, "operations", "deposit",
+		func() test_util.TransitionTest { return new(DepositTestCase) })
 }

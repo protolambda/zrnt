@@ -1,26 +1,30 @@
 package operations
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon"
-	"github.com/protolambda/zrnt/eth2/beacon/block_processing"
-	. "github.com/protolambda/zrnt/tests/spec/test_util"
+	"github.com/protolambda/zrnt/eth2/beacon/header"
+	"github.com/protolambda/zrnt/eth2/phase0"
+	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"testing"
 )
 
 type BlockHeaderTestCase struct {
-	Block                   *beacon.BeaconBlock
-	StateTransitionTestBase `mapstructure:",squash"`
+	test_util.BaseTransitionTest
+	BlockHeader *header.BeaconBlockHeader
 }
 
-func (testCase *BlockHeaderTestCase) Process() error {
-	return block_processing.ProcessBlockHeader(testCase.Pre, testCase.Block)
+func (c *BlockHeaderTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
+	c.BaseTransitionTest.Load(t, readPart)
+	b := phase0.BeaconBlock{}
+	test_util.LoadSSZ(t, "block", &b, phase0.BeaconBlockSSZ, readPart)
+	c.BlockHeader = b.Header()
 }
 
-func (testCase *BlockHeaderTestCase) Run(t *testing.T) {
-	RunTest(t, testCase)
+func (c *BlockHeaderTestCase) Run() error {
+	state := c.Prepare()
+	return state.ProcessHeader(c.BlockHeader)
 }
 
 func TestBlockHeader(t *testing.T) {
-	RunSuitesInPath("operations/block_header/",
-		func(raw interface{}) (interface{}, interface{}) { return new(BlockHeaderTestCase), raw }, t)
+	test_util.RunTransitionTest(t, "operations", "block_header",
+		func() test_util.TransitionTest { return new(BlockHeaderTestCase) })
 }

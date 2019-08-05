@@ -24,6 +24,14 @@ func (e Epoch) GetStartSlot() Slot {
 }
 
 // Return the epoch at which an activation or exit triggered in epoch takes effect.
-func (e Epoch) GetDelayedActivationExitEpoch() Epoch {
+func (e Epoch) ComputeActivationExitEpoch() Epoch {
 	return e + 1 + ACTIVATION_EXIT_DELAY
+}
+
+func (e Epoch) Previous() Epoch {
+	if e == GENESIS_EPOCH {
+		return GENESIS_EPOCH
+	} else {
+		return e - 1
+	}
 }

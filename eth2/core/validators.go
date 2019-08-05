@@ -1,6 +1,8 @@
 package core
 
-import "sort"
+import (
+	"sort"
+)
 
 // Index of a validator, pointing to a validator registry location
 type ValidatorIndex uint64
@@ -8,6 +10,12 @@ type ValidatorIndex uint64
 // Custom constant, not in spec:
 // An impossible high validator index used to mark special internal cases. (all 1s binary)
 const ValidatorIndexMarker = ValidatorIndex(^uint64(0))
+
+type RegistryIndices []ValidatorIndex
+
+func (*RegistryIndices) Limit() uint64 {
+	return VALIDATOR_REGISTRY_LIMIT
+}
 
 // Collection of validators, should always be sorted.
 type ValidatorSet []ValidatorIndex
@@ -40,6 +48,32 @@ func (vs *ValidatorSet) Dedup() {
 		data[j] = data[i]
 	}
 	*vs = data[:j+1]
+}
+
+// merges with other disjoint set, producing a new set.
+func (vs ValidatorSet) MergeDisjoint(other ValidatorSet) ValidatorSet {
+	total := len(vs) + len(other)
+	out := make(ValidatorSet, 0, total)
+	a, b := 0, 0
+	for i := 0; i < total; i++ {
+		if a < len(vs) {
+			if b >= len(other) || vs[a] < other[b] {
+				out = append(out, vs[a])
+				a++
+				continue
+			} else if vs[a] == other[b] {
+				panic("invalid disjoint sets merge, sets contain equal item")
+			}
+		}
+		if b < len(other) {
+			if b < len(other) && (a >= len(vs) || vs[a] > other[b]) {
+				out = append(out, other[b])
+				b++
+				continue
+			}
+		}
+	}
+	return out
 }
 
 // Joins two validator sets: check if there is any overlap

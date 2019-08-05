@@ -59,7 +59,7 @@ func BenchmarkDemoRun(b *testing.B) {
 		for j := 0; j < DEPOSIT_CONTRACT_TREE_DEPTH; j++ {
 			copy(deposits[i].Proof[j][:], proof[j][:])
 		}
-		if i % (genesisValidatorCount / 100) == 0 {
+		if i%(genesisValidatorCount/100) == 0 {
 			fmt.Printf("constructed dep root for %d validators\n", i)
 		}
 		binary.LittleEndian.PutUint64(deposits[i].Proof[DEPOSIT_CONTRACT_TREE_DEPTH][:], i+1)
@@ -80,7 +80,7 @@ func BenchmarkDemoRun(b *testing.B) {
 		if err := state.StateTransition(blockProc, false); err != nil {
 			panic(err)
 		}
-		if i % 100 == 0 {
+		if i%100 == 0 {
 			b.Logf("processed to block #%d (slot %d)\n", i, block.Slot)
 		}
 	}
@@ -101,9 +101,9 @@ func SimulateBlock(state *BeaconState, rng *rand.Rand) *BeaconBlock {
 		Body: BeaconBlockBody{
 			RandaoReveal: BLSSignature{4, 2},
 			Eth1Data: Eth1Data{
-				DepositRoot: Root{0, 1, 3},
+				DepositRoot:  Root{0, 1, 3},
 				DepositCount: DepositIndex(len(state.Validators)),
-				BlockHash:   Root{4, 5, 6},
+				BlockHash:    Root{4, 5, 6},
 			},
 			Graffiti: Root{123},
 			// no operations

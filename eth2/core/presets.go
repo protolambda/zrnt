@@ -1,8 +1,9 @@
-//go:generate go run ../../presets/cmd/main.go --presets-dir=../../presets/eth2.0-presets --output-dir=../../presets/generated
+//go:generate go run ../../presets/cmd/main.go --presets-dir=../../presets/configs --output-dir=../../presets/generated
 
 package core
 
 import (
+	"encoding/binary"
 	generated "github.com/protolambda/zrnt/presets/generated"
 )
 
@@ -72,11 +73,17 @@ const MAX_VOLUNTARY_EXITS = generated.MAX_VOLUNTARY_EXITS
 const MAX_TRANSFERS = generated.MAX_TRANSFERS
 
 // Signature domains
-const (
-	DOMAIN_BEACON_PROPOSER BLSDomainType = generated.DOMAIN_BEACON_PROPOSER
-	DOMAIN_RANDAO          BLSDomainType = generated.DOMAIN_RANDAO
-	DOMAIN_ATTESTATION     BLSDomainType = generated.DOMAIN_ATTESTATION
-	DOMAIN_DEPOSIT         BLSDomainType = generated.DOMAIN_DEPOSIT
-	DOMAIN_VOLUNTARY_EXIT  BLSDomainType = generated.DOMAIN_VOLUNTARY_EXIT
-	DOMAIN_TRANSFER        BLSDomainType = generated.DOMAIN_TRANSFER
+var (
+	DOMAIN_BEACON_PROPOSER BLSDomainType = parseDomain(generated.DOMAIN_BEACON_PROPOSER)
+	DOMAIN_RANDAO          BLSDomainType = parseDomain(generated.DOMAIN_RANDAO)
+	DOMAIN_ATTESTATION     BLSDomainType = parseDomain(generated.DOMAIN_ATTESTATION)
+	DOMAIN_DEPOSIT         BLSDomainType = parseDomain(generated.DOMAIN_DEPOSIT)
+	DOMAIN_VOLUNTARY_EXIT  BLSDomainType = parseDomain(generated.DOMAIN_VOLUNTARY_EXIT)
+	DOMAIN_TRANSFER        BLSDomainType = parseDomain(generated.DOMAIN_TRANSFER)
 )
+
+func parseDomain(v uint32) (out BLSDomainType) {
+	// constants use big-endian to make it read as a byte array. (also YAML default)
+	binary.BigEndian.PutUint32(out[:], v)
+	return
+}

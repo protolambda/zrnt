@@ -1,6 +1,7 @@
 package test_util
 
 import (
+	"github.com/protolambda/zrnt/eth2/util/bls"
 	"gopkg.in/yaml.v2"
 	"testing"
 )
@@ -23,9 +24,12 @@ func HandleBLS(testRunner CaseRunner) CaseRunner {
 			dec := yaml.NewDecoder(part)
 			Check(t, dec.Decode(&meta))
 			Check(t, part.Close())
-			// TODO: change to environment check once BLS is supported by ZRNT
-			if meta.BlsSetting == BlsRequired {
-				t.Skip("skipping BLS-only test")
+			if meta.BlsSetting == BlsRequired && !bls.BLS_ACTIVE {
+				t.Skip("skipping BLS-required test because BLS is disabled")
+				return
+			}
+			if meta.BlsSetting == BlsIgnored && bls.BLS_ACTIVE {
+				t.Skip("skipping BLS-ignored test because BLS is enabled")
 				return
 			}
 		}

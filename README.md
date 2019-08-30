@@ -91,8 +91,9 @@ or
 
 go build -tags preset_minimal
 
-etc.
 ```
+
+BLS can be turned off by adding the `bls_off` build tag (security warning: for testing use only!).
 
 ### Testing
 

@@ -80,23 +80,32 @@ func (indexedAttestation *IndexedAttestation) Validate(m AttestationValidator) e
 		return errors.New("index in custody bit 1 indices is invalid")
 	}
 
+	pubkeys := make([]BLSPubkey, 0, 2)
+	msgs := make([]Root, 0, 2)
 	custodyBit0Pubkeys := make([]BLSPubkey, 0)
 	for _, i := range bit0Indices {
 		custodyBit0Pubkeys = append(custodyBit0Pubkeys, m.Pubkey(i))
+	}
+	if len(custodyBit0Pubkeys) > 0 {
+		pubkeys = append(pubkeys, bls.BlsAggregatePubkeys(custodyBit0Pubkeys))
+		msgs = append(msgs, ssz.HashTreeRoot(&AttestationDataAndCustodyBit{Data: indexedAttestation.Data, CustodyBit: false}, AttestationDataAndCustodyBitSSZ))
 	}
 	custodyBit1Pubkeys := make([]BLSPubkey, 0)
 	for _, i := range bit1Indices {
 		custodyBit1Pubkeys = append(custodyBit1Pubkeys, m.Pubkey(i))
 	}
+	if len(custodyBit1Pubkeys) > 0 {
+		pubkeys = append(pubkeys, bls.BlsAggregatePubkeys(custodyBit1Pubkeys))
+		msgs = append(msgs, ssz.HashTreeRoot(&AttestationDataAndCustodyBit{Data: indexedAttestation.Data, CustodyBit: true}, AttestationDataAndCustodyBitSSZ))
+	}
 
-	// don't trust, verify
-	if bls.BlsVerifyMultiple(
-		[]BLSPubkey{
-			bls.BlsAggregatePubkeys(custodyBit0Pubkeys),
-			bls.BlsAggregatePubkeys(custodyBit1Pubkeys)},
-		[]Root{
-			ssz.HashTreeRoot(&AttestationDataAndCustodyBit{Data: indexedAttestation.Data, CustodyBit: false}, AttestationDataAndCustodyBitSSZ),
-			ssz.HashTreeRoot(&AttestationDataAndCustodyBit{Data: indexedAttestation.Data, CustodyBit: true}, AttestationDataAndCustodyBitSSZ)},
+	// empty attestation
+	if len(msgs) <= 0 {
+		// TODO: check if the signature is default
+		return nil
+	}
+
+	if bls.BlsVerifyMultiple(pubkeys, msgs,
 		indexedAttestation.Signature,
 		m.GetDomain(DOMAIN_ATTESTATION, indexedAttestation.Data.Target.Epoch),
 	) {

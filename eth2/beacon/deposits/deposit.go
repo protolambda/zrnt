@@ -85,7 +85,10 @@ func (f *DepositFeature) ProcessDeposit(dep *Deposit) error {
 			ssz.SigningRoot(dep.Data, DepositDataSSZ),
 			dep.Data.Signature,
 			ComputeDomain(DOMAIN_DEPOSIT, Version{})) {
-			return errors.New("could not verify BLS signature")
+				// invalid signatures are OK,
+				// the depositor will not receive anything because of their mistake,
+				// and the chain continues.
+			return nil
 		}
 
 		// Add validator and balance entries

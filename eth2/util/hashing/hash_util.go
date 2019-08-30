@@ -1,7 +1,7 @@
 package hashing
 
 import (
-	"crypto/sha256"
+	"github.com/minio/sha256-simd"
 )
 
 // Hash the given input. Use a new hashing object, and ditch it after hashing.

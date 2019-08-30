@@ -51,7 +51,7 @@ func (testCase *SSZStaticTestCase) Run(t *testing.T) {
 		{
 			var buf bytes.Buffer
 			bufWriter := bufio.NewWriter(&buf)
-			if err := zssz.Encode(bufWriter, testCase.Value, testCase.SSZ); err != nil {
+			if _, err := zssz.Encode(bufWriter, testCase.Value, testCase.SSZ); err != nil {
 				t.Error(err)
 				return
 			}

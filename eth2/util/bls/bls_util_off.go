@@ -1,6 +1,10 @@
+// +build bls_off
+
 package bls
 
 import . "github.com/protolambda/zrnt/eth2/core"
+
+const BLS_ACTIVE = false
 
 func BlsVerify(pubkey BLSPubkey, messageHash Root, signature BLSSignature, domain BLSDomain) bool {
 	// TODO BLS verify single

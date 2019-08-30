@@ -24,7 +24,7 @@ jobs:
 
       - restore_cache:
           keys:
-            - spec-tests-v0_8_2
+            - spec-tests-v0_8_3
 
       - run:
           name: Update spec tests cache
@@ -35,14 +35,14 @@ jobs:
             git lfs version
             git fetch origin
             git status
-            git checkout v0.8.2
+            git checkout v0.8.3
 
       - run:
           name: Run unit tests and generate coverage reports
           command: TEST_OUT_DIR=$TEST_RESULTS make test
 
       - save_cache:
-          key: spec-tests-v0_8_2
+          key: spec-tests-v0_8_3
           paths:
             - tests/spec/eth2.0-spec-tests
 

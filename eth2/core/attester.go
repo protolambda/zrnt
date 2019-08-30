@@ -1,6 +1,6 @@
 package core
 
-type AttesterFlag uint64
+type AttesterFlag uint8
 
 func (flags AttesterFlag) HasMarkers(markers AttesterFlag) bool {
 	return flags&markers == markers

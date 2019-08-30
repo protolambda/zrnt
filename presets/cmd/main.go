@@ -54,6 +54,10 @@ func buildPreset(path string) (*ContstantsPreset, error) {
 	for _, item := range rawPreset {
 		k := item.Key.(string)
 		v := item.Value
+		intFormat := "%d"
+		if strings.HasPrefix(k, "DOMAIN_") {
+			intFormat = "0x%08x"
+		}
 		formattedValue := ""
 		formattedStart := "const " + k + " = "
 		if strV, ok := v.(string); ok {
@@ -72,9 +76,11 @@ func buildPreset(path string) (*ContstantsPreset, error) {
 			}
 		} else {
 			if uintV, ok := v.(uint64); ok {
-				formattedValue = fmt.Sprintf("%d", uintV)
+				formattedValue = fmt.Sprintf(intFormat, uintV)
+			} else if uintV, ok := v.(uint32); ok {
+				formattedValue = fmt.Sprintf(intFormat, uintV)
 			} else if intV, ok := v.(int); ok {
-				formattedValue = fmt.Sprintf("%d", intV)
+				formattedValue = fmt.Sprintf(intFormat, intV)
 			} else {
 				return nil, errors.New(fmt.Sprintf("could not convert non-string formatted value in %s, key: %s %T", presetName, k, v))
 			}

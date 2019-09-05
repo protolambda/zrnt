@@ -8,7 +8,6 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon/versioning"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
-	constant_presets "github.com/protolambda/zrnt/presets/generated"
 	"github.com/protolambda/zssz"
 )
 
@@ -20,7 +19,7 @@ func (_ *DepositRoots) Limit() uint64 {
 
 var DepositRootsSSZ = zssz.GetSSZ((*DepositRoots)(nil))
 
-func GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit) (*FullFeaturedState, error) {
+func GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit, verifyDeposits bool) (*FullFeaturedState, error) {
 	state := &BeaconState{
 		VersioningState: VersioningState{
 			GenesisTime: time - (time % SECONDS_PER_DAY) + (2 * SECONDS_PER_DAY),
@@ -46,15 +45,24 @@ func GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit) (*FullF
 	for i := range deps {
 		depRoots = append(depRoots, ssz.HashTreeRoot(&deps[i].Data, DepositDataSSZ))
 	}
-	// Process deposits
-	for i := range deps {
-		roots := DepositRoots(depRoots[:i+1])
-		state.Eth1Data.DepositRoot = ssz.HashTreeRoot(&roots, DepositRootsSSZ)
-		// in the rare case someone tries to create a genesis block using invalid data, panic.
-		if err := depProcessor.ProcessDeposit(&deps[i]); err != nil {
-			return nil, err
+	if verifyDeposits {
+		// Process deposits
+		for i := range deps {
+			roots := DepositRoots(depRoots[:i+1])
+			state.Eth1Data.DepositRoot = ssz.HashTreeRoot(&roots, DepositRootsSSZ)
+			// in the rare case someone tries to create a genesis block using invalid data, panic.
+			if err := depProcessor.ProcessDeposit(&deps[i]); err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		// Pre-process deposits: get roots
+		for i := range deps {
+			dat := &deps[i].Data
+			state.AddNewValidator(dat.Pubkey, dat.WithdrawalCredentials, dat.Amount)
 		}
 	}
+	state.Eth1Data.DepositRoot = ssz.HashTreeRoot(&depRoots, DepositRootsSSZ)
 	return InitState(state)
 }
 
@@ -91,7 +99,7 @@ func IsValidGenesisState(state *BeaconState) bool {
 	if state.GenesisTime < MIN_GENESIS_TIME {
 		return false
 	}
-	if state.GetActiveValidatorCount(GENESIS_EPOCH) < constant_presets.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT {
+	if state.GetActiveValidatorCount(GENESIS_EPOCH) < MIN_GENESIS_ACTIVE_VALIDATOR_COUNT {
 		return false
 	}
 	return true

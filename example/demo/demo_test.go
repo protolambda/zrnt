@@ -65,7 +65,7 @@ func BenchmarkDemoRun(b *testing.B) {
 		binary.LittleEndian.PutUint64(deposits[i].Proof[DEPOSIT_CONTRACT_TREE_DEPTH][:], i+1)
 	}
 
-	state, err := GenesisFromEth1(Root{42}, genesisTime, deposits)
+	state, err := GenesisFromEth1(Root{42}, genesisTime, deposits, true)
 	if err != nil {
 		panic(err)
 	}

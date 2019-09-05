@@ -28,7 +28,12 @@ func KickStartState(eth1BlockHash Root, time Timestamp, validators []KickstartVa
 		}
 	}
 
-	return GenesisFromEth1(eth1BlockHash, time, deps, false)
+	state, err := GenesisFromEth1(eth1BlockHash, 0, deps, false)
+	if err != nil {
+		return nil, err
+	}
+	state.GenesisTime = time
+	return state, nil
 }
 
 // To build a genesis state without Eth 1.0 deposits, i.e. directly from a sequence of minimal validator data.
@@ -50,5 +55,10 @@ func KickStartStateWithSignatures(eth1BlockHash Root, time Timestamp, validators
 		d.Data.Signature = sig.Serialize()
 	}
 
-	return GenesisFromEth1(eth1BlockHash, time, deps, false)
+	state, err := GenesisFromEth1(eth1BlockHash, 0, deps, false)
+	if err != nil {
+		return nil, err
+	}
+	state.GenesisTime = time
+	return state, nil
 }

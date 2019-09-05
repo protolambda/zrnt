@@ -88,6 +88,9 @@ func (f *ShufflingFeature) LoadShufflingEpoch(epoch Epoch) *ShufflingEpoch {
 		shard := (startShard + Shard(i)) % SHARD_COUNT
 		startOffset := (validatorCount * i) / committeeCount
 		endOffset := (validatorCount * (i + 1)) / committeeCount
+		if startOffset == endOffset {
+			panic("empty committee")
+		}
 		committee := shep.Shuffling[startOffset:endOffset]
 		shep.Committees[shard] = committee
 	}

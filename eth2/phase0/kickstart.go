@@ -13,7 +13,7 @@ type KickstartValidatorData struct {
 }
 
 // To build a genesis state without Eth 1.0 deposits, i.e. directly from a sequence of minimal validator data.
-func KickStartState(eth1BlockHash Root, time Timestamp, validators []KickstartValidatorData) *FullFeaturedState {
+func KickStartState(eth1BlockHash Root, time Timestamp, validators []KickstartValidatorData) (*FullFeaturedState, error) {
 	state := &BeaconState{
 		VersioningState: VersioningState{
 			GenesisTime: time,

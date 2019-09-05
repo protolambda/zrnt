@@ -1,6 +1,7 @@
 package phase0
 
 import (
+	"errors"
 	. "github.com/protolambda/zrnt/eth2/beacon/deposits"
 	. "github.com/protolambda/zrnt/eth2/beacon/eth1"
 	"github.com/protolambda/zrnt/eth2/beacon/header"
@@ -54,12 +55,15 @@ func GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit) (*FullF
 			return nil, err
 		}
 	}
-	return InitState(state), nil
+	return InitState(state)
 }
 
 // After creating a state and onboarding validators,
 // process the new validators as genesis-validators, and initialize other state variables.
-func InitState(state *BeaconState) *FullFeaturedState {
+func InitState(state *BeaconState) (*FullFeaturedState, error) {
+	if Slot(len(state.Validators)) < SLOTS_PER_EPOCH {
+		return nil, errors.New("not enough validators to init full featured BeaconState")
+	}
 	// Process activations
 	state.UpdateEffectiveBalances()
 	for _, v := range state.Validators {
@@ -80,7 +84,7 @@ func InitState(state *BeaconState) *FullFeaturedState {
 		state.ActiveIndexRoots[i] = activeIndexRoot
 		state.CompactCommitteesRoots[i] = committeeRoot
 	}
-	return full
+	return full, nil
 }
 
 func IsValidGenesisState(state *BeaconState) bool {

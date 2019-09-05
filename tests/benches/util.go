@@ -23,5 +23,9 @@ func CreateTestValidators(count uint64, balance Gwei) []KickstartValidatorData {
 }
 
 func CreateTestState(validatorCount uint64, balance Gwei) *FullFeaturedState {
-	return KickStartState(Root{123}, 1564000000, CreateTestValidators(validatorCount, balance))
+	out, err := KickStartState(Root{123}, 1564000000, CreateTestValidators(validatorCount, balance))
+	if err != nil {
+		panic(err)
+	}
+	return out
 }

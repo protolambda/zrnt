@@ -61,6 +61,7 @@ func GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit, verifyD
 			dat := &deps[i].Data
 			state.AddNewValidator(dat.Pubkey, dat.WithdrawalCredentials, dat.Amount)
 		}
+		state.DepositIndex = DepositIndex(len(deps))
 	}
 	state.Eth1Data.DepositRoot = ssz.HashTreeRoot(&depRoots, DepositRootsSSZ)
 	return InitState(state)

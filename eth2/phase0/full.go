@@ -39,7 +39,6 @@ type FullFeaturedState struct {
 	*AttestersData
 
 	CrosslinkingFeature
-	*CrosslinkingStatus
 
 	ProposingFeature
 	*ProposersData
@@ -89,11 +88,6 @@ func (f *FullFeaturedState) LoadPrecomputedData() {
 func (f *FullFeaturedState) RotateEpochData() {
 	// TODO: rotate data where possible (e.g. shuffling) instead of plain overwriting
 	f.LoadPrecomputedData()
-}
-
-func (f *FullFeaturedState) EndEpoch() {
-	// Load winning crosslinks for this past epoch
-	f.CrosslinkingStatus = f.CrosslinkingFeature.LoadCrosslinkingStatus()
 }
 
 func (f *FullFeaturedState) StartEpoch() {

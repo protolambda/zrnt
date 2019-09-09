@@ -14,7 +14,6 @@ type BlockInput interface {
 type TransitionFeature struct {
 	Meta interface {
 		StartEpoch()
-		EndEpoch()
 		CurrentSlot() Slot
 		IncrementSlot()
 		ProcessSlot()
@@ -35,7 +34,6 @@ func (f *TransitionFeature) ProcessSlots(slot Slot) {
 		currentSlot := f.Meta.CurrentSlot()
 		isEpochEnd := (currentSlot + 1).ToEpoch() != currentSlot.ToEpoch()
 		if isEpochEnd {
-			f.Meta.EndEpoch()
 			f.Meta.ProcessEpoch()
 		}
 		f.Meta.IncrementSlot()

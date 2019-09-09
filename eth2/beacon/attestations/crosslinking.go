@@ -1,7 +1,6 @@
 package attestations
 
 import (
-	"fmt"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/meta"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
@@ -19,33 +18,6 @@ type CrosslinkingFeature struct {
 	}
 }
 
-type CrosslinkingStatus struct {
-	Previous *CrosslinkingEpoch
-	Current  *CrosslinkingEpoch
-}
-
-func (s *CrosslinkingStatus) GetWinningCrosslinkAndAttesters(epoch Epoch, shard Shard) (*Crosslink, ValidatorSet) {
-	if s == nil || s.Previous == nil || s.Current == nil {
-		panic("crosslinking data is not loaded")
-	} else if s.Previous.Epoch == epoch {
-		winner := &s.Previous.WinningLinks[shard]
-		return winner.Crosslink, winner.Attesters
-	} else if s.Current.Epoch == epoch {
-		winner := &s.Current.WinningLinks[shard]
-		return winner.Crosslink, winner.Attesters
-	} else {
-		panic(fmt.Errorf("cannot get winning crosslink "+
-			"for out of range epoch %d (current epoch: %d)", epoch, s.Current.Epoch))
-	}
-}
-
-func (f *CrosslinkingFeature) LoadCrosslinkingStatus() *CrosslinkingStatus {
-	return &CrosslinkingStatus{
-		Previous: f.LoadCrosslinkEpoch(f.Meta.PreviousEpoch()),
-		Current:  f.LoadCrosslinkEpoch(f.Meta.CurrentEpoch()),
-	}
-}
-
 type LinkWinner struct {
 	Crosslink *Crosslink   // nil when there are no crosslinks for the shard.
 	Attesters ValidatorSet // nil-slice when there are no attestations for the shard.
@@ -56,13 +28,18 @@ type CrosslinkingEpoch struct {
 	WinningLinks [SHARD_COUNT]LinkWinner
 }
 
+func (ce *CrosslinkingEpoch) GetWinningCrosslinkAndAttesters(shard Shard) (*Crosslink, ValidatorSet) {
+	winner := ce.WinningLinks[shard]
+	return winner.Crosslink, winner.Attesters
+}
+
 type weightedLink struct {
 	weight    Gwei
 	link      *Crosslink
 	attesters []ValidatorIndex
 }
 
-func (f *CrosslinkingFeature) LoadCrosslinkEpoch(epoch Epoch) *CrosslinkingEpoch {
+func (f *CrosslinkingFeature) LoadEpochCrosslinkWinners(epoch Epoch) meta.EpochCrosslinkWinners {
 	var attestations []*PendingAttestation
 	if epoch == f.Meta.CurrentEpoch() {
 		attestations = f.State.CurrentEpochAttestations

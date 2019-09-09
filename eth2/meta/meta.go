@@ -212,8 +212,12 @@ type Crosslinks interface {
 	GetPreviousCrosslink(shard Shard) *Crosslink
 }
 
+type EpochCrosslinkWinners interface {
+	GetWinningCrosslinkAndAttesters(shard Shard) (*Crosslink, ValidatorSet)
+}
+
 type WinningCrosslinks interface {
-	GetWinningCrosslinkAndAttesters(epoch Epoch, shard Shard) (*Crosslink, ValidatorSet)
+	LoadEpochCrosslinkWinners(epoch Epoch) EpochCrosslinkWinners
 }
 
 type Randao interface {

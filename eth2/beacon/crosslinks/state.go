@@ -62,6 +62,7 @@ func (f *CrosslinkDeltasFeature) CrosslinkDeltas() *Deltas {
 	totalBalanceSqRoot := Gwei(math.IntegerSquareroot(uint64(totalActiveBalance)))
 
 	epoch := f.Meta.PreviousEpoch()
+	ecw := f.Meta.LoadEpochCrosslinkWinners(epoch)
 	count := Shard(f.Meta.GetCommitteeCount(epoch))
 	epochStartShard := f.Meta.GetStartShard(epoch)
 	for offset := Shard(0); offset < count; offset++ {
@@ -72,7 +73,7 @@ func (f *CrosslinkDeltasFeature) CrosslinkDeltas() *Deltas {
 		committee = append(committee, crosslinkCommittee...)
 		sort.Sort(committee)
 
-		_, attestingIndices := f.Meta.GetWinningCrosslinkAndAttesters(epoch, shard)
+		_, attestingIndices := ecw.GetWinningCrosslinkAndAttesters(shard)
 		attestingBalance := f.Meta.SumEffectiveBalanceOf(attestingIndices)
 		totalBalance := f.Meta.SumEffectiveBalanceOf(committee)
 
@@ -117,12 +118,13 @@ func (f *CrosslinksFeature) ProcessEpochCrosslinks() {
 	currentEpoch := f.Meta.CurrentEpoch()
 	previousEpoch := f.Meta.PreviousEpoch()
 	for epoch := previousEpoch; epoch <= currentEpoch; epoch++ {
+		ecw := f.Meta.LoadEpochCrosslinkWinners(epoch)
 		count := f.Meta.GetCommitteeCount(epoch)
 		startShard := f.Meta.GetStartShard(epoch)
 		for offset := uint64(0); offset < count; offset++ {
 			shard := (startShard + Shard(offset)) % SHARD_COUNT
 			crosslinkCommittee := f.Meta.GetCrosslinkCommittee(epoch, shard)
-			winningCrosslink, attestingIndices := f.Meta.GetWinningCrosslinkAndAttesters(epoch, shard)
+			winningCrosslink, attestingIndices := ecw.GetWinningCrosslinkAndAttesters(shard)
 			participatingBalance := f.Meta.SumEffectiveBalanceOf(attestingIndices)
 			totalBalance := f.Meta.SumEffectiveBalanceOf(crosslinkCommittee)
 			if 3*participatingBalance >= 2*totalBalance {

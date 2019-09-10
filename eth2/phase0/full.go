@@ -36,7 +36,6 @@ type FullFeaturedState struct {
 	*ShufflingStatus
 
 	AttesterStatusFeature
-	*AttestersData
 
 	CrosslinkingFeature
 
@@ -81,7 +80,6 @@ func (f *FullFeaturedState) LoadPrecomputedData() {
 	// TODO decide on some lookback time, or load it dynamically
 	f.StartShardStatus = f.ShardRotFeature.LoadStartShardStatus(f.CurrentEpoch() - 20)
 	f.ShufflingStatus = f.ShufflingFeature.LoadShufflingStatus()
-	f.AttestersData = f.AttesterStatusFeature.LoadAttesterStatuses()
 	f.ProposersData = f.LoadBeaconProposersData()
 }
 

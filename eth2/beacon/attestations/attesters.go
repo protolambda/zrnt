@@ -5,32 +5,6 @@ import (
 	"github.com/protolambda/zrnt/eth2/meta"
 )
 
-type AttestersData struct {
-	Epoch          Epoch
-	Statuses       []AttesterStatus
-	TotalStake     Gwei
-	PrevTotalStake EpochStake
-	CurrTotalStake EpochStake
-}
-
-func (atd AttestersData) GetAttesterStatus(index ValidatorIndex) AttesterStatus {
-	return atd.Statuses[index]
-}
-
-func (atd AttestersData) GetTotalStake() Gwei {
-	return atd.TotalStake
-}
-
-func (atd AttestersData) GetTotalEpochStake(epoch Epoch) EpochStake {
-	if epoch == atd.Epoch {
-		return atd.CurrTotalStake
-	} else if epoch == atd.Epoch.Previous() {
-		return atd.PrevTotalStake
-	} else {
-		panic("epoch out of computed range")
-	}
-}
-
 type AttesterStatusFeature struct {
 	State *AttestationsState
 	Meta  interface {
@@ -39,7 +13,6 @@ type AttesterStatusFeature struct {
 		meta.CrosslinkTiming
 		meta.CommitteeCount
 		meta.CrosslinkCommittees
-		meta.EffectiveBalances
 		meta.History
 		meta.SlashedIndices
 		meta.ActiveIndices
@@ -47,24 +20,20 @@ type AttesterStatusFeature struct {
 	}
 }
 
-func (f *AttesterStatusFeature) LoadAttesterStatuses() (out *AttestersData) {
+func (f *AttesterStatusFeature) GetAttesterStatuses() (out []AttesterStatus) {
 	count := f.Meta.ValidatorCount()
 
 	currentEpoch := f.Meta.CurrentEpoch()
 	prevEpoch := f.Meta.PreviousEpoch()
 
-	out = &AttestersData{
-		Epoch:    currentEpoch,
-		Statuses: make([]AttesterStatus, count, count),
-	}
+	out = make([]AttesterStatus, count, count)
 
-	for i := ValidatorIndex(0); i < ValidatorIndex(len(out.Statuses)); i++ {
-		status := &out.Statuses[i]
+	for i := ValidatorIndex(0); i < ValidatorIndex(len(out)); i++ {
+		status := &out[i]
 		if !f.Meta.IsSlashed(i) {
 			status.Flags |= UnslashedAttester
 		}
 		if f.Meta.IsActive(i, currentEpoch) {
-			out.TotalStake += f.Meta.EffectiveBalance(i)
 			status.Flags |= EligibleAttester
 		} else if f.Meta.IsSlashed(i) && prevEpoch+1 < f.Meta.WithdrawableEpoch(i) {
 			status.Flags |= EligibleAttester
@@ -87,8 +56,7 @@ func (f *AttesterStatusFeature) LoadAttesterStatuses() (out *AttestersData) {
 			participants = append(participants, committee...)                   // add committee indices
 			participants = att.AggregationBits.FilterParticipants(participants) // only keep the participants
 			for _, p := range participants {
-
-				status := &out.Statuses[p]
+				status := &out[p]
 
 				// If the attestation is the earliest, i.e. has the biggest delay
 				if status.InclusionDelay < att.InclusionDelay {
@@ -114,28 +82,5 @@ func (f *AttesterStatusFeature) LoadAttesterStatuses() (out *AttestersData) {
 		PrevSourceAttester, PrevTargetAttester, PrevHeadAttester)
 	processEpoch(f.State.CurrentEpochAttestations, currentEpoch,
 		CurrSourceAttester, CurrTargetAttester, CurrHeadAttester)
-
-	for i := range out.Statuses {
-		status := &out.Statuses[i]
-		b := f.Meta.EffectiveBalance(ValidatorIndex(i))
-		if status.Flags.HasMarkers(PrevSourceAttester | UnslashedAttester) {
-			out.PrevTotalStake.SourceBalance += b
-		}
-		if status.Flags.HasMarkers(PrevTargetAttester | UnslashedAttester) {
-			out.PrevTotalStake.TargetBalance += b
-		}
-		if status.Flags.HasMarkers(PrevHeadAttester | UnslashedAttester) {
-			out.PrevTotalStake.HeadBalance += b
-		}
-		if status.Flags.HasMarkers(CurrSourceAttester | UnslashedAttester) {
-			out.CurrTotalStake.SourceBalance += b
-		}
-		if status.Flags.HasMarkers(CurrTargetAttester | UnslashedAttester) {
-			out.CurrTotalStake.TargetBalance += b
-		}
-		if status.Flags.HasMarkers(CurrHeadAttester | UnslashedAttester) {
-			out.CurrTotalStake.HeadBalance += b
-		}
-	}
 	return
 }

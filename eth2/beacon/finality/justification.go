@@ -17,8 +17,9 @@ func (f *JustificationFeature) ProcessEpochJustification() {
 
 	// stake = effective balances of active validators
 	// Get the total stake of the epoch attesters
-	prevTargetStake := f.Meta.GetTotalEpochStake(previousEpoch)
-	currTargetStake := f.Meta.GetTotalEpochStake(currentEpoch)
+	attesterStatuses := f.Meta.GetAttesterStatuses()
+	prevTargetStake := f.Meta.GetAttestersStake(attesterStatuses, PrevTargetAttester|UnslashedAttester)
+	currTargetStake := f.Meta.GetAttestersStake(attesterStatuses, CurrTargetAttester|UnslashedAttester)
 
 	// Get the total current stake
 	totalStake := f.Meta.GetTotalStake()
@@ -31,13 +32,13 @@ func (f *JustificationFeature) ProcessEpochJustification() {
 	f.State.JustificationBits.NextEpoch()
 
 	// > Justification
-	if prevTargetStake.TargetBalance*3 >= totalStake*2 {
+	if prevTargetStake*3 >= totalStake*2 {
 		f.Justify(Checkpoint{
 			Epoch: previousEpoch,
 			Root:  f.Meta.GetBlockRoot(previousEpoch),
 		})
 	}
-	if currTargetStake.TargetBalance*3 >= totalStake*2 {
+	if currTargetStake*3 >= totalStake*2 {
 		f.Justify(Checkpoint{
 			Epoch: currentEpoch,
 			Root:  f.Meta.GetBlockRoot(currentEpoch),

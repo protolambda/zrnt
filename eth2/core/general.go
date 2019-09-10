@@ -16,12 +16,6 @@ type Shard uint64
 
 type Gwei uint64
 
-type EpochStake struct {
-	SourceBalance Gwei
-	TargetBalance Gwei
-	HeadBalance   Gwei
-}
-
 type Checkpoint struct {
 	Epoch Epoch
 	Root  Root

@@ -24,13 +24,17 @@ func (f *AttestationDeltasFeature) AttestationDeltas() *Deltas {
 	previousEpoch := f.Meta.PreviousEpoch()
 
 	totalBalance := f.Meta.GetTotalStake()
-	prevEpochStake := f.Meta.GetTotalEpochStake(previousEpoch)
+
+	attesterStatuses := f.Meta.GetAttesterStatuses()
+	prevEpochSourceStake := f.Meta.GetAttestersStake(attesterStatuses, PrevSourceAttester|UnslashedAttester)
+	prevEpochTargetStake := f.Meta.GetAttestersStake(attesterStatuses, PrevTargetAttester|UnslashedAttester)
+	prevEpochHeadStake := f.Meta.GetAttestersStake(attesterStatuses, PrevHeadAttester|UnslashedAttester)
 
 	balanceSqRoot := Gwei(math.IntegerSquareroot(uint64(totalBalance)))
 	finalityDelay := previousEpoch - f.Meta.Finalized().Epoch
 
 	for i := ValidatorIndex(0); i < validatorCount; i++ {
-		status := f.Meta.GetAttesterStatus(i)
+		status := attesterStatuses[i]
 		if status.Flags&EligibleAttester != 0 {
 
 			effBalance := f.Meta.EffectiveBalance(i)
@@ -40,7 +44,7 @@ func (f *AttestationDeltasFeature) AttestationDeltas() *Deltas {
 			// Expected FFG source
 			if status.Flags.HasMarkers(PrevSourceAttester | UnslashedAttester) {
 				// Justification-participation reward
-				deltas.Rewards[i] += baseReward * prevEpochStake.SourceBalance / totalBalance
+				deltas.Rewards[i] += baseReward * prevEpochSourceStake / totalBalance
 
 				// Inclusion speed bonus
 				proposerReward := baseReward / PROPOSER_REWARD_QUOTIENT
@@ -56,7 +60,7 @@ func (f *AttestationDeltasFeature) AttestationDeltas() *Deltas {
 			// Expected FFG target
 			if status.Flags.HasMarkers(PrevTargetAttester | UnslashedAttester) {
 				// Boundary-attestation reward
-				deltas.Rewards[i] += baseReward * prevEpochStake.TargetBalance / totalBalance
+				deltas.Rewards[i] += baseReward * prevEpochTargetStake / totalBalance
 			} else {
 				//Boundary-attestation-non-participation R-penalty
 				deltas.Penalties[i] += baseReward
@@ -65,7 +69,7 @@ func (f *AttestationDeltasFeature) AttestationDeltas() *Deltas {
 			// Expected head
 			if status.Flags.HasMarkers(PrevHeadAttester | UnslashedAttester) {
 				// Canonical-participation reward
-				deltas.Rewards[i] += baseReward * prevEpochStake.HeadBalance / totalBalance
+				deltas.Rewards[i] += baseReward * prevEpochHeadStake / totalBalance
 			} else {
 				// Non-canonical-participation R-penalty
 				deltas.Penalties[i] += baseReward

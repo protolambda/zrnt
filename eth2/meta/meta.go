@@ -61,7 +61,11 @@ type EpochAttestations interface {
 }
 
 type AttesterStatuses interface {
-	GetAttesterStatus(index ValidatorIndex) AttesterStatus
+	GetAttesterStatuses() []AttesterStatus
+}
+
+type AttesterLoader interface {
+	LoadAttesterStatuses() AttesterStatuses
 }
 
 type SlashedIndices interface {
@@ -83,7 +87,7 @@ type CompactCommitteesUpdate interface {
 type Staking interface {
 	// Staked = Active effective balance
 	GetTotalStake() Gwei
-	GetTotalEpochStake(epoch Epoch) EpochStake
+	GetAttestersStake(statuses []AttesterStatus, mask AttesterFlag) Gwei
 }
 
 type Slashing interface {

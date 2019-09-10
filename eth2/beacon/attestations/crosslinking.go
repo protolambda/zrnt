@@ -34,9 +34,16 @@ func (ce *CrosslinkingEpoch) GetWinningCrosslinkAndAttesters(shard Shard) (*Cros
 }
 
 type weightedLink struct {
-	weight    Gwei
-	link      *Crosslink
-	attesters []ValidatorIndex
+	attestationIndex uint64
+	weight           Gwei
+	link             *Crosslink
+	attesters        []ValidatorIndex
+}
+
+type orderedCrosslinkAttesters struct {
+	attestationIndex uint64
+	crosslink        *Crosslink
+	committee        CommitteeBits
 }
 
 func (f *CrosslinkingFeature) LoadEpochCrosslinkWinners(epoch Epoch) meta.EpochCrosslinkWinners {
@@ -51,51 +58,63 @@ func (f *CrosslinkingFeature) LoadEpochCrosslinkWinners(epoch Epoch) meta.EpochC
 
 	// Keyed by raw crosslink object. Not too big, and simplifies reduction to unique crosslinks
 	// For shards with no attestations available, the value will be a nil slice.
-	crosslinkAttesters := make(map[*Crosslink]CommitteeBits)
-	for _, att := range attestations {
+	crosslinkAttesters := make(map[Root]orderedCrosslinkAttesters)
+	for i := range attestations {
+		att := attestations[i]
 		shard := att.Data.Crosslink.Shard
-		if att.Data.Crosslink.ParentRoot == crosslinkRoots[shard] ||
-			ssz.HashTreeRoot(&att.Data.Crosslink, crosslinkSSZ) == crosslinkRoots[shard] {
+		cr := ssz.HashTreeRoot(&att.Data.Crosslink, crosslinkSSZ)
+		if att.Data.Crosslink.ParentRoot == crosslinkRoots[shard] || cr == crosslinkRoots[shard] {
 
-			bits, ok := crosslinkAttesters[&att.Data.Crosslink]
+			oca, ok := crosslinkAttesters[cr]
 			if !ok {
 				// initialize new bitlist. We can ignore the leading bit, it will be ORed anyway.
-				bits = make(CommitteeBits, len(att.AggregationBits))
-				crosslinkAttesters[&att.Data.Crosslink] = bits
+				oca.committee = make(CommitteeBits, len(att.AggregationBits))
+				oca.crosslink = &att.Data.Crosslink
+				oca.attestationIndex = uint64(i)
 			}
 
 			// Mark attesters
-			bits.Or(att.AggregationBits)
+			oca.committee.Or(att.AggregationBits)
+			crosslinkAttesters[cr] = oca
 		}
 	}
 
 	winningCrosslinks := [SHARD_COUNT]weightedLink{}
 	participants := make([]ValidatorIndex, 0, MAX_VALIDATORS_PER_COMMITTEE)
-	for k, v := range crosslinkAttesters {
-		shard := k.Shard
+	for _, v := range crosslinkAttesters {
+		shard := v.crosslink.Shard
 		committee := f.Meta.GetCrosslinkCommittee(epoch, shard)
-		participants = participants[:0]                      // reset old slice (re-used in for loop)
-		participants = append(participants, committee...)    // add committee indices
-		participants = v.FilterParticipants(participants)    // only keep the participants
-		participants = f.Meta.FilterUnslashed(participants)  // and only those who are not slashed
-		weight := f.Meta.SumEffectiveBalanceOf(participants) // and get their weight
+		participants = participants[:0]                             // reset old slice (re-used in for loop)
+		participants = append(participants, committee...)           // add committee indices
+		participants = v.committee.FilterParticipants(participants) // only keep the participants
+		participants = f.Meta.FilterUnslashed(participants)         // and only those who are not slashed
+		weight := f.Meta.SumEffectiveBalanceOf(participants)        // and get their weight
 
 		currentWinner := &winningCrosslinks[shard]
 		isNewWinner := currentWinner.link == nil
 		isNewWinner = isNewWinner || (weight > currentWinner.weight)
 		if !isNewWinner && weight == currentWinner.weight {
-			// break tie lexicographically
-			for i := 0; i < 32; i++ {
-				if k.DataRoot[i] > currentWinner.link.DataRoot[i] {
+			// if no lexicographical tie can be made, it is the attestation order that determines the winner
+			if v.crosslink.DataRoot == currentWinner.link.DataRoot {
+				if v.attestationIndex < currentWinner.attestationIndex {
 					isNewWinner = true
 					break
+				}
+			} else {
+				// break tie lexicographically
+				for i := 0; i < 32; i++ {
+					if v.crosslink.DataRoot[i] > currentWinner.link.DataRoot[i] {
+						isNewWinner = true
+						break
+					}
 				}
 			}
 		}
 		if isNewWinner {
 			// overwrite winning link
 			currentWinner.weight = weight
-			currentWinner.link = k
+			currentWinner.attestationIndex = v.attestationIndex
+			currentWinner.link = v.crosslink
 			if currentWinner.attesters == nil {
 				currentWinner.attesters = make([]ValidatorIndex, 0, len(participants)<<2) // bit of extra capacity
 			}

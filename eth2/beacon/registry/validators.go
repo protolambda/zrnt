@@ -176,10 +176,31 @@ func (state *ValidatorsState) GetTotalStakedBalance(epoch Epoch) (sum Gwei) {
 			sum += v.EffectiveBalance
 		}
 	}
-	if sum == 0 {
+	return sum
+}
+
+func (state *ValidatorsState) GetAttestersStake(statuses []AttesterStatus, mask AttesterFlag) (out Gwei) {
+	for i := range statuses {
+		status := &statuses[i]
+		b := state.Validators[i].EffectiveBalance
+		if status.Flags.HasMarkers(mask) {
+			out += b
+		}
+	}
+	if out == 0 {
 		return 1
 	}
-	return sum
+	return
+}
+
+func (state *ValidatorsState) GetTotalStake() (out Gwei) {
+	for i := range state.Validators {
+		out += state.Validators[i].EffectiveBalance
+	}
+	if out == 0 {
+		return 1
+	}
+	return
 }
 
 func (state *ValidatorsState) EffectiveBalance(index ValidatorIndex) Gwei {

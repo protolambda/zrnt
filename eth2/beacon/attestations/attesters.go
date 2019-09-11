@@ -53,8 +53,8 @@ func (f *AttesterStatusFeature) GetAttesterStatuses() (out []AttesterStatus) {
 			// attestation-target is already known to be this epoch, get it from the pre-computed shuffling directly.
 			committee := f.Meta.GetCrosslinkCommittee(epoch, att.Data.Crosslink.Shard)
 
-			participants = participants[:0]                                     // reset old slice (re-used in for loop)
-			participants = append(participants, committee...)                   // add committee indices
+			participants = participants[:0]                   // reset old slice (re-used in for loop)
+			participants = append(participants, committee...) // add committee indices
 
 			if epoch == prevEpoch {
 				for _, p := range participants {

@@ -38,6 +38,7 @@ func (f *AttesterStatusFeature) GetAttesterStatuses() (out []AttesterStatus) {
 		} else if f.Meta.IsSlashed(i) && prevEpoch+1 < f.Meta.WithdrawableEpoch(i) {
 			status.Flags |= EligibleAttester
 		}
+		status.AttestedProposer = ValidatorIndexMarker
 	}
 
 	processEpoch := func(
@@ -54,15 +55,22 @@ func (f *AttesterStatusFeature) GetAttesterStatuses() (out []AttesterStatus) {
 
 			participants = participants[:0]                                     // reset old slice (re-used in for loop)
 			participants = append(participants, committee...)                   // add committee indices
+
+			if epoch == prevEpoch {
+				for _, p := range participants {
+					status := &out[p]
+
+					// If the attestation is the earliest, i.e. has the smallest delay
+					if status.AttestedProposer == ValidatorIndexMarker || status.InclusionDelay > att.InclusionDelay {
+						status.InclusionDelay = att.InclusionDelay
+						status.AttestedProposer = att.ProposerIndex
+					}
+				}
+			}
+
 			participants = att.AggregationBits.FilterParticipants(participants) // only keep the participants
 			for _, p := range participants {
 				status := &out[p]
-
-				// If the attestation is the earliest, i.e. has the biggest delay
-				if status.InclusionDelay < att.InclusionDelay {
-					status.InclusionDelay = att.InclusionDelay
-					status.AttestedProposer = att.ProposerIndex
-				}
 
 				// remember the participant as one of the good validators
 				status.Flags |= sourceFlag

@@ -1,3 +1,0 @@
-[submodule "presets/eth2.0-presets"]
-	path = presets/eth2.0-presets
-	url = https://github.com/protolambda/eth2.0-presets.git

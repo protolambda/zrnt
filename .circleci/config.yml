@@ -24,25 +24,18 @@ jobs:
 
       - restore_cache:
           keys:
-            - spec-tests-v0_8_3
+            - spec-tests-v0_8_4
 
       - run:
           name: Update spec tests cache
-          command: |
-            cd tests/spec
-            if ! test -d eth2.0-spec-tests; then git clone https://github.com/ethereum/eth2.0-spec-tests.git; fi
-            cd eth2.0-spec-tests
-            git lfs version
-            git fetch origin
-            git status
-            git checkout v0.8.3
+          command: make download-tests
 
       - run:
           name: Run unit tests and generate coverage reports
           command: TEST_OUT_DIR=$TEST_RESULTS make test
 
       - save_cache:
-          key: spec-tests-v0_8_3
+          key: spec-tests-v0_8_4
           paths:
             - tests/spec/eth2.0-spec-tests
 

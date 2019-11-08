@@ -65,7 +65,8 @@ func (f *BlockHeaderFeature) ProcessHeader(header *BeaconBlockHeader) error {
 	f.State.LatestBlockHeader = BeaconBlockHeader{
 		Slot:       header.Slot,
 		ParentRoot: header.ParentRoot,
-		// state_root: zeroed, overwritten with UpdateStateRoot(), once the post state is available.
+		// state_root is zeroed and overwritten in the next `process_slot` call.
+		// with BlockHeaderState.UpdateStateRoot(), once the post state is available.
 		BodyRoot: header.BodyRoot,
 		// signature is always zeroed
 	}

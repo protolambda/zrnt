@@ -30,10 +30,10 @@ func (state *ProposersData) GetBeaconProposerIndex(slot Slot) ValidatorIndex {
 type ProposingFeature struct {
 	Meta interface {
 		meta.Versioning
-		meta.CrosslinkCommittees
+		meta.BeaconCommittees
 		meta.EffectiveBalances
+		meta.ActiveIndices
 		meta.CommitteeCount
-		meta.CrosslinkTiming
 		meta.EpochSeed
 	}
 }
@@ -47,39 +47,38 @@ func (f *ProposingFeature) LoadBeaconProposersData() (out *ProposersData) {
 	}
 }
 
-// Return the beacon proposer index for the current slot
-func (f *ProposingFeature) LoadBeaconProposerIndices(epoch Epoch) (out *EpochProposerIndices) {
-	seed := f.Meta.GetSeed(epoch)
+func (f *ProposingFeature) computeProposerIndex(indices []ValidatorIndex, seed Root) ValidatorIndex {
 	buf := make([]byte, 32+8, 32+8)
 	copy(buf[0:32], seed[:])
-	balanceWeightedProposer := func(committee []ValidatorIndex) ValidatorIndex {
-		for i := uint64(0); true; i++ {
-			binary.LittleEndian.PutUint64(buf[32:], i)
-			h := Hash(buf)
-			for j := uint64(0); j < 32; j++ {
-				randomByte := h[j]
-				candidateIndex := committee[(uint64(epoch)+((i<<5)|j))%uint64(len(committee))]
-				effectiveBalance := f.Meta.EffectiveBalance(candidateIndex)
-				if effectiveBalance*0xff >= MAX_EFFECTIVE_BALANCE*Gwei(randomByte) {
-					return candidateIndex
-				}
+	for i := uint64(0); true; i++ {
+		binary.LittleEndian.PutUint64(buf[32:], i)
+		h := Hash(buf)
+		for j := uint64(0); j < 32; j++ {
+			randomByte := h[j]
+			candidateIndex := indices[((i<<5)|j)%uint64(len(indices))]
+			effectiveBalance := f.Meta.EffectiveBalance(candidateIndex)
+			if effectiveBalance*0xff >= MAX_EFFECTIVE_BALANCE*Gwei(randomByte) {
+				return candidateIndex
 			}
 		}
-		panic("random (but balance-biased) infinite scrolling through a committee should always find a proposer")
 	}
+	panic("random (but balance-biased) infinite scrolling through a committee should always find a proposer")
+}
+
+// Return the beacon proposer index for the current slot
+func (f *ProposingFeature) LoadBeaconProposerIndices(epoch Epoch) (out *EpochProposerIndices) {
+	seedSource := f.Meta.GetSeed(epoch, DOMAIN_BEACON_PROPOSER)
+	indices := f.Meta.GetActiveValidatorIndices(epoch)
 
 	out = new(EpochProposerIndices)
 
-	// A.k.a. committeesPerSlot
-	shardsPerSlot := Shard(f.Meta.GetCommitteeCount(epoch) / uint64(SLOTS_PER_EPOCH))
-
-	startShard := f.Meta.GetStartShard(epoch)
-	offset := Shard(0)
+	startSlot := epoch.GetStartSlot()
 	for i := Slot(0); i < SLOTS_PER_EPOCH; i++ {
-		shard := (startShard + offset) % SHARD_COUNT
-		offset += shardsPerSlot
-		firstCommittee := f.Meta.GetCrosslinkCommittee(epoch, shard)
-		out[i] = balanceWeightedProposer(firstCommittee)
+		buf := make([]byte, 32+8, 32+8)
+		copy(buf[0:32], seedSource[:])
+		binary.LittleEndian.PutUint64(buf[32:], uint64(startSlot))
+		seed := Hash(buf)
+		out[i] = f.computeProposerIndex(indices, seed)
 	}
 	return
 }

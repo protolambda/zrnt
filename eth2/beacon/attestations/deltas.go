@@ -50,8 +50,7 @@ func (f *AttestationDeltasFeature) AttestationDeltas() *Deltas {
 				proposerReward := baseReward / PROPOSER_REWARD_QUOTIENT
 				deltas.Rewards[status.AttestedProposer] += proposerReward
 				maxAttesterReward := baseReward - proposerReward
-				inclusionOffset := SLOTS_PER_EPOCH + MIN_ATTESTATION_INCLUSION_DELAY - status.InclusionDelay
-				deltas.Rewards[i] += maxAttesterReward * Gwei(inclusionOffset) / Gwei(SLOTS_PER_EPOCH)
+				deltas.Rewards[i] += maxAttesterReward / Gwei(status.InclusionDelay)
 			} else {
 				//Justification-non-participation R-penalty
 				deltas.Penalties[i] += baseReward

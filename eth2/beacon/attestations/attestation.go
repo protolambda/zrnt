@@ -5,7 +5,6 @@ import (
 	"fmt"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/meta"
-	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/protolambda/zssz"
 	"sort"
 )
@@ -19,10 +18,8 @@ type AttestationFeature struct {
 	State *AttestationsState
 	Meta  interface {
 		meta.Versioning
-		meta.CrosslinkCommittees
-		meta.CrosslinkTiming
+		meta.BeaconCommittees
 		meta.CommitteeCount
-		meta.Crosslinks
 		meta.Finality
 		meta.RegistrySize
 		meta.Pubkeys
@@ -48,76 +45,46 @@ type Attestation struct {
 	Signature       BLSSignature
 }
 
-var crosslinkSSZ = zssz.GetSSZ((*Crosslink)(nil))
-
 func (f *AttestationFeature) ProcessAttestation(attestation *Attestation) error {
 	data := &attestation.Data
-	if data.Crosslink.Shard >= SHARD_COUNT {
-		return errors.New("attestation data is invalid, shard out of range")
+
+	// Check slot
+	currentSlot := f.Meta.CurrentSlot()
+	if !(currentSlot <= data.Slot+SLOTS_PER_EPOCH) {
+		return errors.New("attestation slot is too old")
 	}
+	if !(data.Slot+MIN_ATTESTATION_INCLUSION_DELAY <= currentSlot) {
+		return errors.New("attestation is too new")
+	}
+
 	currentEpoch := f.Meta.CurrentEpoch()
 	previousEpoch := f.Meta.PreviousEpoch()
 
+	// Check target
 	if data.Target.Epoch < previousEpoch {
 		return errors.New("attestation data is invalid, target is too far in past")
 	} else if data.Target.Epoch > currentEpoch {
 		return errors.New("attestation data is invalid, target is in future")
 	}
 
-	currentSlot := f.Meta.CurrentSlot()
-	attestationSlot := data.GetAttestationSlot(f.Meta)
-	if !(currentSlot <= attestationSlot+SLOTS_PER_EPOCH) {
-		return errors.New("attestation slot is too old")
-	}
-	if !(attestationSlot+MIN_ATTESTATION_INCLUSION_DELAY <= currentSlot) {
-		return errors.New("attestation is too new")
+	// Check committee index
+	if uint64(data.Index) >= f.Meta.GetCommitteeCountAtSlot(data.Slot) {
+		return errors.New("attestation data is invalid, committee index out of range")
 	}
 
-	var parentCrosslink *Crosslink
-
+	// Check source
 	if data.Target.Epoch == currentEpoch {
 		if data.Source != f.Meta.CurrentJustified() {
 			return errors.New("attestation source does not match current justified checkpoint")
 		}
-		parentCrosslink = f.Meta.GetCurrentCrosslink(data.Crosslink.Shard)
 	} else {
 		if data.Source != f.Meta.PreviousJustified() {
 			return errors.New("attestation source does not match previous justified checkpoint")
 		}
-		parentCrosslink = f.Meta.GetPreviousCrosslink(data.Crosslink.Shard)
-	}
-
-	// Check crosslink against expected parent crosslink
-	if data.Crosslink.ParentRoot != ssz.HashTreeRoot(parentCrosslink, crosslinkSSZ) {
-		return errors.New("attestation parent crosslink is invalid")
-	}
-
-	// crosslink data
-	if data.Crosslink.StartEpoch != parentCrosslink.EndEpoch {
-		return fmt.Errorf("attestation start epoch is invalid,"+
-			" does not match parent crosslink end: %d <> %d", data.Crosslink.StartEpoch, parentCrosslink.EndEpoch)
-	}
-	if parentEnd := parentCrosslink.EndEpoch + MAX_EPOCHS_PER_CROSSLINK; parentEnd < data.Target.Epoch {
-		if data.Crosslink.EndEpoch != parentEnd {
-			return fmt.Errorf("attestation end epoch is invalid,"+
-				" does not match (parent crosslink end epoch + epochs per link): %d <> %d",
-				data.Crosslink.EndEpoch, parentEnd)
-		}
-	} else {
-		if data.Crosslink.EndEpoch != data.Target.Epoch {
-			return fmt.Errorf("attestation end epoch is invalid,"+
-				" does not match parent target epoch: %d <> %d", data.Crosslink.EndEpoch, data.Target.Epoch)
-		}
-	}
-	if data.Crosslink.DataRoot != (Root{}) { //  # [to be removed in phase 1]
-		return errors.New("attestation cannot reference a crosslink root yet, processing as phase 0")
 	}
 
 	// Check signature and bitfields
-	committee := f.Meta.GetCrosslinkCommittee(
-		attestation.Data.Target.Epoch,
-		attestation.Data.Crosslink.Shard,
-	)
+	committee := f.Meta.GetBeaconCommittee(data.Slot, data.Index)
 	if indexedAtt, err := attestation.ConvertToIndexed(committee); err != nil {
 		return fmt.Errorf("attestation could not be converted to an indexed attestation: %v", err)
 	} else if err := indexedAtt.Validate(f.Meta); err != nil {
@@ -128,7 +95,7 @@ func (f *AttestationFeature) ProcessAttestation(attestation *Attestation) error 
 	pendingAttestation := &PendingAttestation{
 		Data:            *data,
 		AggregationBits: attestation.AggregationBits,
-		InclusionDelay:  currentSlot - attestationSlot,
+		InclusionDelay:  currentSlot - data.Slot,
 		ProposerIndex:   f.Meta.GetBeaconProposerIndex(currentSlot),
 	}
 	if data.Target.Epoch == currentEpoch {

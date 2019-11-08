@@ -48,9 +48,9 @@ func (f *PropSlashFeature) ProcessProposerSlashing(ps *ProposerSlashing) error {
 	if !f.Meta.IsValidIndex(ps.ProposerIndex) {
 		return errors.New("invalid proposer index")
 	}
-	// Verify that the epoch is the same
-	if ps.Header1.Slot.ToEpoch() != ps.Header2.Slot.ToEpoch() {
-		return errors.New("proposer slashing requires slashing headers to be in same epoch")
+	// Verify slots match
+	if ps.Header1.Slot != ps.Header2.Slot {
+		return errors.New("proposer slashing requires slashing headers to have the same slot")
 	}
 	// But the headers are different
 	if ps.Header1 == ps.Header2 {

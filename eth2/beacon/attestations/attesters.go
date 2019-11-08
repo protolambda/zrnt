@@ -10,9 +10,8 @@ type AttesterStatusFeature struct {
 	Meta  interface {
 		meta.Versioning
 		meta.RegistrySize
-		meta.CrosslinkTiming
 		meta.CommitteeCount
-		meta.CrosslinkCommittees
+		meta.BeaconCommittees
 		meta.History
 		meta.SlashedIndices
 		meta.ActiveIndices
@@ -48,10 +47,10 @@ func (f *AttesterStatusFeature) GetAttesterStatuses() (out []AttesterStatus) {
 		targetBlockRoot := f.Meta.GetBlockRootAtSlot(epoch.GetStartSlot())
 		participants := make([]ValidatorIndex, 0, MAX_VALIDATORS_PER_COMMITTEE)
 		for _, att := range attestations {
-			attBlockRoot := f.Meta.GetBlockRootAtSlot(att.Data.GetAttestationSlot(f.Meta))
+			attBlockRoot := f.Meta.GetBlockRootAtSlot(att.Data.Slot)
 
 			// attestation-target is already known to be this epoch, get it from the pre-computed shuffling directly.
-			committee := f.Meta.GetCrosslinkCommittee(epoch, att.Data.Crosslink.Shard)
+			committee := f.Meta.GetBeaconCommittee(att.Data.Slot, att.Data.Index)
 
 			participants = participants[:0]                   // reset old slice (re-used in for loop)
 			participants = append(participants, committee...) // add committee indices

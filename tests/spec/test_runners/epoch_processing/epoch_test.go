@@ -26,13 +26,6 @@ func NewEpochTest(fn stateFn) test_util.TransitionCaseMaker {
 	}
 }
 
-func TestCrosslinks(t *testing.T) {
-	test_util.RunTransitionTest(t, "epoch_processing", "crosslinks",
-		NewEpochTest(func(state *phase0.FullFeaturedState) {
-			state.ProcessEpochCrosslinks()
-		}))
-}
-
 func TestFinalUpdates(t *testing.T) {
 	test_util.RunTransitionTest(t, "epoch_processing", "final_updates",
 		NewEpochTest(func(state *phase0.FullFeaturedState) {

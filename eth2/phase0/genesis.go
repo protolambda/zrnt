@@ -38,6 +38,9 @@ func GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit, verifyD
 			},
 		},
 	}
+	// Seed RANDAO with Eth1 entropy
+	state.SeedRandao(eth1BlockHash)
+
 	depProcessor := &DepositFeature{Meta: state}
 
 	depRoots := make(DepositRoots, 0, len(deps))
@@ -86,13 +89,6 @@ func InitState(state *BeaconState) (*FullFeaturedState, error) {
 	full := NewFullFeaturedState(state)
 	// pre-compute the committee data
 	full.LoadPrecomputedData()
-	// Populate active_index_roots and compact_committees_roots
-	activeIndexRoot := full.ComputeActiveIndexRoot(GENESIS_EPOCH)
-	committeeRoot := full.ComputeCompactCommitteesRoot(GENESIS_EPOCH)
-	for i := Epoch(0); i < EPOCHS_PER_HISTORICAL_VECTOR; i++ {
-		state.ActiveIndexRoots[i] = activeIndexRoot
-		state.CompactCommitteesRoots[i] = committeeRoot
-	}
 	return full, nil
 }
 

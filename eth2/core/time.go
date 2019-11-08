@@ -25,7 +25,7 @@ func (e Epoch) GetStartSlot() Slot {
 
 // Return the epoch at which an activation or exit triggered in epoch takes effect.
 func (e Epoch) ComputeActivationExitEpoch() Epoch {
-	return e + 1 + ACTIVATION_EXIT_DELAY
+	return e + 1 + MAX_SEED_LOOKAHEAD
 }
 
 func (e Epoch) Previous() Epoch {

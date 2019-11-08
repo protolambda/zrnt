@@ -42,7 +42,7 @@ func BenchmarkLoadAttesterStatuses(b *testing.B) {
 		}
 	}
 	{
-		committeeCount := meta.GetCommitteeCount(GENESIS_EPOCH)
+		committeeCount := meta.GetCommitteeCountAtSlot(GENESIS_EPOCH)
 		perSlot := committeeCount / uint64(SLOTS_PER_EPOCH)
 		for i := uint64(0); i < committeeCount; i++ {
 			comm := meta.PreviousShuffling.Committees[(meta.GetStartShard(GENESIS_EPOCH)+Shard(i))%SHARD_COUNT]
@@ -52,7 +52,7 @@ func BenchmarkLoadAttesterStatuses(b *testing.B) {
 		}
 	}
 	{
-		committeeCount := meta.GetCommitteeCount(GENESIS_EPOCH+1)
+		committeeCount := meta.GetCommitteeCountAtSlot(GENESIS_EPOCH+1)
 		perSlot := committeeCount / uint64(SLOTS_PER_EPOCH)
 		for i := uint64(0); i < committeeCount; i++ {
 			comm := meta.CurrentShuffling.Committees[(meta.GetStartShard(GENESIS_EPOCH+1)+Shard(i))%SHARD_COUNT]

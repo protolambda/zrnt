@@ -14,9 +14,6 @@ type FinalUpdateFeature struct {
 		meta.Versioning
 		meta.Eth1Voting
 		meta.EffectiveBalancesUpdate
-		meta.ShardRotation
-		meta.ActiveIndexRootsUpdate
-		meta.CompactCommitteesUpdate
 		meta.SlashingHistory
 		meta.Randao
 		meta.HistoryUpdate
@@ -37,9 +34,6 @@ func (f *FinalUpdateFeature) ProcessEpochFinalUpdates() {
 	}
 
 	f.Meta.UpdateEffectiveBalances()
-	f.Meta.RotateStartShard()
-	f.Meta.UpdateActiveIndexRoot(nextEpoch + ACTIVATION_EXIT_DELAY)
-	f.Meta.UpdateCompactCommitteesRoot(nextEpoch)
 	f.Meta.ResetSlashings(nextEpoch)
 	f.Meta.PrepareRandao(nextEpoch)
 

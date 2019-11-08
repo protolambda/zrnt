@@ -1,6 +1,6 @@
 TEST_OUT_DIR ?= ./test_out
 
-.PHONY: clean create-test-dir test open-coverage download-tests
+.PHONY: clean create-test-dir test open-coverage download-tests clear-tests
 
 clean:
 	rm -rf ./test_out
@@ -8,7 +8,7 @@ clean:
 create-test-dir:
 	mkdir -p $(TEST_OUT_DIR)
 
-SPEC_VERSION ?= v0.8.4
+SPEC_VERSION ?= v0.9.0
 
 clear-tests:
 	rm -rf tests/spec/eth2.0-spec-tests
@@ -17,7 +17,7 @@ download-tests:
 	mkdir -p tests/spec/eth2.0-spec-tests
 	wget https://github.com/ethereum/eth2.0-spec-tests/releases/download/$(SPEC_VERSION)/general.tar.gz -O - | tar -xz -C tests/spec/eth2.0-spec-tests
 	wget https://github.com/ethereum/eth2.0-spec-tests/releases/download/$(SPEC_VERSION)/minimal.tar.gz -O - | tar -xz -C tests/spec/eth2.0-spec-tests
-	wget https://github.com/ethereum/eth2.0-spec-tests/releases/download/$(SPEC_VERSION)/mainnet.tar.gz -O - | tar -xz -C tests/spec/eth2.0-spec-tests
+	#wget https://github.com/ethereum/eth2.0-spec-tests/releases/download/$(SPEC_VERSION)/mainnet.tar.gz -O - | tar -xz -C tests/spec/eth2.0-spec-tests
 
 test: create-test-dir
 	gotestsum --junitfile $(TEST_OUT_DIR)/junit.xml -- -tags preset_minimal \

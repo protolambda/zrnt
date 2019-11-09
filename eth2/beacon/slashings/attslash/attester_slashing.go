@@ -60,14 +60,11 @@ func (f *AttestSlashFeature) ProcessAttesterSlashing(attesterSlashing *AttesterS
 	// keep track of effectiveness
 	slashedAny := false
 
-	// the individual custody index sets are already sorted (as verified by ValidateIndexedAttestation)
-	// just merge them in O(n)
-	indices1 := ValidatorSet(sa1.CustodyBit0Indices).MergeDisjoint(ValidatorSet(sa1.CustodyBit1Indices))
-	indices2 := ValidatorSet(sa2.CustodyBit0Indices).MergeDisjoint(ValidatorSet(sa2.CustodyBit1Indices))
-
 	currentEpoch := f.Meta.CurrentEpoch()
+
 	// run slashings where applicable
-	indices1.ZigZagJoin(indices2, func(i ValidatorIndex) {
+	// use ZigZagJoin for efficient intersection: the indicies are already sorted (as validated above)
+	ValidatorSet(sa1.AttestingIndices).ZigZagJoin(ValidatorSet(sa2.AttestingIndices), func(i ValidatorIndex) {
 		if f.Meta.Validator(i).IsSlashable(currentEpoch) {
 			f.Meta.SlashValidator(i, nil)
 			slashedAny = true

@@ -54,6 +54,12 @@ func (indexedAttestation *IndexedAttestation) Validate(m AttestationValidator) e
 		pubkeys = append(pubkeys, m.Pubkey(i))
 	}
 
+	// empty attestation
+	if len(pubkeys) <= 0 {
+		// TODO: check if the signature is default
+		return nil
+	}
+
 	if !bls.BlsVerify(
 		bls.BlsAggregatePubkeys(pubkeys),
 		ssz.HashTreeRoot(&indexedAttestation.Data, AttestationDataSSZ),

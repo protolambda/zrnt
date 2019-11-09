@@ -6,6 +6,7 @@ import (
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/meta"
 	. "github.com/protolambda/zrnt/eth2/util/hashing"
+	"github.com/protolambda/zrnt/eth2/util/shuffle"
 )
 
 type EpochProposerIndices [SLOTS_PER_EPOCH]ValidatorIndex
@@ -55,7 +56,9 @@ func (f *ProposingFeature) computeProposerIndex(indices []ValidatorIndex, seed R
 		h := Hash(buf)
 		for j := uint64(0); j < 32; j++ {
 			randomByte := h[j]
-			candidateIndex := indices[((i<<5)|j)%uint64(len(indices))]
+			absI := ValidatorIndex(((i<<5)|j)%uint64(len(indices)))
+			shuffledI := shuffle.PermuteIndex(absI, uint64(len(indices)), seed)
+			candidateIndex := indices[shuffledI]
 			effectiveBalance := f.Meta.EffectiveBalance(candidateIndex)
 			if effectiveBalance*0xff >= MAX_EFFECTIVE_BALANCE*Gwei(randomByte) {
 				return candidateIndex
@@ -76,7 +79,7 @@ func (f *ProposingFeature) LoadBeaconProposerIndices(epoch Epoch) (out *EpochPro
 	for i := Slot(0); i < SLOTS_PER_EPOCH; i++ {
 		buf := make([]byte, 32+8, 32+8)
 		copy(buf[0:32], seedSource[:])
-		binary.LittleEndian.PutUint64(buf[32:], uint64(startSlot))
+		binary.LittleEndian.PutUint64(buf[32:], uint64(startSlot + i))
 		seed := Hash(buf)
 		out[i] = f.computeProposerIndex(indices, seed)
 	}

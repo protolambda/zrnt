@@ -17,7 +17,7 @@ download-tests:
 	mkdir -p tests/spec/eth2.0-spec-tests
 	wget https://github.com/ethereum/eth2.0-spec-tests/releases/download/$(SPEC_VERSION)/general.tar.gz -O - | tar -xz -C tests/spec/eth2.0-spec-tests
 	wget https://github.com/ethereum/eth2.0-spec-tests/releases/download/$(SPEC_VERSION)/minimal.tar.gz -O - | tar -xz -C tests/spec/eth2.0-spec-tests
-	#wget https://github.com/ethereum/eth2.0-spec-tests/releases/download/$(SPEC_VERSION)/mainnet.tar.gz -O - | tar -xz -C tests/spec/eth2.0-spec-tests
+	wget https://github.com/ethereum/eth2.0-spec-tests/releases/download/$(SPEC_VERSION)/mainnet.tar.gz -O - | tar -xz -C tests/spec/eth2.0-spec-tests
 
 test: create-test-dir
 	gotestsum --junitfile $(TEST_OUT_DIR)/junit.xml -- -tags preset_minimal \

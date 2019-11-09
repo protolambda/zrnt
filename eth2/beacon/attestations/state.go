@@ -2,6 +2,7 @@ package attestations
 
 import (
 	. "github.com/protolambda/zrnt/eth2/core"
+	"github.com/protolambda/zssz"
 )
 
 type AttestationData struct {
@@ -15,6 +16,8 @@ type AttestationData struct {
 	Source Checkpoint
 	Target Checkpoint
 }
+
+var AttestationDataSSZ = zssz.GetSSZ((*AttestationData)(nil))
 
 type PendingAttestation struct {
 	AggregationBits CommitteeBits

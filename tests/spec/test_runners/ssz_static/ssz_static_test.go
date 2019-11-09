@@ -109,7 +109,6 @@ var objs = []*ObjData{
 	{TypeName: "Fork", Alloc: func() interface{} { return new(versioning.Fork) }},
 	{TypeName: "Eth1Data", Alloc: func() interface{} { return new(eth1.Eth1Data) }},
 	{TypeName: "AttestationData", Alloc: func() interface{} { return new(attestations.AttestationData) }},
-	{TypeName: "AttestationDataAndCustodyBit", Alloc: func() interface{} { return new(attestations.AttestationDataAndCustodyBit) }},
 	{TypeName: "IndexedAttestation", Alloc: func() interface{} { return new(attestations.IndexedAttestation) }},
 	{TypeName: "DepositData", Alloc: func() interface{} { return new(deposits.DepositData) }},
 	{TypeName: "BeaconBlockHeader", Alloc: func() interface{} { return new(header.BeaconBlockHeader) }},

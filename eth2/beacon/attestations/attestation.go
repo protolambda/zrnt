@@ -41,7 +41,6 @@ var AttestationSSZ = zssz.GetSSZ((*Attestation)(nil))
 type Attestation struct {
 	AggregationBits CommitteeBits
 	Data            AttestationData
-	CustodyBits     CommitteeBits
 	Signature       BLSSignature
 }
 
@@ -109,40 +108,23 @@ func (f *AttestationFeature) ProcessAttestation(attestation *Attestation) error 
 // Convert attestation to (almost) indexed-verifiable form
 func (attestation *Attestation) ConvertToIndexed(committee []ValidatorIndex) (*IndexedAttestation, error) {
 	bitLen := attestation.AggregationBits.BitLen()
-	if custodyBitLen := attestation.CustodyBits.BitLen(); bitLen != custodyBitLen {
-		return nil, fmt.Errorf("aggregation bits does not match custody size: %d <> %d", bitLen, custodyBitLen)
-	}
-
 	if uint64(len(committee)) != bitLen {
 		return nil, fmt.Errorf("committee size does not match bits size: %d <> %d", len(committee), bitLen)
 	}
 
-	bit1s := make([]ValidatorIndex, 0, len(committee))
-	bit0s := make([]ValidatorIndex, 0, len(committee))
+	participants := make([]ValidatorIndex, 0, len(committee))
 	for i := uint64(0); i < bitLen; i++ {
 		if attestation.AggregationBits.GetBit(i) {
-			if attestation.CustodyBits.GetBit(i) {
-				bit1s = append(bit1s, committee[i])
-			} else {
-				bit0s = append(bit0s, committee[i])
-			}
-		} else {
-			if attestation.CustodyBits.GetBit(i) {
-				return nil, fmt.Errorf("custody bits not a subset of aggregations bits, different at: %d", i)
-			}
+			participants = append(participants, committee[i])
 		}
 	}
-	sort.Slice(bit0s, func(i int, j int) bool {
-		return bit0s[i] < bit0s[j]
-	})
-	sort.Slice(bit1s, func(i int, j int) bool {
-		return bit1s[i] < bit1s[j]
+	sort.Slice(participants, func(i int, j int) bool {
+		return participants[i] < participants[j]
 	})
 
 	return &IndexedAttestation{
-		CustodyBit0Indices: bit0s,
-		CustodyBit1Indices: bit1s,
-		Data:               attestation.Data,
-		Signature:          attestation.Signature,
+		AttestingIndices: participants,
+		Data:             attestation.Data,
+		Signature:        attestation.Signature,
 	}, nil
 }

@@ -24,7 +24,7 @@ jobs:
 
       - restore_cache:
           keys:
-            - spec-tests-v0_9_0
+            - spec-tests-v0_9_1
 
       - run:
           name: Update spec tests cache
@@ -35,7 +35,7 @@ jobs:
           command: TEST_OUT_DIR=$TEST_RESULTS make test
 
       - save_cache:
-          key: spec-tests-v0_9_0
+          key: spec-tests-v0_9_1
           paths:
             - tests/spec/eth2.0-spec-tests
 

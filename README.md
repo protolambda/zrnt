@@ -8,7 +8,7 @@ The goal of this project is to have a Go version of the Python based spec,
 Think of: 
 - Realtime use in test-network monitoring, fast enough to verify full network activity.
 - A much higher fuzzing speed, to explore for new bugs.
-- Not affected nearly as much when scaling to mainnet, or a future 1024 shards.
+- Not affected nearly as much when scaling to mainnet.
 
 ## Structure of `eth2`
 

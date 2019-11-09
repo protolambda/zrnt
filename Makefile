@@ -1,6 +1,6 @@
 TEST_OUT_DIR ?= ./test_out
 
-.PHONY: clean create-test-dir test open-coverage download-tests
+.PHONY: clean create-test-dir test open-coverage download-tests clear-tests
 
 clean:
 	rm -rf ./test_out
@@ -8,7 +8,7 @@ clean:
 create-test-dir:
 	mkdir -p $(TEST_OUT_DIR)
 
-SPEC_VERSION ?= v0.8.4
+SPEC_VERSION ?= v0.9.0
 
 clear-tests:
 	rm -rf tests/spec/eth2.0-spec-tests

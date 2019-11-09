@@ -15,7 +15,6 @@ type RewardsAndPenaltiesFeature struct {
 		meta.RegistrySize
 		meta.BalanceDeltas
 		meta.AttestationDeltas
-		meta.CrosslinkDeltas
 	}
 }
 
@@ -25,6 +24,5 @@ func (f *RewardsAndPenaltiesFeature) ProcessEpochRewardsAndPenalties() {
 	}
 	sum := NewDeltas(f.Meta.ValidatorCount())
 	sum.Add(f.Meta.AttestationDeltas())
-	sum.Add(f.Meta.CrosslinkDeltas())
 	f.Meta.ApplyDeltas(sum)
 }

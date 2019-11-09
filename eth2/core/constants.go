@@ -2,7 +2,7 @@ package core
 
 const FAR_FUTURE_EPOCH = Epoch(^uint64(0))
 
-const BASE_REWARDS_PER_EPOCH = 5
+const BASE_REWARDS_PER_EPOCH = 4
 
 const DEPOSIT_CONTRACT_TREE_DEPTH = 32
 

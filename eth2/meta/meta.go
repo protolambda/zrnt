@@ -23,10 +23,6 @@ type AttestationDeltas interface {
 	AttestationDeltas() *Deltas
 }
 
-type CrosslinkDeltas interface {
-	CrosslinkDeltas() *Deltas
-}
-
 type RegistrySize interface {
 	IsValidIndex(index ValidatorIndex) bool
 	ValidatorCount() uint64
@@ -64,10 +60,6 @@ type AttesterStatuses interface {
 	GetAttesterStatuses() []AttesterStatus
 }
 
-type AttesterLoader interface {
-	LoadAttesterStatuses() AttesterStatuses
-}
-
 type SlashedIndices interface {
 	IsSlashed(i ValidatorIndex) bool
 	FilterUnslashed(indices []ValidatorIndex) []ValidatorIndex
@@ -78,10 +70,6 @@ type CompactCommittees interface {
 	EffectiveBalances
 	SlashedIndices
 	GetCompactCommitteesRoot(epoch Epoch) Root
-}
-
-type CompactCommitteesUpdate interface {
-	UpdateCompactCommitteesRoot(epoch Epoch)
 }
 
 type Staking interface {
@@ -153,7 +141,7 @@ type HistoryUpdate interface {
 
 type EpochSeed interface {
 	// Retrieve the seed for beacon proposer indices.
-	GetSeed(epoch Epoch) Root
+	GetSeed(epoch Epoch, domainType BLSDomainType) Root
 }
 
 type Proposers interface {
@@ -183,45 +171,12 @@ type ActiveIndices interface {
 	ComputeActiveIndexRoot(epoch Epoch) Root
 }
 
-type ActiveIndexRoots interface {
-	GetActiveIndexRoot(epoch Epoch) Root
-}
-
-type ActiveIndexRootsUpdate interface {
-	UpdateActiveIndexRoot(epoch Epoch)
-}
-
 type CommitteeCount interface {
-	// Amount of committees per epoch. Minimum is SLOTS_PER_EPOCH
-	GetCommitteeCount(epoch Epoch) uint64
+	GetCommitteeCountAtSlot(slot Slot) uint64
 }
 
-type CrosslinkTiming interface {
-	GetStartShard(epoch Epoch) Shard
-}
-
-type ShardRotation interface {
-	GetShardDelta(epoch Epoch) Shard
-	RotateStartShard()
-}
-
-type CrosslinkCommittees interface {
-	GetCrosslinkCommittee(epoch Epoch, shard Shard) []ValidatorIndex
-}
-
-type Crosslinks interface {
-	GetCurrentCrosslinkRoots() *[SHARD_COUNT]Root
-	GetPreviousCrosslinkRoots() *[SHARD_COUNT]Root
-	GetCurrentCrosslink(shard Shard) *Crosslink
-	GetPreviousCrosslink(shard Shard) *Crosslink
-}
-
-type EpochCrosslinkWinners interface {
-	GetWinningCrosslinkAndAttesters(shard Shard) (*Crosslink, ValidatorSet)
-}
-
-type WinningCrosslinks interface {
-	LoadEpochCrosslinkWinners(epoch Epoch) EpochCrosslinkWinners
+type BeaconCommittees interface {
+	GetBeaconCommittee(slot Slot, index CommitteeIndex) []ValidatorIndex
 }
 
 type Randao interface {

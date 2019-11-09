@@ -1,10 +1,7 @@
 package phase0
 
 import (
-	. "github.com/protolambda/zrnt/eth2/beacon/active"
 	. "github.com/protolambda/zrnt/eth2/beacon/attestations"
-	. "github.com/protolambda/zrnt/eth2/beacon/compact"
-	. "github.com/protolambda/zrnt/eth2/beacon/crosslinks"
 	. "github.com/protolambda/zrnt/eth2/beacon/deposits"
 	. "github.com/protolambda/zrnt/eth2/beacon/exits"
 	. "github.com/protolambda/zrnt/eth2/beacon/finality"
@@ -15,12 +12,10 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon/registry"
 	. "github.com/protolambda/zrnt/eth2/beacon/rewardpenalty"
 	. "github.com/protolambda/zrnt/eth2/beacon/seeding"
-	. "github.com/protolambda/zrnt/eth2/beacon/shardrot"
 	. "github.com/protolambda/zrnt/eth2/beacon/shuffling"
 	. "github.com/protolambda/zrnt/eth2/beacon/slashings"
 	. "github.com/protolambda/zrnt/eth2/beacon/slashings/attslash"
 	. "github.com/protolambda/zrnt/eth2/beacon/slashings/propslash"
-	. "github.com/protolambda/zrnt/eth2/beacon/transfers"
 	. "github.com/protolambda/zrnt/eth2/beacon/transition"
 )
 
@@ -29,31 +24,20 @@ type FullFeaturedState struct {
 	// All base features a state has
 	*BeaconState
 
-	ShardRotFeature
-	*StartShardStatus
-
 	ShufflingFeature
 	*ShufflingStatus
 
 	AttesterStatusFeature
 
-	CrosslinkingFeature
-
 	ProposingFeature
 	*ProposersData
 
-	// Data computation to serve light clients
-	ActiveRootsFeature       // roots of past active indices lists
-	CompactCommitteesFeature // roots of past crosslink committees, in compact form (minimal validator data)
-
 	// Rewarding process, optimized to use precomputed crosslink/shuffling/etc. data
-	CrosslinkDeltasFeature   // rewards/penalties computation for crosslinking
 	AttestationDeltasFeature // rewards/penalties computation for attestations
 
 	SeedFeature
 
 	JustificationFeature
-	CrosslinksFeature
 	RewardsAndPenaltiesFeature
 	RegistryUpdatesFeature
 	SlashingFeature
@@ -67,7 +51,6 @@ type FullFeaturedState struct {
 	AttestSlashFeature
 	PropSlashFeature
 	DepositFeature
-	TransferFeature
 	VoluntaryExitFeature
 
 	SlotProcessFeature
@@ -77,8 +60,6 @@ type FullFeaturedState struct {
 
 func (f *FullFeaturedState) LoadPrecomputedData() {
 	// TODO: could re-use some pre-computed data from older states, worth benchmarking
-	// TODO decide on some lookback time, or load it dynamically
-	f.StartShardStatus = f.ShardRotFeature.LoadStartShardStatus(f.CurrentEpoch() - 20)
 	f.ShufflingStatus = f.ShufflingFeature.LoadShufflingStatus()
 	f.ProposersData = f.LoadBeaconProposersData()
 }
@@ -106,20 +87,6 @@ func NewFullFeaturedState(state *BeaconState) *FullFeaturedState {
 	f.AttesterStatusFeature.State = &f.AttestationsState
 	f.AttesterStatusFeature.Meta = f
 
-	f.CrosslinkingFeature.Meta = f
-	f.CrosslinkingFeature.State = &f.AttestationsState
-
-	f.ShardRotFeature.Meta = f
-	f.ShardRotFeature.State = &f.ShardRotationState
-
-	f.ActiveRootsFeature.Meta = f
-	f.ActiveRootsFeature.State = &f.ActiveState
-
-	f.CompactCommitteesFeature.Meta = f
-	f.CompactCommitteesFeature.State = &f.CompactCommitteesState
-
-	f.CrosslinkDeltasFeature.Meta = f
-	f.CrosslinkDeltasFeature.State = &f.CrosslinksState
 	f.AttestationDeltasFeature.Meta = f
 
 	f.SeedFeature.Meta = f
@@ -128,8 +95,6 @@ func NewFullFeaturedState(state *BeaconState) *FullFeaturedState {
 	// TODO: disabled for now, need to implement "meta.TargetStaking"
 	f.JustificationFeature.Meta = f
 	f.JustificationFeature.State = &f.FinalityState
-	f.CrosslinksFeature.Meta = f
-	f.CrosslinksFeature.State = &f.CrosslinksState
 	f.RewardsAndPenaltiesFeature.Meta = f
 	f.RegistryUpdatesFeature.Meta = f
 	f.RegistryUpdatesFeature.State = &f.RegistryState
@@ -148,7 +113,6 @@ func NewFullFeaturedState(state *BeaconState) *FullFeaturedState {
 	f.AttestSlashFeature.Meta = f
 	f.PropSlashFeature.Meta = f
 	f.DepositFeature.Meta = f
-	f.TransferFeature.Meta = f
 	f.VoluntaryExitFeature.Meta = f
 
 	f.SlotProcessFeature.Meta = f

@@ -9,7 +9,6 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon/randao"
 	. "github.com/protolambda/zrnt/eth2/beacon/slashings/attslash"
 	. "github.com/protolambda/zrnt/eth2/beacon/slashings/propslash"
-	. "github.com/protolambda/zrnt/eth2/beacon/transfers"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/protolambda/zssz"
@@ -47,7 +46,6 @@ type BeaconBlockBody struct {
 	Attestations      Attestations
 	Deposits          Deposits
 	VoluntaryExits    VoluntaryExits
-	Transfers         Transfers
 }
 
 type BlockProcessFeature struct {
@@ -61,7 +59,6 @@ type BlockProcessFeature struct {
 		RandaoProcessor
 		AttesterSlashingProcessor
 		ProposerSlashingProcessor
-		TransferProcessor
 	}
 }
 
@@ -98,9 +95,6 @@ func (f *BlockProcessFeature) Process() error {
 		return err
 	}
 	if err := f.Meta.ProcessVoluntaryExits(body.VoluntaryExits); err != nil {
-		return err
-	}
-	if err := f.Meta.ProcessTransfers(body.Transfers); err != nil {
 		return err
 	}
 	return nil

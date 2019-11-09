@@ -6,7 +6,6 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon/exits"
 	. "github.com/protolambda/zrnt/eth2/beacon/slashings/attslash"
 	. "github.com/protolambda/zrnt/eth2/beacon/slashings/propslash"
-	. "github.com/protolambda/zrnt/eth2/beacon/transfers"
 	. "github.com/protolambda/zrnt/eth2/core"
 )
 
@@ -32,12 +31,6 @@ type Deposits []Deposit
 
 func (*Deposits) Limit() uint64 {
 	return MAX_DEPOSITS
-}
-
-type Transfers []Transfer
-
-func (*Transfers) Limit() uint64 {
-	return MAX_TRANSFERS
 }
 
 type VoluntaryExits []VoluntaryExit

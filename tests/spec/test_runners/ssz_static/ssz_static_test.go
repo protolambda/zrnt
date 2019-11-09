@@ -12,7 +12,6 @@ import (
 	"github.com/protolambda/zrnt/eth2/beacon/history"
 	"github.com/protolambda/zrnt/eth2/beacon/slashings/attslash"
 	"github.com/protolambda/zrnt/eth2/beacon/slashings/propslash"
-	"github.com/protolambda/zrnt/eth2/beacon/transfers"
 	"github.com/protolambda/zrnt/eth2/beacon/validator"
 	"github.com/protolambda/zrnt/eth2/beacon/versioning"
 	. "github.com/protolambda/zrnt/eth2/core"
@@ -108,7 +107,6 @@ type ObjData struct {
 
 var objs = []*ObjData{
 	{TypeName: "Fork", Alloc: func() interface{} { return new(versioning.Fork) }},
-	{TypeName: "Crosslink", Alloc: func() interface{} { return new(Crosslink) }},
 	{TypeName: "Eth1Data", Alloc: func() interface{} { return new(eth1.Eth1Data) }},
 	{TypeName: "AttestationData", Alloc: func() interface{} { return new(attestations.AttestationData) }},
 	{TypeName: "AttestationDataAndCustodyBit", Alloc: func() interface{} { return new(attestations.AttestationDataAndCustodyBit) }},
@@ -123,7 +121,6 @@ var objs = []*ObjData{
 	{TypeName: "Attestation", Alloc: func() interface{} { return new(attestations.Attestation) }},
 	{TypeName: "Deposit", Alloc: func() interface{} { return new(deposits.Deposit) }},
 	{TypeName: "VoluntaryExit", Alloc: func() interface{} { return new(exits.VoluntaryExit) }},
-	{TypeName: "Transfer", Alloc: func() interface{} { return new(transfers.Transfer) }},
 	{TypeName: "BeaconBlockBody", Alloc: func() interface{} { return new(phase0.BeaconBlockBody) }},
 	{TypeName: "BeaconBlock", Alloc: func() interface{} { return new(phase0.BeaconBlock) }},
 	{TypeName: "BeaconState", Alloc: func() interface{} { return new(phase0.BeaconState) }},

@@ -29,6 +29,12 @@ func (state *RandaoState) PrepareRandao(epoch Epoch) {
 	state.RandaoMixes[epoch%EPOCHS_PER_HISTORICAL_VECTOR] = state.GetRandomMix(epoch.Previous())
 }
 
+func (state *RandaoState) SeedRandao(seed Root) {
+	for i := Epoch(0); i < EPOCHS_PER_HISTORICAL_VECTOR; i++ {
+		state.RandaoMixes[i] = seed
+	}
+}
+
 var RandaoEpochSSZ = zssz.GetSSZ((*Epoch)(nil))
 
 type RandaoFeature struct {

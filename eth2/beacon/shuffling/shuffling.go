@@ -13,7 +13,6 @@ type ShufflingFeature struct {
 		meta.EpochSeed
 		meta.ActiveIndices
 		meta.CommitteeCount
-		meta.CrosslinkTiming
 	}
 }
 
@@ -24,18 +23,19 @@ type ShufflingStatus struct {
 	NextShuffling     *ShufflingEpoch
 }
 
-func (shs *ShufflingStatus) GetCrosslinkCommittee(epoch Epoch, shard Shard) []ValidatorIndex {
-	if shard >= SHARD_COUNT {
-		// sanity check for development, method should only used for previous and current epoch.
-		panic(fmt.Errorf("crosslink committee retrieval: out of range shard: %d", shard))
+// Return the beacon committee at slot for index.
+func (shs *ShufflingStatus) GetBeaconCommittee(slot Slot, index CommitteeIndex) []ValidatorIndex {
+	if index >= MAX_COMMITTEES_PER_SLOT {
+		panic(fmt.Errorf("crosslink committee retrieval: out of range committee index: %d", index))
 	}
 
+	epoch := slot.ToEpoch()
 	if epoch == shs.PreviousShuffling.Epoch {
-		return shs.PreviousShuffling.Committees[shard]
+		return shs.PreviousShuffling.Committees[slot % SLOTS_PER_EPOCH][index]
 	} else if epoch == shs.CurrentShuffling.Epoch {
-		return shs.CurrentShuffling.Committees[shard]
+		return shs.CurrentShuffling.Committees[slot % SLOTS_PER_EPOCH][index]
 	} else if epoch == shs.NextShuffling.Epoch {
-		return shs.NextShuffling.Committees[shard]
+		return shs.NextShuffling.Committees[slot % SLOTS_PER_EPOCH][index]
 	} else {
 		panic(fmt.Errorf("crosslink committee retrieval: out of range epoch: %d", epoch))
 	}
@@ -58,7 +58,7 @@ func (f *ShufflingFeature) LoadShufflingStatus() *ShufflingStatus {
 type ShufflingEpoch struct {
 	Epoch      Epoch
 	Shuffling  []ValidatorIndex              // the active validator indices, shuffled into their committee
-	Committees [SHARD_COUNT][]ValidatorIndex // slices of Shuffling, 1 per slot. Committee can be nil slice.
+	Committees [SLOTS_PER_EPOCH][MAX_COMMITTEES_PER_SLOT][]ValidatorIndex // slices of Shuffling, 1 per slot. Committee can be nil slice.
 }
 
 func (f *ShufflingFeature) LoadShufflingEpoch(epoch Epoch) *ShufflingEpoch {
@@ -73,26 +73,28 @@ func (f *ShufflingFeature) LoadShufflingEpoch(epoch Epoch) *ShufflingEpoch {
 		panic("could not compute shuffling for out of range epoch")
 	}
 
-	seed := f.Meta.GetSeed(epoch)
+	seed := f.Meta.GetSeed(epoch, DOMAIN_BEACON_ATTESTER)
 	activeIndices := f.Meta.GetActiveValidatorIndices(epoch)
 	shuffle.UnshuffleList(activeIndices, seed)
 	shep.Shuffling = activeIndices
 
 	validatorCount := uint64(len(activeIndices))
-	committeeCount := f.Meta.GetCommitteeCount(epoch)
-	if committeeCount > uint64(SHARD_COUNT) {
-		panic("too many committees")
+	committeesPerSlot := f.Meta.GetCommitteeCountAtSlot(epoch.GetStartSlot())
+	if committeesPerSlot > uint64(MAX_COMMITTEES_PER_SLOT) {
+		panic("too many committees per slot")
 	}
-	startShard := f.Meta.GetStartShard(epoch)
-	for i := uint64(0); i < committeeCount; i++ {
-		shard := (startShard + Shard(i)) % SHARD_COUNT
-		startOffset := (validatorCount * i) / committeeCount
-		endOffset := (validatorCount * (i + 1)) / committeeCount
-		if startOffset == endOffset {
-			panic("empty committee")
+	committeeCount := committeesPerSlot * uint64(SLOTS_PER_EPOCH)
+	for slot := uint64(0); slot < uint64(SLOTS_PER_EPOCH); slot++ {
+		for slotIndex := uint64(0); slotIndex < committeesPerSlot; slotIndex++ {
+			index := (slot * committeesPerSlot) + slotIndex
+			startOffset := (validatorCount * index) / committeeCount
+			endOffset := (validatorCount * (index + 1)) / committeeCount
+			if startOffset == endOffset {
+				panic("empty committee")
+			}
+			committee := shep.Shuffling[startOffset:endOffset]
+			shep.Committees[slot][slotIndex] = committee
 		}
-		committee := shep.Shuffling[startOffset:endOffset]
-		shep.Committees[shard] = committee
 	}
 	return shep
 }

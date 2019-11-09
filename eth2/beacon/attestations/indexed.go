@@ -15,7 +15,7 @@ var AttestationDataAndCustodyBitSSZ = zssz.GetSSZ((*AttestationDataAndCustodyBit
 
 type AttestationDataAndCustodyBit struct {
 	Data       AttestationData
-	CustodyBit bool // Challengeable bit (SSZ-bool, 1 byte) for the custody of crosslink data
+	CustodyBit bool // Challengeable bit (SSZ-bool, 1 byte) for the custody of shard data
 }
 
 type CommitteeIndices []ValidatorIndex
@@ -107,7 +107,7 @@ func (indexedAttestation *IndexedAttestation) Validate(m AttestationValidator) e
 
 	if bls.BlsVerifyMultiple(pubkeys, msgs,
 		indexedAttestation.Signature,
-		m.GetDomain(DOMAIN_ATTESTATION, indexedAttestation.Data.Target.Epoch),
+		m.GetDomain(DOMAIN_BEACON_ATTESTER, indexedAttestation.Data.Target.Epoch),
 	) {
 		return nil
 	}

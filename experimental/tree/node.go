@@ -1,7 +1,17 @@
 package tree
 
-// A link is called to rebind a value
-type Link func(v Node)
+// A link is called to rebind a value, and retrieve the new root node.
+type Link func(v Node) Node
+
+func Identity(v Node) Node {
+	return v
+}
+
+func Compose(inner Link, outer Link) Link {
+	return func(v Node) Node {
+		return outer(inner(v))
+	}
+}
 
 // TODO: refactor these to use generalized indices as tree position.
 
@@ -24,20 +34,10 @@ type NodeInteraction interface {
 }
 
 type Node interface {
-	ComputeRoot(h HashFn) Root
-}
-
-type RebindableNode interface {
-	Node
-	Bind(bindingLink Link)
+	MerkleRoot(h HashFn) Root
 }
 
 type ComplexNode interface {
 	Node
-	NodeInteraction
-}
-
-type ComplexRebindableNode interface {
-	RebindableNode
 	NodeInteraction
 }

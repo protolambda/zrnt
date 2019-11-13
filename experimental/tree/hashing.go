@@ -11,7 +11,7 @@ func (h *HashFn) MerkleizeBytes(b []byte) Root {
 	return Root{}
 }
 
-func (s *Root) ComputeRoot(h HashFn) Root {
+func (s *Root) MerkleRoot(h HashFn) Root {
 	if s == nil {
 		return Root{}
 	}

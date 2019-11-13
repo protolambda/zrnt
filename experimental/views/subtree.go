@@ -1,35 +1,32 @@
 package views
 
-import . "github.com/protolambda/zrnt/experimental/tree"
+import (
+	"fmt"
+	. "github.com/protolambda/zrnt/experimental/tree"
+)
 
 type SubtreeView struct {
-	ComplexNode
-	Link
+	Backing ComplexNode
 	depth uint8
-}
-
-func (sv *SubtreeView) Bind(bindingLink Link) {
-	sv.Link = bindingLink
-}
-
-func (sv *SubtreeView) RebindInner(v Node) {
-	// the view keeps track of the latest node, but proxies the rebind up without stepping in-between.
-	sv.ComplexNode = v.(ComplexNode)
-
-	if sv.Link == nil {
-		// If nil, the view is maintaining the latest root binding
-		return
-	}
-	sv.Link(v)
 }
 
 // Result will be nil if an error occurred.
 func (sv *SubtreeView) Get(i uint64) (Node, error) {
-	return sv.Getter(i, sv.depth)
+	return sv.Backing.Getter(i, sv.depth)
 }
 
 // Result will be nil if an error occurred.
-func (sv *SubtreeView) Set(i uint64) (Link, error) {
-	return sv.Setter(i, sv.depth)
+func (sv *SubtreeView) Set(i uint64, node Node) error {
+	s, err := sv.Backing.Setter(i, sv.depth)
+	if err != nil {
+		return err
+	}
+	next := s(node)
+	if nextBacking, ok := next.(ComplexNode); ok {
+		sv.Backing = nextBacking
+		return nil
+	} else {
+		return fmt.Errorf("new value %v is not a ComplexNode to update the view backing with", next)
+	}
 }
 

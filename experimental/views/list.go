@@ -63,23 +63,23 @@ func NewListView(backing ComplexRebindableNode, link Link, limit uint64) *ListVi
 
 // TODO: append/pop modify both contents as list-length: batching the changes would be good.
 
-func (cv *ListView) Append(v Node) error {
-	ll, err := cv.Length()
+func (lv *ListView) Append(v Node) error {
+	ll, err := lv.Length()
 	if err != nil {
 		return err
 	}
-	if ll >= cv.limit {
-		return fmt.Errorf("list length is %d and appending would exceed the list limit %d", ll, cv.limit)
+	if ll >= lv.limit {
+		return fmt.Errorf("list length is %d and appending would exceed the list limit %d", ll, lv.limit)
 	}
 	// Appending is done by setting the node at the index list-length. And expanding where necessary as it is being set.
-	setLast, err := cv.ExpandInto(ll, cv.depth)
+	setLast, err := lv.ExpandInto(ll, lv.depth)
 	if err != nil {
 		return fmt.Errorf("failed to get a setter to append an item")
 	}
 	// Append the item by setting the newly allocated last item to it.
 	setLast(v)
 	// And update the list length
-	setLength, err := cv.SubtreeView.Setter(1, 1)
+	setLength, err := lv.SubtreeView.Setter(1, 1)
 	if err != nil {
 		return err
 	}
@@ -87,8 +87,8 @@ func (cv *ListView) Append(v Node) error {
 	return nil
 }
 
-func (cv *ListView) Pop() error {
-	ll, err := cv.Length()
+func (lv *ListView) Pop() error {
+	ll, err := lv.Length()
 	if err != nil {
 		return err
 	}
@@ -96,14 +96,14 @@ func (cv *ListView) Pop() error {
 		return fmt.Errorf("list length is 0 and no item can be popped")
 	}
 	// Popping is done by setting the node at the index list-length. And expanding where necessary as it is being set.
-	setLast, err := cv.ExpandInto(ll, cv.depth)
+	setLast, err := lv.ExpandInto(ll, lv.depth)
 	if err != nil {
 		return fmt.Errorf("failed to get a setter to append an item")
 	}
 	// Pop the item by setting it to the zero hash
 	setLast(&ZeroHashes[0])
 	// And update the list length
-	setLength, err := cv.SubtreeView.Setter(1, 1)
+	setLength, err := lv.SubtreeView.Setter(1, 1)
 	if err != nil {
 		return err
 	}
@@ -112,27 +112,27 @@ func (cv *ListView) Pop() error {
 }
 
 // Use .SubtreeView.Get(i) to work with the tree and get explicit tree errors instead of nil result.
-func (cv *ListView) Get(i uint64) Node {
-	ll, err := cv.Length()
+func (lv *ListView) Get(i uint64) Node {
+	ll, err := lv.Length()
 	if err != nil || i >= ll {
 		return nil
 	}
-	v, _ := cv.SubtreeView.Get(i)
+	v, _ := lv.SubtreeView.Get(i)
 	return v
 }
 
 // Use .SubtreeView.Set(i) to work with the tree and get explicit tree errors instead of nil result.
-func (cv *ListView) Set(i uint64) Link {
-	ll, err := cv.Length()
+func (lv *ListView) Set(i uint64) Link {
+	ll, err := lv.Length()
 	if err != nil || i >= ll {
 		return nil
 	}
-	v, _ := cv.SubtreeView.Set(i)
+	v, _ := lv.SubtreeView.Set(i)
 	return v
 }
 
-func (cv *ListView) Length() (uint64, error) {
-	v, err := cv.SubtreeView.Getter(1, 1)
+func (lv *ListView) Length() (uint64, error) {
+	v, err := lv.SubtreeView.Getter(1, 1)
 	if err != nil {
 		return 0, err
 	}
@@ -140,7 +140,7 @@ func (cv *ListView) Length() (uint64, error) {
 	if !ok {
 		return 0, fmt.Errorf("cannot read node %v as list-length", v)
 	}
-	if uint64(ll) > cv.limit {
+	if uint64(ll) > lv.limit {
 		return 0, fmt.Errorf("cannot read list length, length appears to be bigger than limit allows")
 	}
 	return uint64(ll), nil

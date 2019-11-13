@@ -9,13 +9,22 @@ import (
 )
 
 // Experimental code! Everything a tree and cached by default.
-// Also spaghetti, iterating on the idea/approach first, then refactoring/polishing later.
-
-// Example usage:
 //  - anything can be a node
-//  - commits are wrapped with navigation to fetch getter/setter pairs of containers.
+//  - commits are wrapped with navigation to fetch getters/setters
 //  - commits can be made read-only
-//  - modifications can be batched
+//  - modifications in a subtree can be batched: do not rebind each all the way up to the root of the tree
+//  - views can be injected in-between commits
+//     - views can be typed
+//     - views are not copied, they proxy rebinds up, and track the latest binding.
+//        - views can be used as ways to pass the tree as regular mutable object
+//  - Vector/List/Container views supported. Basic types do not need a view: they are immutable and a node by default (just define a ComputeRoot() to convert it into 32 bytes).
+//  - views can be overlayed on existing trees
+//    - overlay on incomplete tree == partial
+//  - Views to be implemented still:
+//     - Bitvector
+//     - Bitlist
+//     - Union
+//     - Basic-lists
 
 type Slot uint64
 

@@ -1,6 +1,9 @@
 package views
 
-import . "github.com/protolambda/zrnt/experimental/tree"
+import (
+	"fmt"
+	. "github.com/protolambda/zrnt/experimental/tree"
+)
 
 type ContainerView struct {
 	SubtreeView
@@ -15,7 +18,7 @@ func Container(nodes ...Node) (out *ContainerView) {
 	out = &ContainerView{
 		SubtreeView: SubtreeView{
 			Backing: inner,
-			depth: depth,
+			depth:   depth,
 		},
 		fieldCount: elementCount,
 	}
@@ -49,7 +52,7 @@ func (cv *ContainerView) Get(i uint64) Node {
 // Use .SubtreeView.Set(i, v) to work with the tree and bypass typing.
 func (cv *ContainerView) Set(i uint64, node Node) error {
 	if i >= cv.fieldCount {
-		return nil
+		return fmt.Errorf("cannot set item at field index %d, container only has %d fields", i, cv.fieldCount)
 	}
 	return cv.SubtreeView.Set(i, node)
 }

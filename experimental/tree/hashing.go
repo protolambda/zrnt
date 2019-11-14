@@ -2,21 +2,7 @@ package tree
 
 import "github.com/minio/sha256-simd"
 
-type Root [32]byte
-
 type HashFn func(a Root, b Root) Root
-
-func (h *HashFn) MerkleizeBytes(b []byte) Root {
-	// TODO
-	return Root{}
-}
-
-func (s *Root) MerkleRoot(h HashFn) Root {
-	if s == nil {
-		return Root{}
-	}
-	return *s
-}
 
 func sha256Combi(a Root, b Root) Root {
 	v := [64]byte{}

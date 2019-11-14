@@ -83,7 +83,7 @@ func (c *Commit) ExpandInplaceTo(nodes []Node, depth uint8) {
 			c.Right = &ZeroHashes[0]
 		}
 	} else {
-		pivot := uint64(1) << depth
+		pivot := uint64(1) << (depth - 1)
 		c.Left = &Commit{
 			Value:    Root{},
 			computed: false,
@@ -118,24 +118,16 @@ func (c *Commit) Getter(target uint64, depth uint8) (Node, error) {
 			return c.Right, nil
 		}
 	}
-	if pivot := uint64(1) << depth; target < pivot {
+	if pivot := uint64(1) << (depth - 1); target < pivot {
 		if c.Left == nil {
 			return nil, fmt.Errorf("cannot find node at target %v in depth %v: no left node", target, depth)
 		}
-		if left, ok := c.Left.(GetterInteraction); ok {
-			return left.Getter(target, depth-1)
-		} else {
-			return nil, fmt.Errorf("cannot find node at target %v in depth %v: left node has no GetterInteraction", target, depth)
-		}
+		return c.Left.Getter(target, depth-1)
 	} else {
 		if c.Right == nil {
 			return nil, fmt.Errorf("cannot find node at target %v in depth %v: no right node", target, depth)
 		}
-		if right, ok := c.Right.(GetterInteraction); ok {
-			return right.Getter(target&^pivot, depth-1)
-		} else {
-			return nil, fmt.Errorf("cannot find node at target %v in depth %v: right node has no GetterInteraction", target, depth)
-		}
+		return c.Right.Getter(target&^pivot, depth-1)
 	}
 }
 
@@ -151,40 +143,22 @@ func (c *Commit) ExpandInto(target uint64, depth uint8) (Link, error) {
 			return c.RebindRight, nil
 		}
 	}
-	if pivot := uint64(1) << depth; target < pivot {
+	if pivot := uint64(1) << (depth - 1); target < pivot {
 		if c.Left == nil {
 			return nil, fmt.Errorf("cannot find node at target %v in depth %v: no left node", target, depth)
 		}
-		if left, ok := c.Left.(ExpandIntoInteraction); ok {
-			return left.ExpandInto(target, depth-1)
+		if inner, err := c.Left.ExpandInto(target, depth-1); err != nil {
+			return nil, err
 		} else {
-			startC := &Commit{
-				Left:     &ZeroHashes[depth-2],
-				Right:    &ZeroHashes[depth-2],
-			}
-			// Get the setter, recurse into the new node
-			inner, err := startC.ExpandInto(target, depth-1)
-			if err != nil {
-				return nil, err
-			}
 			return Compose(inner, c.RebindLeft), nil
 		}
 	} else {
 		if c.Right == nil {
 			return nil, fmt.Errorf("cannot find node at target %v in depth %v: no right node", target, depth)
 		}
-		if right, ok := c.Right.(ExpandIntoInteraction); ok {
-			return right.ExpandInto(target&^pivot, depth-1)
+		if inner, err := c.Right.ExpandInto(target&^pivot, depth-1); err != nil {
+			return nil, err
 		} else {
-			startC := &Commit{
-				Left:  &ZeroHashes[depth-1],
-				Right: &ZeroHashes[depth-1],
-			}
-			// Get the setter, recurse into the new node
-			inner, err := startC.ExpandInto(target&^pivot, depth-1)
-			if err != nil {
-				return nil, err
-			}
 			return Compose(inner, c.RebindRight), nil
 		}
 	}
@@ -202,31 +176,23 @@ func (c *Commit) Setter(target uint64, depth uint8) (Link, error) {
 			return c.RebindRight, nil
 		}
 	}
-	if pivot := uint64(1) << depth; target < pivot {
+	if pivot := uint64(1) << (depth - 1); target < pivot {
 		if c.Left == nil {
 			return nil, fmt.Errorf("cannot find node at target %v in depth %v: no left node", target, depth)
 		}
-		if left, ok := c.Left.(SetterInteraction); ok {
-			if inner, err := left.Setter(target, depth-1); err != nil {
-				return nil, err
-			} else {
-				return Compose(inner, c.RebindLeft), nil
-			}
+		if inner, err := c.Left.Setter(target, depth-1); err != nil {
+			return nil, err
 		} else {
-			return nil, fmt.Errorf("cannot find node at target %v in depth %v: left node has no SetterInteraction", target, depth)
+			return Compose(inner, c.RebindLeft), nil
 		}
 	} else {
 		if c.Right == nil {
 			return nil, fmt.Errorf("cannot find node at target %v in depth %v: no right node", target, depth)
 		}
-		if right, ok := c.Right.(SetterInteraction); ok {
-			if inner, err := right.Setter(target&^pivot, depth-1); err != nil {
-				return nil, err
-			} else {
-				return Compose(inner, c.RebindRight), nil
-			}
+		if inner, err := c.Right.Setter(target&^pivot, depth-1); err != nil {
+			return nil, err
 		} else {
-			return nil, fmt.Errorf("cannot find node at target %v in depth %v: right node has no SetterInteraction", target, depth)
+			return Compose(inner, c.RebindRight), nil
 		}
 	}
 }

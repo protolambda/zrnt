@@ -13,31 +13,19 @@ func Compose(inner Link, outer Link) Link {
 	}
 }
 
-// TODO: refactor these to use generalized indices as tree position.
-
-type GetterInteraction interface {
-	Getter(target uint64, depth uint8) (Node, error)
-}
-
-type SetterInteraction interface {
-	Setter(target uint64, depth uint8) (Link, error)
-}
-
-type ExpandIntoInteraction interface {
-	ExpandInto(target uint64, depth uint8) (Link, error)
-}
-
-type NodeInteraction interface {
-	GetterInteraction
-	SetterInteraction
-	ExpandIntoInteraction
-}
-
 type Node interface {
+	// TODO: refactor these to use generalized indices as tree position.
+	Getter(target uint64, depth uint8) (Node, error)
+	Setter(target uint64, depth uint8) (Link, error)
+	ExpandInto(target uint64, depth uint8) (Link, error)
 	MerkleRoot(h HashFn) Root
 }
 
-type ComplexNode interface {
-	Node
-	NodeInteraction
+type View interface {
+	Backing() Node
+}
+
+type TypeDef interface {
+	DefaultNode() Node
+	ViewFromBacking(node Node) View
 }

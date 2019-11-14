@@ -81,14 +81,39 @@ func main() {
 	fmt.Println(err)
 	fmt.Printf("%x\n", b.ViewRoot(Hash))
 
-	body := b.Body()
-	fmt.Printf("body: %x\n", body.ViewRoot(Hash))
-	err = body.Set(0, Uint64View(1))
+	fmt.Println("getting body A...")
+	bodyA := b.Body()
+	fmt.Printf("bodyA: %x\n", bodyA.ViewRoot(Hash))
+
+	fmt.Println("changing body A...")
+	err = bodyA.Set(0, Uint64View(1))
 	fmt.Println(err)
 	fmt.Printf("block: %x\n", b.ViewRoot(Hash))
-	fmt.Printf("body: %x\n", body.ViewRoot(Hash))
-	err = b.Set(2, body)
+	fmt.Printf("bodyA: %x\n", bodyA.ViewRoot(Hash))
+
+
+	fmt.Println("getting body B...")
+	bodyB := b.Body()
+	fmt.Printf("bodyB: %x\n", bodyB.ViewRoot(Hash))
+
+	fmt.Println("changing body B...")
+	err = bodyB.Set(0, Uint64View(2))
 	fmt.Println(err)
 	fmt.Printf("block: %x\n", b.ViewRoot(Hash))
-	fmt.Printf("body: %x\n", body.ViewRoot(Hash))
+	fmt.Printf("bodyA: %x\n", bodyA.ViewRoot(Hash))
+	fmt.Printf("bodyB: %x\n", bodyB.ViewRoot(Hash))
+
+	fmt.Println("updating block with body A...")
+	err = b.Set(2, bodyA)
+	fmt.Println(err)
+	fmt.Printf("block: %x\n", b.ViewRoot(Hash))
+	fmt.Printf("bodyA: %x\n", bodyA.ViewRoot(Hash))
+	fmt.Printf("bodyB: %x\n", bodyB.ViewRoot(Hash))
+
+	fmt.Println("updating block with body B...")
+	err = b.Set(2, bodyB)
+	fmt.Println(err)
+	fmt.Printf("block: %x\n", b.ViewRoot(Hash))
+	fmt.Printf("bodyA: %x\n", bodyA.ViewRoot(Hash))
+	fmt.Printf("bodyB: %x\n", bodyB.ViewRoot(Hash))
 }

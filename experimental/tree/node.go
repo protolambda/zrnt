@@ -36,5 +36,6 @@ type SubView interface {
 
 type BasicTypeDef interface {
 	TypeDef
+	ByteLength() uint64
 	SubViewFromBacking(node *Root, i uint8) SubView
 }

@@ -55,7 +55,7 @@ func (cv *BitVectorView) Get(i uint64) (BoolView, error) {
 	if !ok {
 		return false, fmt.Errorf("bitvector bottom node is not a root, cannot get bit from it at bit index %d", i)
 	}
-	return BoolType.SubViewFromBacking(r, uint8(i)).(BoolView), nil
+	return BoolType.BoolViewFromBitfieldBacking(r, uint8(i)), nil
 }
 
 // Use .SubtreeView.Set(i, v) to work with the tree and bypass typing.
@@ -71,5 +71,5 @@ func (cv *BitVectorView) Set(i uint64, view BoolView) error {
 	if !ok {
 		return fmt.Errorf("bitvector bottom node is not a root, cannot set bit at bit index %d", i)
 	}
-	return cv.SubtreeView.Set(i, view.BackingFromBase(r, uint8(i)))
+	return cv.SubtreeView.Set(i, view.BackingFromBitfieldBase(r, uint8(i)))
 }

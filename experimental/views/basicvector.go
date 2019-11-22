@@ -6,8 +6,8 @@ import (
 )
 
 type BasicVectorType struct {
-	Length uint64
-	ElementType BasicType
+	Length      uint64
+	ElementType BasicTypeDef
 }
 
 func (cd *BasicVectorType) DefaultNode() Node {

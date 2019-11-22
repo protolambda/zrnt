@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/core"
 	. "github.com/protolambda/zrnt/experimental/tree"
 	. "github.com/protolambda/zrnt/experimental/views"
 )
@@ -19,7 +18,6 @@ import (
 //  - views can be overlaid on existing trees
 //    - overlay on incomplete tree == partial
 //  - Views to be implemented still:
-//     - Boolean
 //     - Bitvector
 //     - Bitlist
 //     - Union
@@ -42,8 +40,6 @@ var BlockDef = &ContainerType{
 
 type Block struct {
 	*ContainerView
-	// Not included in default hash-tree-root
-	Signature core.BLSSignature
 }
 
 func NewBlock() (b *Block) {

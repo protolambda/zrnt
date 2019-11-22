@@ -66,3 +66,29 @@ func (v Uint64View) Backing() Node {
 	binary.LittleEndian.PutUint64(out[:8], uint64(v))
 	return out
 }
+
+type BoolType struct {}
+
+func (cd BoolType) DefaultNode() Node {
+	return &ZeroHashes[0]
+}
+
+func (cd BoolType) ViewFromBacking(node Node) View {
+	if *node.(*Root) == (Root{}) {
+		return BoolView(false)
+	} else {
+		return BoolView(true)
+	}
+}
+
+type BoolView bool
+
+var trueRoot = &Root{1}
+
+func (v BoolView) Backing() Node {
+	if v {
+		return trueRoot
+	} else {
+		return &ZeroHashes[0]
+	}
+}

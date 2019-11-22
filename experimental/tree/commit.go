@@ -69,6 +69,25 @@ func (c *Commit) Expand() Node {
 	return next
 }
 
+// Unsafe! Modifies L and R, without triggering a rebind in the parent.
+// Fills the subtree with the given bottom-node, without actually duplicating any storage.
+// Similar to zero-hashes: L == R == H(L1, L2) == H(R1, R2)
+func (c *Commit) ExpandInplaceDepth(bottom Node, depth uint8) {
+	c.computed = false
+	if depth == 0 {
+		panic("invalid usage")
+	}
+	if depth == 1 {
+		c.Left = bottom
+		c.Right = bottom
+	} else {
+		step := &Commit{}
+		step.ExpandInplaceDepth(bottom, depth-1)
+		c.Left = step
+		c.Right = step
+	}
+}
+
 // Unsafe! Modifies L and R, without triggering a rebind in the parent
 func (c *Commit) ExpandInplaceTo(nodes []Node, depth uint8) {
 	c.computed = false
@@ -108,6 +127,9 @@ func (c *Commit) ExpandInplaceTo(nodes []Node, depth uint8) {
 
 func (c *Commit) Getter(target uint64, depth uint8) (Node, error) {
 	if depth == 0 {
+		if target != 0 {
+			return nil, fmt.Errorf("root depth 0 only has a single node at target 0, cannot Get %d", target)
+		}
 		return c, nil
 	}
 	if depth == 1 {
@@ -117,6 +139,7 @@ func (c *Commit) Getter(target uint64, depth uint8) (Node, error) {
 		if target == 1 {
 			return c.Right, nil
 		}
+		return nil, fmt.Errorf("depth 1 only has two nodes at target 0 and 1, cannot Get %d", target)
 	}
 	if pivot := uint64(1) << (depth - 1); target < pivot {
 		if c.Left == nil {
@@ -133,6 +156,9 @@ func (c *Commit) Getter(target uint64, depth uint8) (Node, error) {
 
 func (c *Commit) ExpandInto(target uint64, depth uint8) (Link, error) {
 	if depth == 0 {
+		if target != 0 {
+			return nil, fmt.Errorf("root depth 0 only has a single node at target 0, cannot ExpandInto %d", target)
+		}
 		return Identity, nil
 	}
 	if depth == 1 {
@@ -142,6 +168,7 @@ func (c *Commit) ExpandInto(target uint64, depth uint8) (Link, error) {
 		if target == 1 {
 			return c.RebindRight, nil
 		}
+		return nil, fmt.Errorf("depth 1 only has two nodes at target 0 and 1, cannot ExpandInto %d", target)
 	}
 	if pivot := uint64(1) << (depth - 1); target < pivot {
 		if c.Left == nil {
@@ -166,6 +193,9 @@ func (c *Commit) ExpandInto(target uint64, depth uint8) (Link, error) {
 
 func (c *Commit) Setter(target uint64, depth uint8) (Link, error) {
 	if depth == 0 {
+		if target != 0 {
+			return nil, fmt.Errorf("root depth 0 only has a single node at target 0, cannot Set %d", target)
+		}
 		return Identity, nil
 	}
 	if depth == 1 {
@@ -175,6 +205,7 @@ func (c *Commit) Setter(target uint64, depth uint8) (Link, error) {
 		if target == 1 {
 			return c.RebindRight, nil
 		}
+		return nil, fmt.Errorf("depth 1 only has two nodes at target 0 and 1, cannot Set %d", target)
 	}
 	if pivot := uint64(1) << (depth - 1); target < pivot {
 		if c.Left == nil {

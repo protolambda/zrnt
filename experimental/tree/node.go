@@ -29,3 +29,12 @@ type TypeDef interface {
 	DefaultNode() Node
 	ViewFromBacking(node Node) View
 }
+
+type SubView interface {
+	BackingFromBase(base *Root, i uint8) *Root
+}
+
+type BasicTypeDef interface {
+	TypeDef
+	SubViewFromBacking(node *Root, i uint8) SubView
+}

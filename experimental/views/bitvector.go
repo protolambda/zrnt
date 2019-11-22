@@ -43,8 +43,8 @@ func (cv *BitVectorView) ViewRoot(h HashFn) Root {
 }
 
 // Use .SubtreeView.Get(i) to work with the tree and bypass typing.
-func (cv *BitVectorView) Get(i uint64) (bool, error) {
-	if i >= cv.BitVectorType.BitLength {
+func (cv *BitVectorView) Get(i uint64) (BoolView, error) {
+	if i >= cv.BitLength {
 		return false, fmt.Errorf("bitvector has bit length %d, cannot get bit index %d", cv.BitLength, i)
 	}
 	v, err := cv.SubtreeView.Get(i >> 8)
@@ -55,12 +55,12 @@ func (cv *BitVectorView) Get(i uint64) (bool, error) {
 	if !ok {
 		return false, fmt.Errorf("bitvector bottom node is not a root, cannot get bit from it at bit index %d", i)
 	}
-	return (r[(i & 0xff) >> 3] >> (i & 7)) & 1 == 1, nil
+	return BoolType.SubViewFromBacking(r, uint8(i)).(BoolView), nil
 }
 
 // Use .SubtreeView.Set(i, v) to work with the tree and bypass typing.
-func (cv *BitVectorView) Set(i uint64, value bool) error {
-	if i >= cv.BitVectorType.BitLength {
+func (cv *BitVectorView) Set(i uint64, view BoolView) error {
+	if i >= cv.BitLength {
 		return fmt.Errorf("cannot set item at element index %d, bitvector only has %d bits", i, cv.BitLength)
 	}
 	v, err := cv.SubtreeView.Get(i >> 8)
@@ -71,12 +71,5 @@ func (cv *BitVectorView) Set(i uint64, value bool) error {
 	if !ok {
 		return fmt.Errorf("bitvector bottom node is not a root, cannot set bit at bit index %d", i)
 	}
-	// copy the old root, do not mutate the immutable.
-	newRoot := *r
-	if value {
-		newRoot[(i & 0xff) >> 3] |= 1 << (i & 7)
-	} else {
-		newRoot[(i & 0xff) >> 3] &^= 1 << (i & 7)
-	}
-	return cv.SubtreeView.Set(i, &newRoot)
+	return cv.SubtreeView.Set(i, view.BackingFromBase(r, uint8(i)))
 }

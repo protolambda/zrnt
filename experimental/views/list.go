@@ -36,6 +36,10 @@ type ListView struct {
 	*ListType
 }
 
+func (lv *ListView) ViewRoot(h HashFn) Root {
+	return lv.BackingNode.MerkleRoot(h)
+}
+
 func (lv *ListView) Append(v Node) error {
 	ll, err := lv.Length()
 	if err != nil {
@@ -44,7 +48,7 @@ func (lv *ListView) Append(v Node) error {
 	if ll >= lv.Limit {
 		return fmt.Errorf("list length is %d and appending would exceed the list limit %d", ll, lv.Limit)
 	}
-	// Appending is done by setting the node at the index list-length. And expanding where necessary as it is being set.
+	// Appending is done by setting the node at the index list_length. And expanding where necessary as it is being set.
 	setLast, err := lv.SubtreeView.BackingNode.ExpandInto(ll, lv.depth)
 	if err != nil {
 		return fmt.Errorf("failed to get a setter to append an item")
@@ -71,8 +75,8 @@ func (lv *ListView) Pop() error {
 	if ll == 0 {
 		return fmt.Errorf("list length is 0 and no item can be popped")
 	}
-	// Popping is done by setting the node at the index list-length. And expanding where necessary as it is being set.
-	setLast, err := lv.SubtreeView.BackingNode.ExpandInto(ll, lv.depth)
+	// Popping is done by setting the node at the index list_length - 1. And expanding where necessary as it is being set.
+	setLast, err := lv.SubtreeView.BackingNode.ExpandInto(ll-1, lv.depth)
 	if err != nil {
 		return fmt.Errorf("failed to get a setter to pop an item")
 	}
@@ -90,27 +94,30 @@ func (lv *ListView) Pop() error {
 	return nil
 }
 
-// Use .SubtreeView.Get(i) to work with the tree and get explicit tree errors instead of nil result.
-func (lv *ListView) Get(i uint64) Node {
-	ll, err := lv.Length()
-	if err != nil || i >= ll {
-		return nil
-	}
-	v, _ := lv.SubtreeView.Get(i)
-	return v
-}
-
-// Use .SubtreeView.Set(i) to work with the tree and get explicit tree errors instead of nil result.
-func (lv *ListView) Set(i uint64, node Node) error {
+func (lv *ListView) CheckIndex(i uint64) error {
 	ll, err := lv.Length()
 	if err != nil {
 		return err
 	}
 	if i >= ll {
-		return fmt.Errorf("cannot set item at element index %d, list only has %d elements", i, ll)
+		return fmt.Errorf("cannot handle item at element index %d, list only has %d elements", i, ll)
 	}
 	if i >= lv.Limit {
-		return fmt.Errorf("list has a an invalid length of %d and cannot set an element at index %d because of a limit of %d elements", ll, i, lv.Limit)
+		return fmt.Errorf("list has a an invalid length of %d and cannot handle an element at index %d because of a limit of %d elements", ll, i, lv.Limit)
+	}
+	return nil
+}
+
+func (lv *ListView) Get(i uint64) (Node, error) {
+	if err := lv.CheckIndex(i); err != nil {
+		return nil, err
+	}
+	return lv.SubtreeView.Get(i)
+}
+
+func (lv *ListView) Set(i uint64, node Node) error {
+	if err := lv.CheckIndex(i); err != nil {
+		return err
 	}
 	return lv.SubtreeView.Set(i, node)
 }

@@ -9,12 +9,10 @@ type SubtreeView struct {
 	depth       uint8
 }
 
-// Result will be nil if an error occurred.
 func (sv *SubtreeView) Get(i uint64) (Node, error) {
 	return sv.BackingNode.Getter(i, sv.depth)
 }
 
-// Result will be nil if an error occurred.
 func (sv *SubtreeView) Set(i uint64, node Node) error {
 	s, err := sv.BackingNode.Setter(i, sv.depth)
 	if err != nil {

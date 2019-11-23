@@ -43,19 +43,17 @@ func (cv *VectorView) ViewRoot(h HashFn) Root {
 	return cv.BackingNode.MerkleRoot(h)
 }
 
-// Use .SubtreeView.Get(i) to work with the tree and get explicit tree errors instead of nil result.
-func (cv *VectorView) Get(i uint64) View {
+func (cv *VectorView) Get(i uint64) (View, error) {
 	if i >= cv.VectorType.Length {
-		return nil
+		return nil, fmt.Errorf("cannot get item at element index %d, vector only has %d elements", i, cv.VectorType.Length)
 	}
 	v, err := cv.SubtreeView.Get(i)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return cv.VectorType.ElementType.ViewFromBacking(v)
+	return cv.VectorType.ElementType.ViewFromBacking(v), nil
 }
 
-// Use .SubtreeView.Set(i, v) to work with the tree and bypass typing.
 func (cv *VectorView) Set(i uint64, view View) error {
 	if i >= cv.VectorType.Length {
 		return fmt.Errorf("cannot set item at element index %d, vector only has %d elements", i, cv.VectorType.Length)

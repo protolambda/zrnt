@@ -50,19 +50,17 @@ func (cv *ContainerView) ViewRoot(h HashFn) Root {
 	return cv.BackingNode.MerkleRoot(h)
 }
 
-// Use .SubtreeView.Get(i) to work with the tree and get explicit tree errors instead of nil result.
-func (cv *ContainerView) Get(i uint64) View {
-	if i >= cv.ContainerType.FieldCount() {
-		return nil
+func (cv *ContainerView) Get(i uint64) (View, error) {
+	if count := cv.ContainerType.FieldCount(); i >= count {
+		return nil, fmt.Errorf("cannot get item at field index %d, container only has %d fields", i, count)
 	}
 	v, err := cv.SubtreeView.Get(i)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return cv.ContainerType.Fields[i].ViewFromBacking(v)
+	return cv.ContainerType.Fields[i].ViewFromBacking(v), nil
 }
 
-// Use .SubtreeView.Set(i, v) to work with the tree and bypass typing.
 func (cv *ContainerView) Set(i uint64, view View) error {
 	if fieldCount := cv.ContainerType.FieldCount(); i >= fieldCount {
 		return fmt.Errorf("cannot set item at field index %d, container only has %d fields", i, fieldCount)

@@ -63,7 +63,7 @@ func (cv *BasicListView) Append(view SubView) error {
 		return fmt.Errorf("list length is %d and appending would exceed the list limit %d", ll, cv.Limit)
 	}
 	perNode := cv.ElementsPerBottomNode()
-	// Appending is done by setting the node at the index list-length. And expanding where necessary as it is being set.
+	// Appending is done by modifying the bottom node at the index list_length. And expanding where necessary as it is being set.
 	setLast, err := cv.SubtreeView.BackingNode.ExpandInto(ll/perNode, cv.depth)
 	if err != nil {
 		return fmt.Errorf("failed to get a setter to append an item")
@@ -99,7 +99,7 @@ func (cv *BasicListView) Pop() error {
 		return fmt.Errorf("list length is 0 and no item can be popped")
 	}
 	perNode := cv.ElementsPerBottomNode()
-	// Popping is done by setting the node at the index list_length - 1. And expanding where necessary as it is being set.
+	// Popping is done by modifying the bottom node at the index list_length - 1. And expanding where necessary as it is being set.
 	setLast, err := cv.SubtreeView.BackingNode.ExpandInto((ll-1)/perNode, cv.depth)
 	if err != nil {
 		return fmt.Errorf("failed to get a setter to pop an item")

@@ -18,10 +18,8 @@ import (
 //  - views can be overlaid on existing trees
 //    - overlay on incomplete tree == partial
 //  - Views to be implemented still:
-//     - Bitvector
 //     - Bitlist
 //     - Union
-//     - Basic-lists
 
 type Slot uint64
 
@@ -46,7 +44,10 @@ func NewBlock() (b *Block) {
 	return &Block{ContainerView: BlockDef.New()}
 }
 
-func (b *Block) Slot() Slot { return Slot(b.Get(0).(Uint64View)) }
+func (b *Block) Slot() Slot {
+	v, _ := b.Get(0)
+	return Slot(v.(Uint64View))
+}
 
 var BlockBodyDef = &ContainerType{
 	Fields: []TypeDef{
@@ -62,7 +63,8 @@ type BlockBody struct {
 }
 
 func (b *Block) Body() *BlockBody {
-	return &BlockBody{b.Get(2).(*ContainerView)}
+	v, _ := b.Get(2)
+	return &BlockBody{v.(*ContainerView)}
 }
 
 func main() {

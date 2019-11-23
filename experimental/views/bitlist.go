@@ -61,7 +61,7 @@ func (cv *BitListView) Append(view BoolView) error {
 		cv.BackingNode = setLast(view.BackingFromBitfieldBase(&ZeroHashes[0], 0))
 	} else {
 		// Apply to existing partially zeroed bottom node
-		r, subIndex, err := cv.subviewNode(ll)
+		r, _, subIndex, err := cv.subviewNode(ll)
 		if err != nil {
 			return err
 		}
@@ -92,7 +92,7 @@ func (cv *BitListView) Pop() error {
 		return fmt.Errorf("failed to get a setter to pop a bit")
 	}
 	// Get the subview to erase
-	r, subIndex, err := cv.subviewNode(ll - 1)
+	r, _, subIndex, err := cv.subviewNode(ll - 1)
 	if err != nil {
 		return err
 	}
@@ -124,24 +124,24 @@ func (lv *BitListView) CheckIndex(i uint64) error {
 	return nil
 }
 
-func (cv *BitListView) subviewNode(i uint64) (r *Root, subIndex uint8, err error) {
-	bottomIndex, subIndex := i >> 8, uint8(i)
+func (cv *BitListView) subviewNode(i uint64) (r *Root, bottomIndex uint64, subIndex uint8, err error) {
+	bottomIndex, subIndex = i >> 8, uint8(i)
 	v, err := cv.SubtreeView.Get(bottomIndex)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, 0, err
 	}
 	r, ok := v.(*Root)
 	if !ok {
-		return nil, 0, fmt.Errorf("bitlist bottom node is not a root, at index %d", i)
+		return nil, 0, 0, fmt.Errorf("bitlist bottom node is not a root, at index %d", i)
 	}
-	return r, subIndex, nil
+	return r, bottomIndex, subIndex, nil
 }
 
 func (cv *BitListView) Get(i uint64) (BoolView, error) {
 	if err := cv.CheckIndex(i); err != nil {
 		return false, err
 	}
-	r, subIndex, err := cv.subviewNode(i)
+	r, _, subIndex, err := cv.subviewNode(i)
 	if err != nil {
 		return false, err
 	}
@@ -152,11 +152,11 @@ func (cv *BitListView) Set(i uint64, view BoolView) error {
 	if err := cv.CheckIndex(i); err != nil {
 		return err
 	}
-	r, subIndex, err := cv.subviewNode(i)
+	r, bottomIndex, subIndex, err := cv.subviewNode(i)
 	if err != nil {
 		return err
 	}
-	return cv.SubtreeView.Set(i, view.BackingFromBitfieldBase(r, subIndex))
+	return cv.SubtreeView.Set(bottomIndex, view.BackingFromBitfieldBase(r, subIndex))
 }
 
 func (lv *BitListView) Length() (uint64, error) {

@@ -18,8 +18,25 @@ import (
 //  - views can be overlaid on existing trees
 //    - overlay on incomplete tree == partial
 //  - Views to be implemented still:
-//     - Bitlist
 //     - Union
+
+var BLSSignatureDef = &BasicVectorType{
+	ElementType: ByteType,
+	Length:      96,
+}
+
+type BLSSignature struct {
+	*BasicVectorView
+}
+
+func NewBLSSignature() (b *BLSSignature) {
+	return &BLSSignature{BasicVectorView: BLSSignatureDef.New()}
+}
+
+func (sig *BLSSignature) Bytes() (out [96]byte) {
+	_ = sig.IntoBytes(0, out[:])
+	return
+}
 
 type Slot uint64
 
@@ -29,11 +46,9 @@ func (s Slot) MerkleRoot(h HashFn) (out Root) {
 }
 
 var BlockDef = &ContainerType{
-	Fields: []TypeDef{
-		Uint64Type,
-		Uint64Type,
-		BlockBodyDef,
-	},
+	Uint64Type,
+	Uint64Type,
+	BlockBodyDef,
 }
 
 type Block struct {
@@ -50,12 +65,10 @@ func (b *Block) Slot() Slot {
 }
 
 var BlockBodyDef = &ContainerType{
-	Fields: []TypeDef{
-		Uint64Type,
-		Uint64Type,
-		Uint64Type,
-		Uint64Type,
-	},
+	Uint64Type,
+	Uint64Type,
+	Uint64Type,
+	Uint64Type,
 }
 
 type BlockBody struct {
@@ -89,7 +102,6 @@ func main() {
 	fmt.Printf("block: %x\n", b.ViewRoot(Hash))
 	fmt.Printf("bodyA: %x\n", bodyA.ViewRoot(Hash))
 
-
 	fmt.Println("getting body B...")
 	bodyB := b.Body()
 	fmt.Printf("bodyB: %x\n", bodyB.ViewRoot(Hash))
@@ -114,4 +126,21 @@ func main() {
 	fmt.Printf("block: %x\n", b.ViewRoot(Hash))
 	fmt.Printf("bodyA: %x\n", bodyA.ViewRoot(Hash))
 	fmt.Printf("bodyB: %x\n", bodyB.ViewRoot(Hash))
+
+	fmt.Println("---")
+	sig := NewBLSSignature()
+	err = sig.Set(0, ByteView(0xab))
+	fmt.Println(err)
+	err = sig.Set(42, ByteView(0xaa))
+	fmt.Println(err)
+	fmt.Printf("%x\n", sig.Bytes())
+	fmt.Printf("root: %x\n", sig.ViewRoot(Hash))
+	err = sig.Set(95, ByteView(0xf1))
+	fmt.Println(err)
+	fmt.Printf("%x\n", sig.Bytes())
+	fmt.Printf("root: %x\n", sig.ViewRoot(Hash))
+	err = sig.Set(95, ByteView(0))
+	fmt.Println(err)
+	fmt.Printf("%x\n", sig.Bytes())
+	fmt.Printf("root: %x\n", sig.ViewRoot(Hash))
 }

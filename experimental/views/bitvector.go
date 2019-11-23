@@ -44,24 +44,24 @@ func (cv *BitVectorView) ViewRoot(h HashFn) Root {
 	return cv.BackingNode.MerkleRoot(h)
 }
 
-func (cv *BitVectorView) subviewNode(i uint64) (r *Root, subIndex uint8, err error) {
-	bottomIndex, subIndex := i >> 8, uint8(i)
+func (cv *BitVectorView) subviewNode(i uint64) (r *Root, bottomIndex uint64, subIndex uint8, err error) {
+	bottomIndex, subIndex = i >> 8, uint8(i)
 	v, err := cv.SubtreeView.Get(bottomIndex)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0,0, err
 	}
 	r, ok := v.(*Root)
 	if !ok {
-		return nil, 0, fmt.Errorf("bitvector bottom node is not a root, at index %d", i)
+		return nil, 0, 0, fmt.Errorf("bitvector bottom node is not a root, at index %d", i)
 	}
-	return r, subIndex, nil
+	return r, bottomIndex, subIndex, nil
 }
 
 func (cv *BitVectorView) Get(i uint64) (BoolView, error) {
 	if i >= cv.BitLength {
 		return false, fmt.Errorf("bitvector has bit length %d, cannot get bit index %d", cv.BitLength, i)
 	}
-	r, subIndex, err := cv.subviewNode(i)
+	r, _, subIndex, err := cv.subviewNode(i)
 	if err != nil {
 		return false, err
 	}
@@ -72,9 +72,9 @@ func (cv *BitVectorView) Set(i uint64, view BoolView) error {
 	if i >= cv.BitLength {
 		return fmt.Errorf("cannot set item at element index %d, bitvector only has %d bits", i, cv.BitLength)
 	}
-	r, subIndex, err := cv.subviewNode(i)
+	r, bottomIndex, subIndex, err := cv.subviewNode(i)
 	if err != nil {
 		return err
 	}
-	return cv.SubtreeView.Set(i, view.BackingFromBitfieldBase(r, subIndex))
+	return cv.SubtreeView.Set(bottomIndex, view.BackingFromBitfieldBase(r, subIndex))
 }

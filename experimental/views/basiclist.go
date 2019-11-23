@@ -73,7 +73,7 @@ func (cv *BasicListView) Append(view SubView) error {
 		cv.BackingNode = setLast(view.BackingFromBase(&ZeroHashes[0], 0))
 	} else {
 		// Apply to existing partially zeroed bottom node
-		r, subIndex, err := cv.subviewNode(ll)
+		r, _, subIndex, err := cv.subviewNode(ll)
 		if err != nil {
 			return err
 		}
@@ -105,7 +105,7 @@ func (cv *BasicListView) Pop() error {
 		return fmt.Errorf("failed to get a setter to pop an item")
 	}
 	// Get the subview to erase
-	r, subIndex, err := cv.subviewNode(ll - 1)
+	r, _, subIndex, err := cv.subviewNode(ll - 1)
 	if err != nil {
 		return err
 	}
@@ -138,24 +138,24 @@ func (lv *BasicListView) CheckIndex(i uint64) error {
 	return nil
 }
 
-func (cv *BasicListView) subviewNode(i uint64) (r *Root, subIndex uint8, err error) {
-	bottomIndex, subIndex := cv.TranslateIndex(i)
+func (cv *BasicListView) subviewNode(i uint64) (r *Root, bottomIndex uint64, subIndex uint8, err error) {
+	bottomIndex, subIndex = cv.TranslateIndex(i)
 	v, err := cv.SubtreeView.Get(bottomIndex)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, 0, err
 	}
 	r, ok := v.(*Root)
 	if !ok {
-		return nil, 0, fmt.Errorf("basic list bottom node is not a root, at index %d", i)
+		return nil, 0, 0, fmt.Errorf("basic list bottom node is not a root, at index %d", i)
 	}
-	return r, subIndex, nil
+	return r, bottomIndex, subIndex, nil
 }
 
 func (cv *BasicListView) Get(i uint64) (SubView, error) {
 	if err := cv.CheckIndex(i); err != nil {
 		return nil, err
 	}
-	r, subIndex, err := cv.subviewNode(i)
+	r, _, subIndex, err := cv.subviewNode(i)
 	if err != nil {
 		return nil, err
 	}
@@ -166,11 +166,11 @@ func (cv *BasicListView) Set(i uint64, view SubView) error {
 	if err := cv.CheckIndex(i); err != nil {
 		return err
 	}
-	r, subIndex, err := cv.subviewNode(i)
+	r, bottomIndex, subIndex, err := cv.subviewNode(i)
 	if err != nil {
 		return err
 	}
-	return cv.SubtreeView.Set(i, view.BackingFromBase(r, subIndex))
+	return cv.SubtreeView.Set(bottomIndex, view.BackingFromBase(r, subIndex))
 }
 
 func (lv *BasicListView) Length() (uint64, error) {

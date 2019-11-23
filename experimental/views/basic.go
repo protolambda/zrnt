@@ -22,13 +22,13 @@ func (cd UintType) ViewFromBacking(node Node) View {
 		return nil
 	}
 	switch cd {
-	case 1:
+	case Uint8Type:
 		return Uint8View(v[0])
-	case 2:
+	case Uint16Type:
 		return Uint16View(binary.LittleEndian.Uint16(v[:2]))
-	case 4:
+	case Uint32Type:
 		return Uint32View(binary.LittleEndian.Uint32(v[:4]))
-	case 8:
+	case Uint64Type:
 		return Uint64View(binary.LittleEndian.Uint64(v[:8]))
 	default:
 		// unsupported backing
@@ -41,13 +41,13 @@ func (cd UintType) SubViewFromBacking(v *Root, i uint8) SubView {
 		return nil
 	}
 	switch cd {
-	case 1:
+	case Uint8Type:
 		return Uint8View(v[i])
-	case 2:
+	case Uint16Type:
 		return Uint16View(binary.LittleEndian.Uint16(v[2*i:2*i+2]))
-	case 4:
+	case Uint32Type:
 		return Uint32View(binary.LittleEndian.Uint32(v[4*i:4*i+4]))
-	case 8:
+	case Uint64Type:
 		return Uint64View(binary.LittleEndian.Uint64(v[8*i:8*i+8]))
 	default:
 		// unsupported backing
@@ -78,6 +78,11 @@ func (v Uint8View) BackingFromBase(base *Root, i uint8) *Root {
 	newRoot[i] = uint8(v)
 	return &newRoot
 }
+
+// Alias to Uint8Type
+const ByteType = Uint8Type
+// Alias to Uint8View
+type ByteView = Uint8View
 
 type Uint16View uint16
 

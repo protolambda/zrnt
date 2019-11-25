@@ -5,18 +5,18 @@ import (
 	. "github.com/protolambda/zrnt/experimental/tree"
 )
 
-// A basic type, identified by its size in bytes.
-type UintType uint64
+// A uint type, identified by its size in bytes.
+type UintMeta uint64
 
-func (cd UintType) DefaultNode() Node {
+func (cd UintMeta) DefaultNode() Node {
 	return &ZeroHashes[0]
 }
 
-func (cd UintType) ByteLength() uint64 {
+func (cd UintMeta) ByteLength() uint64 {
 	return uint64(cd)
 }
 
-func (cd UintType) ViewFromBacking(node Node) View {
+func (cd UintMeta) ViewFromBacking(node Node) View {
 	v, ok := node.(*Root)
 	if !ok {
 		return nil
@@ -36,7 +36,7 @@ func (cd UintType) ViewFromBacking(node Node) View {
 	}
 }
 
-func (cd UintType) SubViewFromBacking(v *Root, i uint8) SubView {
+func (cd UintMeta) SubViewFromBacking(v *Root, i uint8) SubView {
 	if uint64(i) >= (32 / uint64(cd)) {
 		return nil
 	}
@@ -56,10 +56,10 @@ func (cd UintType) SubViewFromBacking(v *Root, i uint8) SubView {
 }
 
 const (
-	Uint8Type  UintType = 1
-	Uint16Type UintType = 2
-	Uint32Type UintType = 4
-	Uint64Type UintType = 8
+	Uint8Type  UintMeta = 1
+	Uint16Type UintMeta = 2
+	Uint32Type UintMeta = 4
+	Uint64Type UintMeta = 8
 )
 
 type Uint8View uint8

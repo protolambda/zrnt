@@ -5,21 +5,26 @@ import (
 	. "github.com/protolambda/zrnt/experimental/tree"
 )
 
-type ContainerType []TypeDef
+type FieldDef struct {
+	Name string
+	Type TypeDef
+}
 
-func (cd ContainerType) DefaultNode() Node {
+type ContainerType []FieldDef
+
+func (cd *ContainerType) DefaultNode() Node {
 	fieldCount := cd.FieldCount()
 	depth := GetDepth(fieldCount)
 	inner := &Commit{}
 	nodes := make([]Node, fieldCount, fieldCount)
-	for i, f := range cd {
-		nodes[i] = f.DefaultNode()
+	for i, f := range *cd {
+		nodes[i] = f.Type.DefaultNode()
 	}
 	inner.ExpandInplaceTo(nodes, depth)
 	return inner
 }
 
-func (cd ContainerType) ViewFromBacking(node Node) View {
+func (cd *ContainerType) ViewFromBacking(node Node) View {
 	fieldCount := cd.FieldCount()
 	depth := GetDepth(fieldCount)
 	return &ContainerView{
@@ -31,17 +36,17 @@ func (cd ContainerType) ViewFromBacking(node Node) View {
 	}
 }
 
-func (cd ContainerType) New() *ContainerView {
+func (cd *ContainerType) New() *ContainerView {
 	return cd.ViewFromBacking(cd.DefaultNode()).(*ContainerView)
 }
 
-func (cd ContainerType) FieldCount() uint64 {
-	return uint64(len(cd))
+func (cd *ContainerType) FieldCount() uint64 {
+	return uint64(len(*cd))
 }
 
 type ContainerView struct {
 	SubtreeView
-	ContainerType
+	*ContainerType
 }
 
 func (cv *ContainerView) ViewRoot(h HashFn) Root {
@@ -56,7 +61,7 @@ func (cv *ContainerView) Get(i uint64) (View, error) {
 	if err != nil {
 		return nil, err
 	}
-	return cv.ContainerType[i].ViewFromBacking(v), nil
+	return (*cv.ContainerType)[i].Type.ViewFromBacking(v), nil
 }
 
 func (cv *ContainerView) Set(i uint64, view View) error {

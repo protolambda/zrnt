@@ -7,6 +7,8 @@ import (
 
 type CommitteeBits []byte
 
+var CommitteeBitsType = BitlistType(MAX_VALIDATORS_PER_COMMITTEE)
+
 func (cb CommitteeBits) BitLen() uint64 {
 	return bitfields.BitlistLen(cb)
 }

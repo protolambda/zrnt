@@ -13,3 +13,10 @@ type DepositData struct {
 	Amount                Gwei
 	Signature             BLSSignature
 }
+
+var DepositDataType = &ContainerType{
+	{"pubkey", BLSPubkeyType},
+	{"withdrawal_credentials", Bytes32Type},
+	{"amount", GweiType},
+	{"signature", BLSSignatureType},
+}

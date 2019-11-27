@@ -2,7 +2,14 @@ package versioning
 
 import (
 	. "github.com/protolambda/zrnt/eth2/core"
+	. "github.com/protolambda/ztyp/view"
 )
+
+var ForkType = &ContainerType{
+	{"previous_version", VersionType},
+	{"current_version", VersionType},
+	{"epoch", EpochType}, // Epoch of latest fork
+}
 
 type Fork struct {
 	// Previous fork version

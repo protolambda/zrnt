@@ -3,12 +3,15 @@ package slashings
 import (
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/meta"
+	. "github.com/protolambda/zrnt/experimental/views"
 )
 
 type SlashingsState struct {
 	// Balances slashed at every withdrawal period
 	Slashings [EPOCHS_PER_SLASHINGS_VECTOR]Gwei
 }
+
+var SlashingsType = VectorType(GweiType, EPOCHS_PER_SLASHINGS_VECTOR)
 
 func (state *SlashingsState) ResetSlashings(epoch Epoch) {
 	state.Slashings[epoch%EPOCHS_PER_SLASHINGS_VECTOR] = 0

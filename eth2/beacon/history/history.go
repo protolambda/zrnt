@@ -6,11 +6,18 @@ import (
 	"github.com/protolambda/zssz"
 )
 
+var BatchRootsType = VectorType(RootType, SLOTS_PER_HISTORICAL_ROOT)
+
 var HistoricalBatchSSZ = zssz.GetSSZ((*HistoricalBatch)(nil))
 
 type HistoricalBatch struct {
 	BlockRoots [SLOTS_PER_HISTORICAL_ROOT]Root
 	StateRoots [SLOTS_PER_HISTORICAL_ROOT]Root
+}
+
+var HistoricalBatchType = &ContainerType{
+	{"block_roots", BatchRootsType},
+	{"state_roots", BatchRootsType},
 }
 
 // Return the block root at a recent slot. Only valid to SLOTS_PER_HISTORICAL_ROOT slots ago.
@@ -29,6 +36,7 @@ type HistoricalRoots []Root
 func (_ *HistoricalRoots) Limit() uint64 {
 	return HISTORICAL_ROOTS_LIMIT
 }
+var HistoricalRootsType = ListType(RootType, HISTORICAL_ROOTS_LIMIT)
 
 type HistoryState struct {
 	HistoricalBatch // embedded BlockRoots and StateRoots

@@ -35,6 +35,14 @@ type ProposerSlashing struct {
 	Header2       BeaconBlockHeader // Second proposal
 }
 
+// Beacon operations
+var ProposerSlashingType = &ContainerType{
+	{"proposer_index", ValidatorIndexType},
+	{"header_1", BeaconBlockHeaderType},
+	{"header_2", BeaconBlockHeaderType},
+}
+
+
 func (f *PropSlashFeature) ProcessProposerSlashings(ops []ProposerSlashing) error {
 	for i := range ops {
 		if err := f.ProcessProposerSlashing(&ops[i]); err != nil {

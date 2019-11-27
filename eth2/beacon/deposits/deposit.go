@@ -45,11 +45,18 @@ func (f *DepositFeature) ProcessDeposits(ops []Deposit) error {
 	return nil
 }
 
+var DepositProofType = VectorType(Bytes32Type, DEPOSIT_CONTRACT_TREE_DEPTH+1)
+
 var DepositSSZ = zssz.GetSSZ((*Deposit)(nil))
 
 type Deposit struct {
 	Proof [DEPOSIT_CONTRACT_TREE_DEPTH + 1]Root // Merkle-path to deposit data list root
 	Data  DepositData
+}
+
+var DepositType = &ContainerType{
+	{"proof", DepositProofType}, // Merkle path to deposit data list root
+	{"data", DepositDataType},
 }
 
 // Process an Eth1 deposit, registering a validator or increasing its balance.

@@ -17,6 +17,8 @@ func (_ *ValidatorRegistry) Limit() uint64 {
 	return VALIDATOR_REGISTRY_LIMIT
 }
 
+var RegistryValidatorsType = ListType(ValidatorType, VALIDATOR_REGISTRY_LIMIT)
+
 type ValidatorsState struct {
 	Validators ValidatorRegistry
 }

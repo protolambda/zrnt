@@ -1,5 +1,7 @@
 package core
 
+import . "github.com/protolambda/ztyp/view"
+
 // Unix timestamp
 type Timestamp uint64
 
@@ -18,6 +20,7 @@ func (s Slot) ToEpoch() Epoch {
 }
 
 type Epoch uint64
+const EpochType = Uint64Type
 
 func (e Epoch) GetStartSlot() Slot {
 	return Slot(e) * SLOTS_PER_EPOCH

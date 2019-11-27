@@ -19,6 +19,8 @@ type RandaoState struct {
 	RandaoMixes [EPOCHS_PER_HISTORICAL_VECTOR]Root
 }
 
+var RandaoMixesType = VectorType(Bytes32Type, EPOCHS_PER_HISTORICAL_VECTOR)
+
 // Provides a source of randomness for the state, for e.g. shuffling
 func (state *RandaoState) GetRandomMix(epoch Epoch) Root {
 	return state.RandaoMixes[epoch%EPOCHS_PER_HISTORICAL_VECTOR]

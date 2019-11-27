@@ -12,17 +12,21 @@ import (
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/protolambda/zssz"
+	. "github.com/protolambda/ztyp/view"
 )
 
 var BeaconBlockSSZ = zssz.GetSSZ((*BeaconBlock)(nil))
 
-type BeaconBlock struct {
-	Slot       Slot
-	ParentRoot Root
-	StateRoot  Root
-	Body       BeaconBlockBody
-	Signature  BLSSignature
+type BeaconBlock struct{ *ContainerView }
+
+var BeaconBlockType = &ContainerType{
+	{"slot", SlotType},
+	{"parent_root", RootType},
+	{"state_root", RootType},
+	{"body", BeaconBlockBodyType},
+	{"signature", BLSSignatureType},
 }
+// TODO
 
 func (block *BeaconBlock) Header() *BeaconBlockHeader {
 	return &BeaconBlockHeader{
@@ -46,6 +50,18 @@ type BeaconBlockBody struct {
 	Attestations      Attestations
 	Deposits          Deposits
 	VoluntaryExits    VoluntaryExits
+}
+
+var BeaconBlockBodyType = &ContainerType{
+	{"randao_reveal", BLSSignatureType},
+	{"eth1_data", Eth1DataType}, // Eth1 data vote
+	{"graffiti", Bytes32Type},   // Arbitrary data
+	// Operations
+	{"proposer_slashings", ProposerSlashingsType},
+	{"attester_slashings", AttesterSlashingsType},
+	{"attestations", AttestationsType},
+	{"deposits", DepositsType},
+	{"voluntary_exits", VoluntaryExitsType},
 }
 
 type BlockProcessFeature struct {

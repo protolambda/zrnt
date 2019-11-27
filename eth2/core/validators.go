@@ -1,11 +1,13 @@
 package core
 
 import (
+	. "github.com/protolambda/ztyp/view"
 	"sort"
 )
 
 // Index of a validator, pointing to a validator registry location
 type ValidatorIndex uint64
+const ValidatorIndexType = Uint64Type
 
 // Custom constant, not in spec:
 // An impossible high validator index used to mark special internal cases. (all 1s binary)

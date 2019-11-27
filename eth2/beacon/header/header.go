@@ -36,6 +36,15 @@ type BeaconBlockHeader struct {
 	Signature  BLSSignature
 }
 
+var BeaconBlockHeaderType = &ContainerType{
+	{"slot", SlotType},
+	{"parent_root", RootType},
+	{"state_root", RootType},
+	{"body_root", RootType},
+	{"signature", BLSSignatureType},
+}
+
+
 func (f *BlockHeaderFeature) ProcessHeader(header *BeaconBlockHeader) error {
 	currentSlot := f.Meta.CurrentSlot()
 	// Verify that the slots match

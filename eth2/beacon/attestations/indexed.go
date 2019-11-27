@@ -11,6 +11,7 @@ import (
 )
 
 type CommitteeIndices []ValidatorIndex
+var CommitteeIndicesType = ListType(ValidatorIndexType, MAX_VALIDATORS_PER_COMMITTEE)
 
 func (ci *CommitteeIndices) Limit() uint64 {
 	return MAX_VALIDATORS_PER_COMMITTEE
@@ -20,6 +21,12 @@ type IndexedAttestation struct {
 	AttestingIndices CommitteeIndices
 	Data             AttestationData
 	Signature        BLSSignature
+}
+
+var IndexedAttestationType = &ContainerType{
+	{"attesting_indices", CommitteeIndicesType},
+	{"data", AttestationDataType},
+	{"signature", BLSSignatureType},
 }
 
 type AttestationValidator interface {

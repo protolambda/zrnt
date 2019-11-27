@@ -10,6 +10,8 @@ func (_ *Balances) Limit() uint64 {
 	return VALIDATOR_REGISTRY_LIMIT
 }
 
+var RegistryBalancesType = BasicListType(GweiType, VALIDATOR_REGISTRY_LIMIT)
+
 type BalancesState struct {
 	Balances Balances
 }

@@ -50,6 +50,8 @@ func (f *JustificationFeature) Justify(checkpoint Checkpoint) {
 
 type JustificationBits [1]byte
 
+var JustificationBitsType = BitvectorType(JUSTIFICATION_BITS_LENGTH)
+
 func (jb *JustificationBits) BitLen() uint64 {
 	return 4
 }

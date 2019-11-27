@@ -3,8 +3,8 @@ package main
 import (
 	"encoding/binary"
 	"fmt"
-	. "github.com/protolambda/zrnt/experimental/tree"
-	. "github.com/protolambda/zrnt/experimental/views"
+	. "github.com/protolambda/ztyp/tree"
+	. "github.com/protolambda/ztyp/view"
 )
 
 // Experimental code! Everything a tree and cached by default.
@@ -20,23 +20,11 @@ import (
 //  - Views to be implemented still:
 //     - Union
 
-var BLSSignatureDef = &BasicVectorType{
+var BLSSignatureDef = &BasicVectorTypeDef{
 	ElementType: ByteType,
 	Length:      96,
 }
 
-type BLSSignature struct {
-	*BasicVectorView
-}
-
-func NewBLSSignature() (b *BLSSignature) {
-	return &BLSSignature{BasicVectorView: BLSSignatureDef.New()}
-}
-
-func (sig *BLSSignature) Bytes() (out [96]byte) {
-	_ = sig.IntoBytes(0, out[:])
-	return
-}
 
 type Slot uint64
 

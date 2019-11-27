@@ -42,6 +42,11 @@ type AttesterSlashing struct {
 	Attestation2 IndexedAttestation
 }
 
+var AttesterSlashingType = &ContainerType{
+	{"attestation_1", IndexedAttestationType},
+	{"attestation_2", IndexedAttestationType},
+}
+
 func (f *AttestSlashFeature) ProcessAttesterSlashing(attesterSlashing *AttesterSlashing) error {
 	sa1 := &attesterSlashing.Attestation1
 	sa2 := &attesterSlashing.Attestation2

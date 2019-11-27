@@ -44,6 +44,12 @@ type Attestation struct {
 	Signature       BLSSignature
 }
 
+var AttestationType = &ContainerType{
+	{"aggregation_bits", CommitteeBitsType},
+	{"data", AttestationDataType},
+	{"signature", BLSSignatureType},
+}
+
 func (f *AttestationFeature) ProcessAttestation(attestation *Attestation) error {
 	data := &attestation.Data
 

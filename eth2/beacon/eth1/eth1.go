@@ -15,11 +15,19 @@ type Eth1Data struct {
 	BlockHash    Root
 }
 
+var Eth1DataType = &ContainerType{
+	{"deposit_root", RootType},
+	{"deposit_count", Uint64Type},
+	{"block_hash", Bytes32Type},
+}
+
 type Eth1DataVotes []Eth1Data
 
 func (_ *Eth1DataVotes) Limit() uint64 {
 	return uint64(SLOTS_PER_ETH1_VOTING_PERIOD)
 }
+
+var Eth1DataVotesType = ListType(Eth1DataType, SLOTS_PER_ETH1_VOTING_PERIOD)
 
 // Ethereum 1.0 chain data
 type Eth1State struct {

@@ -6,63 +6,63 @@ import (
 )
 
 type Exits interface {
-	InitiateValidatorExit(currentEpoch Epoch, index ValidatorIndex)
+	InitiateValidatorExit(currentEpoch Epoch, index ValidatorIndex) error
 }
 
 type Balance interface {
-	GetBalance(index ValidatorIndex) Gwei
-	IncreaseBalance(index ValidatorIndex, v Gwei)
-	DecreaseBalance(index ValidatorIndex, v Gwei)
+	GetBalance(index ValidatorIndex) (Gwei, error)
+	IncreaseBalance(index ValidatorIndex, v Gwei) error
+	DecreaseBalance(index ValidatorIndex, v Gwei) error
 }
 
 type BalanceDeltas interface {
-	ApplyDeltas(deltas *Deltas)
+	ApplyDeltas(deltas *Deltas) error
 }
 
 type AttestationDeltas interface {
-	AttestationDeltas() *Deltas
+	AttestationDeltas() (*Deltas, error)
 }
 
 type RegistrySize interface {
-	IsValidIndex(index ValidatorIndex) bool
-	ValidatorCount() uint64
+	IsValidIndex(index ValidatorIndex) (bool, error)
+	ValidatorCount() (uint64, error)
 }
 
 type Pubkeys interface {
-	Pubkey(index ValidatorIndex) BLSPubkey
-	ValidatorIndex(pubkey BLSPubkey) (index ValidatorIndex, exists bool)
+	Pubkey(index ValidatorIndex) (BLSPubkey, error)
+	ValidatorIndex(pubkey BLSPubkey) (index ValidatorIndex, exists bool, err error)
 }
 
 type EffectiveBalances interface {
-	EffectiveBalance(index ValidatorIndex) Gwei
-	SumEffectiveBalanceOf(indices []ValidatorIndex) (sum Gwei)
+	EffectiveBalance(index ValidatorIndex) (Gwei, error)
+	SumEffectiveBalanceOf(indices []ValidatorIndex) (sum Gwei, err error)
 }
 
 type EffectiveBalancesUpdate interface {
-	UpdateEffectiveBalances()
+	UpdateEffectiveBalances() error
 }
 
 type Finality interface {
-	Finalized() Checkpoint
-	CurrentJustified() Checkpoint
-	PreviousJustified() Checkpoint
+	Finalized() (Checkpoint, error)
+	CurrentJustified() (Checkpoint, error)
+	PreviousJustified() (Checkpoint, error)
 }
 
 type Justification interface {
-	Justify(checkpoint Checkpoint)
+	Justify(checkpoint Checkpoint) error
 }
 
 type EpochAttestations interface {
-	RotateEpochAttestations()
+	RotateEpochAttestations() error
 }
 
 type AttesterStatuses interface {
-	GetAttesterStatuses() []AttesterStatus
+	GetAttesterStatuses() ([]AttesterStatus, error)
 }
 
 type SlashedIndices interface {
-	IsSlashed(i ValidatorIndex) bool
-	FilterUnslashed(indices []ValidatorIndex) []ValidatorIndex
+	IsSlashed(i ValidatorIndex) (bool, error)
+	FilterUnslashed(indices []ValidatorIndex) ([]ValidatorIndex, error)
 }
 
 type CompactCommittees interface {

@@ -17,6 +17,18 @@ type Validator struct {
 	WithdrawableEpoch          Epoch // When validator can withdraw funds
 }
 
+var ValidatorType = &ContainerType{
+	{"pubkey", BLSPubkeyType},
+	{"withdrawal_credentials", Bytes32Type}, // Commitment to pubkey for withdrawals
+	{"effective_balance", GweiType},         // Balance at stake
+	{"slashed", BoolType},
+	// Status epochs
+	{"activation_eligibility_epoch", EpochType}, // When criteria for activation were met
+	{"activation_epoch", EpochType},
+	{"exit_epoch", EpochType},
+	{"withdrawable_epoch", EpochType}, // When validator can withdraw funds
+}
+
 func (v *Validator) IsActive(epoch Epoch) bool {
 	return v.ActivationEpoch <= epoch && epoch < v.ExitEpoch
 }

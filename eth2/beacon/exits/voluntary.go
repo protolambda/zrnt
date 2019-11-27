@@ -40,6 +40,13 @@ type VoluntaryExit struct {
 	Signature      BLSSignature
 }
 
+var VoluntaryExitType = &ContainerType{
+	{"epoch", EpochType}, // Earliest epoch when voluntary exit can be processed
+	{"validator_index", ValidatorIndexType},
+	{"signature", BLSSignatureType},
+}
+
+
 func (f *VoluntaryExitFeature) ProcessVoluntaryExit(exit *VoluntaryExit) error {
 	currentEpoch := f.Meta.CurrentEpoch()
 	if !f.Meta.IsValidIndex(exit.ValidatorIndex) {

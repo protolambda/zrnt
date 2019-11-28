@@ -26,7 +26,7 @@ func NewValidator() *Validator {
 	return &Validator{ContainerView: ValidatorType.New()}
 }
 
-func (v *Validator) Pubkey() (*BLSPubkey, error) {
+func (v *Validator) Pubkey() (*BLSPubkeyNode, error) {
 	return BLSPubkeyReadProp(PropReader(v, 1)).BLSPubkey()
 }
 func (v *Validator) WithdrawalCredentials() (out Root, err error) {

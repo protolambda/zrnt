@@ -39,7 +39,7 @@ func (state *RegistryState) InitiateValidatorExit(currentEpoch Epoch, index Vali
 	validator.WithdrawableEpoch = validator.ExitEpoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY
 }
 
-func (state *RegistryState) AddNewValidator(pubkey BLSPubkey, withdrawalCreds Root, balance Gwei) {
+func (state *RegistryState) AddNewValidator(pubkey BLSPubkeyNode, withdrawalCreds Root, balance Gwei) {
 	effBalance := balance - (balance % EFFECTIVE_BALANCE_INCREMENT)
 	if effBalance > MAX_EFFECTIVE_BALANCE {
 		effBalance = MAX_EFFECTIVE_BALANCE

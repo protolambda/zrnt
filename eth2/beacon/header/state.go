@@ -9,7 +9,7 @@ import (
 )
 
 type HeaderProcessor interface {
-	ProcessHeader(header Header) error
+	ProcessHeader(header *BeaconBlockHeader) error
 }
 
 type BlockHeaderFeature struct {
@@ -26,13 +26,17 @@ type BlockHeaderFeature struct {
 
 type LatestHeaderWriteProp WritePropFn
 
-func (p LatestHeaderWriteProp) SetLatestHeader(v *BeaconBlockHeader) error {
+func (p LatestHeaderWriteProp) SetLatestHeader(v *BeaconBlockHeaderNode) error {
 	return p(v)
 }
 
 type LatestHeaderProp struct {
 	BeaconBlockHeaderReadProp
 	LatestHeaderWriteProp
+}
+
+func (p LatestHeaderProp) GetLatestHeader() (*BeaconBlockHeaderNode, error) {
+	return p.BeaconBlockHeaderReadProp.BeaconBlockHeader()
 }
 
 func (p LatestHeaderProp) UpdateStateRoot(root Root) error {
@@ -47,32 +51,20 @@ func (p LatestHeaderProp) UpdateStateRoot(root Root) error {
 	return p.LatestHeaderWriteProp.SetLatestHeader(prev)
 }
 
-func (f *BlockHeaderFeature) ProcessHeader(header Header) error {
+func (f *BlockHeaderFeature) ProcessHeader(header *BeaconBlockHeader) error {
 	currentSlot, err := f.Meta.CurrentSlot()
 	if err != nil {
 		return err
 	}
-	headerSlot, err := header.Slot()
-	if err != nil {
-		return err
-	}
-	parentRoot, err := header.ParentRoot()
-	if err != nil {
-		return err
-	}
-	bodyRoot, err := header.BodyRoot()
-	if err != nil {
-		return err
-	}
 	// Verify that the slots match
-	if headerSlot != currentSlot {
+	if header.Slot != currentSlot {
 		return errors.New("slot of block does not match slot of state")
 	}
 	// Verify that the parent matches
 	if latestRoot, err := f.Meta.GetLatestBlockRoot(); err != nil {
 		return err
-	} else if parentRoot != latestRoot {
-		return fmt.Errorf("previous block root %x does not match root %x from latest state block header", parentRoot, latestRoot)
+	} else if header.ParentRoot != latestRoot {
+		return fmt.Errorf("previous block root %x does not match root %x from latest state block header", header.ParentRoot, latestRoot)
 	}
 
 	proposerIndex, err := f.Meta.GetBeaconProposerIndex(currentSlot)
@@ -86,14 +78,14 @@ func (f *BlockHeaderFeature) ProcessHeader(header Header) error {
 		return errors.New("cannot accept block header from slashed proposer")
 	}
 
-	newLatest := NewBeaconBlockHeader()
-	if err := newLatest.SetSlot(headerSlot); err != nil {
+	newLatest := NewBeaconBlockHeaderNode()
+	if err := newLatest.SetSlot(header.Slot); err != nil {
 		return err
 	}
-	if err := newLatest.SetParentRoot(parentRoot); err != nil {
+	if err := newLatest.SetParentRoot(header.ParentRoot); err != nil {
 		return err
 	}
-	if err := newLatest.SetBodyRoot(bodyRoot); err != nil {
+	if err := newLatest.SetBodyRoot(header.StateRoot); err != nil {
 		return err
 	}
 	// state_root is zeroed and overwritten in the next `process_slot` call.

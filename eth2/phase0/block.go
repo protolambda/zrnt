@@ -32,7 +32,7 @@ func (block *BeaconBlock) Header() *BeaconBlockHeader {
 var BeaconBlockBodySSZ = zssz.GetSSZ((*BeaconBlockBody)(nil))
 
 type BeaconBlockBody struct {
-	RandaoReveal BLSSignature
+	RandaoReveal BLSSignatureNode
 	Eth1Data     Eth1Data // Eth1 data vote
 	Graffiti     Root     // Arbitrary data
 

@@ -41,7 +41,7 @@ var AttestationSSZ = zssz.GetSSZ((*Attestation)(nil))
 type Attestation struct {
 	AggregationBits CommitteeBits
 	Data            AttestationData
-	Signature       BLSSignature
+	Signature       BLSSignatureNode
 }
 
 var AttestationType = &ContainerType{

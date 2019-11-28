@@ -11,7 +11,7 @@ import (
 )
 
 type RandaoProcessor interface {
-	ProcessRandaoReveal(reveal BLSSignature) error
+	ProcessRandaoReveal(reveal BLSSignatureNode) error
 }
 
 // Randomness and committees
@@ -48,7 +48,7 @@ type RandaoFeature struct {
 	}
 }
 
-func (f *RandaoFeature) ProcessRandaoReveal(reveal BLSSignature) error {
+func (f *RandaoFeature) ProcessRandaoReveal(reveal BLSSignatureNode) error {
 	slot := f.Meta.CurrentSlot()
 	propIndex := f.Meta.GetBeaconProposerIndex(slot)
 	proposerPubkey := f.Meta.Pubkey(propIndex)

@@ -20,7 +20,7 @@ func (ci *CommitteeIndices) Limit() uint64 {
 type IndexedAttestation struct {
 	AttestingIndices CommitteeIndices
 	Data             AttestationData
-	Signature        BLSSignature
+	Signature        BLSSignatureNode
 }
 
 var IndexedAttestationType = &ContainerType{
@@ -56,7 +56,7 @@ func (indexedAttestation *IndexedAttestation) Validate(m AttestationValidator) e
 		return errors.New("attestation indices contains out of range index")
 	}
 
-	pubkeys := make([]BLSPubkey, 0, 2)
+	pubkeys := make([]BLSPubkeyNode, 0, 2)
 	for _, i := range indices {
 		pubkeys = append(pubkeys, m.Pubkey(i))
 	}

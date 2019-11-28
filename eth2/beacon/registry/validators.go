@@ -35,11 +35,11 @@ func (state *ValidatorsState) Validator(index ValidatorIndex) *Validator {
 	return state.Validators[index]
 }
 
-func (state *ValidatorsState) Pubkey(index ValidatorIndex) BLSPubkey {
+func (state *ValidatorsState) Pubkey(index ValidatorIndex) BLSPubkeyNode {
 	return state.Validators[index].Pubkey
 }
 
-func (state *ValidatorsState) ValidatorIndex(pubkey BLSPubkey) (index ValidatorIndex, exists bool) {
+func (state *ValidatorsState) ValidatorIndex(pubkey BLSPubkeyNode) (index ValidatorIndex, exists bool) {
 	for i, v := range state.Validators {
 		if v.Pubkey == pubkey {
 			return ValidatorIndex(i), true

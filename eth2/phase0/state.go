@@ -56,6 +56,7 @@ type BeaconStateMutProps struct {
 	ForkProp
 	// TODO remaining props
 	SlashingsMutProp
+	LatestHeaderProp
 }
 
 type BeaconStateView struct {
@@ -75,6 +76,10 @@ func (state *BeaconStateView) MutProps() *BeaconStateMutProps {
 		SlashingsMutProp: SlashingsMutProp{
 			SlashingsReadProp: SlashingsReadProp(PropReader(state, 123)),
 			SlashingsWriteProp: SlashingsWriteProp(PropWriter(state, 123)),
+		},
+		LatestHeaderProp: LatestHeaderProp{
+			BeaconBlockHeaderReadProp: BeaconBlockHeaderReadProp(PropReader(state, 123)),
+			LatestHeaderWriteProp: LatestHeaderWriteProp(PropWriter(state, 123)),
 		},
 	}
 }

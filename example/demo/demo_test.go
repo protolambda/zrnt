@@ -33,7 +33,7 @@ func BenchmarkDemoRun(b *testing.B) {
 		rng.Read(privKey[:])
 		privKeys = append(privKeys, privKey)
 		// simply derive pubkey and withdraw creds, not real thing yet
-		pubKey := BLSPubkey{}
+		pubKey := BLSPubkeyNode{}
 		h := hashing.Hash(privKey[:])
 		copy(pubKey[:], h[:])
 		withdrawCreds := hashing.Hash(append(h[:], 1))
@@ -43,7 +43,7 @@ func BenchmarkDemoRun(b *testing.B) {
 				Pubkey:                pubKey,
 				WithdrawalCredentials: withdrawCreds,
 				Amount:                MAX_EFFECTIVE_BALANCE,
-				Signature:             BLSSignature{1, 2, 3}, // BLS not yet implemented
+				Signature:             BLSSignatureNode{1, 2, 3}, // BLS not yet implemented
 			},
 		}
 		depLeafHash := ssz.HashTreeRoot(&dep.Data, DepositDataSSZ)
@@ -99,7 +99,7 @@ func SimulateBlock(state *BeaconState, rng *rand.Rand) *BeaconBlock {
 		ParentRoot: parentRoot,
 		StateRoot:  Root{}, // verifyStateRoot = false in the transition call.
 		Body: BeaconBlockBody{
-			RandaoReveal: BLSSignature{4, 2},
+			RandaoReveal: BLSSignatureNode{4, 2},
 			Eth1Data: Eth1Data{
 				DepositRoot:  Root{0, 1, 3},
 				DepositCount: DepositIndex(len(state.Validators)),
@@ -108,7 +108,7 @@ func SimulateBlock(state *BeaconState, rng *rand.Rand) *BeaconBlock {
 			Graffiti: Root{123},
 			// no operations
 		},
-		Signature: BLSSignature{1, 2, 3}, // TODO implement BLS
+		Signature: BLSSignatureNode{1, 2, 3}, // TODO implement BLS
 	}
 	// TODO: set randao reveal
 	// TODO: change eth1 data

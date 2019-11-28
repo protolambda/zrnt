@@ -5,58 +5,11 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
-type BLSPubkeyBytes [48]byte
+type BLSPubkey [48]byte
 var BLSPubkeyType = BasicVectorType(ByteType, 48)
 
-type BLSPubkey struct {
-	*BasicVectorView
-}
-
-func NewBLSPubkey() (b *BLSPubkey) {
-	return &BLSPubkey{BasicVectorView: BLSPubkeyType.New()}
-}
-
-func (sig *BLSPubkey) Bytes() (out BLSPubkeyBytes) {
-	_ = sig.IntoBytes(0, out[:])
-	return
-}
-
-type BLSPubkeyReadProp BasicVectorReadProp
-
-func (p BLSPubkeyReadProp) BLSPubkey() (*BLSPubkey, error) {
-	if v, err := BasicVectorReadProp(p).BasicVector(); err != nil {
-		return nil, err
-	} else {
-		return &BLSPubkey{BasicVectorView: v}, nil
-	}
-}
-
-
-type BLSSignatureBytes [96]byte
+type BLSSignature [96]byte
 var BLSSignatureType = BasicVectorType(ByteType, 96)
-
-type BLSSignature struct {
-	*BasicVectorView
-}
-
-func NewBLSSignature() (b *BLSSignature) {
-	return &BLSSignature{BasicVectorView: BLSSignatureType.New()}
-}
-
-func (sig *BLSSignature) Bytes() (out BLSSignatureBytes) {
-	_ = sig.IntoBytes(0, out[:])
-	return
-}
-
-type BLSSignatureReadProp BasicVectorReadProp
-
-func (p BLSSignatureReadProp) BLSSignature() (*BLSSignature, error) {
-	if v, err := BasicVectorReadProp(p).BasicVector(); err != nil {
-		return nil, err
-	} else {
-		return &BLSSignature{BasicVectorView: v}, nil
-	}
-}
 
 // Mixed into a BLS domain to define its type
 type BLSDomainType [4]byte
@@ -68,4 +21,53 @@ func ComputeDomain(domainType BLSDomainType, forkVersion Version) (out BLSDomain
 	copy(out[0:4], domainType[:])
 	copy(out[4:8], forkVersion[:])
 	return
+}
+
+// For pubkeys/signatures in state, a tree-representation is used.
+
+type BLSPubkeyNode struct {
+	*BasicVectorView
+}
+
+func NewBLSPubkeyNode() (b *BLSPubkeyNode) {
+	return &BLSPubkeyNode{BasicVectorView: BLSPubkeyType.New()}
+}
+
+func (sig *BLSPubkeyNode) AsRaw() (out BLSPubkey) {
+	_ = sig.IntoBytes(0, out[:])
+	return
+}
+
+type BLSPubkeyReadProp BasicVectorReadProp
+
+func (p BLSPubkeyReadProp) BLSPubkey() (*BLSPubkeyNode, error) {
+	if v, err := BasicVectorReadProp(p).BasicVector(); err != nil {
+		return nil, err
+	} else {
+		return &BLSPubkeyNode{BasicVectorView: v}, nil
+	}
+}
+
+
+type BLSSignatureNode struct {
+	*BasicVectorView
+}
+
+func NewBLSSignatureNode() (b *BLSSignatureNode) {
+	return &BLSSignatureNode{BasicVectorView: BLSSignatureType.New()}
+}
+
+func (sig *BLSSignatureNode) AsRaw() (out BLSSignature) {
+	_ = sig.IntoBytes(0, out[:])
+	return
+}
+
+type BLSSignatureReadProp BasicVectorReadProp
+
+func (p BLSSignatureReadProp) BLSSignature() (*BLSSignatureNode, error) {
+	if v, err := BasicVectorReadProp(p).BasicVector(); err != nil {
+		return nil, err
+	} else {
+		return &BLSSignatureNode{BasicVectorView: v}, nil
+	}
 }

@@ -6,17 +6,17 @@ import . "github.com/protolambda/zrnt/eth2/core"
 
 const BLS_ACTIVE = false
 
-func BlsVerify(pubkey BLSPubkeyBytes, messageHash Root, signature BLSSignatureBytes, domain BLSDomain) bool {
+func BlsVerify(pubkey BLSPubkey, messageHash Root, signature BLSSignature, domain BLSDomain) bool {
 	// BLS OFF: just allow it.
 	return true
 }
 
-func BlsAggregatePubkeys(pubkeys []BLSPubkey) BLSPubkey {
+func BlsAggregatePubkeys(pubkeys []BLSPubkeyNode) BLSPubkeyNode {
 	// BLS OFF: just return an empty key
-	return BLSPubkey{}
+	return BLSPubkeyNode{}
 }
 
-func BlsVerifyMultiple(pubkeys []BLSPubkey, messageHashes []Root, signature BLSSignature, domain BLSDomain) bool {
+func BlsVerifyMultiple(pubkeys []BLSPubkeyNode, messageHashes []Root, signature BLSSignatureNode, domain BLSDomain) bool {
 	// BLS OFF: just allow it.
 	return true
 }

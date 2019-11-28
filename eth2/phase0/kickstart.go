@@ -9,7 +9,7 @@ import (
 )
 
 type KickstartValidatorData struct {
-	Pubkey                BLSPubkey
+	Pubkey                BLSPubkeyNode
 	WithdrawalCredentials Root
 	Balance               Gwei
 }
@@ -25,7 +25,7 @@ func KickStartState(eth1BlockHash Root, time Timestamp, validators []KickstartVa
 			Pubkey:                v.Pubkey,
 			WithdrawalCredentials: v.WithdrawalCredentials,
 			Amount:                v.Balance,
-			Signature:             BLSSignature{},
+			Signature:             BLSSignatureNode{},
 		}
 	}
 
@@ -48,7 +48,7 @@ func KickStartStateWithSignatures(eth1BlockHash Root, time Timestamp, validators
 			Pubkey:                v.Pubkey,
 			WithdrawalCredentials: v.WithdrawalCredentials,
 			Amount:                v.Balance,
-			Signature:             BLSSignature{},
+			Signature:             BLSSignatureNode{},
 		}
 		root := ssz.SigningRoot(d.Data, deposits.DepositDataSSZ)
 		priv := g1pubs.DeserializeSecretKey(keys[i])

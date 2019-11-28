@@ -37,7 +37,7 @@ var VoluntaryExitSSZ = zssz.GetSSZ((*VoluntaryExit)(nil))
 type VoluntaryExit struct {
 	Epoch          Epoch // Earliest epoch when voluntary exit can be processed
 	ValidatorIndex ValidatorIndex
-	Signature      BLSSignature
+	Signature      BLSSignatureNode
 }
 
 var VoluntaryExitType = &ContainerType{

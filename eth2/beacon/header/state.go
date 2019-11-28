@@ -3,25 +3,27 @@ package header
 import (
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
+	. "github.com/protolambda/ztyp/view"
 )
 
-type BlockHeaderState struct {
-	LatestBlockHeader BeaconBlockHeader
+type LatestBlockHeader struct{ *ContainerView }
+
+func (v *LatestBlockHeader) GetStateRoot() (Root, error) {
+
 }
 
 // Signing root of latest_block_header
-func (state *BlockHeaderState) GetLatestBlockRoot() Root {
-	return ssz.SigningRoot(state.LatestBlockHeader, BeaconBlockHeaderSSZ)
+func (v *LatestBlockHeader) GetLatestBlockRoot() Root {
+	return v.ViewRoot(h)
 }
 
-func (state *BlockHeaderState) UpdateLatestBlockRoot(stateRoot Root) Root {
+func (v *LatestBlockHeader) UpdateLatestBlockStateRoot(stateRoot Root) {
 	// Store latest known state root (for previous slot) in latest_block_header if it is empty
 	if state.LatestBlockHeader.StateRoot == (Root{}) {
 		state.LatestBlockHeader.StateRoot = stateRoot
 	}
-	return ssz.SigningRoot(state.LatestBlockHeader, BeaconBlockHeaderSSZ)
 }
 
-func (state *BlockHeaderState) UpdateStateRoot(root Root) {
+func (v *LatestBlockHeader) UpdateStateRoot(root Root) {
 	state.LatestBlockHeader.StateRoot = root
 }

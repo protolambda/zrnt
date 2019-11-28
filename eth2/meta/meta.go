@@ -125,7 +125,7 @@ type LatestHeader interface {
 }
 
 type LatestHeaderUpdate interface {
-	UpdateLatestBlockRoot(stateRoot Root) Root
+	UpdateLatestBlockStateRoot(stateRoot Root)
 }
 
 type History interface {

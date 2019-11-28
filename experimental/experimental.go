@@ -26,12 +26,7 @@ var BLSSignatureDef = &BasicVectorTypeDef{
 }
 
 
-type Slot uint64
-
-func (s Slot) MerkleRoot(h HashFn) (out Root) {
-	binary.LittleEndian.PutUint64(out[:], uint64(s))
-	return
-}
+type Slot Uint64View
 
 var BlockDef = &ContainerType{
 	Uint64Type,

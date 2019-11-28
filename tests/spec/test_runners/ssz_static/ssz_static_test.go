@@ -62,14 +62,12 @@ func (testCase *SSZStaticTestCase) Run(t *testing.T) {
 		}
 
 		if len(data) != len(testCase.Serialized) {
-			b := Bytes(data)
-			t.Errorf("encoded data has different length: %d (spec) <-> %d (zrnt)\nspec: %x\nzrnt: %x", len(testCase.Serialized), len(data), testCase.Serialized, b)
+			t.Errorf("encoded data has different length: %d (spec) <-> %d (zrnt)\nspec: %x\nzrnt: %x", len(testCase.Serialized), len(data), testCase.Serialized, data)
 			return
 		}
 		for i := 0; i < len(data); i++ {
 			if data[i] != testCase.Serialized[i] {
-				b := Bytes(data)
-				t.Errorf("byte i: %d differs: %d (spec) <-> %d (zrnt)\nspec: %x\nzrnt: %x", i, testCase.Serialized[i], data[i], testCase.Serialized, b)
+				t.Errorf("byte i: %d differs: %d (spec) <-> %d (zrnt)\nspec: %x\nzrnt: %x", i, testCase.Serialized[i], data[i], testCase.Serialized, data)
 				return
 			}
 		}

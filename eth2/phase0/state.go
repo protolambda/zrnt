@@ -11,13 +11,13 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon/slashings"
 	. "github.com/protolambda/zrnt/eth2/beacon/versioning"
 	. "github.com/protolambda/zrnt/eth2/core"
-	"github.com/protolambda/zrnt/eth2/util/ssz"
-	"github.com/protolambda/zssz"
+	"github.com/protolambda/ztyp/tree"
+	. "github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
 
 // Beacon state
-var BeaconState = &ContainerType{
+var BeaconStateType = &ContainerType{
 	// Versioning
 	{"genesis_time", Uint64Type},
 	{"slot", SlotType},
@@ -30,7 +30,7 @@ var BeaconState = &ContainerType{
 	// Eth1
 	{"eth1_data", Eth1DataType},
 	{"eth1_data_votes", Eth1DataVotesType},
-	{"eth1_deposit_index", Uint64TypeType},
+	{"eth1_deposit_index", Uint64Type},
 	// Registry
 	{"validators", RegistryValidatorsType},
 	{"balances", RegistryBalancesType},
@@ -48,14 +48,31 @@ var BeaconState = &ContainerType{
 	{"finalized_checkpoint", CheckpointType},
 }
 
+// TODO: can also create an explicit read-only props view (to not rely on tree forking on modifications)
+
+type BeaconStateMutProps struct {
+	GenesisTimeProp
+	CurrentSlotMutProp
+	ForkProp
+	// TODO remaining props
+}
+
 type BeaconStateView struct {
 	*ContainerView
 }
 
-func (state *BeaconState) StateRoot() Root {
-	return ssz.HashTreeRoot(state, BeaconStateSSZ)
+// MutProps returns a mutable view of the BeaconState
+func (state *BeaconStateView) MutProps() *BeaconStateMutProps {
+	return &BeaconStateMutProps{
+		GenesisTimeProp: GenesisTimeProp(PropReader(state, 0)),
+		CurrentSlotMutProp: CurrentSlotMutProp{
+			CurrentSlotReadProp: CurrentSlotReadProp(PropReader(state, 1)),
+			SlotWriteProp: SlotWriteProp(PropWriter(state, 1)),
+		},
+		ForkProp:        ForkProp(PropReader(state, 2)),
+	}
 }
 
-func (state *BeaconState) IncrementSlot() {
-	state.Slot++
+func (state *BeaconStateView) StateRoot() Root {
+	return state.ViewRoot(tree.Hash)
 }

@@ -7,6 +7,7 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon/slashings/attslash"
 	. "github.com/protolambda/zrnt/eth2/beacon/slashings/propslash"
 	. "github.com/protolambda/zrnt/eth2/core"
+	. "github.com/protolambda/ztyp/view"
 )
 
 var ProposerSlashingsType = ListType(ProposerSlashingType, MAX_PROPOSER_SLASHINGS)

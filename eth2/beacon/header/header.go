@@ -8,15 +8,23 @@ import (
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/protolambda/zssz"
+	. "github.com/protolambda/ztyp/view"
 )
 
+type Header interface {
+	HashTreeRoot() (Root, error)
+	Slot() (Slot, error)
+	ParentRoot() (Root, error)
+	BodyRoot() (Root, error)
+}
+
 type HeaderProcessor interface {
-	ProcessHeader(header *BeaconBlockHeader) error
+	ProcessHeader(header Header) error
 }
 
 type BlockHeaderFeature struct {
-	State *BlockHeaderState
 	Meta  interface {
+		SetLatestHeader(header *BeaconBlockHeader)
 		meta.Versioning
 		meta.Proposers
 		meta.Pubkeys
@@ -24,16 +32,6 @@ type BlockHeaderFeature struct {
 		meta.LatestHeader
 		meta.LatestHeaderUpdate
 	}
-}
-
-var BeaconBlockHeaderSSZ = zssz.GetSSZ((*BeaconBlockHeader)(nil))
-
-type BeaconBlockHeader struct {
-	Slot       Slot
-	ParentRoot Root
-	StateRoot  Root
-	BodyRoot   Root // Where the body would be, just a root embedded here.
-	Signature  BLSSignature
 }
 
 var BeaconBlockHeaderType = &ContainerType{
@@ -44,41 +42,65 @@ var BeaconBlockHeaderType = &ContainerType{
 	{"signature", BLSSignatureType},
 }
 
+type BeaconBlockHeader struct { *ContainerView }
 
-func (f *BlockHeaderFeature) ProcessHeader(header *BeaconBlockHeader) error {
+func NewBeaconBlockHeader() *BeaconBlockHeader {
+	return &BeaconBlockHeader{ContainerView: BeaconBlockHeaderType.New()}
+}
+
+
+func (v *BeaconBlockHeader) HashTreeRoot() (Root, error) {
+
+}
+func (v *BeaconBlockHeader) Slot() (Slot, error) {
+
+}
+func (v *BeaconBlockHeader) ParentRoot() (Root, error) {
+
+}
+func (v *BeaconBlockHeader) BodyRoot() (Root, error) {
+
+}
+
+func (f *BlockHeaderFeature) ProcessHeader(header Header) error {
 	currentSlot := f.Meta.CurrentSlot()
+	headerSlot, err := header.Slot()
+	if err != nil {
+		return err
+	}
+	parentRoot, err := header.ParentRoot()
+	if err != nil {
+		return err
+	}
+	bodyRoot, err := header.BodyRoot()
+	if err != nil {
+		return err
+	}
 	// Verify that the slots match
-	if header.Slot != currentSlot {
+	if headerSlot != currentSlot {
 		return errors.New("slot of block does not match slot of state")
 	}
 	// Verify that the parent matches
-	if latestRoot := f.Meta.GetLatestBlockRoot(); header.ParentRoot != latestRoot {
-		return fmt.Errorf("previous block root %x does not match root %x from latest state block header", header.ParentRoot, latestRoot)
+	if latestRoot := f.Meta.GetLatestBlockRoot(); parentRoot != latestRoot {
+		return fmt.Errorf("previous block root %x does not match root %x from latest state block header", parentRoot, latestRoot)
 	}
 
 	proposerIndex := f.Meta.GetBeaconProposerIndex(currentSlot)
 	// Verify proposer is not slashed
-	if f.Meta.IsSlashed(proposerIndex) {
+	if slashed, err := f.Meta.IsSlashed(proposerIndex); err != nil {
+		return err
+	} else if slashed {
 		return errors.New("cannot accept block header from slashed proposer")
-	}
-	// Block signature
-	if !bls.BlsVerify(
-		f.Meta.Pubkey(proposerIndex),
-		ssz.SigningRoot(header, BeaconBlockHeaderSSZ),
-		header.Signature,
-		f.Meta.GetDomain(DOMAIN_BEACON_PROPOSER, f.Meta.CurrentEpoch())) {
-		return errors.New("block signature invalid")
 	}
 
 	// Store as the new latest block
 	f.State.LatestBlockHeader = BeaconBlockHeader{
-		Slot:       header.Slot,
-		ParentRoot: header.ParentRoot,
+		Slot:       headerSlot,
+		ParentRoot: parentRoot,
 		// state_root is zeroed and overwritten in the next `process_slot` call.
 		// with BlockHeaderState.UpdateStateRoot(), once the post state is available.
-		BodyRoot: header.BodyRoot,
+		BodyRoot: bodyRoot,
 		// signature is always zeroed
 	}
-
 	return nil
 }

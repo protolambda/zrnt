@@ -15,8 +15,6 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
-var BeaconBlockSSZ = zssz.GetSSZ((*BeaconBlock)(nil))
-
 type BeaconBlock struct{ *ContainerView }
 
 var BeaconBlockType = &ContainerType{
@@ -26,16 +24,9 @@ var BeaconBlockType = &ContainerType{
 	{"body", BeaconBlockBodyType},
 	{"signature", BLSSignatureType},
 }
-// TODO
 
 func (block *BeaconBlock) Header() *BeaconBlockHeader {
-	return &BeaconBlockHeader{
-		Slot:       block.Slot,
-		ParentRoot: block.ParentRoot,
-		StateRoot:  block.StateRoot,
-		BodyRoot:   ssz.HashTreeRoot(block.Body, BeaconBlockBodySSZ),
-		Signature:  block.Signature,
-	}
+
 }
 
 var BeaconBlockBodySSZ = zssz.GetSSZ((*BeaconBlockBody)(nil))

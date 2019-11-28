@@ -9,7 +9,7 @@ import (
 
 const BLS_ACTIVE = true
 
-func BlsVerify(pubkey BLSPubkey, messageHash Root, signature BLSSignature, domain BLSDomain) bool {
+func BlsVerify(pubkey BLSPubkeyBytes, messageHash Root, signature BLSSignatureBytes, domain BLSDomain) bool {
 	pub, err := phbls.DeserializePublicKey(pubkey)
 	if err != nil {
 		return false
@@ -21,12 +21,12 @@ func BlsVerify(pubkey BLSPubkey, messageHash Root, signature BLSSignature, domai
 	return phbls.VerifyWithDomain(messageHash, pub, sig, domain)
 }
 
-func BlsAggregatePubkeys(pubkeys []BLSPubkey) BLSPubkey {
+func BlsAggregatePubkeys(pubkeys []BLSPubkeyBytes) BLSPubkeyBytes {
 	agpub := phbls.AggregatePublicKeys(parsePubkeys(pubkeys))
 	return agpub.Serialize()
 }
 
-func parsePubkeys(pubkeys []BLSPubkey) []*phbls.PublicKey {
+func parsePubkeys(pubkeys []BLSPubkeyBytes) []*phbls.PublicKey {
 	pubs := make([]*phbls.PublicKey, 0, len(pubkeys))
 	for i := range pubkeys {
 		p, err := phbls.DeserializePublicKey(pubkeys[i])
@@ -38,7 +38,7 @@ func parsePubkeys(pubkeys []BLSPubkey) []*phbls.PublicKey {
 	return pubs
 }
 
-func BlsVerifyMultiple(pubkeys []BLSPubkey, messageHashes []Root, signature BLSSignature, domain BLSDomain) bool {
+func BlsVerifyMultiple(pubkeys []BLSPubkeyBytes, messageHashes []Root, signature BLSSignatureBytes, domain BLSDomain) bool {
 	if len(pubkeys) != len(messageHashes) {
 		return false
 	}

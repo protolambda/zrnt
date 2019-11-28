@@ -19,7 +19,6 @@ type PropSlashFeature struct {
 	Meta interface {
 		meta.Versioning
 		meta.RegistrySize
-		meta.Validators
 		meta.Proposers
 		meta.Balance
 		meta.Exits

@@ -2,10 +2,11 @@ package core
 
 import (
 	. "github.com/protolambda/ztyp/props"
-	. "github.com/protolambda/ztyp/tree"
+	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
 
+type Root = tree.Root
 const Bytes32Type = RootType
 
 type Bytes []byte

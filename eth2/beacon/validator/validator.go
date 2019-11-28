@@ -3,7 +3,6 @@ package validator
 import (
 	. "github.com/protolambda/zrnt/eth2/core"
 	. "github.com/protolambda/ztyp/props"
-	. "github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
 
@@ -30,7 +29,7 @@ func NewValidator() *Validator {
 func (v *Validator) Pubkey() (*BLSPubkey, error) {
 	return BLSPubkeyReadProp(PropReader(v, 1)).BLSPubkey()
 }
-func (v *Validator) WithdrawalCredentials() (*Root, error) {
+func (v *Validator) WithdrawalCredentials() (out Root, err error) {
 	return RootReadProp(PropReader(v, 1)).Root()
 }
 func (v *Validator) EffectiveBalance() (Gwei, error) {

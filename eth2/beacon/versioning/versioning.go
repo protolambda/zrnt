@@ -3,6 +3,7 @@ package versioning
 import (
 	"fmt"
 	. "github.com/protolambda/zrnt/eth2/core"
+	. "github.com/protolambda/ztyp/props"
 	. "github.com/protolambda/ztyp/view"
 )
 
@@ -64,6 +65,14 @@ func (p ForkProp) Fork() (*Fork, error) {
 	} else {
 		return f, nil
 	}
+}
+
+func (p ForkProp) GetDomain(dom BLSDomainType, messageEpoch Epoch) (BLSDomain, error) {
+	f, err := p.Fork()
+	if err != nil {
+		return BLSDomain{}, err
+	}
+	return f.GetDomain(dom, messageEpoch)
 }
 
 type CurrentSlotReadProp SlotReadProp

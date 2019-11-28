@@ -55,6 +55,14 @@ func (state *ValidatorsState) WithdrawableEpoch(index ValidatorIndex) Epoch {
 func (state *ValidatorsState) IsActive(index ValidatorIndex, epoch Epoch) bool {
 	return state.Validators[index].IsActive(epoch)
 }
+func (state *ValidatorsState) SlashAndDelayWithdraw(index ValidatorIndex, withdrawalEpoch Epoch) {
+	// TODO: fix validator mutation
+	state.Validators[index].Slashed = true
+	prev := state.Validators[index].WithdrawableEpoch()
+	if withdrawalEpoch > prev {
+		state.Validators[index].WithdrawableEpoch = withdrawalEpoch
+	}
+}
 
 func (state *ValidatorsState) GetActiveValidatorIndices(epoch Epoch) RegistryIndices {
 	res := make([]ValidatorIndex, 0, len(state.Validators))

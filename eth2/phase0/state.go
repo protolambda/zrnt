@@ -11,8 +11,8 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon/slashings"
 	. "github.com/protolambda/zrnt/eth2/beacon/versioning"
 	. "github.com/protolambda/zrnt/eth2/core"
+	. "github.com/protolambda/ztyp/props"
 	"github.com/protolambda/ztyp/tree"
-	. "github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
 
@@ -55,6 +55,7 @@ type BeaconStateMutProps struct {
 	CurrentSlotMutProp
 	ForkProp
 	// TODO remaining props
+	SlashingsMutProp
 }
 
 type BeaconStateView struct {
@@ -70,6 +71,11 @@ func (state *BeaconStateView) MutProps() *BeaconStateMutProps {
 			SlotWriteProp: SlotWriteProp(PropWriter(state, 1)),
 		},
 		ForkProp:        ForkProp(PropReader(state, 2)),
+		// TODO remaining props
+		SlashingsMutProp: SlashingsMutProp{
+			SlashingsReadProp: SlashingsReadProp(PropReader(state, 123)),
+			SlashingsWriteProp: SlashingsWriteProp(PropWriter(state, 123)),
+		},
 	}
 }
 

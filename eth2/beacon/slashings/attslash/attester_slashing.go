@@ -18,7 +18,6 @@ type AttestSlashFeature struct {
 		meta.RegistrySize
 		meta.Pubkeys
 		meta.Versioning
-		meta.Validators
 		meta.Proposers
 		meta.Balance
 		meta.Slasher

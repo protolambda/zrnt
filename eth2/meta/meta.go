@@ -65,6 +65,10 @@ type SlashedIndices interface {
 	FilterUnslashed(indices []ValidatorIndex) ([]ValidatorIndex, error)
 }
 
+type SlashableCheck interface {
+	IsSlashable(i ValidatorIndex, epoch Epoch) (bool, error)
+}
+
 type CompactCommittees interface {
 	Pubkeys
 	EffectiveBalances

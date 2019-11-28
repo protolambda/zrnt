@@ -1,7 +1,6 @@
 package core
 
 import (
-	"fmt"
 	. "github.com/protolambda/ztyp/props"
 	. "github.com/protolambda/ztyp/view"
 )
@@ -22,18 +21,14 @@ func (sig *BLSPubkey) Bytes() (out BLSPubkeyBytes) {
 	return
 }
 
-type BLSPubkeyReadProp ReadPropFn
+type BLSPubkeyReadProp BasicVectorReadProp
 
 func (p BLSPubkeyReadProp) BLSPubkey() (*BLSPubkey, error) {
-	v, err := p()
-	if err != nil {
+	if v, err := BasicVectorReadProp(p).BasicVector(); err != nil {
 		return nil, err
+	} else {
+		return &BLSPubkey{BasicVectorView: v}, nil
 	}
-	pub, ok := v.(*BasicVectorView)
-	if ok {
-		return nil, fmt.Errorf("not a uint64 view: %v", v)
-	}
-	return &BLSPubkey{BasicVectorView: pub}, nil
 }
 
 
@@ -51,6 +46,16 @@ func NewBLSSignature() (b *BLSSignature) {
 func (sig *BLSSignature) Bytes() (out BLSSignatureBytes) {
 	_ = sig.IntoBytes(0, out[:])
 	return
+}
+
+type BLSSignatureReadProp BasicVectorReadProp
+
+func (p BLSSignatureReadProp) BLSSignature() (*BLSSignature, error) {
+	if v, err := BasicVectorReadProp(p).BasicVector(); err != nil {
+		return nil, err
+	} else {
+		return &BLSSignature{BasicVectorView: v}, nil
+	}
 }
 
 // Mixed into a BLS domain to define its type

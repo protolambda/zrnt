@@ -1,37 +1,17 @@
 package header
 
 import (
-	"errors"
-	"fmt"
 	. "github.com/protolambda/zrnt/eth2/core"
-	"github.com/protolambda/zrnt/eth2/meta"
-	"github.com/protolambda/zrnt/eth2/util/bls"
-	"github.com/protolambda/zrnt/eth2/util/ssz"
-	"github.com/protolambda/zssz"
+	. "github.com/protolambda/ztyp/props"
+	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
 
 type Header interface {
-	HashTreeRoot() (Root, error)
+	HashTreeRoot() Root
 	Slot() (Slot, error)
 	ParentRoot() (Root, error)
 	BodyRoot() (Root, error)
-}
-
-type HeaderProcessor interface {
-	ProcessHeader(header Header) error
-}
-
-type BlockHeaderFeature struct {
-	Meta  interface {
-		SetLatestHeader(header *BeaconBlockHeader)
-		meta.Versioning
-		meta.Proposers
-		meta.Pubkeys
-		meta.SlashedIndices
-		meta.LatestHeader
-		meta.LatestHeaderUpdate
-	}
 }
 
 var BeaconBlockHeaderType = &ContainerType{
@@ -39,7 +19,6 @@ var BeaconBlockHeaderType = &ContainerType{
 	{"parent_root", RootType},
 	{"state_root", RootType},
 	{"body_root", RootType},
-	{"signature", BLSSignatureType},
 }
 
 type BeaconBlockHeader struct { *ContainerView }
@@ -48,59 +27,60 @@ func NewBeaconBlockHeader() *BeaconBlockHeader {
 	return &BeaconBlockHeader{ContainerView: BeaconBlockHeaderType.New()}
 }
 
-
-func (v *BeaconBlockHeader) HashTreeRoot() (Root, error) {
-
+func (v *BeaconBlockHeader) HashTreeRoot() Root {
+	return v.ViewRoot(tree.Hash)
 }
 func (v *BeaconBlockHeader) Slot() (Slot, error) {
-
+	return SlotReadProp(PropReader(v, 0)).Slot()
+}
+func (v *BeaconBlockHeader) SetSlot(s Slot) error {
+	return SlotWriteProp(PropWriter(v, 0)).SetSlot(s)
 }
 func (v *BeaconBlockHeader) ParentRoot() (Root, error) {
-
+	return RootReadProp(PropReader(v, 1)).Root()
+}
+func (v *BeaconBlockHeader) SetParentRoot(r Root) error {
+	return RootWriteProp(PropWriter(v, 1)).SetRoot(r)
+}
+func (v *BeaconBlockHeader) StateRoot() (Root, error) {
+	return RootReadProp(PropReader(v, 2)).Root()
+}
+func (v *BeaconBlockHeader) SetStateRoot(r Root) error {
+	return RootWriteProp(PropWriter(v, 2)).SetRoot(r)
 }
 func (v *BeaconBlockHeader) BodyRoot() (Root, error) {
-
+	return RootReadProp(PropReader(v, 3)).Root()
+}
+func (v *BeaconBlockHeader) SetBodyRoot(r Root) error {
+	return RootWriteProp(PropWriter(v, 3)).SetRoot(r)
 }
 
-func (f *BlockHeaderFeature) ProcessHeader(header Header) error {
-	currentSlot := f.Meta.CurrentSlot()
-	headerSlot, err := header.Slot()
-	if err != nil {
-		return err
-	}
-	parentRoot, err := header.ParentRoot()
-	if err != nil {
-		return err
-	}
-	bodyRoot, err := header.BodyRoot()
-	if err != nil {
-		return err
-	}
-	// Verify that the slots match
-	if headerSlot != currentSlot {
-		return errors.New("slot of block does not match slot of state")
-	}
-	// Verify that the parent matches
-	if latestRoot := f.Meta.GetLatestBlockRoot(); parentRoot != latestRoot {
-		return fmt.Errorf("previous block root %x does not match root %x from latest state block header", parentRoot, latestRoot)
-	}
+type BeaconBlockHeaderReadProp ContainerReadProp
 
-	proposerIndex := f.Meta.GetBeaconProposerIndex(currentSlot)
-	// Verify proposer is not slashed
-	if slashed, err := f.Meta.IsSlashed(proposerIndex); err != nil {
-		return err
-	} else if slashed {
-		return errors.New("cannot accept block header from slashed proposer")
+func (p BeaconBlockHeaderReadProp) BeaconBlockHeader() (*BeaconBlockHeader, error) {
+	if c, err := (ContainerReadProp)(p).Container(); err != nil {
+		return nil, err
+	} else {
+		return &BeaconBlockHeader{ContainerView: c}, nil
 	}
+}
 
-	// Store as the new latest block
-	f.State.LatestBlockHeader = BeaconBlockHeader{
-		Slot:       headerSlot,
-		ParentRoot: parentRoot,
-		// state_root is zeroed and overwritten in the next `process_slot` call.
-		// with BlockHeaderState.UpdateStateRoot(), once the post state is available.
-		BodyRoot: bodyRoot,
-		// signature is always zeroed
+type SignedBeaconBlockHeader struct { *ContainerView }
+
+func (v *SignedBeaconBlockHeader) Message() (*BeaconBlockHeader, error) {
+	return BeaconBlockHeaderReadProp(PropReader(v, 0)).BeaconBlockHeader()
+}
+
+func (v *SignedBeaconBlockHeader) Signature() (*BLSSignature, error) {
+	return BLSSignatureReadProp(PropReader(v, 0)).BLSSignature()
+}
+
+type SignedBeaconBlockHeaderReadProp ContainerReadProp
+
+func (p SignedBeaconBlockHeaderReadProp) SignedBeaconBlockHeader() (*SignedBeaconBlockHeader, error) {
+	if c, err := (ContainerReadProp)(p).Container(); err != nil {
+		return nil, err
+	} else {
+		return &SignedBeaconBlockHeader{ContainerView: c}, nil
 	}
-	return nil
 }

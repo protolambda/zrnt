@@ -6,8 +6,9 @@ import (
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/meta"
 	"github.com/protolambda/zrnt/eth2/util/bls"
-	"github.com/protolambda/zrnt/eth2/util/ssz"
-	"github.com/protolambda/zssz"
+	. "github.com/protolambda/ztyp/props"
+	"github.com/protolambda/ztyp/tree"
+	. "github.com/protolambda/ztyp/view"
 )
 
 type ProposerSlashingProcessor interface {
@@ -17,6 +18,9 @@ type ProposerSlashingProcessor interface {
 
 type PropSlashFeature struct {
 	Meta interface {
+		meta.Pubkeys
+		meta.SigDomain
+		meta.SlashableCheck
 		meta.Versioning
 		meta.RegistrySize
 		meta.Proposers
@@ -26,19 +30,24 @@ type PropSlashFeature struct {
 	}
 }
 
-var ProposerSlashingSSZ = zssz.GetSSZ((*ProposerSlashing)(nil))
+type ProposerSlashing struct { *ContainerView }
 
-type ProposerSlashing struct {
-	ProposerIndex ValidatorIndex
-	Header1       BeaconBlockHeader // First proposal
-	Header2       BeaconBlockHeader // Second proposal
+func (ps *ProposerSlashing) ProposerIndex() (ValidatorIndex, error) {
+	return ValidatorIndexProp(PropReader(ps, 0)).ValidatorIndex()
+}
+
+func (ps *ProposerSlashing) SignedHeader1() (*SignedBeaconBlockHeader, error) {
+	return SignedBeaconBlockHeaderReadProp(PropReader(ps, 1)).SignedBeaconBlockHeader()
+}
+func (ps *ProposerSlashing) SignedHeader2() (*SignedBeaconBlockHeader, error) {
+	return SignedBeaconBlockHeaderReadProp(PropReader(ps, 2)).SignedBeaconBlockHeader()
 }
 
 // Beacon operations
 var ProposerSlashingType = &ContainerType{
 	{"proposer_index", ValidatorIndexType},
-	{"header_1", BeaconBlockHeaderType},
-	{"header_2", BeaconBlockHeaderType},
+	{"header_1", BeaconBlockHeaderType}, // First proposal
+	{"header_2", BeaconBlockHeaderType}, // Second proposal
 }
 
 
@@ -52,31 +61,81 @@ func (f *PropSlashFeature) ProcessProposerSlashings(ops []ProposerSlashing) erro
 }
 
 func (f *PropSlashFeature) ProcessProposerSlashing(ps *ProposerSlashing) error {
-	if !f.Meta.IsValidIndex(ps.ProposerIndex) {
+	proposerIndex, err := ps.ProposerIndex()
+	if err != nil {
+		return err
+	}
+	if valid, err := f.Meta.IsValidIndex(proposerIndex); err != nil {
+		return err
+	} else if !valid {
 		return errors.New("invalid proposer index")
 	}
+	signedHeader1, err := ps.SignedHeader1()
+	if err != nil {
+		return err
+	}
+	signedHeader2, err := ps.SignedHeader2()
+	if err != nil {
+		return err
+	}
+	header1, err := signedHeader1.Message()
+	if err != nil {
+		return err
+	}
+	header2, err := signedHeader2.Message()
+	if err != nil {
+		return err
+	}
+	slot1, err := header1.Slot()
+	if err != nil {
+		return err
+	}
+	slot2, err := header1.Slot()
+	if err != nil {
+		return err
+	}
 	// Verify slots match
-	if ps.Header1.Slot != ps.Header2.Slot {
+	if slot1 != slot2 {
 		return errors.New("proposer slashing requires slashing headers to have the same slot")
 	}
+	root1 := header1.ViewRoot(tree.Hash)
+	root2 := header2.ViewRoot(tree.Hash)
 	// But the headers are different
-	if ps.Header1 == ps.Header2 {
+	if root1 == root2 {
 		return errors.New("proposer slashing requires two different headers")
 	}
-	proposer := f.Meta.Validator(ps.ProposerIndex)
+	currentEpoch, err := f.Meta.CurrentEpoch()
+	if err != nil {
+		return err
+	}
 	// Check proposer is slashable
-	if !proposer.IsSlashable(f.Meta.CurrentEpoch()) {
+	if slashable, err := f.Meta.IsSlashable(proposerIndex, currentEpoch); err != nil {
+		return err
+	} else if !slashable {
 		return errors.New("proposer slashing requires proposer to be slashable")
 	}
+	pubkey, err := f.Meta.Pubkey(proposerIndex)
+	if err != nil {
+		return err
+	}
+	sig1, err := signedHeader1.Signature()
+	if err != nil {
+		return err
+	}
+	domain, err := f.Meta.GetDomain(DOMAIN_BEACON_PROPOSER, slot1.ToEpoch())
+	if err != nil {
+		return err
+	}
 	// Signatures are valid
-	if !bls.BlsVerify(proposer.Pubkey, ssz.SigningRoot(ps.Header1, BeaconBlockHeaderSSZ), ps.Header1.Signature,
-		f.Meta.GetDomain(DOMAIN_BEACON_PROPOSER, ps.Header1.Slot.ToEpoch())) {
+	if !bls.BlsVerify(pubkey.Bytes(), root1, sig1.Bytes(), domain) {
 		return errors.New("proposer slashing header 1 has invalid BLS signature")
 	}
-	if !bls.BlsVerify(proposer.Pubkey, ssz.SigningRoot(ps.Header2, BeaconBlockHeaderSSZ), ps.Header2.Signature,
-		f.Meta.GetDomain(DOMAIN_BEACON_PROPOSER, ps.Header2.Slot.ToEpoch())) {
+	sig2, err := signedHeader2.Signature()
+	if err != nil {
+		return err
+	}
+	if !bls.BlsVerify(pubkey.Bytes(), root2, sig2.Bytes(), domain) {
 		return errors.New("proposer slashing header 2 has invalid BLS signature")
 	}
-	f.Meta.SlashValidator(ps.ProposerIndex, nil)
-	return nil
+	return f.Meta.SlashValidator(proposerIndex, nil)
 }

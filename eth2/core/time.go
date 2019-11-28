@@ -1,29 +1,9 @@
 package core
 
 import (
-	"fmt"
+	. "github.com/protolambda/ztyp/props"
 	. "github.com/protolambda/ztyp/view"
 )
-
-type Uint64ReadProp ReadPropFn
-
-func (p Uint64ReadProp) Uint64() (Uint64View, error) {
-	v, err := p()
-	if err != nil {
-		return 0, err
-	}
-	n, ok := v.(Uint64View)
-	if ok {
-		return 0, fmt.Errorf("not a uint64 view: %v", v)
-	}
-	return n, nil
-}
-
-type Uint64WriteProp WritePropFn
-
-func (p Uint64WriteProp) SetUint64(v Uint64View) error {
-	return p(v)
-}
 
 // Unix timestamp
 type Timestamp Uint64View

@@ -2,20 +2,10 @@ package validator
 
 import (
 	. "github.com/protolambda/zrnt/eth2/core"
+	. "github.com/protolambda/ztyp/props"
+	. "github.com/protolambda/ztyp/tree"
+	. "github.com/protolambda/ztyp/view"
 )
-
-type Validator struct {
-	Pubkey                BLSPubkey
-	WithdrawalCredentials Root // Commitment to pubkey for withdrawals
-	EffectiveBalance      Gwei // Balance at stake
-	Slashed               bool
-
-	// Status epochs
-	ActivationEligibilityEpoch Epoch // When criteria for activation were met
-	ActivationEpoch            Epoch
-	ExitEpoch                  Epoch
-	WithdrawableEpoch          Epoch // When validator can withdraw funds
-}
 
 var ValidatorType = &ContainerType{
 	{"pubkey", BLSPubkeyType},
@@ -29,10 +19,73 @@ var ValidatorType = &ContainerType{
 	{"withdrawable_epoch", EpochType}, // When validator can withdraw funds
 }
 
-func (v *Validator) IsActive(epoch Epoch) bool {
-	return v.ActivationEpoch <= epoch && epoch < v.ExitEpoch
+type Validator struct {
+	*ContainerView
 }
 
-func (v *Validator) IsSlashable(epoch Epoch) bool {
-	return !v.Slashed && v.ActivationEpoch <= epoch && epoch < v.WithdrawableEpoch
+func NewValidator() *Validator {
+	return &Validator{ContainerView: ValidatorType.New()}
+}
+
+func (v *Validator) Pubkey() (*BLSPubkey, error) {
+	return BLSPubkeyReadProp(PropReader(v, 1)).BLSPubkey()
+}
+func (v *Validator) WithdrawalCredentials() (*Root, error) {
+	return RootReadProp(PropReader(v, 1)).Root()
+}
+func (v *Validator) EffectiveBalance() (Gwei, error) {
+	return GweiReadProp(PropReader(v, 2)).Gwei()
+}
+func (v *Validator) Slashed() (BoolView, error) {
+	return BoolReadProp(PropReader(v, 3)).Bool()
+}
+func (v *Validator) ActivationEligibilityEpoch() (Epoch, error) {
+	return EpochReadProp(PropReader(v, 4)).Epoch()
+}
+func (v *Validator) ActivationEpoch() (Epoch, error) {
+	return EpochReadProp(PropReader(v, 5)).Epoch()
+}
+func (v *Validator) ExitEpoch() (Epoch, error) {
+	return EpochReadProp(PropReader(v, 6)).Epoch()
+}
+func (v *Validator) WithdrawableEpoch() (Epoch, error) {
+	return EpochReadProp(PropReader(v, 7)).Epoch()
+}
+
+func (v *Validator) IsActive(epoch Epoch) (bool, error) {
+	activationEpoch, err := v.ActivationEpoch()
+	if err != nil {
+		return false, err
+	} else if activationEpoch > epoch {
+		return false, nil
+	}
+	exitEpoch, err := v.ExitEpoch()
+	if err != nil {
+		return false, err
+	} else if epoch >= exitEpoch {
+		return false, nil
+	}
+	return true, nil
+}
+
+func (v *Validator) IsSlashable(epoch Epoch) (bool, error) {
+	slashed, err := v.Slashed()
+	if err != nil {
+		return false, err
+	} else if slashed {
+		return false, nil
+	}
+	activationEpoch, err := v.ActivationEpoch()
+	if err != nil {
+		return false, err
+	} else if activationEpoch > epoch {
+		return false, nil
+	}
+	withdrawableEpoch, err := v.WithdrawableEpoch()
+	if err != nil {
+		return false, err
+	} else if withdrawableEpoch <= epoch {
+		return false, nil
+	}
+	return true, nil
 }

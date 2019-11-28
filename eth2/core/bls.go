@@ -1,6 +1,10 @@
 package core
 
-import . "github.com/protolambda/ztyp/view"
+import (
+	"fmt"
+	. "github.com/protolambda/ztyp/props"
+	. "github.com/protolambda/ztyp/view"
+)
 
 type BLSPubkeyBytes [48]byte
 var BLSPubkeyType = BasicVectorType(ByteType, 48)
@@ -16,6 +20,20 @@ func NewBLSPubkey() (b *BLSPubkey) {
 func (sig *BLSPubkey) Bytes() (out BLSPubkeyBytes) {
 	_ = sig.IntoBytes(0, out[:])
 	return
+}
+
+type BLSPubkeyReadProp ReadPropFn
+
+func (p BLSPubkeyReadProp) BLSPubkey() (*BLSPubkey, error) {
+	v, err := p()
+	if err != nil {
+		return nil, err
+	}
+	pub, ok := v.(*BasicVectorView)
+	if ok {
+		return nil, fmt.Errorf("not a uint64 view: %v", v)
+	}
+	return &BLSPubkey{BasicVectorView: pub}, nil
 }
 
 

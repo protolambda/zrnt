@@ -9,6 +9,13 @@ type Exits interface {
 	InitiateValidatorExit(currentEpoch Epoch, index ValidatorIndex) error
 }
 
+type ExitEpoch interface {
+	ExitEpoch(index ValidatorIndex) (Epoch, error)
+}
+type ActivationEpoch interface {
+	ActivationEpoch(index ValidatorIndex) (Epoch, error)
+}
+
 type Balance interface {
 	GetBalance(index ValidatorIndex) (Gwei, error)
 	IncreaseBalance(index ValidatorIndex, v Gwei) error

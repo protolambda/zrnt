@@ -57,6 +57,7 @@ type BeaconStateMutProps struct {
 	// TODO remaining props
 	SlashingsMutProp
 	LatestHeaderProp
+	RandaoMixesMutProp
 }
 
 type BeaconStateView struct {
@@ -80,6 +81,10 @@ func (state *BeaconStateView) MutProps() *BeaconStateMutProps {
 		LatestHeaderProp: LatestHeaderProp{
 			BeaconBlockHeaderReadProp: BeaconBlockHeaderReadProp(PropReader(state, 123)),
 			LatestHeaderWriteProp: LatestHeaderWriteProp(PropWriter(state, 123)),
+		},
+		RandaoMixesMutProp: RandaoMixesMutProp{
+			RandaoMixesReadProp:  RandaoMixesReadProp(PropReader(state, 123)),
+			RandaoMixesWriteProp: RandaoMixesWriteProp(PropWriter(state, 123)),
 		},
 	}
 }

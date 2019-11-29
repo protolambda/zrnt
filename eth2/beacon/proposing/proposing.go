@@ -2,6 +2,7 @@ package proposing
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/meta"
@@ -22,7 +23,7 @@ func (state *ProposersData) GetBeaconProposerIndex(slot Slot) ValidatorIndex {
 	if epoch == state.Epoch {
 		return state.Current[slot-state.Epoch.GetStartSlot()]
 	} else if epoch == state.Epoch+1 {
-		return state.Next[slot-(state.Epoch+1).GetStartSlot()]
+		return state.Next[slot-(state.Epoch + 1).GetStartSlot()]
 	} else {
 		panic(fmt.Errorf("slot %d not within range", slot))
 	}
@@ -39,39 +40,56 @@ type ProposingFeature struct {
 	}
 }
 
-func (f *ProposingFeature) LoadBeaconProposersData() (out *ProposersData) {
-	currentEpoch := f.Meta.CurrentEpoch()
+func (f *ProposingFeature) LoadBeaconProposersData() (out *ProposersData, err error) {
+	currentEpoch, err := f.Meta.CurrentEpoch()
+	if err != nil {
+		return nil, err
+	}
+	curr, err := f.LoadBeaconProposerIndices(currentEpoch)
+	if err != nil {
+		return nil, err
+	}
+	next, err := f.LoadBeaconProposerIndices(currentEpoch + 1)
 	return &ProposersData{
 		Epoch:   currentEpoch,
-		Current: f.LoadBeaconProposerIndices(currentEpoch),
-		Next:    f.LoadBeaconProposerIndices(currentEpoch + 1),
-	}
+		Current: curr,
+		Next:    next,
+	}, nil
 }
 
-func (f *ProposingFeature) computeProposerIndex(indices []ValidatorIndex, seed Root) ValidatorIndex {
+func (f *ProposingFeature) computeProposerIndex(indices []ValidatorIndex, seed Root) (ValidatorIndex, error) {
 	buf := make([]byte, 32+8, 32+8)
 	copy(buf[0:32], seed[:])
-	for i := uint64(0); true; i++ {
+	for i := uint64(0); i < 1000; i++ {
 		binary.LittleEndian.PutUint64(buf[32:], i)
 		h := Hash(buf)
 		for j := uint64(0); j < 32; j++ {
 			randomByte := h[j]
-			absI := ValidatorIndex(((i<<5)|j)%uint64(len(indices)))
+			absI := ValidatorIndex(((i << 5) | j) % uint64(len(indices)))
 			shuffledI := shuffle.PermuteIndex(absI, uint64(len(indices)), seed)
 			candidateIndex := indices[shuffledI]
-			effectiveBalance := f.Meta.EffectiveBalance(candidateIndex)
+			effectiveBalance, err := f.Meta.EffectiveBalance(candidateIndex)
+			if err != nil {
+				return 0, err
+			}
 			if effectiveBalance*0xff >= MAX_EFFECTIVE_BALANCE*Gwei(randomByte) {
-				return candidateIndex
+				return candidateIndex, nil
 			}
 		}
 	}
-	panic("random (but balance-biased) infinite scrolling through a committee should always find a proposer")
+	return 0, errors.New("random (but balance-biased) infinite scrolling through a committee should always find a proposer")
 }
 
 // Return the beacon proposer index for the current slot
-func (f *ProposingFeature) LoadBeaconProposerIndices(epoch Epoch) (out *EpochProposerIndices) {
-	seedSource := f.Meta.GetSeed(epoch, DOMAIN_BEACON_PROPOSER)
-	indices := f.Meta.GetActiveValidatorIndices(epoch)
+func (f *ProposingFeature) LoadBeaconProposerIndices(epoch Epoch) (out *EpochProposerIndices, err error) {
+	seedSource, err := f.Meta.GetSeed(epoch, DOMAIN_BEACON_PROPOSER)
+	if err != nil {
+		return nil, err
+	}
+	indices, err := f.Meta.GetActiveValidatorIndices(epoch)
+	if err != nil {
+		return nil, err
+	}
 
 	out = new(EpochProposerIndices)
 
@@ -79,9 +97,13 @@ func (f *ProposingFeature) LoadBeaconProposerIndices(epoch Epoch) (out *EpochPro
 	for i := Slot(0); i < SLOTS_PER_EPOCH; i++ {
 		buf := make([]byte, 32+8, 32+8)
 		copy(buf[0:32], seedSource[:])
-		binary.LittleEndian.PutUint64(buf[32:], uint64(startSlot + i))
+		binary.LittleEndian.PutUint64(buf[32:], uint64(startSlot+i))
 		seed := Hash(buf)
-		out[i] = f.computeProposerIndex(indices, seed)
+		proposerIndex, err := f.computeProposerIndex(indices, seed)
+		if err != nil {
+			return nil, err
+		}
+		out[i] = proposerIndex
 	}
 	return
 }

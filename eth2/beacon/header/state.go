@@ -5,7 +5,6 @@ import (
 	"fmt"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/meta"
-	. "github.com/protolambda/ztyp/props"
 )
 
 type HeaderProcessor interface {
@@ -13,7 +12,7 @@ type HeaderProcessor interface {
 }
 
 type BlockHeaderFeature struct {
-	State *LatestHeaderWriteProp
+	State *LatestHeaderProp
 	Meta  interface {
 		meta.Versioning
 		meta.Proposers
@@ -24,19 +23,10 @@ type BlockHeaderFeature struct {
 	}
 }
 
-type LatestHeaderWriteProp WritePropFn
-
-func (p LatestHeaderWriteProp) SetLatestHeader(v *BeaconBlockHeaderNode) error {
-	return p(v)
-}
-
-type LatestHeaderProp struct {
-	BeaconBlockHeaderReadProp
-	LatestHeaderWriteProp
-}
+type LatestHeaderProp BeaconBlockHeaderReadProp
 
 func (p LatestHeaderProp) GetLatestHeader() (*BeaconBlockHeaderNode, error) {
-	return p.BeaconBlockHeaderReadProp.BeaconBlockHeader()
+	return BeaconBlockHeaderReadProp(p).BeaconBlockHeader()
 }
 
 func (p LatestHeaderProp) GetLatestBlockRoot() (Root, error) {
@@ -48,15 +38,11 @@ func (p LatestHeaderProp) GetLatestBlockRoot() (Root, error) {
 }
 
 func (p LatestHeaderProp) UpdateLatestBlockStateRoot(root Root) error {
-	prev, err := p.BeaconBlockHeaderReadProp.BeaconBlockHeader()
+	prev, err := BeaconBlockHeaderReadProp(p).BeaconBlockHeader()
 	if err != nil {
 		return err
 	}
-	// modifying the view will only fork the view from the original tree, i.e. a copy.
-	if err := prev.SetStateRoot(root); err != nil {
-		return err
-	}
-	return p.LatestHeaderWriteProp.SetLatestHeader(prev)
+	return prev.SetStateRoot(root)
 }
 
 func (f *BlockHeaderFeature) ProcessHeader(header *BeaconBlockHeader) error {
@@ -100,5 +86,9 @@ func (f *BlockHeaderFeature) ProcessHeader(header *BeaconBlockHeader) error {
 	// with BlockHeaderState.UpdateStateRoot(), once the post state is available.
 
 	// Store as the new latest block
-	return f.State.SetLatestHeader(newLatest)
+	h, err := f.State.GetLatestHeader()
+	if err != nil {
+		return err
+	}
+	return h.PropagateChange(newLatest)
 }

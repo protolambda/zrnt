@@ -22,7 +22,7 @@ var BeaconBlockHeaderType = &ContainerType{
 type BeaconBlockHeaderNode struct { *ContainerView }
 
 func NewBeaconBlockHeaderNode() *BeaconBlockHeaderNode {
-	return &BeaconBlockHeaderNode{ContainerView: BeaconBlockHeaderType.New()}
+	return &BeaconBlockHeaderNode{ContainerView: BeaconBlockHeaderType.New(nil)}
 }
 
 func (v *BeaconBlockHeaderNode) HashTreeRoot() Root {

@@ -46,9 +46,9 @@ func (sl *Slashings) Total() (sum Gwei, err error) {
 	return
 }
 
-type SlashingsReadProp ReadPropFn
+type SlashingsProp ReadPropFn
 
-func (p SlashingsReadProp) Slashings() (*Slashings, error) {
+func (p SlashingsProp) Slashings() (*Slashings, error) {
 	if v, err := p(); err != nil {
 		return nil, err
 	} else if f, ok := v.(*Slashings); !ok {
@@ -58,23 +58,12 @@ func (p SlashingsReadProp) Slashings() (*Slashings, error) {
 	}
 }
 
-type SlashingsWriteProp WritePropFn
-
-func (p SlashingsWriteProp) SetSlashings(v *Slashings) error {
-	return p(v)
-}
-
-type SlashingsMutProp struct {
-	SlashingsReadProp
-	SlashingsWriteProp
-}
-
 type SlashingsEpochProcess interface {
 	ProcessEpochSlashings()
 }
 
 type SlashingFeature struct {
-	State *SlashingsMutProp
+	State SlashingsProp
 	Meta  interface {
 		meta.Versioning
 		meta.Proposers
@@ -109,9 +98,6 @@ func (f *SlashingFeature) SlashValidator(slashedIndex ValidatorIndex, whistleblo
 		return err
 	}
 	if err := slashings.AddSlashing(currentEpoch, effectiveBalance); err != nil {
-		return err
-	}
-	if err := f.State.SetSlashings(slashings); err != nil {
 		return err
 	}
 

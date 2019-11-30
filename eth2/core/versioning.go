@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	. "github.com/protolambda/ztyp/props"
 	. "github.com/protolambda/ztyp/view"
 )
 

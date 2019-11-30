@@ -55,12 +55,12 @@ type BeaconStateMutProps struct {
 	CurrentSlotMutProp
 	ForkProp
 	// TODO remaining props
-	SlashingsMutProp
+	SlashingsProp
 	LatestHeaderProp
-	RandaoMixesMutProp
+	RandaoMixesProp
 
 	// history
-	HistoryMutProps
+	HistoryProps
 }
 
 type BeaconStateView struct {
@@ -77,25 +77,13 @@ func (state *BeaconStateView) MutProps() *BeaconStateMutProps {
 		},
 		ForkProp:        ForkProp(PropReader(state, 2)),
 		// TODO remaining props
-		SlashingsMutProp: SlashingsMutProp{
-			SlashingsReadProp: SlashingsReadProp(PropReader(state, 123)),
-			SlashingsWriteProp: SlashingsWriteProp(PropWriter(state, 123)),
-		},
-		LatestHeaderProp: LatestHeaderProp{
-			BeaconBlockHeaderReadProp: BeaconBlockHeaderReadProp(PropReader(state, 123)),
-			LatestHeaderWriteProp: LatestHeaderWriteProp(PropWriter(state, 123)),
-		},
-		RandaoMixesMutProp: RandaoMixesMutProp{
-			RandaoMixesReadProp:  RandaoMixesReadProp(PropReader(state, 123)),
-			RandaoMixesWriteProp: RandaoMixesWriteProp(PropWriter(state, 123)),
-		},
-		HistoryMutProps: HistoryMutProps{
-			BlockRootsReadProp:       BlockRootsReadProp(PropReader(state, 123)),
-			StateRootsReadProp:       StateRootsReadProp(PropReader(state, 123)),
-			BlockRootsWriteProp:      BlockRootsWriteProp(PropWriter(state, 123)),
-			StateRootsWriteProp:      StateRootsWriteProp(PropWriter(state, 123)),
-			HistoricalRootsReadProp:  HistoricalRootsReadProp(PropReader(state, 123)),
-			HistoricalRootsWriteProp: HistoricalRootsWriteProp(PropWriter(state, 123)),
+		SlashingsProp:      SlashingsProp(PropReader(state, 123)),
+		LatestHeaderProp: LatestHeaderProp(PropReader(state, 123)),
+		RandaoMixesProp:      RandaoMixesProp(PropReader(state, 123)),
+		HistoryProps: HistoryProps{
+			BlockRootsProp:      BlockRootsProp(PropReader(state, 123)),
+			StateRootsProp:      StateRootsProp(PropReader(state, 123)),
+			HistoricalRootsProp: HistoricalRootsProp(PropReader(state, 123)),
 		},
 	}
 }

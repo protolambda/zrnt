@@ -31,7 +31,7 @@ func (mixes *RandaoMixes) SetRandomMix(epoch Epoch, mix Root) error {
 	return RootWriteProp(PropWriter(mixes, uint64(epoch%EPOCHS_PER_HISTORICAL_VECTOR))).SetRoot(mix)
 }
 
-// Prepare the randao mix for the given epoch by copying over the mix from the privious epoch.
+// Prepare the randao mix for the given epoch by copying over the mix from the previous epoch.
 func (mixes *RandaoMixes) PrepareRandao(epoch Epoch) error {
 	prev, err := mixes.GetRandomMix(epoch.Previous())
 	if err != nil {
@@ -40,11 +40,11 @@ func (mixes *RandaoMixes) PrepareRandao(epoch Epoch) error {
 	return mixes.SetRandomMix(epoch, prev)
 }
 
-func SeedRandao(seed Root) (*RandaoMixes, error) {
+func SeedRandao(seed Root, hook ViewHook) (*RandaoMixes, error) {
 	c := &tree.Commit{}
 	filler := seed
 	c.ExpandInplaceDepth(&filler, tree.GetDepth(uint64(EPOCHS_PER_HISTORICAL_VECTOR)))
-	v, err := RandaoMixesType.ViewFromBacking(c)
+	v, err := RandaoMixesType.ViewFromBacking(c, hook)
 	if err != nil {
 		return nil, err
 	}
@@ -55,9 +55,9 @@ func SeedRandao(seed Root) (*RandaoMixes, error) {
 	return &RandaoMixes{VectorView: vecView}, nil
 }
 
-type RandaoMixesReadProp VectorReadProp
+type RandaoMixesProp VectorReadProp
 
-func (p RandaoMixesReadProp) RandaoMixes() (*RandaoMixes, error) {
+func (p RandaoMixesProp) RandaoMixes() (*RandaoMixes, error) {
 	v, err := VectorReadProp(p).Vector()
 	if err != nil {
 		return nil, err
@@ -65,7 +65,7 @@ func (p RandaoMixesReadProp) RandaoMixes() (*RandaoMixes, error) {
 	return &RandaoMixes{VectorView: v}, nil
 }
 
-func (p *RandaoMixesReadProp) GetRandomMix(epoch Epoch) (Root, error) {
+func (p *RandaoMixesProp) GetRandomMix(epoch Epoch) (Root, error) {
 	mixes, err := p.RandaoMixes()
 	if err != nil {
 		return Root{}, err
@@ -73,51 +73,26 @@ func (p *RandaoMixesReadProp) GetRandomMix(epoch Epoch) (Root, error) {
 	return mixes.GetRandomMix(epoch)
 }
 
-type RandaoMixesWriteProp VectorWriteProp
-
-func (p RandaoMixesWriteProp) SetRandaoMixes(v *RandaoMixes) error {
-	return p(v)
-}
-
-func (p RandaoMixesWriteProp) SeedRandao(seed Root) error {
-	mixes, err := SeedRandao(seed)
-	if err != nil {
-		return err
-	}
-	return p.SetRandaoMixes(mixes)
-}
-
-type RandaoMixesMutProp struct {
-	RandaoMixesReadProp
-	RandaoMixesWriteProp
-}
-
-func (p *RandaoMixesMutProp) SetRandomMix(epoch Epoch, mix Root) error {
+func (p *RandaoMixesProp) SetRandomMix(epoch Epoch, mix Root) error {
 	mixes, err := p.RandaoMixes()
 	if err != nil {
 		return err
 	}
-	if err := mixes.SetRandomMix(epoch, mix); err != nil {
-		return err
-	}
-	return p.SetRandaoMixes(mixes)
+	return mixes.SetRandomMix(epoch, mix)
 }
 
-func (p *RandaoMixesMutProp) PrepareRandao(epoch Epoch) error {
+func (p *RandaoMixesProp) PrepareRandao(epoch Epoch) error {
 	mixes, err := p.RandaoMixes()
 	if err != nil {
 		return err
 	}
-	if err := mixes.PrepareRandao(epoch); err != nil {
-		return err
-	}
-	return p.SetRandaoMixes(mixes)
+	return mixes.PrepareRandao(epoch)
 }
 
 var RandaoEpochSSZ = zssz.GetSSZ((*Epoch)(nil))
 
 type RandaoFeature struct {
-	State *RandaoMixesMutProp
+	State RandaoMixesProp
 	Meta  interface {
 		meta.Versioning
 		meta.Proposers

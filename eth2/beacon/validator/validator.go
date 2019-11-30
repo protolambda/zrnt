@@ -23,7 +23,7 @@ type Validator struct {
 }
 
 func NewValidator() *Validator {
-	return &Validator{ContainerView: ValidatorType.New()}
+	return &Validator{ContainerView: ValidatorType.New(nil)}
 }
 
 func (v *Validator) Pubkey() (*BLSPubkeyNode, error) {

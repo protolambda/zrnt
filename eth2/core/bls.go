@@ -30,7 +30,7 @@ type BLSPubkeyNode struct {
 }
 
 func NewBLSPubkeyNode() (b *BLSPubkeyNode) {
-	return &BLSPubkeyNode{BasicVectorView: BLSPubkeyType.New()}
+	return &BLSPubkeyNode{BasicVectorView: BLSPubkeyType.New(nil)}
 }
 
 func (sig *BLSPubkeyNode) AsRaw() (out BLSPubkey) {
@@ -54,7 +54,7 @@ type BLSSignatureNode struct {
 }
 
 func NewBLSSignatureNode() (b *BLSSignatureNode) {
-	return &BLSSignatureNode{BasicVectorView: BLSSignatureType.New()}
+	return &BLSSignatureNode{BasicVectorView: BLSSignatureType.New(nil)}
 }
 
 func (sig *BLSSignatureNode) AsRaw() (out BLSSignature) {

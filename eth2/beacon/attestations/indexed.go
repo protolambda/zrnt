@@ -7,6 +7,7 @@ import (
 	"github.com/protolambda/zrnt/eth2/meta"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
+	. "github.com/protolambda/ztyp/view"
 	"sort"
 )
 
@@ -20,7 +21,7 @@ func (ci *CommitteeIndices) Limit() uint64 {
 type IndexedAttestation struct {
 	AttestingIndices CommitteeIndices
 	Data             AttestationData
-	Signature        BLSSignatureNode
+	Signature        BLSSignature
 }
 
 var IndexedAttestationType = &ContainerType{
@@ -32,6 +33,7 @@ var IndexedAttestationType = &ContainerType{
 type AttestationValidator interface {
 	meta.RegistrySize
 	meta.Pubkeys
+	meta.SigDomain
 	meta.Versioning
 }
 
@@ -52,13 +54,22 @@ func (indexedAttestation *IndexedAttestation) Validate(m AttestationValidator) e
 
 	// Check the last item of the sorted list to be a valid index,
 	// if this one is valid, the others are as well, since they are lower.
-	if len(indices) > 0 && !m.IsValidIndex(indices[len(indices)-1]) {
-		return errors.New("attestation indices contains out of range index")
+	if len(indices) > 0 {
+		valid, err := m.IsValidIndex(indices[len(indices)-1])
+		if err != nil {
+			return err
+		} else if !valid {
+			return errors.New("attestation indices contains out of range index")
+		}
 	}
 
-	pubkeys := make([]BLSPubkeyNode, 0, 2)
+	pubkeys := make([]BLSPubkey, 0, 2)
 	for _, i := range indices {
-		pubkeys = append(pubkeys, m.Pubkey(i))
+		pub, err := m.Pubkey(i)
+		if err != nil {
+			return err
+		}
+		pubkeys = append(pubkeys, pub)
 	}
 
 	// empty attestation
@@ -67,11 +78,15 @@ func (indexedAttestation *IndexedAttestation) Validate(m AttestationValidator) e
 		return nil
 	}
 
+	domain, err := m.GetDomain(DOMAIN_BEACON_ATTESTER, indexedAttestation.Data.Target.Epoch)
+	if err != nil {
+		return err
+	}
 	if !bls.BlsVerify(
 		bls.BlsAggregatePubkeys(pubkeys),
 		ssz.HashTreeRoot(&indexedAttestation.Data, AttestationDataSSZ),
 		indexedAttestation.Signature,
-		m.GetDomain(DOMAIN_BEACON_ATTESTER, indexedAttestation.Data.Target.Epoch),
+		domain,
 	) {
 		return errors.New("could not verify BLS signature for indexed attestation")
 	}

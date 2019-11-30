@@ -77,3 +77,9 @@ func (p EpochReadProp) Epoch() (Epoch, error) {
 	v, err := (Uint64ReadProp)(p).Uint64()
 	return Epoch(v), err
 }
+
+type EpochWriteProp Uint64WriteProp
+
+func (p EpochWriteProp) SetEpoch(v Epoch) error {
+	return (Uint64WriteProp)(p).SetUint64(Uint64View(v))
+}

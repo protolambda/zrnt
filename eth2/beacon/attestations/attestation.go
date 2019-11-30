@@ -6,6 +6,7 @@ import (
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/meta"
 	"github.com/protolambda/zssz"
+	. "github.com/protolambda/ztyp/view"
 	"sort"
 )
 
@@ -15,7 +16,7 @@ type AttestationProcessor interface {
 }
 
 type AttestationFeature struct {
-	State *AttestationsState
+	State *AttestationsProps
 	Meta  interface {
 		meta.Versioning
 		meta.BeaconCommittees
@@ -23,6 +24,7 @@ type AttestationFeature struct {
 		meta.Finality
 		meta.RegistrySize
 		meta.Pubkeys
+		meta.SigDomain
 		meta.Proposers
 	}
 }
@@ -41,7 +43,7 @@ var AttestationSSZ = zssz.GetSSZ((*Attestation)(nil))
 type Attestation struct {
 	AggregationBits CommitteeBits
 	Data            AttestationData
-	Signature       BLSSignatureNode
+	Signature       BLSSignature
 }
 
 var AttestationType = &ContainerType{
@@ -54,7 +56,10 @@ func (f *AttestationFeature) ProcessAttestation(attestation *Attestation) error 
 	data := &attestation.Data
 
 	// Check slot
-	currentSlot := f.Meta.CurrentSlot()
+	currentSlot, err := f.Meta.CurrentSlot()
+	if err != nil {
+		return err
+	}
 	if !(currentSlot <= data.Slot+SLOTS_PER_EPOCH) {
 		return errors.New("attestation slot is too old")
 	}
@@ -62,8 +67,8 @@ func (f *AttestationFeature) ProcessAttestation(attestation *Attestation) error 
 		return errors.New("attestation is too new")
 	}
 
-	currentEpoch := f.Meta.CurrentEpoch()
-	previousEpoch := f.Meta.PreviousEpoch()
+	currentEpoch := currentSlot.ToEpoch()
+	previousEpoch := currentEpoch.Previous()
 
 	// Check target
 	if data.Target.Epoch < previousEpoch {
@@ -73,41 +78,55 @@ func (f *AttestationFeature) ProcessAttestation(attestation *Attestation) error 
 	}
 
 	// Check committee index
-	if uint64(data.Index) >= f.Meta.GetCommitteeCountAtSlot(data.Slot) {
+	if commCount, err := f.Meta.GetCommitteeCountAtSlot(data.Slot); err != nil {
+		return err
+	} else if uint64(data.Index) >= commCount {
 		return errors.New("attestation data is invalid, committee index out of range")
 	}
 
 	// Check source
 	if data.Target.Epoch == currentEpoch {
-		if data.Source != f.Meta.CurrentJustified() {
+		if currentJustified, err := f.Meta.CurrentJustified(); err != nil {
+			return err
+		} else if data.Source != currentJustified {
 			return errors.New("attestation source does not match current justified checkpoint")
 		}
 	} else {
-		if data.Source != f.Meta.PreviousJustified() {
+		if previousJustified, err := f.Meta.PreviousJustified(); err != nil {
+			return err
+		} else if data.Source != previousJustified {
 			return errors.New("attestation source does not match previous justified checkpoint")
 		}
 	}
 
 	// Check signature and bitfields
-	committee := f.Meta.GetBeaconCommittee(data.Slot, data.Index)
+	committee, err := f.Meta.GetBeaconCommittee(data.Slot, data.Index)
+	if err != nil {
+		return err
+	}
 	if indexedAtt, err := attestation.ConvertToIndexed(committee); err != nil {
 		return fmt.Errorf("attestation could not be converted to an indexed attestation: %v", err)
 	} else if err := indexedAtt.Validate(f.Meta); err != nil {
 		return fmt.Errorf("attestation could not be verified in its indexed form: %v", err)
 	}
 
-	// Cache pending attestation
-	pendingAttestation := &PendingAttestation{
-		Data:            *data,
-		AggregationBits: attestation.AggregationBits,
-		InclusionDelay:  currentSlot - data.Slot,
-		ProposerIndex:   f.Meta.GetBeaconProposerIndex(currentSlot),
-	}
-	if data.Target.Epoch == currentEpoch {
-		f.State.CurrentEpochAttestations = append(f.State.CurrentEpochAttestations, pendingAttestation)
-	} else {
-		f.State.PreviousEpochAttestations = append(f.State.PreviousEpochAttestations, pendingAttestation)
-	}
+	// TODO
+	//proposerIndex, err := f.Meta.GetBeaconProposerIndex(currentSlot)
+	//if err != nil {
+	//	return err
+	//}
+	//// Cache pending attestation
+	//pendingAttestation := &PendingAttestation{
+	//	Data:            *data,
+	//	AggregationBits: attestation.AggregationBits,
+	//	InclusionDelay:  currentSlot - data.Slot,
+	//	ProposerIndex:   proposerIndex,
+	//}
+	//if data.Target.Epoch == currentEpoch {
+	//	f.State.CurrentEpochAttestations = append(f.State.CurrentEpochAttestations, pendingAttestation)
+	//} else {
+	//	f.State.PreviousEpochAttestations = append(f.State.PreviousEpochAttestations, pendingAttestation)
+	//}
 	return nil
 }
 

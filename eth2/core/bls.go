@@ -34,7 +34,7 @@ func NewBLSPubkeyNode() (b *BLSPubkeyNode) {
 }
 
 func (sig *BLSPubkeyNode) AsRaw() (out BLSPubkey) {
-	_ = sig.IntoBytes(0, out[:])
+	_ = sig.IntoBytes(out[:])
 	return
 }
 
@@ -58,7 +58,7 @@ func NewBLSSignatureNode() (b *BLSSignatureNode) {
 }
 
 func (sig *BLSSignatureNode) AsRaw() (out BLSSignature) {
-	_ = sig.IntoBytes(0, out[:])
+	_ = sig.IntoBytes(out[:])
 	return
 }
 

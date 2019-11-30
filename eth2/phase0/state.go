@@ -61,6 +61,7 @@ type BeaconStateMutProps struct {
 
 	// history
 	HistoryProps
+	FinalityProps
 }
 
 type BeaconStateView struct {
@@ -84,6 +85,12 @@ func (state *BeaconStateView) MutProps() *BeaconStateMutProps {
 			BlockRootsProp:      BlockRootsProp(PropReader(state, 123)),
 			StateRootsProp:      StateRootsProp(PropReader(state, 123)),
 			HistoricalRootsProp: HistoricalRootsProp(PropReader(state, 123)),
+		},
+		FinalityProps: FinalityProps{
+			JustificationBits:           JustificationBitsProp(PropReader(state, 123)),
+			PreviousJustifiedCheckpoint: CheckpointProp(PropReader(state, 123)),
+			CurrentJustifiedCheckpoint:  CheckpointProp(PropReader(state, 123)),
+			FinalizedCheckpoint:         CheckpointProp(PropReader(state, 123)),
 		},
 	}
 }

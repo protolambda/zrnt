@@ -3,6 +3,7 @@ package attestations
 import (
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zssz/bitfields"
+	. "github.com/protolambda/ztyp/view"
 )
 
 type CommitteeBits []byte

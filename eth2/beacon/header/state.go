@@ -39,7 +39,15 @@ func (p LatestHeaderProp) GetLatestHeader() (*BeaconBlockHeaderNode, error) {
 	return p.BeaconBlockHeaderReadProp.BeaconBlockHeader()
 }
 
-func (p LatestHeaderProp) UpdateStateRoot(root Root) error {
+func (p LatestHeaderProp) GetLatestBlockRoot() (Root, error) {
+	h, err := p.GetLatestHeader()
+	if err != nil {
+		return Root{}, err
+	}
+	return h.HashTreeRoot(), nil
+}
+
+func (p LatestHeaderProp) UpdateLatestBlockStateRoot(root Root) error {
 	prev, err := p.BeaconBlockHeaderReadProp.BeaconBlockHeader()
 	if err != nil {
 		return err

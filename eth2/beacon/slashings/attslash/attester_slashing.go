@@ -19,6 +19,7 @@ type AttestSlashFeature struct {
 	Meta interface {
 		meta.RegistrySize
 		meta.Pubkeys
+		meta.SigDomain
 		meta.SlashableCheck
 		meta.Versioning
 		meta.Proposers

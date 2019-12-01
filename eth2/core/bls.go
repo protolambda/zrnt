@@ -33,18 +33,15 @@ func NewBLSPubkeyNode() (b *BLSPubkeyNode) {
 	return &BLSPubkeyNode{BasicVectorView: BLSPubkeyType.New(nil)}
 }
 
-func (sig *BLSPubkeyNode) AsRaw() (out BLSPubkey) {
-	_ = sig.IntoBytes(out[:])
-	return
-}
-
 type BLSPubkeyReadProp BasicVectorReadProp
 
-func (p BLSPubkeyReadProp) BLSPubkey() (*BLSPubkeyNode, error) {
+func (p BLSPubkeyReadProp) BLSPubkey() (out BLSPubkey, err error) {
 	if v, err := BasicVectorReadProp(p).BasicVector(); err != nil {
-		return nil, err
+		return BLSPubkey{}, err
 	} else {
-		return &BLSPubkeyNode{BasicVectorView: v}, nil
+		pub := BLSPubkeyNode{BasicVectorView: v}
+		err = pub.IntoBytes(out[:])
+		return out, err
 	}
 }
 
@@ -57,17 +54,14 @@ func NewBLSSignatureNode() (b *BLSSignatureNode) {
 	return &BLSSignatureNode{BasicVectorView: BLSSignatureType.New(nil)}
 }
 
-func (sig *BLSSignatureNode) AsRaw() (out BLSSignature) {
-	_ = sig.IntoBytes(out[:])
-	return
-}
-
 type BLSSignatureReadProp BasicVectorReadProp
 
-func (p BLSSignatureReadProp) BLSSignature() (*BLSSignatureNode, error) {
+func (p BLSSignatureReadProp) BLSSignature() (out BLSSignature, err error) {
 	if v, err := BasicVectorReadProp(p).BasicVector(); err != nil {
-		return nil, err
+		return BLSSignature{}, err
 	} else {
-		return &BLSSignatureNode{BasicVectorView: v}, nil
+		sig := BLSSignatureNode{BasicVectorView: v}
+		err = sig.IntoBytes(out[:])
+		return out, err
 	}
 }

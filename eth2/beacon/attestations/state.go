@@ -133,7 +133,8 @@ func (ep *EpochPendingAttestations) CollectRawPendingAttestations() ([]*PendingA
 		if err != nil {
 			return nil, err
 		}
-		pa, err := PendingAttestationNode{ContainerView: v}.RawPendingAttestation()
+		pan := PendingAttestationNode{ContainerView: v}
+		pa, err := pan.RawPendingAttestation()
 		if err != nil {
 			return nil, err
 		}

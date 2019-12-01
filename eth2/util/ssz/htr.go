@@ -1,7 +1,6 @@
 package ssz
 
 import (
-	"github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/hashing"
 	"github.com/protolambda/zssz"
 	"github.com/protolambda/zssz/htr"
@@ -15,7 +14,7 @@ import (
 //  sszTyp := zssz.GetSSZ((*MyStruct)(nil))
 //  value := MyStruct{A: 123, B: false, C: []byte{42,13,37}}
 //  root := HashTreeRoot(&value, sszTyp)
-func HashTreeRoot(value interface{}, sszTyp types.SSZ) core.Root {
+func HashTreeRoot(value interface{}, sszTyp types.SSZ) [32]byte {
 	hFn := hashing.GetHashFn()
 	return zssz.HashTreeRoot(htr.HashFn(hFn), value, sszTyp)
 }

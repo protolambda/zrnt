@@ -32,7 +32,7 @@ var BeaconStateType = &ContainerType{
 	{"eth1_data_votes", Eth1DataVotesType},
 	{"eth1_deposit_index", Uint64Type},
 	// Registry
-	{"validators", RegistryValidatorsType},
+	{"validators", ValidatorsRegistryType},
 	{"balances", RegistryBalancesType},
 	// Randomness
 	{"randao_mixes", RandaoMixesType},

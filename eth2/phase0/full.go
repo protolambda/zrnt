@@ -22,7 +22,7 @@ import (
 // Full feature set for phase 0
 type FullFeaturedState struct {
 	// All base features a state has
-	*BeaconState
+	//*BeaconState //TODO
 
 	ShufflingFeature
 	*ShufflingStatus
@@ -60,8 +60,8 @@ type FullFeaturedState struct {
 
 func (f *FullFeaturedState) LoadPrecomputedData() {
 	// TODO: could re-use some pre-computed data from older states, worth benchmarking
-	f.ShufflingStatus = f.ShufflingFeature.LoadShufflingStatus()
-	f.ProposersData = f.LoadBeaconProposersData()
+	//f.ShufflingStatus = f.ShufflingFeature.LoadShufflingStatus()
+	//f.ProposersData = f.LoadBeaconProposersData()
 }
 
 func (f *FullFeaturedState) RotateEpochData() {
@@ -72,52 +72,52 @@ func (f *FullFeaturedState) RotateEpochData() {
 func (f *FullFeaturedState) StartEpoch() {
 	f.RotateEpochData()
 }
-
-func NewFullFeaturedState(state *BeaconState) *FullFeaturedState {
-	// The con of heavy composition: it needs to be hooked up at the upper abstraction level
-	// for cross references through interfaces to work.
-	f := new(FullFeaturedState)
-
-	// add state
-	f.BeaconState = state
-
-	// hook up features
-	f.ShufflingFeature.Meta = f
-
-	f.AttesterStatusFeature.State = &f.AttestationsState
-	f.AttesterStatusFeature.Meta = f
-
-	f.AttestationDeltasFeature.Meta = f
-
-	f.SeedFeature.Meta = f
-	f.ProposingFeature.Meta = f
-
-	// TODO: disabled for now, need to implement "meta.TargetStaking"
-	f.JustificationFeature.Meta = f
-	f.JustificationFeature.State = &f.FinalityState
-	f.RewardsAndPenaltiesFeature.Meta = f
-	f.RegistryUpdatesFeature.Meta = f
-	f.RegistryUpdatesFeature.State = &f.RegistryState
-	f.SlashingFeature.Meta = f
-	f.SlashingFeature.State = &f.SlashingsState
-	f.FinalUpdateFeature.Meta = f
-
-	f.RandaoFeature.Meta = f
-	f.RandaoFeature.State = &f.RandaoState
-
-	f.BlockHeaderFeature.Meta = f
-	f.BlockHeaderFeature.State = &f.BlockHeaderState
-
-	f.AttestationFeature.Meta = f
-	f.AttestationFeature.State = &f.AttestationsState
-	f.AttestSlashFeature.Meta = f
-	f.PropSlashFeature.Meta = f
-	f.DepositFeature.Meta = f
-	f.VoluntaryExitFeature.Meta = f
-
-	f.SlotProcessFeature.Meta = f
-	f.EpochProcessFeature.Meta = f
-	f.TransitionFeature.Meta = f
-
-	return f
-}
+//
+//func NewFullFeaturedState(state *BeaconState) *FullFeaturedState {
+//	// The con of heavy composition: it needs to be hooked up at the upper abstraction level
+//	// for cross references through interfaces to work.
+//	f := new(FullFeaturedState)
+//
+//	// add state
+//	f.BeaconState = state
+//
+//	// hook up features
+//	f.ShufflingFeature.Meta = f
+//
+//	f.AttesterStatusFeature.State = &f.AttestationsState
+//	f.AttesterStatusFeature.Meta = f
+//
+//	f.AttestationDeltasFeature.Meta = f
+//
+//	f.SeedFeature.Meta = f
+//	f.ProposingFeature.Meta = f
+//
+//	// TODO: disabled for now, need to implement "meta.TargetStaking"
+//	f.JustificationFeature.Meta = f
+//	f.JustificationFeature.State = &f.FinalityState
+//	f.RewardsAndPenaltiesFeature.Meta = f
+//	f.RegistryUpdatesFeature.Meta = f
+//	f.RegistryUpdatesFeature.State = &f.RegistryState
+//	f.SlashingFeature.Meta = f
+//	f.SlashingFeature.State = &f.SlashingsState
+//	f.FinalUpdateFeature.Meta = f
+//
+//	f.RandaoFeature.Meta = f
+//	f.RandaoFeature.State = &f.RandaoState
+//
+//	f.BlockHeaderFeature.Meta = f
+//	f.BlockHeaderFeature.State = &f.BlockHeaderState
+//
+//	f.AttestationFeature.Meta = f
+//	f.AttestationFeature.State = &f.AttestationsState
+//	f.AttestSlashFeature.Meta = f
+//	f.PropSlashFeature.Meta = f
+//	f.DepositFeature.Meta = f
+//	f.VoluntaryExitFeature.Meta = f
+//
+//	f.SlotProcessFeature.Meta = f
+//	f.EpochProcessFeature.Meta = f
+//	f.TransitionFeature.Meta = f
+//
+//	return f
+//}

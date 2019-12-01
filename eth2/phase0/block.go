@@ -10,8 +10,6 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon/slashings/attslash"
 	. "github.com/protolambda/zrnt/eth2/beacon/slashings/propslash"
 	. "github.com/protolambda/zrnt/eth2/core"
-	"github.com/protolambda/zrnt/eth2/util/ssz"
-	"github.com/protolambda/zssz"
 	. "github.com/protolambda/ztyp/view"
 )
 
@@ -26,10 +24,10 @@ var BeaconBlockType = &ContainerType{
 }
 
 func (block *BeaconBlock) Header() *BeaconBlockHeader {
-
+	return nil // TODO
 }
 
-var BeaconBlockBodySSZ = zssz.GetSSZ((*BeaconBlockBody)(nil))
+//var BeaconBlockBodySSZ = zssz.GetSSZ((*BeaconBlockBody)(nil))
 
 type BeaconBlockBody struct {
 	RandaoReveal BLSSignatureNode
@@ -68,41 +66,41 @@ type BlockProcessFeature struct {
 		ProposerSlashingProcessor
 	}
 }
-
-func (f *BlockProcessFeature) Slot() Slot {
-	return f.Block.Slot
-}
-
-func (f *BlockProcessFeature) StateRoot() Root {
-	return f.Block.StateRoot
-}
-
-func (f *BlockProcessFeature) Process() error {
-	header := f.Block.Header()
-	if err := f.Meta.ProcessHeader(header); err != nil {
-		return err
-	}
-	body := &f.Block.Body
-	if err := f.Meta.ProcessRandaoReveal(body.RandaoReveal); err != nil {
-		return err
-	}
-	if err := f.Meta.ProcessEth1Vote(body.Eth1Data); err != nil {
-		return err
-	}
-	if err := f.Meta.ProcessProposerSlashings(body.ProposerSlashings); err != nil {
-		return err
-	}
-	if err := f.Meta.ProcessAttesterSlashings(body.AttesterSlashings); err != nil {
-		return err
-	}
-	if err := f.Meta.ProcessAttestations(body.Attestations); err != nil {
-		return err
-	}
-	if err := f.Meta.ProcessDeposits(body.Deposits); err != nil {
-		return err
-	}
-	if err := f.Meta.ProcessVoluntaryExits(body.VoluntaryExits); err != nil {
-		return err
-	}
-	return nil
-}
+//
+//func (f *BlockProcessFeature) Slot() Slot {
+//	return f.Block.Slot
+//}
+//
+//func (f *BlockProcessFeature) StateRoot() Root {
+//	return f.Block.StateRoot
+//}
+//
+//func (f *BlockProcessFeature) Process() error {
+//	header := f.Block.Header()
+//	if err := f.Meta.ProcessHeader(header); err != nil {
+//		return err
+//	}
+//	body := &f.Block.Body
+//	if err := f.Meta.ProcessRandaoReveal(body.RandaoReveal); err != nil {
+//		return err
+//	}
+//	if err := f.Meta.ProcessEth1Vote(body.Eth1Data); err != nil {
+//		return err
+//	}
+//	if err := f.Meta.ProcessProposerSlashings(body.ProposerSlashings); err != nil {
+//		return err
+//	}
+//	if err := f.Meta.ProcessAttesterSlashings(body.AttesterSlashings); err != nil {
+//		return err
+//	}
+//	if err := f.Meta.ProcessAttestations(body.Attestations); err != nil {
+//		return err
+//	}
+//	if err := f.Meta.ProcessDeposits(body.Deposits); err != nil {
+//		return err
+//	}
+//	if err := f.Meta.ProcessVoluntaryExits(body.VoluntaryExits); err != nil {
+//		return err
+//	}
+//	return nil
+//}

@@ -15,11 +15,11 @@ type SlotProcessFeature struct {
 }
 
 func (f *SlotProcessFeature) ProcessSlot() {
-	// Cache latest known state root (for previous slot)
-	latestStateRoot := f.Meta.StateRoot()
-
-	previousBlockRoot := f.Meta.UpdateLatestBlockRoot(latestStateRoot)
-
-	// Cache latest known block and state root
-	f.Meta.SetRecentRoots(f.Meta.CurrentSlot(), previousBlockRoot, latestStateRoot)
+	//// Cache latest known state root (for previous slot)
+	//latestStateRoot := f.Meta.StateRoot()
+	//
+	//previousBlockRoot := f.Meta.UpdateLatestBlockRoot(latestStateRoot)
+	//
+	//// Cache latest known block and state root
+	//f.Meta.SetRecentRoots(f.Meta.CurrentSlot(), previousBlockRoot, latestStateRoot)
 }

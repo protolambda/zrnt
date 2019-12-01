@@ -15,7 +15,7 @@ func (t Timestamp) ToSlot(genesisTime Timestamp) Slot {
 type TimestampReadProp Uint64ReadProp
 
 func (p TimestampReadProp) Timestamp() (Timestamp, error) {
-	v, err := (Uint64ReadProp)(p).Uint64()
+	v, err := Uint64ReadProp(p).Uint64()
 	return Timestamp(v), err
 }
 
@@ -25,7 +25,7 @@ type DepositIndex Uint64View
 type DepositIndexReadProp Uint64ReadProp
 
 func (p DepositIndexReadProp) DepositIndex() (DepositIndex, error) {
-	v, err := (Uint64ReadProp)(p).Uint64()
+	v, err := Uint64ReadProp(p).Uint64()
 	return DepositIndex(v), err
 }
 
@@ -40,14 +40,14 @@ func (s Slot) ToEpoch() Epoch {
 type SlotReadProp Uint64ReadProp
 
 func (p SlotReadProp) Slot() (Slot, error) {
-	v, err := (Uint64ReadProp)(p).Uint64()
+	v, err := Uint64ReadProp(p).Uint64()
 	return Slot(v), err
 }
 
 type SlotWriteProp Uint64WriteProp
 
 func (p SlotWriteProp) SetSlot(v Slot) error {
-	return (Uint64WriteProp)(p).SetUint64(Uint64View(v))
+	return (Uint64WriteProp)(p).SetUint64(uint64(v))
 }
 
 const EpochType = Uint64Type
@@ -74,12 +74,12 @@ func (e Epoch) Previous() Epoch {
 type EpochReadProp Uint64ReadProp
 
 func (p EpochReadProp) Epoch() (Epoch, error) {
-	v, err := (Uint64ReadProp)(p).Uint64()
+	v, err := Uint64ReadProp(p).Uint64()
 	return Epoch(v), err
 }
 
 type EpochWriteProp Uint64WriteProp
 
 func (p EpochWriteProp) SetEpoch(v Epoch) error {
-	return (Uint64WriteProp)(p).SetUint64(Uint64View(v))
+	return (Uint64WriteProp)(p).SetUint64(uint64(v))
 }

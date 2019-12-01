@@ -1,6 +1,8 @@
 package core
 
 import (
+	"github.com/protolambda/zrnt/eth2/util/ssz"
+	"github.com/protolambda/zssz"
 	. "github.com/protolambda/ztyp/props"
 	. "github.com/protolambda/ztyp/view"
 	"sort"
@@ -14,7 +16,7 @@ type ValidatorIndex uint64
 type ValidatorIndexProp Uint64ReadProp
 
 func (p ValidatorIndexProp) ValidatorIndex() (ValidatorIndex, error) {
-	v, err := (Uint64ReadProp)(p).Uint64()
+	v, err := Uint64ReadProp(p).Uint64()
 	return ValidatorIndex(v), err
 }
 
@@ -26,6 +28,12 @@ type RegistryIndices []ValidatorIndex
 
 func (*RegistryIndices) Limit() uint64 {
 	return VALIDATOR_REGISTRY_LIMIT
+}
+
+var registryIndicesSSZ = zssz.GetSSZ((*RegistryIndices)(nil))
+
+func (v *RegistryIndices) HashTreeRoot() Root {
+	return ssz.HashTreeRoot(v, registryIndicesSSZ)
 }
 
 // Collection of validators, should always be sorted.

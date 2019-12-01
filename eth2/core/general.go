@@ -20,7 +20,7 @@ const CommitteeIndexType = Uint64Type
 type CommitteeIndexReadProp Uint64ReadProp
 
 func (p CommitteeIndexReadProp) CommitteeIndex() (CommitteeIndex, error) {
-	v, err := (Uint64ReadProp)(p).Uint64()
+	v, err := Uint64ReadProp(p).Uint64()
 	return CommitteeIndex(v), err
 }
 
@@ -30,7 +30,7 @@ const GweiType = Uint64Type
 type GweiReadProp Uint64ReadProp
 
 func (p GweiReadProp) Gwei() (Gwei, error) {
-	v, err := (Uint64ReadProp)(p).Uint64()
+	v, err := Uint64ReadProp(p).Uint64()
 	return Gwei(v), err
 }
 

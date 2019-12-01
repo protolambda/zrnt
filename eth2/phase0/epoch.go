@@ -19,9 +19,9 @@ type EpochProcessFeature struct {
 }
 
 func (f *EpochProcessFeature) ProcessEpoch() {
-	f.Meta.ProcessEpochJustification()
-	f.Meta.ProcessEpochRewardsAndPenalties()
-	f.Meta.ProcessEpochRegistryUpdates()
-	f.Meta.ProcessEpochSlashings()
-	f.Meta.ProcessEpochFinalUpdates()
+	//f.Meta.ProcessEpochJustification()
+	//f.Meta.ProcessEpochRewardsAndPenalties()
+	//f.Meta.ProcessEpochRegistryUpdates()
+	//f.Meta.ProcessEpochSlashings()
+	//f.Meta.ProcessEpochFinalUpdates()
 }

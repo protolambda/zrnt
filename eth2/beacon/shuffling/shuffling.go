@@ -26,7 +26,7 @@ type ShufflingStatus struct {
 // Return the beacon committee at slot for index.
 func (shs *ShufflingStatus) GetBeaconCommittee(slot Slot, index CommitteeIndex) []ValidatorIndex {
 	if index >= MAX_COMMITTEES_PER_SLOT {
-		panic(fmt.Errorf("crosslink committee retrieval: out of range committee index: %d", index))
+		panic(fmt.Errorf("beacon committee retrieval: out of range committee index: %d", index))
 	}
 
 	epoch := slot.ToEpoch()
@@ -37,7 +37,7 @@ func (shs *ShufflingStatus) GetBeaconCommittee(slot Slot, index CommitteeIndex) 
 	} else if epoch == shs.NextShuffling.Epoch {
 		return shs.NextShuffling.Committees[slot % SLOTS_PER_EPOCH][index]
 	} else {
-		panic(fmt.Errorf("crosslink committee retrieval: out of range epoch: %d", epoch))
+		panic(fmt.Errorf("beacon committee retrieval: out of range epoch: %d", epoch))
 	}
 }
 

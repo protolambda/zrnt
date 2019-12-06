@@ -41,9 +41,12 @@ func (mixes *RandaoMixes) PrepareRandao(epoch Epoch) error {
 }
 
 func SeedRandao(seed Root, hook ViewHook) (*RandaoMixes, error) {
-	c := &tree.Commit{}
 	filler := seed
-	c.ExpandInplaceDepth(&filler, tree.GetDepth(uint64(EPOCHS_PER_HISTORICAL_VECTOR)))
+	length := uint64(EPOCHS_PER_HISTORICAL_VECTOR)
+	c, err := tree.SubtreeFillToLength(&filler, tree.GetDepth(length), length)
+	if err != nil {
+		return nil, err
+	}
 	v, err := RandaoMixesType.ViewFromBacking(c, hook)
 	if err != nil {
 		return nil, err

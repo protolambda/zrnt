@@ -14,7 +14,7 @@ var ProposerSlashingsType = ListType(ProposerSlashingType, MAX_PROPOSER_SLASHING
 var AttesterSlashingsType = ListType(AttesterSlashingType, MAX_ATTESTER_SLASHINGS)
 var AttestationsType = ListType(AttestationType, MAX_ATTESTATIONS)
 var DepositsType = ListType(DepositType, MAX_DEPOSITS)
-var VoluntaryExitsType = ListType(VoluntaryExitType, MAX_VOLUNTARY_EXITS)
+var VoluntaryExitsType = ListType(SignedVoluntaryExitType, MAX_VOLUNTARY_EXITS)
 
 type ProposerSlashings []ProposerSlashing
 
@@ -40,7 +40,7 @@ func (*Deposits) Limit() uint64 {
 	return MAX_DEPOSITS
 }
 
-type VoluntaryExits []VoluntaryExit
+type VoluntaryExits []SignedVoluntaryExit
 
 func (*VoluntaryExits) Limit() uint64 {
 	return MAX_VOLUNTARY_EXITS

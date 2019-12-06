@@ -6,7 +6,7 @@ import (
 )
 
 type FinalUpdatesEpochProcess interface {
-	ProcessEpochFinalUpdates()
+	ProcessEpochFinalUpdates() error
 }
 
 type FinalUpdateFeature struct {

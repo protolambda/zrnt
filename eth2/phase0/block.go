@@ -10,27 +10,50 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon/slashings/attslash"
 	. "github.com/protolambda/zrnt/eth2/beacon/slashings/propslash"
 	. "github.com/protolambda/zrnt/eth2/core"
+	"github.com/protolambda/zrnt/eth2/util/ssz"
+	"github.com/protolambda/zssz"
 	. "github.com/protolambda/ztyp/view"
 )
 
-type BeaconBlock struct{ *ContainerView }
+var BeaconBlockSSZ = zssz.GetSSZ((*BeaconBlock)(nil))
+
+type SignedBeaconBlock struct {
+	Message   BeaconBlock
+	Signature BLSSignature
+}
+
+type BeaconBlock struct {
+	Slot       Slot
+	ParentRoot Root
+	StateRoot  Root
+	Body       BeaconBlockBody
+}
 
 var BeaconBlockType = &ContainerType{
 	{"slot", SlotType},
 	{"parent_root", RootType},
 	{"state_root", RootType},
 	{"body", BeaconBlockBodyType},
+}
+
+var SignedBeaconBlockType = &ContainerType{
+	{"message", BeaconBlockType},
 	{"signature", BLSSignatureType},
 }
 
 func (block *BeaconBlock) Header() *BeaconBlockHeader {
-	return nil // TODO
+	return &BeaconBlockHeader{
+		Slot:       block.Slot,
+		ParentRoot: block.ParentRoot,
+		StateRoot:  block.StateRoot,
+		BodyRoot:   block.Body.HashTreeRoot(),
+	}
 }
 
-//var BeaconBlockBodySSZ = zssz.GetSSZ((*BeaconBlockBody)(nil))
+var BeaconBlockBodySSZ = zssz.GetSSZ((*BeaconBlockBody)(nil))
 
 type BeaconBlockBody struct {
-	RandaoReveal BLSSignatureNode
+	RandaoReveal BLSSignature
 	Eth1Data     Eth1Data // Eth1 data vote
 	Graffiti     Root     // Arbitrary data
 
@@ -39,6 +62,10 @@ type BeaconBlockBody struct {
 	Attestations      Attestations
 	Deposits          Deposits
 	VoluntaryExits    VoluntaryExits
+}
+
+func (b *BeaconBlockBody) HashTreeRoot() Root {
+	return ssz.HashTreeRoot(b, BeaconBlockBodySSZ)
 }
 
 var BeaconBlockBodyType = &ContainerType{
@@ -66,41 +93,41 @@ type BlockProcessFeature struct {
 		ProposerSlashingProcessor
 	}
 }
-//
-//func (f *BlockProcessFeature) Slot() Slot {
-//	return f.Block.Slot
-//}
-//
-//func (f *BlockProcessFeature) StateRoot() Root {
-//	return f.Block.StateRoot
-//}
-//
-//func (f *BlockProcessFeature) Process() error {
-//	header := f.Block.Header()
-//	if err := f.Meta.ProcessHeader(header); err != nil {
-//		return err
-//	}
-//	body := &f.Block.Body
-//	if err := f.Meta.ProcessRandaoReveal(body.RandaoReveal); err != nil {
-//		return err
-//	}
-//	if err := f.Meta.ProcessEth1Vote(body.Eth1Data); err != nil {
-//		return err
-//	}
-//	if err := f.Meta.ProcessProposerSlashings(body.ProposerSlashings); err != nil {
-//		return err
-//	}
-//	if err := f.Meta.ProcessAttesterSlashings(body.AttesterSlashings); err != nil {
-//		return err
-//	}
-//	if err := f.Meta.ProcessAttestations(body.Attestations); err != nil {
-//		return err
-//	}
-//	if err := f.Meta.ProcessDeposits(body.Deposits); err != nil {
-//		return err
-//	}
-//	if err := f.Meta.ProcessVoluntaryExits(body.VoluntaryExits); err != nil {
-//		return err
-//	}
-//	return nil
-//}
+
+func (f *BlockProcessFeature) Slot() Slot {
+	return f.Block.Slot
+}
+
+func (f *BlockProcessFeature) StateRoot() Root {
+	return f.Block.StateRoot
+}
+
+func (f *BlockProcessFeature) Process() error {
+	header := f.Block.Header()
+	if err := f.Meta.ProcessHeader(header); err != nil {
+		return err
+	}
+	body := &f.Block.Body
+	if err := f.Meta.ProcessRandaoReveal(body.RandaoReveal); err != nil {
+		return err
+	}
+	if err := f.Meta.ProcessEth1Vote(body.Eth1Data); err != nil {
+		return err
+	}
+	if err := f.Meta.ProcessProposerSlashings(body.ProposerSlashings); err != nil {
+		return err
+	}
+	if err := f.Meta.ProcessAttesterSlashings(body.AttesterSlashings); err != nil {
+		return err
+	}
+	if err := f.Meta.ProcessAttestations(body.Attestations); err != nil {
+		return err
+	}
+	if err := f.Meta.ProcessDeposits(body.Deposits); err != nil {
+		return err
+	}
+	if err := f.Meta.ProcessVoluntaryExits(body.VoluntaryExits); err != nil {
+		return err
+	}
+	return nil
+}

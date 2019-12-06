@@ -6,7 +6,7 @@ import (
 )
 
 type RewardsAndPenaltiesEpochProcess interface {
-	ProcessEpochRewardsAndPenalties()
+	ProcessEpochRewardsAndPenalties() error
 }
 
 type RewardsAndPenaltiesFeature struct {

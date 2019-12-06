@@ -60,7 +60,7 @@ func (state *RegistryState) AddNewValidator(pubkey BLSPubkeyNode, withdrawalCred
 }
 
 type RegistryUpdateEpochProcess interface {
-	ProcessEpochRegistryUpdates()
+	ProcessEpochRegistryUpdates() error
 }
 
 type RegistryUpdatesFeature struct {

@@ -18,10 +18,21 @@ type EpochProcessFeature struct {
 	}
 }
 
-func (f *EpochProcessFeature) ProcessEpoch() {
-	//f.Meta.ProcessEpochJustification()
-	//f.Meta.ProcessEpochRewardsAndPenalties()
-	//f.Meta.ProcessEpochRegistryUpdates()
-	//f.Meta.ProcessEpochSlashings()
-	//f.Meta.ProcessEpochFinalUpdates()
+func (f *EpochProcessFeature) ProcessEpoch() error {
+	if err := f.Meta.ProcessEpochJustification(); err != nil {
+		return err
+	}
+	if err := f.Meta.ProcessEpochRewardsAndPenalties(); err != nil {
+		return err
+	}
+	if err := f.Meta.ProcessEpochRegistryUpdates(); err != nil {
+		return err
+	}
+	if err := f.Meta.ProcessEpochSlashings(); err != nil {
+		return err
+	}
+	if err := f.Meta.ProcessEpochFinalUpdates(); err != nil {
+		return err
+	}
+	return nil
 }

@@ -59,7 +59,7 @@ func (p SlashingsProp) Slashings() (*Slashings, error) {
 }
 
 type SlashingsEpochProcess interface {
-	ProcessEpochSlashings()
+	ProcessEpochSlashings() error
 }
 
 type SlashingFeature struct {

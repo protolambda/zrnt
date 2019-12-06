@@ -1,9 +1,6 @@
 package meta
 
-import (
-	"github.com/protolambda/zrnt/eth2/beacon/validator"
-	. "github.com/protolambda/zrnt/eth2/core"
-)
+import . "github.com/protolambda/zrnt/eth2/core"
 
 type Exits interface {
 	InitiateValidatorExit(currentEpoch Epoch, index ValidatorIndex) error
@@ -100,10 +97,6 @@ type SlashingHistory interface {
 
 type Slasher interface {
 	SlashValidator(slashedIndex ValidatorIndex, whistleblowerIndex *ValidatorIndex) error
-}
-
-type Validators interface {
-	Validator(index ValidatorIndex) (*validator.Validator, error)
 }
 
 type Versioning interface {

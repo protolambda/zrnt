@@ -24,7 +24,6 @@ type VoluntaryExitFeature struct {
 		meta.ActivationEpoch
 		meta.Versioning
 		meta.RegistrySize
-		meta.Validators
 		meta.Exits
 	}
 }

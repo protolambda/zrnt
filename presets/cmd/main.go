@@ -136,7 +136,7 @@ func main() {
 
 var constantsFileTemplate = `// +build preset_{{.Name}}
 
-package constant_presets
+package generated
 
 const PRESET_NAME string = "{{.Name}}"
 {{ range .Entries }}

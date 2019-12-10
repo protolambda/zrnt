@@ -4,7 +4,7 @@ package core
 
 import (
 	"encoding/binary"
-	generated "github.com/protolambda/zrnt/presets/generated"
+	"github.com/protolambda/zrnt/presets/generated"
 )
 
 // Helper to know what preset is active

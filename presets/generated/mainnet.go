@@ -1,6 +1,6 @@
 // +build preset_mainnet
 
-package constant_presets
+package generated
 
 const PRESET_NAME string = "mainnet"
 

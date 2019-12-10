@@ -1,6 +1,6 @@
 // +build preset_minimal
 
-package constant_presets
+package generated
 
 const PRESET_NAME string = "minimal"
 

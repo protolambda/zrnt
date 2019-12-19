@@ -74,16 +74,13 @@ func (f *RegistryUpdatesFeature) ProcessEpochRegistryUpdates() {
 	// Process activation eligibility and ejections
 	currentEpoch := f.Meta.CurrentEpoch()
 	for i, v := range f.State.Validators {
-		if v.ActivationEligibilityEpoch == FAR_FUTURE_EPOCH &&
-			v.EffectiveBalance == MAX_EFFECTIVE_BALANCE {
-			v.ActivationEligibilityEpoch = currentEpoch
+		if v.IsEligibleForActivationQueue() {
+			v.ActivationEligibilityEpoch = currentEpoch + 1
 		}
 		if v.IsActive(currentEpoch) &&
 			v.EffectiveBalance <= EJECTION_BALANCE {
 			f.State.InitiateValidatorExit(currentEpoch, ValidatorIndex(i))
 		}
 	}
-	// Queue validators eligible for activation and not dequeued for activation prior to finalized epoch
-	activationEpoch := f.Meta.Finalized().Epoch.ComputeActivationExitEpoch()
-	f.State.ProcessActivationQueue(activationEpoch, currentEpoch)
+	f.State.ProcessActivationQueue(currentEpoch, f.Meta.Finalized().Epoch)
 }

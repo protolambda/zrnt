@@ -33,7 +33,7 @@ func (*Deposits) Limit() uint64 {
 	return MAX_DEPOSITS
 }
 
-type VoluntaryExits []VoluntaryExit
+type VoluntaryExits []SignedVoluntaryExit
 
 func (*VoluntaryExits) Limit() uint64 {
 	return MAX_VOLUNTARY_EXITS

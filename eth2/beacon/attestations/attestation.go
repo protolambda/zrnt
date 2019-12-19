@@ -65,6 +65,10 @@ func (f *AttestationFeature) ProcessAttestation(attestation *Attestation) error 
 	} else if data.Target.Epoch > currentEpoch {
 		return errors.New("attestation data is invalid, target is in future")
 	}
+	// And if it matches the slot
+	if data.Target.Epoch != data.Slot.ToEpoch() {
+		return errors.New("attestation data is invalid, slot epoch does not match target epoch")
+	}
 
 	// Check committee index
 	if uint64(data.Index) >= f.Meta.GetCommitteeCountAtSlot(data.Slot) {

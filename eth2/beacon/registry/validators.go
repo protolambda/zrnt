@@ -143,27 +143,31 @@ func (state *ValidatorsState) ExitQueueEnd(epoch Epoch) Epoch {
 	return exitQueueEnd
 }
 
-func (state *ValidatorsState) ProcessActivationQueue(activationEpoch Epoch, currentEpoch Epoch) {
-	activationQueue := make([]*Validator, 0)
-	for _, v := range state.Validators {
-		if v.ActivationEligibilityEpoch != FAR_FUTURE_EPOCH &&
-			v.ActivationEpoch >= activationEpoch {
-			activationQueue = append(activationQueue, v)
+func (state *ValidatorsState) ProcessActivationQueue(currentEpoch Epoch, finalizedEpoch Epoch) {
+	// Queue validators eligible for activation and not dequeued for activation prior to finalized epoch
+	activationQueue := make([]ValidatorIndex, 0)
+	for i, v := range state.Validators {
+		if v.IsEligibleForActivation(finalizedEpoch) {
+			activationQueue = append(activationQueue, ValidatorIndex(i))
 		}
 	}
+
+	// Order by the sequence of activation_eligibility_epoch setting and then index
 	sort.Slice(activationQueue, func(i int, j int) bool {
-		return activationQueue[i].ActivationEligibilityEpoch <
-			activationQueue[j].ActivationEligibilityEpoch
+		aEligible := state.Validators[activationQueue[i]].ActivationEligibilityEpoch
+		bEligible := state.Validators[activationQueue[j]].ActivationEligibilityEpoch
+		if aEligible == bEligible {
+			return activationQueue[i] < activationQueue[j]
+		}
+		return aEligible < bEligible
 	})
 	// Dequeued validators for activation up to churn limit (without resetting activation epoch)
 	queueLen := uint64(len(activationQueue))
 	if churnLimit := state.GetChurnLimit(currentEpoch); churnLimit < queueLen {
 		queueLen = churnLimit
 	}
-	for _, v := range activationQueue[:queueLen] {
-		if v.ActivationEpoch == FAR_FUTURE_EPOCH {
-			v.ActivationEpoch = currentEpoch.ComputeActivationExitEpoch()
-		}
+	for _, vi := range activationQueue[:queueLen] {
+		state.Validators[vi].ActivationEpoch = currentEpoch.ComputeActivationExitEpoch()
 	}
 }
 

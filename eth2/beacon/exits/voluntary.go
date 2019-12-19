@@ -10,8 +10,8 @@ import (
 )
 
 type VoluntaryExitProcessor interface {
-	ProcessVoluntaryExits(ops []VoluntaryExit) error
-	ProcessVoluntaryExit(exit *VoluntaryExit) error
+	ProcessVoluntaryExits(ops []SignedVoluntaryExit) error
+	ProcessVoluntaryExit(signedExit *SignedVoluntaryExit) error
 }
 
 type VoluntaryExitFeature struct {
@@ -23,7 +23,7 @@ type VoluntaryExitFeature struct {
 	}
 }
 
-func (f *VoluntaryExitFeature) ProcessVoluntaryExits(ops []VoluntaryExit) error {
+func (f *VoluntaryExitFeature) ProcessVoluntaryExits(ops []SignedVoluntaryExit) error {
 	for i := range ops {
 		if err := f.ProcessVoluntaryExit(&ops[i]); err != nil {
 			return err
@@ -37,10 +37,17 @@ var VoluntaryExitSSZ = zssz.GetSSZ((*VoluntaryExit)(nil))
 type VoluntaryExit struct {
 	Epoch          Epoch // Earliest epoch when voluntary exit can be processed
 	ValidatorIndex ValidatorIndex
+}
+
+var SignedVoluntaryExitSSZ = zssz.GetSSZ((*SignedVoluntaryExit)(nil))
+
+type SignedVoluntaryExit struct {
+	Message        VoluntaryExit
 	Signature      BLSSignature
 }
 
-func (f *VoluntaryExitFeature) ProcessVoluntaryExit(exit *VoluntaryExit) error {
+func (f *VoluntaryExitFeature) ProcessVoluntaryExit(signedExit *SignedVoluntaryExit) error {
+	exit := &signedExit.Message
 	currentEpoch := f.Meta.CurrentEpoch()
 	if !f.Meta.IsValidIndex(exit.ValidatorIndex) {
 		return errors.New("invalid exit validator index")
@@ -65,8 +72,8 @@ func (f *VoluntaryExitFeature) ProcessVoluntaryExit(exit *VoluntaryExit) error {
 	// Verify signature
 	if !bls.BlsVerify(
 		validator.Pubkey,
-		ssz.SigningRoot(exit, VoluntaryExitSSZ),
-		exit.Signature,
+		ssz.HashTreeRoot(exit, VoluntaryExitSSZ),
+		signedExit.Signature,
 		f.Meta.GetDomain(DOMAIN_VOLUNTARY_EXIT, exit.Epoch)) {
 		return errors.New("voluntary exit signature could not be verified")
 	}

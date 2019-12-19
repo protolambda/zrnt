@@ -11,7 +11,7 @@ type BlockHeaderState struct {
 
 // Signing root of latest_block_header
 func (state *BlockHeaderState) GetLatestBlockRoot() Root {
-	return ssz.SigningRoot(state.LatestBlockHeader, BeaconBlockHeaderSSZ)
+	return ssz.HashTreeRoot(state.LatestBlockHeader, BeaconBlockHeaderSSZ)
 }
 
 func (state *BlockHeaderState) UpdateLatestBlockRoot(stateRoot Root) Root {
@@ -19,7 +19,7 @@ func (state *BlockHeaderState) UpdateLatestBlockRoot(stateRoot Root) Root {
 	if state.LatestBlockHeader.StateRoot == (Root{}) {
 		state.LatestBlockHeader.StateRoot = stateRoot
 	}
-	return ssz.SigningRoot(state.LatestBlockHeader, BeaconBlockHeaderSSZ)
+	return ssz.HashTreeRoot(state.LatestBlockHeader, BeaconBlockHeaderSSZ)
 }
 
 func (state *BlockHeaderState) UpdateStateRoot(root Root) {

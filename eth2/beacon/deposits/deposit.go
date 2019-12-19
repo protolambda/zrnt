@@ -82,7 +82,7 @@ func (f *DepositFeature) ProcessDeposit(dep *Deposit) error {
 		// Note: Deposits are valid across forks, thus the deposit domain is retrieved directly from ComputeDomain().
 		if !bls.BlsVerify(
 			dep.Data.Pubkey,
-			ssz.SigningRoot(dep.Data, DepositDataSSZ),
+			ssz.HashTreeRoot(dep.Data.Message(), DepositMessageSSZ),
 			dep.Data.Signature,
 			ComputeDomain(DOMAIN_DEPOSIT, Version{})) {
 			// invalid signatures are OK,

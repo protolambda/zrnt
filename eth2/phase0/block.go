@@ -10,9 +10,24 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon/slashings/attslash"
 	. "github.com/protolambda/zrnt/eth2/beacon/slashings/propslash"
 	. "github.com/protolambda/zrnt/eth2/core"
+	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/protolambda/zssz"
 )
+
+var SignedBeaconBlockSSZ = zssz.GetSSZ((*SignedBeaconBlock)(nil))
+
+type SignedBeaconBlock struct {
+	Message BeaconBlock
+	Signature BLSSignature
+}
+
+func (block *SignedBeaconBlock) SignedHeader() *SignedBeaconBlockHeader {
+	return &SignedBeaconBlockHeader{
+		Message: *block.Message.Header(),
+		Signature: block.Signature,
+	}
+}
 
 var BeaconBlockSSZ = zssz.GetSSZ((*BeaconBlock)(nil))
 
@@ -21,7 +36,6 @@ type BeaconBlock struct {
 	ParentRoot Root
 	StateRoot  Root
 	Body       BeaconBlockBody
-	Signature  BLSSignature
 }
 
 func (block *BeaconBlock) Header() *BeaconBlockHeader {
@@ -30,7 +44,6 @@ func (block *BeaconBlock) Header() *BeaconBlockHeader {
 		ParentRoot: block.ParentRoot,
 		StateRoot:  block.StateRoot,
 		BodyRoot:   ssz.HashTreeRoot(block.Body, BeaconBlockBodySSZ),
-		Signature:  block.Signature,
 	}
 }
 
@@ -49,7 +62,7 @@ type BeaconBlockBody struct {
 }
 
 type BlockProcessFeature struct {
-	Block *BeaconBlock
+	Block *SignedBeaconBlock
 	Meta  interface {
 		HeaderProcessor
 		Eth1VoteProcessor
@@ -63,19 +76,39 @@ type BlockProcessFeature struct {
 }
 
 func (f *BlockProcessFeature) Slot() Slot {
-	return f.Block.Slot
+	return f.Block.Message.Slot
 }
 
 func (f *BlockProcessFeature) StateRoot() Root {
-	return f.Block.StateRoot
+	return f.Block.Message.StateRoot
+}
+
+func (f *BlockProcessFeature) VerifyStateRoot(expected Root) bool {
+	return f.Block.Message.StateRoot == expected
+}
+
+func (f *BlockProcessFeature) BlockRoot() Root {
+	return ssz.HashTreeRoot(&f.Block.Message, BeaconBlockSSZ)
+}
+
+func (f *BlockProcessFeature) Signature() BLSSignature {
+	return f.Block.Signature
+}
+
+func (f *BlockProcessFeature) VerifySignature(pubkey BLSPubkey, version Version) bool {
+	return bls.BlsVerify(
+		pubkey,
+		f.BlockRoot(),
+		f.Signature(),
+		ComputeDomain(DOMAIN_BEACON_PROPOSER, version))
 }
 
 func (f *BlockProcessFeature) Process() error {
-	header := f.Block.Header()
+	header := f.Block.Message.Header()
 	if err := f.Meta.ProcessHeader(header); err != nil {
 		return err
 	}
-	body := &f.Block.Body
+	body := &f.Block.Message.Body
 	if err := f.Meta.ProcessRandaoReveal(body.RandaoReveal); err != nil {
 		return err
 	}

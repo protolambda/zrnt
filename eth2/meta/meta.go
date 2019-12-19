@@ -98,6 +98,7 @@ type Versioning interface {
 	CurrentSlot() Slot
 	CurrentEpoch() Epoch
 	PreviousEpoch() Epoch
+	CurrentVersion() Version
 	GetDomain(dom BLSDomainType, messageEpoch Epoch) BLSDomain
 }
 

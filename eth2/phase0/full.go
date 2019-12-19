@@ -17,6 +17,7 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon/slashings/attslash"
 	. "github.com/protolambda/zrnt/eth2/beacon/slashings/propslash"
 	. "github.com/protolambda/zrnt/eth2/beacon/transition"
+	. "github.com/protolambda/zrnt/eth2/core"
 )
 
 // Full feature set for phase 0
@@ -71,6 +72,10 @@ func (f *FullFeaturedState) RotateEpochData() {
 
 func (f *FullFeaturedState) StartEpoch() {
 	f.RotateEpochData()
+}
+
+func (f *FullFeaturedState) CurrentProposer() BLSPubkey {
+	return f.Pubkey(f.GetBeaconProposerIndex(f.CurrentSlot()))
 }
 
 func NewFullFeaturedState(state *BeaconState) *FullFeaturedState {

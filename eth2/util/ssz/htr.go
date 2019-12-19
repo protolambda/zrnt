@@ -20,24 +20,6 @@ func HashTreeRoot(value interface{}, sszTyp types.SSZ) core.Root {
 	return zssz.HashTreeRoot(htr.HashFn(hFn), value, sszTyp)
 }
 
-// SigningRoot the given value. If sszTyp is not a container,
-// this function will just return the result of a regular HashTreeRoot.
-//
-// The value is expected to be a pointer to a type matching the SSZ definition that is used.
-// Example:
-//  sszTyp := zssz.GetSSZ((*MyStruct)(nil))
-//  value := MyStruct{A: 123, B: false, C: []byte{42,13,37}}
-//  root := SigningRoot(&value, sszTyp)
-func SigningRoot(value interface{}, sszTyp types.SSZ) core.Root {
-	hFn := hashing.GetHashFn()
-	signedSSZ, ok := sszTyp.(types.SignedSSZ)
-	if !ok {
-		// resort to Hash-tree-root, if the type is not something that can be signed
-		return zssz.HashTreeRoot(htr.HashFn(hFn), value, sszTyp)
-	}
-	return zssz.SigningRoot(htr.HashFn(hFn), value, signedSSZ)
-}
-
 // When the hash function changed, also re-initialize the precomputed zero-hashes with this hash-function.
 // These precomputed hashes are used to complete merkle-trees efficiently to a power of 2,
 // without unnecessary duplicate hashing of zeroes, or hashes of, or higher order, up to 32.

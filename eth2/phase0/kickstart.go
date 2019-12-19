@@ -50,7 +50,7 @@ func KickStartStateWithSignatures(eth1BlockHash Root, time Timestamp, validators
 			Amount:                v.Balance,
 			Signature:             BLSSignature{},
 		}
-		root := ssz.SigningRoot(d.Data, deposits.DepositDataSSZ)
+		root := ssz.HashTreeRoot(d.Data.Message(), deposits.DepositMessageSSZ)
 		priv := g1pubs.DeserializeSecretKey(keys[i])
 		dom := ComputeDomain(DOMAIN_DEPOSIT, Version{})
 		sig := g1pubs.SignWithDomain(root, priv, dom)

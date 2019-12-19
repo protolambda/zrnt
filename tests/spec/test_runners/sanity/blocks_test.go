@@ -10,7 +10,7 @@ import (
 
 type BlocksTestCase struct {
 	test_util.BaseTransitionTest
-	Blocks []*phase0.BeaconBlock
+	Blocks []*phase0.SignedBeaconBlock
 }
 
 type BlocksCountMeta struct {
@@ -24,9 +24,9 @@ func (c *BlocksTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
 	m := &BlocksCountMeta{}
 	test_util.Check(t, dec.Decode(&m))
 	test_util.Check(t, p.Close())
-	loadBlock := func(i uint64) *phase0.BeaconBlock {
-		dst := new(phase0.BeaconBlock)
-		test_util.LoadSSZ(t, fmt.Sprintf("blocks_%d", i), dst, phase0.BeaconBlockSSZ, readPart)
+	loadBlock := func(i uint64) *phase0.SignedBeaconBlock {
+		dst := new(phase0.SignedBeaconBlock)
+		test_util.LoadSSZ(t, fmt.Sprintf("blocks_%d", i), dst, phase0.SignedBeaconBlockSSZ, readPart)
 		return dst
 	}
 	for i := uint64(0); i < m.BlocksCount; i++ {

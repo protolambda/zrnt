@@ -43,6 +43,13 @@ func (indexedAttestation *IndexedAttestation) Validate(m AttestationValidator) e
 		return errors.New("attestation indices are not sorted")
 	}
 
+	// Verify if the indices are unique. Simple O(n) check, since they are already sorted.
+	for i := 1; i < len(indices); i++ {
+		if indices[i-1] == indices[i] {
+			return fmt.Errorf("attestation indices at %d and %d are duplicate, both: %d", i-1, i, indices[i])
+		}
+	}
+
 	// Check the last item of the sorted list to be a valid index,
 	// if this one is valid, the others are as well, since they are lower.
 	if len(indices) > 0 && !m.IsValidIndex(indices[len(indices)-1]) {

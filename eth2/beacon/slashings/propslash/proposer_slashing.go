@@ -31,8 +31,8 @@ var ProposerSlashingSSZ = zssz.GetSSZ((*ProposerSlashing)(nil))
 
 type ProposerSlashing struct {
 	ProposerIndex ValidatorIndex
-	Header1       BeaconBlockHeader // First proposal
-	Header2       BeaconBlockHeader // Second proposal
+	SignedHeader1 SignedBeaconBlockHeader // First proposal
+	SignedHeader2 SignedBeaconBlockHeader // Second proposal
 }
 
 func (f *PropSlashFeature) ProcessProposerSlashings(ops []ProposerSlashing) error {
@@ -49,11 +49,11 @@ func (f *PropSlashFeature) ProcessProposerSlashing(ps *ProposerSlashing) error {
 		return errors.New("invalid proposer index")
 	}
 	// Verify slots match
-	if ps.Header1.Slot != ps.Header2.Slot {
+	if ps.SignedHeader1.Message.Slot != ps.SignedHeader2.Message.Slot {
 		return errors.New("proposer slashing requires slashing headers to have the same slot")
 	}
 	// But the headers are different
-	if ps.Header1 == ps.Header2 {
+	if ps.SignedHeader1.Message == ps.SignedHeader2.Message {
 		return errors.New("proposer slashing requires two different headers")
 	}
 	proposer := f.Meta.Validator(ps.ProposerIndex)
@@ -62,12 +62,15 @@ func (f *PropSlashFeature) ProcessProposerSlashing(ps *ProposerSlashing) error {
 		return errors.New("proposer slashing requires proposer to be slashable")
 	}
 	// Signatures are valid
-	if !bls.BlsVerify(proposer.Pubkey, ssz.SigningRoot(ps.Header1, BeaconBlockHeaderSSZ), ps.Header1.Signature,
-		f.Meta.GetDomain(DOMAIN_BEACON_PROPOSER, ps.Header1.Slot.ToEpoch())) {
+	if !bls.BlsVerify(proposer.Pubkey, ssz.HashTreeRoot(ps.SignedHeader1.Message, BeaconBlockHeaderSSZ),
+		ps.SignedHeader1.Signature,
+		f.Meta.GetDomain(DOMAIN_BEACON_PROPOSER, ps.SignedHeader1.Message.Slot.ToEpoch())) {
 		return errors.New("proposer slashing header 1 has invalid BLS signature")
 	}
-	if !bls.BlsVerify(proposer.Pubkey, ssz.SigningRoot(ps.Header2, BeaconBlockHeaderSSZ), ps.Header2.Signature,
-		f.Meta.GetDomain(DOMAIN_BEACON_PROPOSER, ps.Header2.Slot.ToEpoch())) {
+	if !bls.BlsVerify(proposer.Pubkey,
+		ssz.HashTreeRoot(ps.SignedHeader2.Message, BeaconBlockHeaderSSZ),
+		ps.SignedHeader2.Signature,
+		f.Meta.GetDomain(DOMAIN_BEACON_PROPOSER, ps.SignedHeader2.Message.Slot.ToEpoch())) {
 		return errors.New("proposer slashing header 2 has invalid BLS signature")
 	}
 	f.Meta.SlashValidator(ps.ProposerIndex, nil)

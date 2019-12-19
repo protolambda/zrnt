@@ -24,3 +24,11 @@ func (v *Validator) IsActive(epoch Epoch) bool {
 func (v *Validator) IsSlashable(epoch Epoch) bool {
 	return !v.Slashed && v.ActivationEpoch <= epoch && epoch < v.WithdrawableEpoch
 }
+
+func (v *Validator) IsEligibleForActivationQueue() bool {
+	return v.ActivationEligibilityEpoch == FAR_FUTURE_EPOCH && v.EffectiveBalance == MAX_EFFECTIVE_BALANCE
+}
+
+func (v *Validator) IsEligibleForActivation(finalizedEpoch Epoch) bool {
+	return v.ActivationEligibilityEpoch <= finalizedEpoch && v.ActivationEpoch == FAR_FUTURE_EPOCH
+}

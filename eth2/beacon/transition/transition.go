@@ -8,7 +8,8 @@ import (
 type BlockInput interface {
 	Slot() Slot
 	Process() error
-	StateRoot() Root
+	VerifySignature(pubkey BLSPubkey, version Version) bool
+	VerifyStateRoot(expected Root) bool
 }
 
 type TransitionFeature struct {
@@ -19,6 +20,8 @@ type TransitionFeature struct {
 		ProcessSlot()
 		ProcessEpoch()
 		StateRoot() Root
+		CurrentProposer() BLSPubkey
+		CurrentVersion() Version
 	}
 }
 
@@ -46,18 +49,24 @@ func (f *TransitionFeature) ProcessSlots(slot Slot) {
 // Transition the state to the slot of the given block, then processes the block.
 // Returns an error if the slot is older than the state is already at.
 // Mutates the state, does not copy.
-func (f *TransitionFeature) StateTransition(block BlockInput, verifyStateRoot bool) error {
+//
+func (f *TransitionFeature) StateTransition(block BlockInput, validateResult bool) error {
 	if f.Meta.CurrentSlot() > block.Slot() {
 		return errors.New("cannot transition from pre-state with higher slot than transition target")
 	}
 	f.ProcessSlots(block.Slot())
+	if validateResult {
+		if !block.VerifySignature(f.Meta.CurrentProposer(), f.Meta.CurrentVersion()) {
+			return errors.New("block has invalid signature")
+		}
+	}
 
 	if err := block.Process(); err != nil {
 		return err
 	}
 
 	// State root verification
-	if verifyStateRoot && block.StateRoot() != f.Meta.StateRoot() {
+	if !block.VerifyStateRoot(f.Meta.StateRoot()) {
 		return errors.New("block has invalid state root")
 	}
 	return nil

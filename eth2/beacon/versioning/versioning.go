@@ -34,6 +34,10 @@ func (state *VersioningState) PreviousEpoch() Epoch {
 	return state.CurrentEpoch().Previous()
 }
 
+func (state *VersioningState) CurrentVersion() Version {
+	return state.Fork.CurrentVersion
+}
+
 // Return the signature domain (fork version concatenated with domain type) of a message.
 func (state *VersioningState) GetDomain(dom BLSDomainType, messageEpoch Epoch) BLSDomain {
 	v := state.Fork.CurrentVersion

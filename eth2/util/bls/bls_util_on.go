@@ -7,6 +7,11 @@ import (
 	. "github.com/protolambda/zrnt/eth2/core"
 )
 
+func init()  {
+	hbls.Init(hbls.BLS12_381)
+	hbls.SetETHmode(1)
+}
+
 const BLS_ACTIVE = true
 
 func Verify(pubkey BLSPubkey, message [32]byte, signature BLSSignature) bool {

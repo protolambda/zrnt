@@ -67,11 +67,11 @@ func (indexedAttestation *IndexedAttestation) Validate(m AttestationValidator) e
 		return nil
 	}
 
-	if !bls.BlsVerify(
-		bls.BlsAggregatePubkeys(pubkeys),
-		ssz.HashTreeRoot(&indexedAttestation.Data, AttestationDataSSZ),
+	if !bls.FastAggregateVerify(pubkeys,
+		ComputeSigningRoot(
+			ssz.HashTreeRoot(&indexedAttestation.Data, AttestationDataSSZ),
+			m.GetDomain(DOMAIN_BEACON_ATTESTER, indexedAttestation.Data.Target.Epoch)),
 		indexedAttestation.Signature,
-		m.GetDomain(DOMAIN_BEACON_ATTESTER, indexedAttestation.Data.Target.Epoch),
 	) {
 		return errors.New("could not verify BLS signature for indexed attestation")
 	}

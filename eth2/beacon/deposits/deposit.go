@@ -48,7 +48,7 @@ func (f *DepositFeature) ProcessDeposits(ops []Deposit) error {
 var DepositSSZ = zssz.GetSSZ((*Deposit)(nil))
 
 type Deposit struct {
-	Proof [DEPOSIT_CONTRACT_TREE_DEPTH + 1]Root // Merkle-path to deposit data list root
+	Proof [DEPOSIT_CONTRACT_TREE_DEPTH + 1]Root // Merkle-path to deposit root
 	Data  DepositData
 }
 
@@ -76,15 +76,14 @@ func (f *DepositFeature) ProcessDeposit(dep *Deposit) error {
 
 	// Check if it is a known validator that is depositing ("if pubkey not in validator_pubkeys")
 	if !exists {
-		// Verify the deposit signature (proof of possession) for new validators.
-		// Only unknown pubkeys need to be verified, others are already trusted
-		// Note: The deposit contract does not check signatures.
-		// Note: Deposits are valid across forks, thus the deposit domain is retrieved directly from ComputeDomain().
-		if !bls.BlsVerify(
+		// Verify the deposit signature (proof of possession) which is not checked by the deposit contract
+		if !bls.Verify(
 			dep.Data.Pubkey,
-			ssz.HashTreeRoot(dep.Data.Message(), DepositMessageSSZ),
-			dep.Data.Signature,
-			ComputeDomain(DOMAIN_DEPOSIT, Version{})) {
+			ComputeSigningRoot(
+				ssz.HashTreeRoot(dep.Data.Message(), DepositMessageSSZ),
+				// Fork-agnostic domain since deposits are valid across forks
+				ComputeDomain(DOMAIN_DEPOSIT, Version{})),
+			dep.Data.Signature) {
 			// invalid signatures are OK,
 			// the depositor will not receive anything because of their mistake,
 			// and the chain continues.

@@ -52,11 +52,12 @@ func (f *RandaoFeature) ProcessRandaoReveal(reveal BLSSignature) error {
 	proposerPubkey := f.Meta.Pubkey(propIndex)
 	epoch := slot.ToEpoch()
 	// Verify RANDAO reveal
-	if !bls.BlsVerify(
+	if !bls.Verify(
 		proposerPubkey,
-		ssz.HashTreeRoot(epoch, RandaoEpochSSZ),
+		ComputeSigningRoot(
+			ssz.HashTreeRoot(epoch, RandaoEpochSSZ),
+			f.Meta.GetDomain(DOMAIN_RANDAO, epoch)),
 		reveal,
-		f.Meta.GetDomain(DOMAIN_RANDAO, epoch),
 	) {
 		return errors.New("randao invalid")
 	}

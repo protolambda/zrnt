@@ -48,29 +48,34 @@ func (f *PropSlashFeature) ProcessProposerSlashing(ps *ProposerSlashing) error {
 	if !f.Meta.IsValidIndex(ps.ProposerIndex) {
 		return errors.New("invalid proposer index")
 	}
-	// Verify slots match
+	// Verify header slots match
 	if ps.SignedHeader1.Message.Slot != ps.SignedHeader2.Message.Slot {
 		return errors.New("proposer slashing requires slashing headers to have the same slot")
 	}
-	// But the headers are different
+	// Verify the headers are different
 	if ps.SignedHeader1.Message == ps.SignedHeader2.Message {
 		return errors.New("proposer slashing requires two different headers")
 	}
 	proposer := f.Meta.Validator(ps.ProposerIndex)
-	// Check proposer is slashable
+	// Verify the proposer is slashable
 	if !proposer.IsSlashable(f.Meta.CurrentEpoch()) {
 		return errors.New("proposer slashing requires proposer to be slashable")
 	}
-	// Signatures are valid
-	if !bls.BlsVerify(proposer.Pubkey, ssz.HashTreeRoot(ps.SignedHeader1.Message, BeaconBlockHeaderSSZ),
-		ps.SignedHeader1.Signature,
-		f.Meta.GetDomain(DOMAIN_BEACON_PROPOSER, ps.SignedHeader1.Message.Slot.ToEpoch())) {
+	// Verify signatures
+	if !bls.Verify(
+		proposer.Pubkey,
+		ComputeSigningRoot(
+			ssz.HashTreeRoot(ps.SignedHeader1.Message, BeaconBlockHeaderSSZ),
+			f.Meta.GetDomain(DOMAIN_BEACON_PROPOSER, ps.SignedHeader1.Message.Slot.ToEpoch())),
+		ps.SignedHeader1.Signature) {
 		return errors.New("proposer slashing header 1 has invalid BLS signature")
 	}
-	if !bls.BlsVerify(proposer.Pubkey,
-		ssz.HashTreeRoot(ps.SignedHeader2.Message, BeaconBlockHeaderSSZ),
-		ps.SignedHeader2.Signature,
-		f.Meta.GetDomain(DOMAIN_BEACON_PROPOSER, ps.SignedHeader2.Message.Slot.ToEpoch())) {
+	if !bls.Verify(
+		proposer.Pubkey,
+		ComputeSigningRoot(
+			ssz.HashTreeRoot(ps.SignedHeader2.Message, BeaconBlockHeaderSSZ),
+			f.Meta.GetDomain(DOMAIN_BEACON_PROPOSER, ps.SignedHeader2.Message.Slot.ToEpoch())),
+		ps.SignedHeader2.Signature) {
 		return errors.New("proposer slashing header 2 has invalid BLS signature")
 	}
 	f.Meta.SlashValidator(ps.ProposerIndex, nil)

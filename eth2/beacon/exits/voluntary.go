@@ -57,7 +57,7 @@ func (f *VoluntaryExitFeature) ProcessVoluntaryExit(signedExit *SignedVoluntaryE
 	if !validator.IsActive(currentEpoch) {
 		return errors.New("validator must be active to be able to voluntarily exit")
 	}
-	// Verify the validator has not yet exited
+	// Verify exit has not been initiated
 	if validator.ExitEpoch != FAR_FUTURE_EPOCH {
 		return errors.New("validator already exited")
 	}
@@ -70,11 +70,12 @@ func (f *VoluntaryExitFeature) ProcessVoluntaryExit(signedExit *SignedVoluntaryE
 		return errors.New("exit is too soon")
 	}
 	// Verify signature
-	if !bls.BlsVerify(
+	if !bls.Verify(
 		validator.Pubkey,
-		ssz.HashTreeRoot(exit, VoluntaryExitSSZ),
-		signedExit.Signature,
-		f.Meta.GetDomain(DOMAIN_VOLUNTARY_EXIT, exit.Epoch)) {
+		ComputeSigningRoot(
+			ssz.HashTreeRoot(exit, VoluntaryExitSSZ),
+			f.Meta.GetDomain(DOMAIN_VOLUNTARY_EXIT, exit.Epoch)),
+		signedExit.Signature) {
 		return errors.New("voluntary exit signature could not be verified")
 	}
 	// Initiate exit

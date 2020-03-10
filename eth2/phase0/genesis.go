@@ -23,6 +23,11 @@ func GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit, verifyD
 	state := &BeaconState{
 		VersioningState: VersioningState{
 			GenesisTime: time - (time % SECONDS_PER_DAY) + (2 * SECONDS_PER_DAY),
+			Fork: Fork{
+				PreviousVersion: GENESIS_FORK_VERSION,
+				CurrentVersion:  GENESIS_FORK_VERSION,
+				Epoch:           GENESIS_EPOCH,
+			},
 		},
 		// Ethereum 1.0 chain data
 		Eth1State: Eth1State{

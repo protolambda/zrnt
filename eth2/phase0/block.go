@@ -41,10 +41,11 @@ type BeaconBlock struct {
 
 func (block *BeaconBlock) Header() *BeaconBlockHeader {
 	return &BeaconBlockHeader{
-		Slot:       block.Slot,
-		ParentRoot: block.ParentRoot,
-		StateRoot:  block.StateRoot,
-		BodyRoot:   ssz.HashTreeRoot(block.Body, BeaconBlockBodySSZ),
+		Slot:          block.Slot,
+		ProposerIndex: block.ProposerIndex,
+		ParentRoot:    block.ParentRoot,
+		StateRoot:     block.StateRoot,
+		BodyRoot:      ssz.HashTreeRoot(block.Body, BeaconBlockBodySSZ),
 	}
 }
 

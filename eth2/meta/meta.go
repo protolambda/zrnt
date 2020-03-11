@@ -94,6 +94,10 @@ type Validators interface {
 	Validator(index ValidatorIndex) *validator.Validator
 }
 
+type DomainInfo interface {
+	GenesisValRoot() Root
+}
+
 type Versioning interface {
 	CurrentSlot() Slot
 	CurrentEpoch() Epoch

@@ -82,7 +82,7 @@ func (f *DepositFeature) ProcessDeposit(dep *Deposit) error {
 			ComputeSigningRoot(
 				ssz.HashTreeRoot(dep.Data.Message(), DepositMessageSSZ),
 				// Fork-agnostic domain since deposits are valid across forks
-				ComputeDomain(DOMAIN_DEPOSIT, GENESIS_FORK_VERSION)),
+				ComputeDomain(DOMAIN_DEPOSIT, GENESIS_FORK_VERSION, Root{})),
 			dep.Data.Signature) {
 			// invalid signatures are OK,
 			// the depositor will not receive anything because of their mistake,

@@ -55,7 +55,7 @@ func KickStartStateWithSignatures(eth1BlockHash Root, time Timestamp, validators
 		if err := secKey.Deserialize(keys[i][:]); err != nil {
 			return nil, err
 		}
-		dom := ComputeDomain(DOMAIN_DEPOSIT, GENESIS_FORK_VERSION)
+		dom := ComputeDomain(DOMAIN_DEPOSIT, GENESIS_FORK_VERSION, Root{})
 		msg := ComputeSigningRoot(root, dom)
 		sig := secKey.SignHash(msg[:])
 		var p BLSPubkey

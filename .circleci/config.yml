@@ -6,7 +6,7 @@ orbs:
 jobs:
   build:
     docker:
-      - image: protolambda/zrnt-ci-primary:1.2.0
+      - image: protolambda/zrnt-ci-primary:1.5.0
     working_directory: /zrnt-repo
 
     parallelism: 2
@@ -24,7 +24,7 @@ jobs:
 
       - restore_cache:
           keys:
-            - spec-tests-v0_9_4
+            - spec-tests-v0_10_1
 
       - run:
           name: Update spec tests cache
@@ -35,7 +35,7 @@ jobs:
           command: TEST_OUT_DIR=$TEST_RESULTS make test
 
       - save_cache:
-          key: spec-tests-v0_9_4
+          key: spec-tests-v0_10_1
           paths:
             - tests/spec/eth2.0-spec-tests
 

@@ -33,23 +33,22 @@ const EFFECTIVE_BALANCE_INCREMENT Gwei = generated.EFFECTIVE_BALANCE_INCREMENT
 const HALF_INCREMENT = generated.EFFECTIVE_BALANCE_INCREMENT / 2
 
 // Initial values
-const GENESIS_SLOT Slot = generated.GENESIS_SLOT
-const GENESIS_EPOCH = Epoch(GENESIS_SLOT / SLOTS_PER_EPOCH)
-
+var GENESIS_FORK_VERSION = parseVersion(generated.GENESIS_FORK_VERSION)
 const BLS_WITHDRAWAL_PREFIX byte = generated.BLS_WITHDRAWAL_PREFIX
 
 // Time parameters
+const MIN_GENESIS_DELAY Timestamp = generated.MIN_GENESIS_DELAY
 const SECONDS_PER_SLOT Timestamp = generated.SECONDS_PER_SLOT
 const MIN_ATTESTATION_INCLUSION_DELAY Slot = generated.MIN_ATTESTATION_INCLUSION_DELAY
 const SLOTS_PER_EPOCH Slot = generated.SLOTS_PER_EPOCH
 const MIN_SEED_LOOKAHEAD Epoch = generated.MIN_SEED_LOOKAHEAD
 const MAX_SEED_LOOKAHEAD Epoch = generated.MAX_SEED_LOOKAHEAD
+const MIN_EPOCHS_TO_INACTIVITY_PENALTY Epoch = generated.MIN_EPOCHS_TO_INACTIVITY_PENALTY
 const SLOTS_PER_ETH1_VOTING_PERIOD Slot = generated.SLOTS_PER_ETH1_VOTING_PERIOD
 const SLOTS_PER_HISTORICAL_ROOT Slot = generated.SLOTS_PER_HISTORICAL_ROOT
 const MIN_VALIDATOR_WITHDRAWABILITY_DELAY Epoch = generated.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
 const PERSISTENT_COMMITTEE_PERIOD Epoch = generated.PERSISTENT_COMMITTEE_PERIOD
 const MAX_EPOCHS_PER_CROSSLINK Epoch = generated.MAX_EPOCHS_PER_CROSSLINK
-const MIN_EPOCHS_TO_INACTIVITY_PENALTY = generated.MIN_EPOCHS_TO_INACTIVITY_PENALTY
 
 // State list lengths
 const EPOCHS_PER_HISTORICAL_VECTOR Epoch = generated.EPOCHS_PER_HISTORICAL_VECTOR
@@ -85,3 +84,10 @@ func parseDomain(v uint32) (out BLSDomainType) {
 	binary.BigEndian.PutUint32(out[:], v)
 	return
 }
+
+func parseVersion(v uint32) (out Version) {
+	// constants use big-endian to make it read as a byte array. (also YAML default)
+	binary.BigEndian.PutUint32(out[:], v)
+	return
+}
+

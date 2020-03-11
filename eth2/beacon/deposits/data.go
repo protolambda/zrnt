@@ -11,7 +11,7 @@ type DepositData struct {
 	Pubkey                BLSPubkey
 	WithdrawalCredentials Root
 	Amount                Gwei
-	// signing over DepositMessage
+	// Signing over DepositMessage
 	Signature             BLSSignature
 }
 

@@ -3,59 +3,50 @@
 package bls
 
 import (
-	phbls "github.com/phoreproject/bls/g1pubs"
+	hbls "github.com/herumi/bls-eth-go-binary/bls"
 	. "github.com/protolambda/zrnt/eth2/core"
 )
 
+func init()  {
+	hbls.Init(hbls.BLS12_381)
+	hbls.SetETHmode(1)
+}
+
 const BLS_ACTIVE = true
 
-func BlsVerify(pubkey BLSPubkey, messageHash Root, signature BLSSignature, domain BLSDomain) bool {
-	pub, err := phbls.DeserializePublicKey(pubkey)
-	if err != nil {
+func Verify(pubkey BLSPubkey, message [32]byte, signature BLSSignature) bool {
+	var parsedPubkey hbls.PublicKey
+	if err := parsedPubkey.Deserialize(pubkey[:]); err != nil {
 		return false
 	}
-	sig, err := phbls.DeserializeSignature(signature)
-	if err != nil {
+	var parsedSig hbls.Sign
+	if err := parsedSig.Deserialize(signature[:]); err != nil {
 		return false
 	}
-	return phbls.VerifyWithDomain(messageHash, pub, sig, domain)
+
+	return parsedSig.VerifyHash(&parsedPubkey, message[:])
 }
 
-func BlsAggregatePubkeys(pubkeys []BLSPubkey) BLSPubkey {
-	agpub := phbls.AggregatePublicKeys(parsePubkeys(pubkeys))
-	return agpub.Serialize()
-}
-
-func parsePubkeys(pubkeys []BLSPubkey) []*phbls.PublicKey {
-	pubs := make([]*phbls.PublicKey, 0, len(pubkeys))
+func parsePubkeys(pubkeys []BLSPubkey) []hbls.PublicKey {
+	pubs := make([]hbls.PublicKey, len(pubkeys), len(pubkeys))
 	for i := range pubkeys {
-		p, err := phbls.DeserializePublicKey(pubkeys[i])
-		if err != nil {
-			return nil
+		if err := pubs[i].Deserialize(pubkeys[i][:]); err != nil {
+			panic(err)
 		}
-		pubs = append(pubs, p)
 	}
 	return pubs
 }
 
-func BlsVerifyMultiple(pubkeys []BLSPubkey, messageHashes []Root, signature BLSSignature, domain BLSDomain) bool {
-	if len(pubkeys) != len(messageHashes) {
-		return false
-	}
+func FastAggregateVerify(pubkeys []BLSPubkey, message [32]byte, signature BLSSignature) bool {
 	pubs := parsePubkeys(pubkeys)
 	if len(pubs) == 0 {
 		return false
 	}
 
-	sig, err := phbls.DeserializeSignature(signature)
-	if err != nil {
+	var parsedSig hbls.Sign
+	if err := parsedSig.Deserialize(signature[:]); err != nil {
 		return false
 	}
 
-	msgs := make([][32]byte, 0, len(messageHashes))
-	for i := range messageHashes {
-		msgs = append(msgs, messageHashes[i])
-	}
-
-	return sig.VerifyAggregateWithDomain(pubs, msgs, domain)
+	return parsedSig.FastAggregateVerify(pubs, message[:])
 }

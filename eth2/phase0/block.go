@@ -96,11 +96,12 @@ func (f *BlockProcessFeature) Signature() BLSSignature {
 }
 
 func (f *BlockProcessFeature) VerifySignature(pubkey BLSPubkey, version Version) bool {
-	return bls.BlsVerify(
+	return bls.Verify(
 		pubkey,
-		f.BlockRoot(),
-		f.Signature(),
-		ComputeDomain(DOMAIN_BEACON_PROPOSER, version))
+		ComputeSigningRoot(
+			f.BlockRoot(),
+			ComputeDomain(DOMAIN_BEACON_PROPOSER, version)),
+		f.Signature())
 }
 
 func (f *BlockProcessFeature) Process() error {

@@ -2,7 +2,7 @@ package phase0
 
 import (
 	"errors"
-	"github.com/phoreproject/bls/g1pubs"
+	hbls "github.com/herumi/bls-eth-go-binary/bls"
 	"github.com/protolambda/zrnt/eth2/beacon/deposits"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
@@ -51,14 +51,19 @@ func KickStartStateWithSignatures(eth1BlockHash Root, time Timestamp, validators
 			Signature:             BLSSignature{},
 		}
 		root := ssz.HashTreeRoot(d.Data.Message(), deposits.DepositMessageSSZ)
-		priv := g1pubs.DeserializeSecretKey(keys[i])
-		dom := ComputeDomain(DOMAIN_DEPOSIT, Version{})
-		sig := g1pubs.SignWithDomain(root, priv, dom)
-		p := g1pubs.PrivToPub(priv).Serialize()
+		var secKey hbls.SecretKey
+		if err := secKey.Deserialize(keys[i][:]); err != nil {
+			return nil, err
+		}
+		dom := ComputeDomain(DOMAIN_DEPOSIT, GENESIS_FORK_VERSION)
+		msg := ComputeSigningRoot(root, dom)
+		sig := secKey.SignHash(msg[:])
+		var p BLSPubkey
+		copy(p[:], secKey.GetPublicKey().Serialize())
 		if p != d.Data.Pubkey {
 			return nil, errors.New("privkey invalid, expected different pubkey")
 		}
-		d.Data.Signature = sig.Serialize()
+		copy(d.Data.Signature[:], sig.Serialize())
 	}
 
 	state, err := GenesisFromEth1(eth1BlockHash, 0, deps, false)

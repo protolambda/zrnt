@@ -32,10 +32,11 @@ func (block *SignedBeaconBlock) SignedHeader() *SignedBeaconBlockHeader {
 var BeaconBlockSSZ = zssz.GetSSZ((*BeaconBlock)(nil))
 
 type BeaconBlock struct {
-	Slot       Slot
-	ParentRoot Root
-	StateRoot  Root
-	Body       BeaconBlockBody
+	Slot          Slot
+	ProposerIndex ValidatorIndex
+	ParentRoot    Root
+	StateRoot     Root
+	Body          BeaconBlockBody
 }
 
 func (block *BeaconBlock) Header() *BeaconBlockHeader {
@@ -95,12 +96,12 @@ func (f *BlockProcessFeature) Signature() BLSSignature {
 	return f.Block.Signature
 }
 
-func (f *BlockProcessFeature) VerifySignature(pubkey BLSPubkey, version Version) bool {
+func (f *BlockProcessFeature) VerifySignature(pubkey BLSPubkey, version Version, genValRoot Root) bool {
 	return bls.Verify(
 		pubkey,
 		ComputeSigningRoot(
 			f.BlockRoot(),
-			ComputeDomain(DOMAIN_BEACON_PROPOSER, version)),
+			ComputeDomain(DOMAIN_BEACON_PROPOSER, version, genValRoot)),
 		f.Signature())
 }
 

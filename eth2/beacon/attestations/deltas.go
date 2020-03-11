@@ -23,12 +23,13 @@ func (f *AttestationDeltasFeature) AttestationDeltas() *Deltas {
 
 	previousEpoch := f.Meta.PreviousEpoch()
 
-	totalBalance := f.Meta.GetTotalStake()
+	// All summed effective balances are normalized to effective-balance increments, to avoid overflows.
+	totalBalance := f.Meta.GetTotalStake() / EFFECTIVE_BALANCE_INCREMENT
 
 	attesterStatuses := f.Meta.GetAttesterStatuses()
-	prevEpochSourceStake := f.Meta.GetAttestersStake(attesterStatuses, PrevSourceAttester|UnslashedAttester)
-	prevEpochTargetStake := f.Meta.GetAttestersStake(attesterStatuses, PrevTargetAttester|UnslashedAttester)
-	prevEpochHeadStake := f.Meta.GetAttestersStake(attesterStatuses, PrevHeadAttester|UnslashedAttester)
+	prevEpochSourceStake := f.Meta.GetAttestersStake(attesterStatuses, PrevSourceAttester|UnslashedAttester) / EFFECTIVE_BALANCE_INCREMENT
+	prevEpochTargetStake := f.Meta.GetAttestersStake(attesterStatuses, PrevTargetAttester|UnslashedAttester) / EFFECTIVE_BALANCE_INCREMENT
+	prevEpochHeadStake := f.Meta.GetAttestersStake(attesterStatuses, PrevHeadAttester|UnslashedAttester) / EFFECTIVE_BALANCE_INCREMENT
 
 	balanceSqRoot := Gwei(math.IntegerSquareroot(uint64(totalBalance)))
 	finalityDelay := previousEpoch - f.Meta.Finalized().Epoch

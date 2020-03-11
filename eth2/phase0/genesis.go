@@ -5,6 +5,7 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon/deposits"
 	. "github.com/protolambda/zrnt/eth2/beacon/eth1"
 	"github.com/protolambda/zrnt/eth2/beacon/header"
+	"github.com/protolambda/zrnt/eth2/beacon/registry"
 	. "github.com/protolambda/zrnt/eth2/beacon/versioning"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
@@ -89,6 +90,7 @@ func InitState(state *BeaconState) (*FullFeaturedState, error) {
 			v.ActivationEpoch = GENESIS_EPOCH
 		}
 	}
+	state.GenesisValidatorsRoot = ssz.HashTreeRoot(state.Validators, registry.ValidatorRegistrySSZ)
 	// Now that validators are activated, we can load the full feature set.
 	// Committees will now be pre-computed.
 	full := NewFullFeaturedState(state)

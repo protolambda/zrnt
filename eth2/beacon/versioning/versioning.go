@@ -14,9 +14,10 @@ type Fork struct {
 }
 
 type VersioningState struct {
-	GenesisTime Timestamp
-	Slot        Slot
-	Fork        Fork
+	GenesisTime           Timestamp
+	GenesisValidatorsRoot Root
+	Slot                  Slot
+	Fork                  Fork
 }
 
 // Get current slot
@@ -38,6 +39,10 @@ func (state *VersioningState) CurrentVersion() Version {
 	return state.Fork.CurrentVersion
 }
 
+func (state *VersioningState) GenesisValRoot() Root {
+	return state.GenesisValidatorsRoot
+}
+
 // Return the signature domain (fork version concatenated with domain type) of a message.
 func (state *VersioningState) GetDomain(dom BLSDomainType, messageEpoch Epoch) BLSDomain {
 	v := state.Fork.CurrentVersion
@@ -45,5 +50,5 @@ func (state *VersioningState) GetDomain(dom BLSDomainType, messageEpoch Epoch) B
 		v = state.Fork.PreviousVersion
 	}
 	// combine fork version with domain type.
-	return ComputeDomain(dom, v)
+	return ComputeDomain(dom, v, state.GenesisValidatorsRoot)
 }

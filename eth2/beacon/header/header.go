@@ -27,10 +27,11 @@ type BlockHeaderFeature struct {
 var BeaconBlockHeaderSSZ = zssz.GetSSZ((*BeaconBlockHeader)(nil))
 
 type BeaconBlockHeader struct {
-	Slot       Slot
-	ParentRoot Root
-	StateRoot  Root
-	BodyRoot   Root // Where the body would be, just a root embedded here.
+	Slot          Slot
+	ProposerIndex ValidatorIndex
+	ParentRoot    Root
+	StateRoot     Root
+	BodyRoot      Root // Where the body would be, just a root embedded here.
 }
 
 var SignedBeaconBlockHeaderSSZ = zssz.GetSSZ((*SignedBeaconBlockHeader)(nil))
@@ -46,12 +47,17 @@ func (f *BlockHeaderFeature) ProcessHeader(header *BeaconBlockHeader) error {
 	if header.Slot != currentSlot {
 		return errors.New("slot of block does not match slot of state")
 	}
+
+	proposerIndex := f.Meta.GetBeaconProposerIndex(currentSlot)
+	// Verify that proposer index is the correct index
+	if header.ProposerIndex != proposerIndex {
+		return fmt.Errorf("proposer index of block (%d) does not match expected proposer index (%d)", header.ProposerIndex, proposerIndex)
+	}
+
 	// Verify that the parent matches
 	if latestRoot := f.Meta.GetLatestBlockRoot(); header.ParentRoot != latestRoot {
 		return fmt.Errorf("previous block root %x does not match root %x from latest state block header", header.ParentRoot, latestRoot)
 	}
-
-	proposerIndex := f.Meta.GetBeaconProposerIndex(currentSlot)
 
 	// Verify proposer is not slashed
 	if f.Meta.IsSlashed(proposerIndex) {
@@ -60,8 +66,9 @@ func (f *BlockHeaderFeature) ProcessHeader(header *BeaconBlockHeader) error {
 
 	// Store as the new latest block
 	f.State.LatestBlockHeader = BeaconBlockHeader{
-		Slot:       header.Slot,
-		ParentRoot: header.ParentRoot,
+		Slot:          header.Slot,
+		ParentRoot:    header.ParentRoot,
+		ProposerIndex: header.ProposerIndex,
 		// state_root is zeroed and overwritten in the next `process_slot` call.
 		// with BlockHeaderState.UpdateStateRoot(), once the post state is available.
 		BodyRoot: header.BodyRoot,

@@ -14,10 +14,14 @@ type RegistryState struct {
 
 // Update effective balances with hysteresis
 func (state *RegistryState) UpdateEffectiveBalances() {
+	const HYSTERESIS_INCREMENT = EFFECTIVE_BALANCE_INCREMENT / Gwei(HYSTERESIS_QUOTIENT)
+	const DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * Gwei(HYSTERESIS_DOWNWARD_MULTIPLIER)
+	const UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * Gwei(HYSTERESIS_UPWARD_MULTIPLIER)
+
 	for i, v := range state.Validators {
 		balance := state.Balances[i]
-		if balance < v.EffectiveBalance ||
-			v.EffectiveBalance+3*HALF_INCREMENT < balance {
+		if balance+DOWNWARD_THRESHOLD < v.EffectiveBalance ||
+			v.EffectiveBalance+UPWARD_THRESHOLD < balance {
 			v.EffectiveBalance = balance - (balance % EFFECTIVE_BALANCE_INCREMENT)
 			if MAX_EFFECTIVE_BALANCE < v.EffectiveBalance {
 				v.EffectiveBalance = MAX_EFFECTIVE_BALANCE

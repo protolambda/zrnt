@@ -30,7 +30,6 @@ type PropSlashFeature struct {
 var ProposerSlashingSSZ = zssz.GetSSZ((*ProposerSlashing)(nil))
 
 type ProposerSlashing struct {
-	ProposerIndex ValidatorIndex
 	SignedHeader1 SignedBeaconBlockHeader // First proposal
 	SignedHeader2 SignedBeaconBlockHeader // Second proposal
 }
@@ -45,18 +44,23 @@ func (f *PropSlashFeature) ProcessProposerSlashings(ops []ProposerSlashing) erro
 }
 
 func (f *PropSlashFeature) ProcessProposerSlashing(ps *ProposerSlashing) error {
-	if !f.Meta.IsValidIndex(ps.ProposerIndex) {
-		return errors.New("invalid proposer index")
-	}
 	// Verify header slots match
 	if ps.SignedHeader1.Message.Slot != ps.SignedHeader2.Message.Slot {
 		return errors.New("proposer slashing requires slashing headers to have the same slot")
+	}
+	// Verify header proposer indices match
+	if ps.SignedHeader1.Message.ProposerIndex != ps.SignedHeader2.Message.ProposerIndex {
+		return errors.New("proposer slashing headers proposer-indices do not match")
+	}
+	// Verify header proposer index is valid
+	if !f.Meta.IsValidIndex(ps.SignedHeader1.Message.ProposerIndex) {
+		return errors.New("invalid proposer index")
 	}
 	// Verify the headers are different
 	if ps.SignedHeader1.Message == ps.SignedHeader2.Message {
 		return errors.New("proposer slashing requires two different headers")
 	}
-	proposer := f.Meta.Validator(ps.ProposerIndex)
+	proposer := f.Meta.Validator(ps.SignedHeader1.Message.ProposerIndex)
 	// Verify the proposer is slashable
 	if !proposer.IsSlashable(f.Meta.CurrentEpoch()) {
 		return errors.New("proposer slashing requires proposer to be slashable")
@@ -78,6 +82,6 @@ func (f *PropSlashFeature) ProcessProposerSlashing(ps *ProposerSlashing) error {
 		ps.SignedHeader2.Signature) {
 		return errors.New("proposer slashing header 2 has invalid BLS signature")
 	}
-	f.Meta.SlashValidator(ps.ProposerIndex, nil)
+	f.Meta.SlashValidator(ps.SignedHeader1.Message.ProposerIndex, nil)
 	return nil
 }

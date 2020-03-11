@@ -18,7 +18,7 @@ type Eth1Data struct {
 type Eth1DataVotes []Eth1Data
 
 func (_ *Eth1DataVotes) Limit() uint64 {
-	return uint64(SLOTS_PER_ETH1_VOTING_PERIOD)
+	return uint64(EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH)
 }
 
 // Ethereum 1.0 chain data
@@ -43,6 +43,8 @@ func (state *Eth1State) DepRoot() Root {
 func (state *Eth1State) IncrementDepositIndex() {
 	state.DepositIndex += 1
 }
+
+const SLOTS_PER_ETH1_VOTING_PERIOD = Slot(EPOCHS_PER_ETH1_VOTING_PERIOD) * SLOTS_PER_EPOCH
 
 // Done at the end of every voting period
 func (state *Eth1State) ResetEth1Votes() {

@@ -17,6 +17,8 @@ func (_ *ValidatorRegistry) Limit() uint64 {
 	return VALIDATOR_REGISTRY_LIMIT
 }
 
+var ValidatorRegistrySSZ = zssz.GetSSZ((*ValidatorRegistry)(nil))
+
 type ValidatorsState struct {
 	Validators ValidatorRegistry
 }

@@ -74,16 +74,15 @@ func buildPreset(path string) (*ContstantsPreset, error) {
 			} else {
 				return nil, errors.New(fmt.Sprintf("could not convert string formatted value in %s, key: %s, value: %s", presetName, k, strV))
 			}
+		} else if uintV, ok := v.(uint64); ok {
+			formattedValue = fmt.Sprintf(intFormat, uintV)
+		} else if uintV, ok := v.(uint32); ok {
+			formattedValue = fmt.Sprintf(intFormat, uintV)
+		} else if intV, ok := v.(int); ok {
+			formattedValue = fmt.Sprintf(intFormat, intV)
 		} else {
-			if uintV, ok := v.(uint64); ok {
-				formattedValue = fmt.Sprintf(intFormat, uintV)
-			} else if uintV, ok := v.(uint32); ok {
-				formattedValue = fmt.Sprintf(intFormat, uintV)
-			} else if intV, ok := v.(int); ok {
-				formattedValue = fmt.Sprintf(intFormat, intV)
-			} else {
-				return nil, errors.New(fmt.Sprintf("could not convert non-string formatted value in %s, key: %s %T", presetName, k, v))
-			}
+			formattedStart = "// " + formattedStart
+			formattedValue = fmt.Sprintf("(unrecognized type) %v", v)
 		}
 
 		preset.Entries = append(preset.Entries, formattedStart+formattedValue)

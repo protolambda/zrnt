@@ -29,7 +29,7 @@ func (f *FinalUpdateFeature) ProcessEpochFinalUpdates() {
 	}
 
 	// Reset eth1 data votes if it is the end of the voting period.
-	if nextSlot%SLOTS_PER_ETH1_VOTING_PERIOD == 0 {
+	if nextEpoch%EPOCHS_PER_ETH1_VOTING_PERIOD == 0 {
 		f.Meta.ResetEth1Votes()
 	}
 

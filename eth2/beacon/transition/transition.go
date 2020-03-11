@@ -8,7 +8,7 @@ import (
 type BlockInput interface {
 	Slot() Slot
 	Process() error
-	VerifySignature(pubkey BLSPubkey, version Version) bool
+	VerifySignature(pubkey BLSPubkey, version Version, genValRoot Root) bool
 	VerifyStateRoot(expected Root) bool
 }
 
@@ -22,6 +22,7 @@ type TransitionFeature struct {
 		StateRoot() Root
 		CurrentProposer() BLSPubkey
 		CurrentVersion() Version
+		GenesisValRoot() Root
 	}
 }
 
@@ -56,7 +57,7 @@ func (f *TransitionFeature) StateTransition(block BlockInput, validateResult boo
 	}
 	f.ProcessSlots(block.Slot())
 	if validateResult {
-		if !block.VerifySignature(f.Meta.CurrentProposer(), f.Meta.CurrentVersion()) {
+		if !block.VerifySignature(f.Meta.CurrentProposer(), f.Meta.CurrentVersion(), f.Meta.GenesisValRoot()) {
 			return errors.New("block has invalid signature")
 		}
 	}

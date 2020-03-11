@@ -31,11 +31,11 @@ func (shs *ShufflingStatus) GetBeaconCommittee(slot Slot, index CommitteeIndex) 
 
 	epoch := slot.ToEpoch()
 	if epoch == shs.PreviousShuffling.Epoch {
-		return shs.PreviousShuffling.Committees[slot % SLOTS_PER_EPOCH][index]
+		return shs.PreviousShuffling.Committees[slot%SLOTS_PER_EPOCH][index]
 	} else if epoch == shs.CurrentShuffling.Epoch {
-		return shs.CurrentShuffling.Committees[slot % SLOTS_PER_EPOCH][index]
+		return shs.CurrentShuffling.Committees[slot%SLOTS_PER_EPOCH][index]
 	} else if epoch == shs.NextShuffling.Epoch {
-		return shs.NextShuffling.Committees[slot % SLOTS_PER_EPOCH][index]
+		return shs.NextShuffling.Committees[slot%SLOTS_PER_EPOCH][index]
 	} else {
 		panic(fmt.Errorf("crosslink committee retrieval: out of range epoch: %d", epoch))
 	}
@@ -57,7 +57,7 @@ func (f *ShufflingFeature) LoadShufflingStatus() *ShufflingStatus {
 // some shards may not have a committee this epoch.
 type ShufflingEpoch struct {
 	Epoch      Epoch
-	Shuffling  []ValidatorIndex              // the active validator indices, shuffled into their committee
+	Shuffling  []ValidatorIndex                                           // the active validator indices, shuffled into their committee
 	Committees [SLOTS_PER_EPOCH][MAX_COMMITTEES_PER_SLOT][]ValidatorIndex // slices of Shuffling, 1 per slot. Committee can be nil slice.
 }
 

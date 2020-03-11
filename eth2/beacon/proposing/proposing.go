@@ -56,7 +56,7 @@ func (f *ProposingFeature) computeProposerIndex(indices []ValidatorIndex, seed R
 		h := Hash(buf)
 		for j := uint64(0); j < 32; j++ {
 			randomByte := h[j]
-			absI := ValidatorIndex(((i<<5)|j)%uint64(len(indices)))
+			absI := ValidatorIndex(((i << 5) | j) % uint64(len(indices)))
 			shuffledI := shuffle.PermuteIndex(absI, uint64(len(indices)), seed)
 			candidateIndex := indices[shuffledI]
 			effectiveBalance := f.Meta.EffectiveBalance(candidateIndex)
@@ -79,7 +79,7 @@ func (f *ProposingFeature) LoadBeaconProposerIndices(epoch Epoch) (out *EpochPro
 	for i := Slot(0); i < SLOTS_PER_EPOCH; i++ {
 		buf := make([]byte, 32+8, 32+8)
 		copy(buf[0:32], seedSource[:])
-		binary.LittleEndian.PutUint64(buf[32:], uint64(startSlot + i))
+		binary.LittleEndian.PutUint64(buf[32:], uint64(startSlot+i))
 		seed := Hash(buf)
 		out[i] = f.computeProposerIndex(indices, seed)
 	}

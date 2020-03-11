@@ -42,8 +42,8 @@ type VoluntaryExit struct {
 var SignedVoluntaryExitSSZ = zssz.GetSSZ((*SignedVoluntaryExit)(nil))
 
 type SignedVoluntaryExit struct {
-	Message        VoluntaryExit
-	Signature      BLSSignature
+	Message   VoluntaryExit
+	Signature BLSSignature
 }
 
 func (f *VoluntaryExitFeature) ProcessVoluntaryExit(signedExit *SignedVoluntaryExit) error {

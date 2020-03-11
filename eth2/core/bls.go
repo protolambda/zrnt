@@ -11,7 +11,7 @@ type BLSPubkey [48]byte
 type BLSSignature [96]byte
 
 type BLSPubkeyMessagePair struct {
-	PK BLSPubkey
+	PK      BLSPubkey
 	Message []byte
 }
 
@@ -29,7 +29,7 @@ func ComputeDomain(domainType BLSDomainType, forkVersion Version) (out BLSDomain
 
 type SigningRoot struct {
 	ObjectRoot Root
-	Domain BLSDomain
+	Domain     BLSDomain
 }
 
 var SigningRootSSZ = zssz.GetSSZ((*SigningRoot)(nil))

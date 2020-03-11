@@ -18,13 +18,13 @@ import (
 var SignedBeaconBlockSSZ = zssz.GetSSZ((*SignedBeaconBlock)(nil))
 
 type SignedBeaconBlock struct {
-	Message BeaconBlock
+	Message   BeaconBlock
 	Signature BLSSignature
 }
 
 func (block *SignedBeaconBlock) SignedHeader() *SignedBeaconBlockHeader {
 	return &SignedBeaconBlockHeader{
-		Message: *block.Message.Header(),
+		Message:   *block.Message.Header(),
 		Signature: block.Signature,
 	}
 }

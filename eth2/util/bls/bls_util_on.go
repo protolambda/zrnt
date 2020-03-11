@@ -7,7 +7,7 @@ import (
 	. "github.com/protolambda/zrnt/eth2/core"
 )
 
-func init()  {
+func init() {
 	hbls.Init(hbls.BLS12_381)
 	hbls.SetETHmode(1)
 }

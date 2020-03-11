@@ -12,7 +12,7 @@ type DepositData struct {
 	WithdrawalCredentials Root
 	Amount                Gwei
 	// Signing over DepositMessage
-	Signature             BLSSignature
+	Signature BLSSignature
 }
 
 func (data *DepositData) Message() DepositMessage {

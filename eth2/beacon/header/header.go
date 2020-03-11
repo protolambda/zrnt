@@ -36,8 +36,8 @@ type BeaconBlockHeader struct {
 var SignedBeaconBlockHeaderSSZ = zssz.GetSSZ((*SignedBeaconBlockHeader)(nil))
 
 type SignedBeaconBlockHeader struct {
-	Message BeaconBlockHeader
-	Signature  BLSSignature
+	Message   BeaconBlockHeader
+	Signature BLSSignature
 }
 
 func (f *BlockHeaderFeature) ProcessHeader(header *BeaconBlockHeader) error {

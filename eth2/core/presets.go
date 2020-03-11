@@ -34,6 +34,7 @@ const HALF_INCREMENT = generated.EFFECTIVE_BALANCE_INCREMENT / 2
 
 // Initial values
 var GENESIS_FORK_VERSION = parseVersion(generated.GENESIS_FORK_VERSION)
+
 const BLS_WITHDRAWAL_PREFIX byte = generated.BLS_WITHDRAWAL_PREFIX
 
 // Time parameters
@@ -90,4 +91,3 @@ func parseVersion(v uint32) (out Version) {
 	binary.BigEndian.PutUint32(out[:], v)
 	return
 }
-

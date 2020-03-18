@@ -77,10 +77,11 @@ func (f *AttesterStatusFeature) GetAttesterStatuses() (out []AttesterStatus) {
 				// If the attestation is for the boundary:
 				if att.Data.Target.Root == targetBlockRoot {
 					status.Flags |= targetFlag
-				}
-				// If the attestation is for the head (att the time of attestation):
-				if att.Data.BeaconBlockRoot == attBlockRoot {
-					status.Flags |= headFlag
+
+					// If the attestation is for the head (att the time of attestation):
+					if att.Data.BeaconBlockRoot == attBlockRoot {
+						status.Flags |= headFlag
+					}
 				}
 			}
 		}

@@ -13,6 +13,7 @@ import (
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/protolambda/zssz"
+	. "github.com/protolambda/ztyp/view"
 )
 
 var SignedBeaconBlockSSZ = zssz.GetSSZ((*SignedBeaconBlock)(nil))
@@ -39,13 +40,26 @@ type BeaconBlock struct {
 	Body          BeaconBlockBody
 }
 
+var BeaconBlockType = &ContainerType{
+	{"slot", SlotType},
+	{"proposer_index", ValidatorIndexType},
+	{"parent_root", RootType},
+	{"state_root", RootType},
+	{"body", BeaconBlockBodyType},
+}
+
+var SignedBeaconBlockType = &ContainerType{
+	{"message", BeaconBlockType},
+	{"signature", BLSSignatureType},
+}
+
 func (block *BeaconBlock) Header() *BeaconBlockHeader {
 	return &BeaconBlockHeader{
 		Slot:          block.Slot,
 		ProposerIndex: block.ProposerIndex,
 		ParentRoot:    block.ParentRoot,
 		StateRoot:     block.StateRoot,
-		BodyRoot:      ssz.HashTreeRoot(block.Body, BeaconBlockBodySSZ),
+		BodyRoot:      block.Body.HashTreeRoot(),
 	}
 }
 
@@ -61,6 +75,22 @@ type BeaconBlockBody struct {
 	Attestations      Attestations
 	Deposits          Deposits
 	VoluntaryExits    VoluntaryExits
+}
+
+func (b *BeaconBlockBody) HashTreeRoot() Root {
+	return ssz.HashTreeRoot(b, BeaconBlockBodySSZ)
+}
+
+var BeaconBlockBodyType = &ContainerType{
+	{"randao_reveal", BLSSignatureType},
+	{"eth1_data", Eth1DataType}, // Eth1 data vote
+	{"graffiti", Bytes32Type},   // Arbitrary data
+	// Operations
+	{"proposer_slashings", ProposerSlashingsType},
+	{"attester_slashings", AttesterSlashingsType},
+	{"attestations", AttestationsType},
+	{"deposits", DepositsType},
+	{"voluntary_exits", VoluntaryExitsType},
 }
 
 type BlockProcessFeature struct {

@@ -7,7 +7,14 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon/slashings/attslash"
 	. "github.com/protolambda/zrnt/eth2/beacon/slashings/propslash"
 	. "github.com/protolambda/zrnt/eth2/core"
+	. "github.com/protolambda/ztyp/view"
 )
+
+var ProposerSlashingsType = ListType(ProposerSlashingType, MAX_PROPOSER_SLASHINGS)
+var AttesterSlashingsType = ListType(AttesterSlashingType, MAX_ATTESTER_SLASHINGS)
+var AttestationsType = ListType(AttestationType, MAX_ATTESTATIONS)
+var DepositsType = ListType(DepositType, MAX_DEPOSITS)
+var VoluntaryExitsType = ListType(SignedVoluntaryExitType, MAX_VOLUNTARY_EXITS)
 
 type ProposerSlashings []ProposerSlashing
 

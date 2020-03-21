@@ -3,6 +3,7 @@ package eth1
 import (
 	"errors"
 	. "github.com/protolambda/zrnt/eth2/core"
+	. "github.com/protolambda/ztyp/view"
 )
 
 type Eth1VoteProcessor interface {
@@ -17,11 +18,21 @@ type Eth1Data struct {
 
 const SLOTS_PER_ETH1_VOTING_PERIOD = Slot(EPOCHS_PER_ETH1_VOTING_PERIOD) * SLOTS_PER_EPOCH
 
+var Eth1DataType = &ContainerType{
+	{"deposit_root", RootType},
+	{"deposit_count", Uint64Type},
+	{"block_hash", Bytes32Type},
+}
+
 type Eth1DataVotes []Eth1Data
 
 func (_ *Eth1DataVotes) Limit() uint64 {
 	return uint64(SLOTS_PER_ETH1_VOTING_PERIOD)
 }
+
+var Eth1DataVotesType = ListType(Eth1DataType, uint64(SLOTS_PER_ETH1_VOTING_PERIOD))
+
+//TODO
 
 // Ethereum 1.0 chain data
 type Eth1State struct {

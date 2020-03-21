@@ -4,77 +4,140 @@ import (
 	. "github.com/protolambda/zrnt/eth2/beacon/validator"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/util/math"
-	"github.com/protolambda/zrnt/eth2/util/ssz"
-	"github.com/protolambda/zssz"
+	. "github.com/protolambda/ztyp/props"
+	. "github.com/protolambda/ztyp/view"
 	"sort"
 )
 
-var RegistryIndicesSSZ = zssz.GetSSZ((*RegistryIndices)(nil))
+var ValidatorsRegistryType = ListType(ValidatorType, VALIDATOR_REGISTRY_LIMIT)
 
-type ValidatorRegistry []*Validator
+type ValidatorsRegistry struct { *ListView }
 
-func (_ *ValidatorRegistry) Limit() uint64 {
-	return VALIDATOR_REGISTRY_LIMIT
+func (state *ValidatorsRegistry) IsValidIndex(index ValidatorIndex) (bool, error) {
+	count, err := state.ValidatorCount()
+	return index < ValidatorIndex(count), err
 }
 
-var ValidatorRegistrySSZ = zssz.GetSSZ((*ValidatorRegistry)(nil))
-
-type ValidatorsState struct {
-	Validators ValidatorRegistry
+func (state *ValidatorsRegistry) ValidatorCount() (uint64, error) {
+	return state.Length()
 }
 
-func (state *ValidatorsState) IsValidIndex(index ValidatorIndex) bool {
-	return index < ValidatorIndex(len(state.Validators))
+func (state *ValidatorsRegistry) Validator(index ValidatorIndex) (*Validator, error) {
+	v, err := ContainerReadProp(PropReader(state, uint64(index))).Container()
+	if err != nil {
+		return nil, err
+	}
+	return &Validator{ContainerView: v}, nil
 }
 
-func (state *ValidatorsState) ValidatorCount() uint64 {
-	return uint64(len(state.Validators))
+func (state *ValidatorsRegistry) Pubkey(index ValidatorIndex) (BLSPubkey, error) {
+	v, err := state.Validator(index)
+	if err != nil {
+		return BLSPubkey{}, err
+	}
+	return v.Pubkey()
 }
 
-func (state *ValidatorsState) Validator(index ValidatorIndex) *Validator {
-	return state.Validators[index]
-}
-
-func (state *ValidatorsState) Pubkey(index ValidatorIndex) BLSPubkey {
-	return state.Validators[index].Pubkey
-}
-
-func (state *ValidatorsState) ValidatorIndex(pubkey BLSPubkey) (index ValidatorIndex, exists bool) {
-	for i, v := range state.Validators {
-		if v.Pubkey == pubkey {
-			return ValidatorIndex(i), true
+// TODO: probably really slow, should have a pubkey cache or something
+func (state *ValidatorsRegistry) ValidatorIndex(pubkey BLSPubkey) (index ValidatorIndex, exists bool, err error) {
+	count, err := state.ValidatorCount()
+	if err != nil {
+		return 0, false, err
+	}
+	for i := ValidatorIndex(0); i < ValidatorIndex(count); i++ {
+		v, err := state.Validator(i)
+		if err != nil {
+			return 0, false, err
+		}
+		valPub, err := v.Pubkey()
+		if err != nil {
+			return 0, false, err
+		}
+		if valPub == pubkey {
+			return i, true, nil
 		}
 	}
-	return ValidatorIndexMarker, false
+	return 0, false, err
 }
 
-func (state *ValidatorsState) WithdrawableEpoch(index ValidatorIndex) Epoch {
-	return state.Validators[index].WithdrawableEpoch
+func (state *ValidatorsRegistry) WithdrawableEpoch(index ValidatorIndex) (Epoch, error) {
+	v, err := state.Validator(index)
+	if err != nil {
+		return 0, err
+	}
+	return v.WithdrawableEpoch()
 }
 
-func (state *ValidatorsState) IsActive(index ValidatorIndex, epoch Epoch) bool {
-	return state.Validators[index].IsActive(epoch)
+func (state *ValidatorsRegistry) IsActive(index ValidatorIndex, epoch Epoch) (bool, error) {
+	v, err := state.Validator(index)
+	if err != nil {
+		return false, err
+	}
+	return v.IsActive(epoch)
 }
 
-func (state *ValidatorsState) GetActiveValidatorIndices(epoch Epoch) RegistryIndices {
-	res := make([]ValidatorIndex, 0, len(state.Validators))
-	for i, v := range state.Validators {
-		if v.IsActive(epoch) {
-			res = append(res, ValidatorIndex(i))
+func (state *ValidatorsRegistry) SlashAndDelayWithdraw(index ValidatorIndex, withdrawalEpoch Epoch) error {
+	v, err := state.Validator(index)
+	if err != nil {
+		return err
+	}
+	if err := v.MakeSlashed(); err != nil {
+		return err
+	}
+	prevWithdrawalEpoch, err := v.WithdrawableEpoch()
+	if err != nil {
+		return err
+	}
+	if withdrawalEpoch > prevWithdrawalEpoch {
+		if err := v.SetWithdrawableEpoch(withdrawalEpoch); err != nil {
+			return err
 		}
 	}
-	return res
+	return nil
 }
 
-func (state *ValidatorsState) ComputeActiveIndexRoot(epoch Epoch) Root {
-	indices := state.GetActiveValidatorIndices(epoch)
-	return ssz.HashTreeRoot(indices, RegistryIndicesSSZ)
+func (state *ValidatorsRegistry) GetActiveValidatorIndices(epoch Epoch) (RegistryIndices, error) {
+	count, err := state.ValidatorCount()
+	if err != nil {
+		return nil, err
+	}
+	res := make(RegistryIndices, 0, count)
+	for i := ValidatorIndex(0); i < ValidatorIndex(count); i++ {
+		v, err := state.Validator(i)
+		if err != nil {
+			return nil, err
+		}
+		if active, err := v.IsActive(epoch); err != nil {
+			return nil, err
+		} else if active {
+			res = append(res, i)
+		}
+	}
+	return res, nil
 }
 
-func (state *ValidatorsState) GetActiveValidatorCount(epoch Epoch) (count uint64) {
-	for _, v := range state.Validators {
-		if v.IsActive(epoch) {
-			count++
+func (state *ValidatorsRegistry) ComputeActiveIndexRoot(epoch Epoch) (Root, error) {
+	indices, err := state.GetActiveValidatorIndices(epoch)
+	if err != nil {
+		return Root{}, err
+	}
+	return indices.HashTreeRoot(), nil
+}
+
+func (state *ValidatorsRegistry) GetActiveValidatorCount(epoch Epoch) (activeCount uint64, err error) {
+	count, err := state.ValidatorCount()
+	if err != nil {
+		return 0, err
+	}
+	for i := ValidatorIndex(0); i < ValidatorIndex(count); i++ {
+		v, err := state.Validator(i)
+		if err != nil {
+			return 0, err
+		}
+		if active, err := v.IsActive(epoch); err != nil {
+			return 0, err
+		} else if active {
+			activeCount++
 		}
 	}
 	return
@@ -92,132 +155,248 @@ func CommitteeCount(activeValidators uint64) uint64 {
 	return committeesPerSlot
 }
 
-func (state *ValidatorsState) GetCommitteeCountAtSlot(slot Slot) uint64 {
-	return CommitteeCount(state.GetActiveValidatorCount(slot.ToEpoch()))
-}
-
-func (state *ValidatorsState) IsSlashed(index ValidatorIndex) bool {
-	return state.Validators[index].Slashed
-}
-
-// Filters a slice in-place. Only keeps the unslashed validators.
-// If input is sorted, then the result will be sorted.
-func (state *ValidatorsState) FilterUnslashed(indices []ValidatorIndex) []ValidatorIndex {
-	unslashed := indices[:0]
-	for _, x := range indices {
-		if !state.Validators[x].Slashed {
-			unslashed = append(unslashed, x)
-		}
+func (state *ValidatorsRegistry) GetCommitteeCountAtSlot(slot Slot) (uint64, error) {
+	activeCount, err := state.GetActiveValidatorCount(slot.ToEpoch())
+	if err != nil {
+		return 0, err
 	}
-	return unslashed
+	return CommitteeCount(activeCount), nil
 }
 
-func (state *ValidatorsState) GetIndicesToSlash(withdrawal Epoch) (out []ValidatorIndex) {
-	for i, v := range state.Validators {
-		if v.Slashed && withdrawal == v.WithdrawableEpoch {
+func (state *ValidatorsRegistry) IsSlashed(index ValidatorIndex) (bool, error) {
+	v, err := state.Validator(index)
+	if err != nil {
+		return false, err
+	}
+	return v.Slashed()
+}
+
+func (state *ValidatorsRegistry) GetIndicesToSlash(withdrawal Epoch) (out []ValidatorIndex, err error) {
+	count, err := state.ValidatorCount()
+	if err != nil {
+		return nil, err
+	}
+	for i := ValidatorIndex(0); i < ValidatorIndex(count); i++ {
+		v, err := state.Validator(i)
+		if err != nil {
+			return nil, err
+		}
+		valSlashed, err := v.Slashed()
+		if err != nil {
+			return nil, err
+		}
+		valWithdrawal, err := v.WithdrawableEpoch()
+		if err != nil {
+			return nil, err
+		}
+		if valSlashed && withdrawal == valWithdrawal {
 			out = append(out, ValidatorIndex(i))
 		}
 	}
 	return
 }
 
-func (state *ValidatorsState) GetChurnLimit(epoch Epoch) uint64 {
-	return math.MaxU64(MIN_PER_EPOCH_CHURN_LIMIT, state.GetActiveValidatorCount(epoch)/CHURN_LIMIT_QUOTIENT)
+func (state *ValidatorsRegistry) GetChurnLimit(epoch Epoch) (uint64, error) {
+	activeCount, err := state.GetActiveValidatorCount(epoch)
+	if err != nil {
+		return 0, err
+	}
+	return math.MaxU64(MIN_PER_EPOCH_CHURN_LIMIT, activeCount/CHURN_LIMIT_QUOTIENT), nil
 }
 
-func (state *ValidatorsState) ExitQueueEnd(epoch Epoch) Epoch {
+func (state *ValidatorsRegistry) ExitQueueEnd(epoch Epoch) (Epoch, error) {
+	count, err := state.ValidatorCount()
+	if err != nil {
+		return 0, err
+	}
 	// Compute exit queue epoch
 	exitQueueEnd := epoch.ComputeActivationExitEpoch()
-	for _, v := range state.Validators {
-		if v.ExitEpoch != FAR_FUTURE_EPOCH && v.ExitEpoch > exitQueueEnd {
-			exitQueueEnd = v.ExitEpoch
+	for i := ValidatorIndex(0); i < ValidatorIndex(count); i++ {
+		v, err := state.Validator(i)
+		if err != nil {
+			return 0, err
+		}
+		valExit, err := v.ExitEpoch()
+		if err != nil {
+			return 0, err
+		}
+		if valExit != FAR_FUTURE_EPOCH && valExit > exitQueueEnd {
+			exitQueueEnd = valExit
 		}
 	}
 	exitQueueChurn := uint64(0)
-	for _, v := range state.Validators {
-		if v.ExitEpoch == exitQueueEnd {
+	for i := ValidatorIndex(0); i < ValidatorIndex(count); i++ {
+		v, err := state.Validator(i)
+		if err != nil {
+			return 0, err
+		}
+		valExit, err := v.ExitEpoch()
+		if valExit == exitQueueEnd {
 			exitQueueChurn++
 		}
 	}
-	if exitQueueChurn >= state.GetChurnLimit(epoch) {
+	churnLimit, err := state.GetChurnLimit(epoch)
+	if err != nil {
+		return 0, err
+	}
+	if exitQueueChurn >= churnLimit {
 		exitQueueEnd++
 	}
-	return exitQueueEnd
+	return exitQueueEnd, nil
 }
 
-func (state *ValidatorsState) ProcessActivationQueue(currentEpoch Epoch, finalizedEpoch Epoch) {
-	// Queue validators eligible for activation and not dequeued for activation prior to finalized epoch
-	activationQueue := make([]ValidatorIndex, 0)
-	for i, v := range state.Validators {
-		if v.IsEligibleForActivation(finalizedEpoch) {
-			activationQueue = append(activationQueue, ValidatorIndex(i))
+type activationQueueItem struct {
+	valIndex ValidatorIndex
+	activation Epoch
+	activationEligibility Epoch
+}
+
+func (state *ValidatorsRegistry) ProcessActivationQueue(activationEpoch Epoch, currentEpoch Epoch) error {
+	activationQueue := make([]activationQueueItem, 0)
+	count, err := state.ValidatorCount()
+	if err != nil {
+		return err
+	}
+	for i := ValidatorIndex(0); i < ValidatorIndex(count); i++ {
+		v, err := state.Validator(i)
+		if err != nil {
+			return err
+		}
+		valActivationEligibilityEpoch, err := v.ActivationEligibilityEpoch()
+		if err != nil {
+			return err
+		}
+		valActivationEpoch, err := v.ActivationEpoch()
+		if err != nil {
+			return err
+		}
+		if valActivationEligibilityEpoch != FAR_FUTURE_EPOCH && valActivationEpoch >= activationEpoch {
+			activationQueue = append(activationQueue, activationQueueItem{
+				valIndex: i,
+				activation: valActivationEpoch,
+				activationEligibility: valActivationEligibilityEpoch,
+			})
+
 		}
 	}
 
 	// Order by the sequence of activation_eligibility_epoch setting and then index
 	sort.Slice(activationQueue, func(i int, j int) bool {
-		aEligible := state.Validators[activationQueue[i]].ActivationEligibilityEpoch
-		bEligible := state.Validators[activationQueue[j]].ActivationEligibilityEpoch
-		if aEligible == bEligible {
-			return activationQueue[i] < activationQueue[j]
-		}
-		return aEligible < bEligible
+		return activationQueue[i].activationEligibility < activationQueue[j].activationEligibility
 	})
 	// Dequeued validators for activation up to churn limit (without resetting activation epoch)
 	queueLen := uint64(len(activationQueue))
-	if churnLimit := state.GetChurnLimit(currentEpoch); churnLimit < queueLen {
+	if churnLimit, err := state.GetChurnLimit(currentEpoch); err != nil {
+		return err
+	} else if churnLimit < queueLen {
 		queueLen = churnLimit
 	}
-	for _, vi := range activationQueue[:queueLen] {
-		state.Validators[vi].ActivationEpoch = currentEpoch.ComputeActivationExitEpoch()
+
+	for _, item := range activationQueue[:queueLen] {
+		if item.activation == FAR_FUTURE_EPOCH {
+			v, err := state.Validator(item.valIndex)
+			if err != nil {
+				return err
+			}
+			if err := v.SetActivationEpoch(currentEpoch.ComputeActivationExitEpoch()); err != nil {
+				return err
+			}
+		}
 	}
+	return nil
 }
 
 // Return the total balance sum (1 Gwei minimum to avoid divisions by zero.)
-func (state *ValidatorsState) GetTotalStakedBalance(epoch Epoch) (sum Gwei) {
-	for _, v := range state.Validators {
-		if v.IsActive(epoch) {
-			sum += v.EffectiveBalance
+func (state *ValidatorsRegistry) GetTotalStakedBalance(epoch Epoch) (sum Gwei, err error) {
+	count, err := state.ValidatorCount()
+	if err != nil {
+		return 0, err
+	}
+	for i := ValidatorIndex(0); i < ValidatorIndex(count); i++ {
+		v, err := state.Validator(i)
+		if err != nil {
+			return 0, err
+		}
+
+		if active, err := v.IsActive(epoch); err != nil {
+			return 0, err
+		} else if active {
+			effBal, err := v.EffectiveBalance()
+			if err != nil {
+				return 0, err
+			}
+			sum += effBal
 		}
 	}
-	return sum
+	return sum, nil
 }
 
-func (state *ValidatorsState) GetAttestersStake(statuses []AttesterStatus, mask AttesterFlag) (out Gwei) {
+func (state *ValidatorsRegistry) GetAttestersStake(statuses []AttesterStatus, mask AttesterFlag) (out Gwei, err error) {
 	for i := range statuses {
 		status := &statuses[i]
-		b := state.Validators[i].EffectiveBalance
+		v, err := state.Validator(ValidatorIndex(i))
+		if err != nil {
+			return 0, err
+		}
+		b, err := v.EffectiveBalance()
+		if err != nil {
+			return 0, err
+		}
 		if status.Flags.HasMarkers(mask) {
 			out += b
 		}
 	}
 	if out == 0 {
-		return 1
+		return 1, nil
 	}
 	return
 }
 
-func (state *ValidatorsState) GetTotalStake() (out Gwei) {
-	for i := range state.Validators {
-		out += state.Validators[i].EffectiveBalance
+func (state *ValidatorsRegistry) GetTotalStake() (out Gwei, err error) {
+	count, err := state.ValidatorCount()
+	if err != nil {
+		return 0, err
+	}
+	for i := ValidatorIndex(0); i < ValidatorIndex(count); i++ {
+		v, err := state.Validator(i)
+		if err != nil {
+			return 0, err
+		}
+		b, err := v.EffectiveBalance()
+		if err != nil {
+			return 0, err
+		}
+		out += b
 	}
 	if out == 0 {
-		return 1
+		return 1, nil
 	}
 	return
 }
 
-func (state *ValidatorsState) EffectiveBalance(index ValidatorIndex) Gwei {
-	return state.Validators[index].EffectiveBalance
+func (state *ValidatorsRegistry) EffectiveBalance(index ValidatorIndex) (Gwei, error) {
+	v, err := state.Validator(index)
+	if err != nil {
+		return 0, err
+	}
+	return v.EffectiveBalance()
 }
 
 // Return the combined effective balance of an array of validators. (1 Gwei minimum to avoid divisions by zero.)
-func (state *ValidatorsState) SumEffectiveBalanceOf(indices []ValidatorIndex) (sum Gwei) {
+func (state *ValidatorsRegistry) SumEffectiveBalanceOf(indices []ValidatorIndex) (sum Gwei, err error) {
 	for _, vIndex := range indices {
-		sum += state.Validators[vIndex].EffectiveBalance
+		v, err := state.Validator(vIndex)
+		if err != nil {
+			return 0, err
+		}
+		b, err := v.EffectiveBalance()
+		if err != nil {
+			return 0, err
+		}
+		sum += b
 	}
 	if sum == 0 {
-		return 1
+		return 1, nil
 	}
-	return sum
+	return
 }

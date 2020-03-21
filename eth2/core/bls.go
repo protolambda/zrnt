@@ -4,11 +4,15 @@ import (
 	"github.com/protolambda/zrnt/eth2/util/hashing"
 	"github.com/protolambda/zssz"
 	"github.com/protolambda/zssz/htr"
+	. "github.com/protolambda/ztyp/props"
+	. "github.com/protolambda/ztyp/view"
 )
 
 type BLSPubkey [48]byte
+var BLSPubkeyType = BasicVectorType(ByteType, 48)
 
 type BLSSignature [96]byte
+var BLSSignatureType = BasicVectorType(ByteType, 96)
 
 type BLSPubkeyMessagePair struct {
 	PK      BLSPubkey
@@ -68,4 +72,47 @@ func ComputeSigningRoot(msgRoot Root, dom BLSDomain) Root {
 	}
 	hFn := hashing.GetHashFn()
 	return zssz.HashTreeRoot(htr.HashFn(hFn), &withDomain, SigningRootSSZ)
+}
+
+// For pubkeys/signatures in state, a tree-representation is used.
+
+type BLSPubkeyNode struct {
+	*BasicVectorView
+}
+
+func NewBLSPubkeyNode() (b *BLSPubkeyNode) {
+	return &BLSPubkeyNode{BasicVectorView: BLSPubkeyType.New(nil)}
+}
+
+type BLSPubkeyReadProp BasicVectorReadProp
+
+func (p BLSPubkeyReadProp) BLSPubkey() (out BLSPubkey, err error) {
+	if v, err := BasicVectorReadProp(p).BasicVector(); err != nil {
+		return BLSPubkey{}, err
+	} else {
+		pub := BLSPubkeyNode{BasicVectorView: v}
+		err = pub.IntoBytes(out[:])
+		return out, err
+	}
+}
+
+
+type BLSSignatureNode struct {
+	*BasicVectorView
+}
+
+func NewBLSSignatureNode() (b *BLSSignatureNode) {
+	return &BLSSignatureNode{BasicVectorView: BLSSignatureType.New(nil)}
+}
+
+type BLSSignatureReadProp BasicVectorReadProp
+
+func (p BLSSignatureReadProp) BLSSignature() (out BLSSignature, err error) {
+	if v, err := BasicVectorReadProp(p).BasicVector(); err != nil {
+		return BLSSignature{}, err
+	} else {
+		sig := BLSSignatureNode{BasicVectorView: v}
+		err = sig.IntoBytes(out[:])
+		return out, err
+	}
 }

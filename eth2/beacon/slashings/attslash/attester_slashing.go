@@ -2,10 +2,12 @@ package attslash
 
 import (
 	"errors"
+	"fmt"
 	. "github.com/protolambda/zrnt/eth2/beacon/attestations"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/meta"
 	"github.com/protolambda/zssz"
+	. "github.com/protolambda/ztyp/view"
 )
 
 type AttesterSlashingProcessor interface {
@@ -17,8 +19,9 @@ type AttestSlashFeature struct {
 	Meta interface {
 		meta.RegistrySize
 		meta.Pubkeys
+		meta.SigDomain
+		meta.SlashableCheck
 		meta.Versioning
-		meta.Validators
 		meta.Proposers
 		meta.Balance
 		meta.Slasher
@@ -42,6 +45,11 @@ type AttesterSlashing struct {
 	Attestation2 IndexedAttestation
 }
 
+var AttesterSlashingType = &ContainerType{
+	{"attestation_1", IndexedAttestationType},
+	{"attestation_2", IndexedAttestationType},
+}
+
 func (f *AttestSlashFeature) ProcessAttesterSlashing(attesterSlashing *AttesterSlashing) error {
 	sa1 := &attesterSlashing.Attestation1
 	sa2 := &attesterSlashing.Attestation2
@@ -57,19 +65,34 @@ func (f *AttestSlashFeature) ProcessAttesterSlashing(attesterSlashing *AttesterS
 		return errors.New("attestation 2 of attester slashing cannot be verified")
 	}
 
+	currentEpoch, err := f.Meta.CurrentEpoch()
+	if err != nil {
+		return err
+	}
+
 	// keep track of effectiveness
 	slashedAny := false
-
-	currentEpoch := f.Meta.CurrentEpoch()
+	var errorAny error
 
 	// run slashings where applicable
 	// use ZigZagJoin for efficient intersection: the indicies are already sorted (as validated above)
 	ValidatorSet(sa1.AttestingIndices).ZigZagJoin(ValidatorSet(sa2.AttestingIndices), func(i ValidatorIndex) {
-		if f.Meta.Validator(i).IsSlashable(currentEpoch) {
-			f.Meta.SlashValidator(i, nil)
-			slashedAny = true
+		if errorAny != nil {
+			return
+		}
+		if slashable, err := f.Meta.IsSlashable(i, currentEpoch); err != nil {
+			errorAny = err
+		} else if slashable {
+			if err := f.Meta.SlashValidator(i, nil); err != nil {
+				errorAny = err
+			} else {
+				slashedAny = true
+			}
 		}
 	}, nil)
+	if errorAny != nil {
+		return fmt.Errorf("error during attester-slashing validators slashable check: %v", errorAny)
+	}
 	if !slashedAny {
 		return errors.New("attester slashing %d is not effective, hence invalid")
 	}

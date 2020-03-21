@@ -7,6 +7,7 @@ import (
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/protolambda/zssz"
+	. "github.com/protolambda/ztyp/view"
 )
 
 type VoluntaryExitProcessor interface {
@@ -16,9 +17,13 @@ type VoluntaryExitProcessor interface {
 
 type VoluntaryExitFeature struct {
 	Meta interface {
+		meta.ActiveIndices
+		meta.Pubkeys
+		meta.SigDomain
+		meta.ExitEpoch
+		meta.ActivationEpoch
 		meta.Versioning
 		meta.RegistrySize
-		meta.Validators
 		meta.Exits
 	}
 }
@@ -39,46 +44,77 @@ type VoluntaryExit struct {
 	ValidatorIndex ValidatorIndex
 }
 
-var SignedVoluntaryExitSSZ = zssz.GetSSZ((*SignedVoluntaryExit)(nil))
+func (v *VoluntaryExit) HashTreeRoot() Root {
+	return ssz.HashTreeRoot(v, VoluntaryExitSSZ)
+}
 
 type SignedVoluntaryExit struct {
-	Message   VoluntaryExit
+	Message VoluntaryExit
 	Signature BLSSignature
+}
+
+var VoluntaryExitType = &ContainerType{
+	{"epoch", EpochType}, // Earliest epoch when voluntary exit can be processed
+	{"validator_index", ValidatorIndexType},
+}
+
+var SignedVoluntaryExitType = &ContainerType{
+	{"message", VoluntaryExitType},
+	{"signature", BLSSignatureType},
 }
 
 func (f *VoluntaryExitFeature) ProcessVoluntaryExit(signedExit *SignedVoluntaryExit) error {
 	exit := &signedExit.Message
-	currentEpoch := f.Meta.CurrentEpoch()
-	if !f.Meta.IsValidIndex(exit.ValidatorIndex) {
+	currentEpoch, err := f.Meta.CurrentEpoch()
+	if err != nil {
+		return err
+	}
+	if valid, err := f.Meta.IsValidIndex(exit.ValidatorIndex); err != nil {
+		return err
+	} else if !valid {
 		return errors.New("invalid exit validator index")
 	}
-	validator := f.Meta.Validator(exit.ValidatorIndex)
 	// Verify that the validator is active
-	if !validator.IsActive(currentEpoch) {
+	if isActive, err := f.Meta.IsActive(exit.ValidatorIndex, currentEpoch); err != nil {
+		return err
+	} else if !isActive {
 		return errors.New("validator must be active to be able to voluntarily exit")
 	}
+	scheduledExitEpoch, err := f.Meta.ExitEpoch(exit.ValidatorIndex)
+	if err != nil {
+		return err
+	}
 	// Verify exit has not been initiated
-	if validator.ExitEpoch != FAR_FUTURE_EPOCH {
+	if scheduledExitEpoch != FAR_FUTURE_EPOCH {
 		return errors.New("validator already exited")
 	}
 	// Exits must specify an epoch when they become valid; they are not valid before then
 	if currentEpoch < exit.Epoch {
 		return errors.New("invalid exit epoch")
 	}
+	registeredActivationEpoch, err := f.Meta.ActivationEpoch(exit.ValidatorIndex)
+	if err != nil {
+		return err
+	}
 	// Verify the validator has been active long enough
-	if currentEpoch < validator.ActivationEpoch+PERSISTENT_COMMITTEE_PERIOD {
+	if currentEpoch < registeredActivationEpoch+PERSISTENT_COMMITTEE_PERIOD {
 		return errors.New("exit is too soon")
+	}
+	pubkey, err := f.Meta.Pubkey(exit.ValidatorIndex)
+	if err != nil {
+		return err
+	}
+	domain, err := f.Meta.GetDomain(DOMAIN_VOLUNTARY_EXIT, exit.Epoch)
+	if err != nil {
+		return err
 	}
 	// Verify signature
 	if !bls.Verify(
-		validator.Pubkey,
-		ComputeSigningRoot(
-			ssz.HashTreeRoot(exit, VoluntaryExitSSZ),
-			f.Meta.GetDomain(DOMAIN_VOLUNTARY_EXIT, exit.Epoch)),
+		pubkey,
+		ComputeSigningRoot(signedExit.Message.HashTreeRoot(), domain),
 		signedExit.Signature) {
 		return errors.New("voluntary exit signature could not be verified")
 	}
 	// Initiate exit
-	f.Meta.InitiateValidatorExit(f.Meta.CurrentEpoch(), exit.ValidatorIndex)
-	return nil
+	return f.Meta.InitiateValidatorExit(currentEpoch, exit.ValidatorIndex)
 }

@@ -72,3 +72,20 @@ func (f *TransitionFeature) StateTransition(block BlockInput, validateResult boo
 	}
 	return nil
 }
+
+//// TODO block sig
+//func (f *TransitionFeature) VerifySig() {
+//
+//	pubkey, err := f.Meta.Pubkey(proposerIndex)
+//	if err != nil {
+//		return err
+//	}
+//	// Block signature
+//	if !bls.BlsVerify(
+//		pubkey.Bytes(),
+//		ssz.SigningRoot(header, BeaconBlockHeaderSSZ),
+//		header.Signature(),
+//		f.Meta.GetDomain(DOMAIN_BEACON_PROPOSER, f.Meta.CurrentEpoch())) {
+//		return errors.New("block signature invalid")
+//	}
+//}

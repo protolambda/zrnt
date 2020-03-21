@@ -2,6 +2,7 @@ package registry
 
 import (
 	. "github.com/protolambda/zrnt/eth2/core"
+	. "github.com/protolambda/ztyp/view"
 )
 
 type Balances []Gwei
@@ -9,6 +10,8 @@ type Balances []Gwei
 func (_ *Balances) Limit() uint64 {
 	return VALIDATOR_REGISTRY_LIMIT
 }
+
+var RegistryBalancesType = BasicListType(GweiType, VALIDATOR_REGISTRY_LIMIT)
 
 type BalancesState struct {
 	Balances Balances

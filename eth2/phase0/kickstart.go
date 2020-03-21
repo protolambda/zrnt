@@ -1,5 +1,7 @@
 package phase0
 
+// TODO kick start tree state
+
 import (
 	"errors"
 	hbls "github.com/herumi/bls-eth-go-binary/bls"

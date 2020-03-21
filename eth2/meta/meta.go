@@ -1,68 +1,76 @@
 package meta
 
-import (
-	"github.com/protolambda/zrnt/eth2/beacon/validator"
-	. "github.com/protolambda/zrnt/eth2/core"
-)
+import . "github.com/protolambda/zrnt/eth2/core"
 
 type Exits interface {
-	InitiateValidatorExit(currentEpoch Epoch, index ValidatorIndex)
+	InitiateValidatorExit(currentEpoch Epoch, index ValidatorIndex) error
+}
+
+type ExitEpoch interface {
+	ExitEpoch(index ValidatorIndex) (Epoch, error)
+}
+type ActivationEpoch interface {
+	ActivationEpoch(index ValidatorIndex) (Epoch, error)
 }
 
 type Balance interface {
-	GetBalance(index ValidatorIndex) Gwei
-	IncreaseBalance(index ValidatorIndex, v Gwei)
-	DecreaseBalance(index ValidatorIndex, v Gwei)
+	GetBalance(index ValidatorIndex) (Gwei, error)
+	IncreaseBalance(index ValidatorIndex, v Gwei) error
+	DecreaseBalance(index ValidatorIndex, v Gwei) error
 }
 
 type BalanceDeltas interface {
-	ApplyDeltas(deltas *Deltas)
+	ApplyDeltas(deltas *Deltas) error
 }
 
 type AttestationDeltas interface {
-	AttestationDeltas() *Deltas
+	AttestationDeltas() (*Deltas, error)
 }
 
 type RegistrySize interface {
-	IsValidIndex(index ValidatorIndex) bool
-	ValidatorCount() uint64
+	IsValidIndex(index ValidatorIndex) (bool, error)
+	ValidatorCount() (uint64, error)
 }
 
 type Pubkeys interface {
-	Pubkey(index ValidatorIndex) BLSPubkey
-	ValidatorIndex(pubkey BLSPubkey) (index ValidatorIndex, exists bool)
+	Pubkey(index ValidatorIndex) (BLSPubkey, error)
+	ValidatorIndex(pubkey BLSPubkey) (index ValidatorIndex, exists bool, err error)
 }
 
 type EffectiveBalances interface {
-	EffectiveBalance(index ValidatorIndex) Gwei
-	SumEffectiveBalanceOf(indices []ValidatorIndex) (sum Gwei)
+	EffectiveBalance(index ValidatorIndex) (Gwei, error)
+	SumEffectiveBalanceOf(indices []ValidatorIndex) (sum Gwei, err error)
 }
 
 type EffectiveBalancesUpdate interface {
-	UpdateEffectiveBalances()
+	UpdateEffectiveBalances() error
 }
 
 type Finality interface {
-	Finalized() Checkpoint
-	CurrentJustified() Checkpoint
-	PreviousJustified() Checkpoint
+	Finalized() (Checkpoint, error)
+	CurrentJustified() (Checkpoint, error)
+	PreviousJustified() (Checkpoint, error)
 }
 
 type Justification interface {
-	Justify(checkpoint Checkpoint)
+	Justify(checkpoint Checkpoint) error
 }
 
 type EpochAttestations interface {
-	RotateEpochAttestations()
+	RotateEpochAttestations() error
 }
 
 type AttesterStatuses interface {
-	GetAttesterStatuses() []AttesterStatus
+	GetAttesterStatuses() ([]AttesterStatus, error)
 }
 
 type SlashedIndices interface {
-	IsSlashed(i ValidatorIndex) bool
-	FilterUnslashed(indices []ValidatorIndex) []ValidatorIndex
+	IsSlashed(i ValidatorIndex) (bool, error)
+	FilterUnslashed(indices []ValidatorIndex) ([]ValidatorIndex, error)
+}
+
+type SlashableCheck interface {
+	IsSlashable(i ValidatorIndex, epoch Epoch) (bool, error)
 }
 
 type CompactCommittees interface {
@@ -74,120 +82,129 @@ type CompactCommittees interface {
 
 type Staking interface {
 	// Staked = Active effective balance
-	GetTotalStake() Gwei
-	GetAttestersStake(statuses []AttesterStatus, mask AttesterFlag) Gwei
+	GetTotalStake() (Gwei, error)
+	GetAttestersStake(statuses []AttesterStatus, mask AttesterFlag) (Gwei, error)
 }
 
 type Slashing interface {
-	GetIndicesToSlash(withdrawal Epoch) (out []ValidatorIndex)
+	SlashAndDelayWithdraw(index ValidatorIndex, withdrawalEpoch Epoch)
+	GetIndicesToSlash(withdrawal Epoch) (out []ValidatorIndex, err error)
 }
 
 type SlashingHistory interface {
-	ResetSlashings(epoch Epoch)
+	ResetSlashings(epoch Epoch) error
 }
 
 type Slasher interface {
-	SlashValidator(slashedIndex ValidatorIndex, whistleblowerIndex *ValidatorIndex)
-}
-
-type Validators interface {
-	Validator(index ValidatorIndex) *validator.Validator
-}
-
-type DomainInfo interface {
-	GenesisValRoot() Root
+	SlashValidator(slashedIndex ValidatorIndex, whistleblowerIndex *ValidatorIndex) error
 }
 
 type Versioning interface {
-	CurrentSlot() Slot
-	CurrentEpoch() Epoch
-	PreviousEpoch() Epoch
-	CurrentVersion() Version
-	GetDomain(dom BLSDomainType, messageEpoch Epoch) BLSDomain
+	CurrentSlot() (Slot, error)
+	CurrentEpoch() (Epoch, error)
+	PreviousEpoch() (Epoch, error)
+}
+
+type Forking interface {
+	PreviousVersion() (Version, error)
+	CurrentVersion() (Version, error)
+	ForkEpoch() (Epoch, error)
+}
+
+type GenesisTime interface {
+	GenesisTime() (Timestamp, error)
+}
+
+type GenesisValidatorsRoot interface {
+	GenesisValidatorsRoot() (Root, error)
+}
+
+type SigDomain interface {
+	GetDomain(dom BLSDomainType, messageEpoch Epoch) (BLSDomain, error)
 }
 
 type Eth1Voting interface {
-	ResetEth1Votes()
+	ResetEth1Votes() error
 }
 
 type Deposits interface {
-	DepIndex() DepositIndex
-	DepCount() DepositIndex
-	DepRoot() Root
+	DepIndex() (DepositIndex, error)
+	DepCount() (DepositIndex, error)
+	DepRoot() (Root, error)
 }
 
 type Onboarding interface {
-	AddNewValidator(pubkey BLSPubkey, withdrawalCreds Root, balance Gwei)
+	AddNewValidator(pubkey BLSPubkey, withdrawalCreds Root, balance Gwei) error
 }
 
 type Depositing interface {
-	IncrementDepositIndex()
+	IncrementDepositIndex() error
 }
 
 type LatestHeader interface {
 	// Signing root of latest_block_header
-	GetLatestBlockRoot() Root
+	GetLatestBlockRoot() (Root, error)
 }
 
 type LatestHeaderUpdate interface {
-	UpdateLatestBlockRoot(stateRoot Root) Root
+	UpdateLatestBlockStateRoot(stateRoot Root) error
 }
 
 type History interface {
-	GetBlockRootAtSlot(slot Slot) Root
-	GetBlockRoot(epoch Epoch) Root
+	GetBlockRootAtSlot(slot Slot) (Root, error)
+	GetBlockRoot(epoch Epoch) (Root, error)
 }
 
 type HistoryUpdate interface {
-	SetRecentRoots(slot Slot, blockRoot Root, stateRoot Root)
-	UpdateStateRoot(root Root)
-	UpdateHistoricalRoots()
+	SetRecentRoots(slot Slot, blockRoot Root, stateRoot Root) error
+	UpdateStateRoot(root Root) error
+	UpdateHistoricalRoots() error
 }
 
 type EpochSeed interface {
 	// Retrieve the seed for beacon proposer indices.
-	GetSeed(epoch Epoch, domainType BLSDomainType) Root
+	GetSeed(epoch Epoch, domainType BLSDomainType) (Root, error)
 }
 
 type Proposers interface {
-	GetBeaconProposerIndex(slot Slot) ValidatorIndex
+	GetBeaconProposerIndex(slot Slot) (ValidatorIndex, error)
 }
 
 type ActivationExit interface {
-	GetChurnLimit(epoch Epoch) uint64
-	ExitQueueEnd(epoch Epoch) Epoch
+	GetChurnLimit(epoch Epoch) (uint64, error)
+	ExitQueueEnd(epoch Epoch) (Epoch, error)
 }
 
 type ActivationQeueue interface {
-	ProcessActivationQueue(activationEpoch Epoch, currentEpoch Epoch)
+	ProcessActivationQueue(activationEpoch Epoch, currentEpoch Epoch) error
 }
 
 type ActiveValidatorCount interface {
-	GetActiveValidatorCount(epoch Epoch) uint64
+	GetActiveValidatorCount(epoch Epoch) (uint64, error)
 }
 
 type ValidatorEpochData interface {
-	WithdrawableEpoch(index ValidatorIndex) Epoch
+	WithdrawableEpoch(index ValidatorIndex) (Epoch, error)
 }
 
 type ActiveIndices interface {
-	IsActive(index ValidatorIndex, epoch Epoch) bool
-	GetActiveValidatorIndices(epoch Epoch) RegistryIndices
-	ComputeActiveIndexRoot(epoch Epoch) Root
+	IsActive(index ValidatorIndex, epoch Epoch) (bool, error)
+	GetActiveValidatorIndices(epoch Epoch) (RegistryIndices, error)
+	ComputeActiveIndexRoot(epoch Epoch) (Root, error)
 }
 
 type CommitteeCount interface {
-	GetCommitteeCountAtSlot(slot Slot) uint64
+	GetCommitteeCountAtSlot(slot Slot) (uint64, error)
 }
 
 type BeaconCommittees interface {
-	GetBeaconCommittee(slot Slot, index CommitteeIndex) []ValidatorIndex
+	GetBeaconCommittee(slot Slot, index CommitteeIndex) ([]ValidatorIndex, error)
 }
 
 type Randao interface {
-	PrepareRandao(epoch Epoch)
+	PrepareRandao(epoch Epoch) error
 }
 
 type Randomness interface {
-	GetRandomMix(epoch Epoch) Root
+	GetRandomMix(epoch Epoch) (Root, error)
 }

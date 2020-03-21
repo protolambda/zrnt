@@ -1,23 +1,58 @@
 package core
 
+import (
+	. "github.com/protolambda/ztyp/props"
+	. "github.com/protolambda/ztyp/view"
+)
+
 // Unix timestamp
-type Timestamp uint64
+type Timestamp Uint64View
 
 func (t Timestamp) ToSlot(genesisTime Timestamp) Slot {
 	return Slot((t - genesisTime) / SECONDS_PER_SLOT)
 }
 
-// Eth1 deposit ordering
-type DepositIndex uint64
+type TimestampReadProp Uint64ReadProp
 
-// Current slot
-type Slot uint64
+func (p TimestampReadProp) Timestamp() (Timestamp, error) {
+	v, err := Uint64ReadProp(p).Uint64()
+	return Timestamp(v), err
+}
+
+// Eth1 deposit ordering
+type DepositIndex Uint64View
+
+type DepositIndexReadProp Uint64ReadProp
+
+func (p DepositIndexReadProp) DepositIndex() (DepositIndex, error) {
+	v, err := Uint64ReadProp(p).Uint64()
+	return DepositIndex(v), err
+}
+
+const SlotType = Uint64Type
+
+type Slot Uint64View
 
 func (s Slot) ToEpoch() Epoch {
 	return Epoch(s / SLOTS_PER_EPOCH)
 }
 
-type Epoch uint64
+type SlotReadProp Uint64ReadProp
+
+func (p SlotReadProp) Slot() (Slot, error) {
+	v, err := Uint64ReadProp(p).Uint64()
+	return Slot(v), err
+}
+
+type SlotWriteProp Uint64WriteProp
+
+func (p SlotWriteProp) SetSlot(v Slot) error {
+	return (Uint64WriteProp)(p).SetUint64(uint64(v))
+}
+
+const EpochType = Uint64Type
+
+type Epoch Uint64View
 
 func (e Epoch) GetStartSlot() Slot {
 	return Slot(e) * SLOTS_PER_EPOCH
@@ -34,4 +69,17 @@ func (e Epoch) Previous() Epoch {
 	} else {
 		return e - 1
 	}
+}
+
+type EpochReadProp Uint64ReadProp
+
+func (p EpochReadProp) Epoch() (Epoch, error) {
+	v, err := Uint64ReadProp(p).Uint64()
+	return Epoch(v), err
+}
+
+type EpochWriteProp Uint64WriteProp
+
+func (p EpochWriteProp) SetEpoch(v Epoch) error {
+	return (Uint64WriteProp)(p).SetUint64(uint64(v))
 }

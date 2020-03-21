@@ -1,31 +1,34 @@
 package finality
 
 import (
+	"errors"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/meta"
+	. "github.com/protolambda/ztyp/props"
+	. "github.com/protolambda/ztyp/view"
 )
 
-type FinalityState struct {
-	JustificationBits           JustificationBits
-	PreviousJustifiedCheckpoint Checkpoint
-	CurrentJustifiedCheckpoint  Checkpoint
-	FinalizedCheckpoint         Checkpoint
+type FinalityProps struct {
+	JustificationBits           JustificationBitsProp
+	PreviousJustifiedCheckpoint CheckpointProp
+	CurrentJustifiedCheckpoint  CheckpointProp
+	FinalizedCheckpoint         CheckpointProp
 }
 
-func (state *FinalityState) Finalized() Checkpoint {
-	return state.FinalizedCheckpoint
+func (state *FinalityProps) Finalized() (Checkpoint, error) {
+	return state.FinalizedCheckpoint.CheckPoint()
 }
 
-func (state *FinalityState) PreviousJustified() Checkpoint {
-	return state.PreviousJustifiedCheckpoint
+func (state *FinalityProps) PreviousJustified() (Checkpoint, error) {
+	return state.PreviousJustifiedCheckpoint.CheckPoint()
 }
 
-func (state *FinalityState) CurrentJustified() Checkpoint {
-	return state.CurrentJustifiedCheckpoint
+func (state *FinalityProps) CurrentJustified() (Checkpoint, error) {
+	return state.CurrentJustifiedCheckpoint.CheckPoint()
 }
 
 type JustificationFeature struct {
-	State *FinalityState
+	State FinalityProps
 	Meta  interface {
 		meta.Versioning
 		meta.History
@@ -34,37 +37,61 @@ type JustificationFeature struct {
 	}
 }
 
-func (f *JustificationFeature) Justify(checkpoint Checkpoint) {
-	currentEpoch := f.Meta.CurrentEpoch()
+func (f *JustificationFeature) Justify(checkpoint Checkpoint) error {
+	currentEpoch, err := f.Meta.CurrentEpoch()
+	if err != nil {
+		return err
+	}
 	if currentEpoch < checkpoint.Epoch {
-		panic("cannot justify future epochs")
+		return errors.New("cannot justify future epochs")
 	}
 	epochsAgo := currentEpoch - checkpoint.Epoch
-	if epochsAgo >= Epoch(f.State.JustificationBits.BitLen()) {
-		panic("cannot justify history past justification bitfield length")
+	if epochsAgo >= Epoch(JUSTIFICATION_BITS_LENGTH) {
+		return errors.New("cannot justify history past justification bitfield length")
 	}
 
-	f.State.CurrentJustifiedCheckpoint = checkpoint
-	f.State.JustificationBits[0] |= 1 << epochsAgo
+	if err := f.State.CurrentJustifiedCheckpoint.SetCheckPoint(checkpoint); err != nil {
+		return err
+	}
+	if err := f.State.JustificationBits.SetJustified(epochsAgo); err != nil {
+		return err
+	}
+	return nil
 }
 
-type JustificationBits [1]byte
 
-func (jb *JustificationBits) BitLen() uint64 {
-	return 4
-}
+var JustificationBitsType = BitvectorType(JUSTIFICATION_BITS_LENGTH)
+
+type JustificationBitsProp BitVectorReadProp
 
 // Prepare bitfield for next epoch by shifting previous bits (truncating to bitfield length)
-func (jb *JustificationBits) NextEpoch() {
-	// shift and mask
-	jb[0] = (jb[0] << 1) & 0x0f
+func (p JustificationBitsProp) NextEpoch() error {
+	v, err := BitVectorReadProp(p).BitVector()
+	if err != nil {
+		return err
+	}
+	return v.ShRight(1)
 }
 
-func (jb *JustificationBits) IsJustified(epochsAgo ...Epoch) bool {
+func (p JustificationBitsProp) IsJustified(epochsAgo ...Epoch) (bool, error) {
+	v, err := BitVectorReadProp(p).BitVector()
+	if err != nil {
+		return false, err
+	}
 	for _, t := range epochsAgo {
-		if jb[0]&(1<<t) == 0 {
-			return false
+		if bit, err := v.Get(uint64(t)); err != nil {
+			return false, err
+		} else if !bit {
+			return false, nil
 		}
 	}
-	return true
+	return true, nil
+}
+
+func (p JustificationBitsProp) SetJustified(epochsAgo Epoch) error {
+	v, err := BitVectorReadProp(p).BitVector()
+	if err != nil {
+		return err
+	}
+	return v.Set(uint64(epochsAgo), true)
 }

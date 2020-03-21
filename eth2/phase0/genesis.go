@@ -12,6 +12,8 @@ import (
 	"github.com/protolambda/zssz"
 )
 
+// TODO genesis tree state
+
 type DepositRoots []Root
 
 func (_ *DepositRoots) Limit() uint64 {

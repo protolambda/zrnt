@@ -23,7 +23,7 @@ import (
 // Full feature set for phase 0
 type FullFeaturedState struct {
 	// All base features a state has
-	*BeaconState
+	*BeaconStateProps
 
 	ShufflingFeature
 	*ShufflingStatus
@@ -59,37 +59,52 @@ type FullFeaturedState struct {
 	TransitionFeature
 }
 
-func (f *FullFeaturedState) LoadPrecomputedData() {
+func (f *FullFeaturedState) LoadPrecomputedData() error {
 	// TODO: could re-use some pre-computed data from older states, worth benchmarking
-	f.ShufflingStatus = f.ShufflingFeature.LoadShufflingStatus()
-	f.ProposersData = f.LoadBeaconProposersData()
+	var err error
+	f.ShufflingStatus, err = f.ShufflingFeature.LoadShufflingStatus()
+	if err != nil {
+		return err
+	}
+	f.ProposersData, err = f.LoadBeaconProposersData()
+	if err != nil {
+		return err
+	}
 }
 
-func (f *FullFeaturedState) RotateEpochData() {
+func (f *FullFeaturedState) RotateEpochData() error {
 	// TODO: rotate data where possible (e.g. shuffling) instead of plain overwriting
-	f.LoadPrecomputedData()
+	return f.LoadPrecomputedData()
 }
 
-func (f *FullFeaturedState) StartEpoch() {
-	f.RotateEpochData()
+func (f *FullFeaturedState) StartEpoch() error {
+	return f.RotateEpochData()
 }
 
-func (f *FullFeaturedState) CurrentProposer() BLSPubkey {
-	return f.Pubkey(f.GetBeaconProposerIndex(f.CurrentSlot()))
+func (f *FullFeaturedState) CurrentProposer() (BLSPubkey, error) {
+	slot, err := f.CurrentSlot()
+	if err != nil {
+		return BLSPubkey{}, err
+	}
+	index, err := f.GetBeaconProposerIndex(slot)
+	if err != nil {
+		return BLSPubkey{}, err
+	}
+	return f.Pubkey(index)
 }
 
-func NewFullFeaturedState(state *BeaconState) *FullFeaturedState {
+func NewFullFeaturedState(state *BeaconStateView) *FullFeaturedState {
 	// The con of heavy composition: it needs to be hooked up at the upper abstraction level
 	// for cross references through interfaces to work.
 	f := new(FullFeaturedState)
 
 	// add state
-	f.BeaconState = state
+	f.BeaconStateProps = state.Props()
 
 	// hook up features
 	f.ShufflingFeature.Meta = f
 
-	f.AttesterStatusFeature.State = &f.AttestationsState
+	f.AttesterStatusFeature.State = &f.AttestationsProps
 	f.AttesterStatusFeature.Meta = f
 
 	f.AttestationDeltasFeature.Meta = f
@@ -97,24 +112,23 @@ func NewFullFeaturedState(state *BeaconState) *FullFeaturedState {
 	f.SeedFeature.Meta = f
 	f.ProposingFeature.Meta = f
 
-	// TODO: disabled for now, need to implement "meta.TargetStaking"
 	f.JustificationFeature.Meta = f
-	f.JustificationFeature.State = &f.FinalityState
+	f.JustificationFeature.State = f.FinalityProps
 	f.RewardsAndPenaltiesFeature.Meta = f
 	f.RegistryUpdatesFeature.Meta = f
 	f.RegistryUpdatesFeature.State = &f.RegistryState
 	f.SlashingFeature.Meta = f
-	f.SlashingFeature.State = &f.SlashingsState
+	f.SlashingFeature.State = f.SlashingsProp
 	f.FinalUpdateFeature.Meta = f
 
 	f.RandaoFeature.Meta = f
-	f.RandaoFeature.State = &f.RandaoState
+	f.RandaoFeature.State = f.RandaoMixesProp
 
 	f.BlockHeaderFeature.Meta = f
-	f.BlockHeaderFeature.State = &f.BlockHeaderState
+	f.BlockHeaderFeature.State = f.LatestBlockHeaderProp
 
 	f.AttestationFeature.Meta = f
-	f.AttestationFeature.State = &f.AttestationsState
+	f.AttestationFeature.State = f.AttestationsProps
 	f.AttestSlashFeature.Meta = f
 	f.PropSlashFeature.Meta = f
 	f.DepositFeature.Meta = f

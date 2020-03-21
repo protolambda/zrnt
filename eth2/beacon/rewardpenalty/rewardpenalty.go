@@ -6,7 +6,7 @@ import (
 )
 
 type RewardsAndPenaltiesEpochProcess interface {
-	ProcessEpochRewardsAndPenalties()
+	ProcessEpochRewardsAndPenalties() error
 }
 
 type RewardsAndPenaltiesFeature struct {
@@ -18,11 +18,23 @@ type RewardsAndPenaltiesFeature struct {
 	}
 }
 
-func (f *RewardsAndPenaltiesFeature) ProcessEpochRewardsAndPenalties() {
-	if f.Meta.CurrentEpoch() == GENESIS_EPOCH {
-		return
+func (f *RewardsAndPenaltiesFeature) ProcessEpochRewardsAndPenalties() error {
+	currentEpoch, err := f.Meta.CurrentEpoch()
+	if err != nil {
+		return err
 	}
-	sum := NewDeltas(f.Meta.ValidatorCount())
-	sum.Add(f.Meta.AttestationDeltas())
-	f.Meta.ApplyDeltas(sum)
+	if currentEpoch == GENESIS_EPOCH {
+		return nil
+	}
+	valCount, err := f.Meta.ValidatorCount()
+	if err != nil {
+		return err
+	}
+	sum := NewDeltas(valCount)
+	attDeltas, err := f.Meta.AttestationDeltas()
+	if err != nil {
+		return err
+	}
+	sum.Add(attDeltas)
+	return f.Meta.ApplyDeltas(sum)
 }

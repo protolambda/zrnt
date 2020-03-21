@@ -9,7 +9,7 @@ import (
 func CreateTestValidators(count uint64, balance Gwei) []KickstartValidatorData {
 	out := make([]KickstartValidatorData, 0, count)
 	for i := uint64(0); i < count; i++ {
-		pubkey := BLSPubkey{0xaa}
+		pubkey := BLSPubkeyNode{0xaa}
 		binary.LittleEndian.PutUint64(pubkey[1:], i)
 		withdrawalCred := Root{0xbb}
 		binary.LittleEndian.PutUint64(withdrawalCred[1:], i)

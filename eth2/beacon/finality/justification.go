@@ -2,14 +2,21 @@ package finality
 
 import (
 	. "github.com/protolambda/zrnt/eth2/core"
+	"github.com/protolambda/zrnt/eth2/meta"
 )
 
 type JustificationEpochProcess interface {
-	ProcessEpochJustification() error
+	ProcessEpochJustification(input JustificationEpochProcessInput) error
 }
 
-func (f *JustificationFeature) ProcessEpochJustification() error {
-	currentEpoch, err := f.Meta.CurrentEpoch()
+type JustificationEpochProcessInput interface {
+	meta.Versioning
+	meta.History
+	meta.Staking
+}
+
+func (state *FinalityProps) ProcessEpochJustification(input JustificationEpochProcessInput) error {
+	currentEpoch, err := input.CurrentEpoch()
 	if err != nil {
 		return err
 	}
@@ -17,68 +24,64 @@ func (f *JustificationFeature) ProcessEpochJustification() error {
 	if currentEpoch <= GENESIS_EPOCH+1 {
 		return nil
 	}
-	previousEpoch, err := f.Meta.PreviousEpoch()
+	previousEpoch, err := input.PreviousEpoch()
 	if err != nil {
 		return err
 	}
 
 	// stake = effective balances of active validators
 	// Get the total stake of the epoch attesters
-	attesterStatuses, err := f.Meta.GetAttesterStatuses()
+	prevEpochStake, err := input.PrevEpochStakeSummary()
 	if err != nil {
 		return err
 	}
-	prevTargetStake, err := f.Meta.GetAttestersStake(attesterStatuses, PrevTargetAttester|UnslashedAttester)
-	if err != nil {
-		return err
-	}
-	currTargetStake, err := f.Meta.GetAttestersStake(attesterStatuses, CurrTargetAttester|UnslashedAttester)
+	currEpochStake, err := input.CurrEpochStakeSummary()
 	if err != nil {
 		return err
 	}
 
 	// Get the total current stake
-	totalStake, err := f.Meta.GetTotalStake()
+	totalStake, err := input.GetTotalStake()
 	if err != nil {
 		return err
 	}
 
-	oldPreviousJustified, err := f.State.PreviousJustifiedCheckpoint.CheckPoint()
+	oldPreviousJustified, err := state.PreviousJustifiedCheckpoint.CheckPoint()
 	if err != nil {
 		return err
 	}
-	oldCurrentJustified, err := f.State.CurrentJustifiedCheckpoint.CheckPoint()
+	oldCurrentJustified, err := state.CurrentJustifiedCheckpoint.CheckPoint()
 	if err != nil {
 		return err
 	}
 
 	// Rotate current into previous
-	if err := f.State.PreviousJustifiedCheckpoint.SetCheckPoint(oldCurrentJustified); err != nil {
+	if err := state.PreviousJustifiedCheckpoint.SetCheckPoint(oldCurrentJustified); err != nil {
 		return err
 	}
-	if err := f.State.JustificationBits.NextEpoch(); err != nil {
+	if err := state.JustificationBits.NextEpoch(); err != nil {
 		return err
 	}
 
 	// > Justification
-	if prevTargetStake*3 >= totalStake*2 {
-		root, err := f.Meta.GetBlockRoot(previousEpoch)
+	if prevEpochStake.TargetStake*3 >= totalStake*2 {
+		root, err := input.GetBlockRoot(previousEpoch)
 		if err != nil {
 			return err
 		}
-		if err := f.Justify(Checkpoint{
+		if err := state.Justify(currentEpoch, Checkpoint{
 			Epoch: previousEpoch,
 			Root:  root,
 		}); err != nil {
 			return err
 		}
 	}
-	if currTargetStake*3 >= totalStake*2 {
-		root, err := f.Meta.GetBlockRoot(currentEpoch)
+	if currEpochStake.TargetStake*3 >= totalStake*2 {
+		root, err := input.GetBlockRoot(currentEpoch)
 		if err != nil {
 			return err
 		}
-		if err := f.Justify(Checkpoint{
+		if err := state.Justify(currentEpoch, Checkpoint{
 			Epoch: currentEpoch,
 			Root:  root,
 		}); err != nil {
@@ -87,7 +90,7 @@ func (f *JustificationFeature) ProcessEpochJustification() error {
 	}
 
 	// > Finalization
-	bits := f.State.JustificationBits
+	bits := state.JustificationBits
 	var toFinalize *Checkpoint
 	// The 2nd/3rd/4th most recent epochs are all justified, the 2nd using the 4th as source
 	if justified, err := bits.IsJustified(1, 2, 3); err != nil {
@@ -114,7 +117,7 @@ func (f *JustificationFeature) ProcessEpochJustification() error {
 		toFinalize = &oldCurrentJustified
 	}
 	if toFinalize != nil {
-		if err := f.State.FinalizedCheckpoint.SetCheckPoint(*toFinalize); err != nil {
+		if err := state.FinalizedCheckpoint.SetCheckPoint(*toFinalize); err != nil {
 			return err
 		}
 	}

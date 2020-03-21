@@ -29,6 +29,12 @@ func (p DepositIndexReadProp) DepositIndex() (DepositIndex, error) {
 	return DepositIndex(v), err
 }
 
+type DepositIndexWriteProp Uint64WriteProp
+
+func (p DepositIndexWriteProp) SetDepositIndex(v DepositIndex) error {
+	return (Uint64WriteProp)(p).SetUint64(uint64(v))
+}
+
 const SlotType = Uint64Type
 
 type Slot Uint64View

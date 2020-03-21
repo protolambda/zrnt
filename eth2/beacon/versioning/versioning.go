@@ -3,7 +3,6 @@ package versioning
 import (
 	"fmt"
 	. "github.com/protolambda/zrnt/eth2/core"
-	"github.com/protolambda/zrnt/eth2/meta"
 	. "github.com/protolambda/ztyp/props"
 	. "github.com/protolambda/ztyp/view"
 )
@@ -90,39 +89,36 @@ func (p CurrentSlotMutProp) IncrementSlot() error {
 	return p.SetSlot(v + 1)
 }
 
-type DomainFeature struct {
-	Meta interface {
-		meta.GenesisValidatorsRoot
-		meta.Forking
-	}
-}
-
-// Return the signature domain (fork version concatenated with domain type) of a message.
-func (f *DomainFeature) GetDomain(dom BLSDomainType, messageEpoch Epoch) (BLSDomain, error) {
-	forkEpoch, err := f.Meta.ForkEpoch()
-	if err != nil {
-		return BLSDomain{}, err
-	}
-	var v Version
-	if messageEpoch < forkEpoch {
-		v, err = f.Meta.PreviousVersion()
-	} else {
-		v, err = f.Meta.CurrentVersion()
-	}
-	if err != nil {
-		return BLSDomain{}, err
-	}
-	genesisValRoot, err := f.Meta.GenesisValidatorsRoot()
-	if err != nil {
-		return BLSDomain{}, err
-	}
-	// combine fork version with domain type.
-	return ComputeDomain(dom, v, genesisValRoot), nil
-}
-
 type VersioningProps struct {
 	GenesisTimeProp
 	GenesisValidatorsRootProp
 	CurrentSlotMutProp
 	ForkProp
+}
+
+// Return the signature domain (fork version concatenated with domain type) of a message.
+func (state *VersioningProps) GetDomain(dom BLSDomainType, messageEpoch Epoch) (BLSDomain, error) {
+	fork, err := state.Fork()
+	if err != nil {
+		return BLSDomain{}, err
+	}
+	forkEpoch, err := fork.ForkEpoch()
+	if err != nil {
+		return BLSDomain{}, err
+	}
+	var v Version
+	if messageEpoch < forkEpoch {
+		v, err = fork.PreviousVersion()
+	} else {
+		v, err = fork.CurrentVersion()
+	}
+	if err != nil {
+		return BLSDomain{}, err
+	}
+	genesisValRoot, err := state.GenesisValidatorsRoot()
+	if err != nil {
+		return BLSDomain{}, err
+	}
+	// combine fork version with domain type.
+	return ComputeDomain(dom, v, genesisValRoot), nil
 }

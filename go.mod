@@ -1,6 +1,6 @@
 module github.com/protolambda/zrnt
 
-go 1.12
+go 1.14
 
 require (
 	github.com/herumi/bls-eth-go-binary v0.0.0-20200310092706-2b0aca401927

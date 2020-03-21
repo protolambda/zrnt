@@ -11,27 +11,24 @@ import (
 )
 
 type AttestationProcessor interface {
-	ProcessAttestations(ops []Attestation) error
-	ProcessAttestation(attestation *Attestation) error
+	ProcessAttestations(input AttestationProcessInput, ops []Attestation) error
+	ProcessAttestation(input AttestationProcessInput, attestation *Attestation) error
 }
 
-type AttestationFeature struct {
-	State AttestationsProps
-	Meta  interface {
-		meta.Versioning
-		meta.BeaconCommittees
-		meta.CommitteeCount
-		meta.Finality
-		meta.RegistrySize
-		meta.Pubkeys
-		meta.SigDomain
-		meta.Proposers
-	}
+type AttestationProcessInput interface {
+	meta.Versioning
+	meta.BeaconCommittees
+	meta.CommitteeCount
+	meta.Finality
+	meta.RegistrySize
+	meta.Pubkeys
+	meta.SigDomain
+	meta.Proposers
 }
 
-func (f *AttestationFeature) ProcessAttestations(ops []Attestation) error {
+func (state *AttestationsProps) ProcessAttestations(input AttestationProcessInput, ops []Attestation) error {
 	for i := range ops {
-		if err := f.ProcessAttestation(&ops[i]); err != nil {
+		if err := state.ProcessAttestation(input, &ops[i]); err != nil {
 			return err
 		}
 	}
@@ -46,17 +43,19 @@ type Attestation struct {
 	Signature       BLSSignature
 }
 
+var CommitteeBitsType = BitlistType(MAX_VALIDATORS_PER_COMMITTEE)
+
 var AttestationType = &ContainerType{
 	{"aggregation_bits", CommitteeBitsType},
 	{"data", AttestationDataType},
 	{"signature", BLSSignatureType},
 }
 
-func (f *AttestationFeature) ProcessAttestation(attestation *Attestation) error {
+func (state *AttestationsProps) ProcessAttestation(input AttestationProcessInput, attestation *Attestation) error {
 	data := &attestation.Data
 
 	// Check slot
-	currentSlot, err := f.Meta.CurrentSlot()
+	currentSlot, err := input.CurrentSlot()
 	if err != nil {
 		return err
 	}
@@ -82,7 +81,7 @@ func (f *AttestationFeature) ProcessAttestation(attestation *Attestation) error 
 	}
 
 	// Check committee index
-	if commCount, err := f.Meta.GetCommitteeCountAtSlot(data.Slot); err != nil {
+	if commCount, err := input.GetCommitteeCountAtSlot(data.Slot); err != nil {
 		return err
 	} else if uint64(data.Index) >= commCount {
 		return errors.New("attestation data is invalid, committee index out of range")
@@ -90,13 +89,13 @@ func (f *AttestationFeature) ProcessAttestation(attestation *Attestation) error 
 
 	// Check source
 	if data.Target.Epoch == currentEpoch {
-		if currentJustified, err := f.Meta.CurrentJustified(); err != nil {
+		if currentJustified, err := input.CurrentJustified(); err != nil {
 			return err
 		} else if data.Source != currentJustified {
 			return errors.New("attestation source does not match current justified checkpoint")
 		}
 	} else {
-		if previousJustified, err := f.Meta.PreviousJustified(); err != nil {
+		if previousJustified, err := input.PreviousJustified(); err != nil {
 			return err
 		} else if data.Source != previousJustified {
 			return errors.New("attestation source does not match previous justified checkpoint")
@@ -104,18 +103,18 @@ func (f *AttestationFeature) ProcessAttestation(attestation *Attestation) error 
 	}
 
 	// Check signature and bitfields
-	committee, err := f.Meta.GetBeaconCommittee(data.Slot, data.Index)
+	committee, err := input.GetBeaconCommittee(data.Slot, data.Index)
 	if err != nil {
 		return err
 	}
 	if indexedAtt, err := attestation.ConvertToIndexed(committee); err != nil {
 		return fmt.Errorf("attestation could not be converted to an indexed attestation: %v", err)
-	} else if err := indexedAtt.Validate(f.Meta); err != nil {
+	} else if err := indexedAtt.Validate(input); err != nil {
 		return fmt.Errorf("attestation could not be verified in its indexed form: %v", err)
 	}
 
-	// TODO
-	//proposerIndex, err := f.Meta.GetBeaconProposerIndex(currentSlot)
+	// TODO pending attestation to att node, append to tree
+	//proposerIndex, err := input.GetBeaconProposerIndex(currentSlot)
 	//if err != nil {
 	//	return err
 	//}

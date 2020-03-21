@@ -28,4 +28,12 @@ type AttesterStatus struct {
 	AttestedProposer ValidatorIndex
 	// A bitfield of markers describing the recent actions of the validator
 	Flags AttesterFlag
+	// Effective balance
+	EffectiveBalance Gwei
+	// If the validator is active
+	Active bool
+	// Exit epoch
+	ExitEpoch Epoch
+	ActivationEligibilityEpoch Epoch
+	ActivationEpoch Epoch
 }

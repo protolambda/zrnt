@@ -62,38 +62,35 @@ type SlashingsEpochProcess interface {
 	ProcessEpochSlashings() error
 }
 
-type SlashingFeature struct {
-	State SlashingsProp
-	Meta  interface {
-		meta.Versioning
-		meta.Proposers
-		meta.Balance
-		meta.Staking
-		meta.EffectiveBalances
-		meta.Slashing
-		meta.Exits
-	}
+type SlashingProcessInput interface {
+	meta.Versioning
+	meta.Proposers
+	meta.Balance
+	meta.Staking
+	meta.EffectiveBalances
+	meta.Slashing
+	meta.Exits
 }
 
 // Slash the validator with the given index.
-func (f *SlashingFeature) SlashValidator(slashedIndex ValidatorIndex, whistleblowerIndex *ValidatorIndex) error {
-	slot, err := f.Meta.CurrentSlot()
+func (state *SlashingsProp) SlashValidator(input SlashingProcessInput, slashedIndex ValidatorIndex, whistleblowerIndex *ValidatorIndex) error {
+	slot, err := input.CurrentSlot()
 	if err != nil {
 		return err
 	}
 	currentEpoch := slot.ToEpoch()
 
-	if err := f.Meta.InitiateValidatorExit(currentEpoch, slashedIndex); err != nil {
+	if err := input.InitiateValidatorExit(currentEpoch, slashedIndex); err != nil {
 		return err
 	}
-	f.Meta.SlashAndDelayWithdraw(slashedIndex, currentEpoch + EPOCHS_PER_SLASHINGS_VECTOR)
+	input.SlashAndDelayWithdraw(slashedIndex, currentEpoch + EPOCHS_PER_SLASHINGS_VECTOR)
 
-	effectiveBalance, err := f.Meta.EffectiveBalance(slashedIndex)
+	effectiveBalance, err := input.EffectiveBalance(slashedIndex)
 	if err != nil {
 		return err
 	}
 
-	slashings, err := f.State.Slashings()
+	slashings, err := state.Slashings()
 	if err != nil {
 		return err
 	}
@@ -101,11 +98,11 @@ func (f *SlashingFeature) SlashValidator(slashedIndex ValidatorIndex, whistleblo
 		return err
 	}
 
-	if err := f.Meta.DecreaseBalance(slashedIndex, effectiveBalance/MIN_SLASHING_PENALTY_QUOTIENT); err != nil {
+	if err := input.DecreaseBalance(slashedIndex, effectiveBalance/MIN_SLASHING_PENALTY_QUOTIENT); err != nil {
 		return err
 	}
 
-	propIndex, err := f.Meta.GetBeaconProposerIndex(slot)
+	propIndex, err := input.GetBeaconProposerIndex(slot)
 	if err != nil {
 		return err
 	}
@@ -114,22 +111,22 @@ func (f *SlashingFeature) SlashValidator(slashedIndex ValidatorIndex, whistleblo
 	}
 	whistleblowerReward := effectiveBalance / WHISTLEBLOWER_REWARD_QUOTIENT
 	proposerReward := whistleblowerReward / PROPOSER_REWARD_QUOTIENT
-	if err := f.Meta.IncreaseBalance(propIndex, proposerReward); err != nil {
+	if err := input.IncreaseBalance(propIndex, proposerReward); err != nil {
 		return err
 	}
-	if err := f.Meta.IncreaseBalance(*whistleblowerIndex, whistleblowerReward-proposerReward); err != nil {
+	if err := input.IncreaseBalance(*whistleblowerIndex, whistleblowerReward-proposerReward); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (f *SlashingFeature) ProcessEpochSlashings() error {
-	totalBalance, err := f.Meta.GetTotalStake()
+func (state *SlashingsProp) ProcessEpochSlashings(input SlashingProcessInput) error {
+	totalBalance, err := input.GetTotalStake()
 	if err != nil {
 		return err
 	}
 
-	slashings, err := f.State.Slashings()
+	slashings, err := state.Slashings()
 	if err != nil {
 		return err
 	}
@@ -139,19 +136,13 @@ func (f *SlashingFeature) ProcessEpochSlashings() error {
 		return err
 	}
 
-	currentEpoch, err := f.Meta.CurrentEpoch()
-	if err != nil {
-		return err
-	}
-	withdrawableEpoch := currentEpoch + (EPOCHS_PER_SLASHINGS_VECTOR / 2)
-
-	toSlash, err := f.Meta.GetIndicesToSlash(withdrawableEpoch)
+	toSlash, err := input.GetIndicesToSlash()
 	if err != nil {
 		return err
 	}
 	for _, index := range toSlash {
 		// Factored out from penalty numerator to avoid uint64 overflow
-		slashedEffectiveBal, err := f.Meta.EffectiveBalance(index)
+		slashedEffectiveBal, err := input.EffectiveBalance(index)
 		if err != nil {
 			return err
 		}
@@ -162,7 +153,7 @@ func (f *SlashingFeature) ProcessEpochSlashings() error {
 			penaltyNumerator *= slashingsWeight
 		}
 		penalty := penaltyNumerator / totalBalance * EFFECTIVE_BALANCE_INCREMENT
-		if err := f.Meta.DecreaseBalance(index, penalty); err != nil {
+		if err := input.DecreaseBalance(index, penalty); err != nil {
 			return err
 		}
 	}

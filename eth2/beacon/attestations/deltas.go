@@ -6,54 +6,48 @@ import (
 	"github.com/protolambda/zrnt/eth2/util/math"
 )
 
-type AttestationDeltasFeature struct {
-	Meta interface {
-		meta.Versioning
-		meta.RegistrySize
-		meta.Staking
-		meta.EffectiveBalances
-		meta.AttesterStatuses
-		meta.Finality
-	}
+type AttestationDeltasInput interface {
+	meta.Versioning
+	meta.RegistrySize
+	meta.Staking
+	meta.DetailedStaking
+	meta.EffectiveBalances
+	meta.Finality
 }
 
-func (f *AttestationDeltasFeature) AttestationDeltas() (*Deltas, error) {
-	cres, err := f.Meta.ValidatorCount()
+func AttestationDeltas(input AttestationDeltasInput) (*Deltas, error) {
+	cres, err := input.ValidatorCount()
 	if err != nil {
 		return nil, err
 	}
 	validatorCount := ValidatorIndex(cres)
 	deltas := NewDeltas(uint64(validatorCount))
 
-	previousEpoch, err := f.Meta.PreviousEpoch()
+	previousEpoch, err := input.PreviousEpoch()
 	if err != nil {
 		return nil, err
 	}
 
-	totalBalance, err := f.Meta.GetTotalStake()
+	attesterStatuses, err := input.GetAttesterStatuses()
 	if err != nil {
 		return nil, err
 	}
 
-	attesterStatuses, err := f.Meta.GetAttesterStatuses()
+	totalBalance, err := input.GetTotalStake()
 	if err != nil {
 		return nil, err
 	}
-	prevEpochSourceStake, err := f.Meta.GetAttestersStake(attesterStatuses, PrevSourceAttester|UnslashedAttester)
+
+	prevEpochStake, err := input.PrevEpochStakeSummary()
 	if err != nil {
 		return nil, err
 	}
-	prevEpochTargetStake, err := f.Meta.GetAttestersStake(attesterStatuses, PrevTargetAttester|UnslashedAttester)
-	if err != nil {
-		return nil, err
-	}
-	prevEpochHeadStake, err := f.Meta.GetAttestersStake(attesterStatuses, PrevHeadAttester|UnslashedAttester)
-	if err != nil {
-		return nil, err
-	}
+	prevEpochSourceStake := prevEpochStake.SourceStake
+	prevEpochTargetStake := prevEpochStake.TargetStake
+	prevEpochHeadStake := prevEpochStake.HeadStake
 
 	balanceSqRoot := Gwei(math.IntegerSquareroot(uint64(totalBalance)))
-	finalized, err := f.Meta.Finalized()
+	finalized, err := input.Finalized()
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +63,7 @@ func (f *AttestationDeltasFeature) AttestationDeltas() (*Deltas, error) {
 		status := attesterStatuses[i]
 		if status.Flags&EligibleAttester != 0 {
 
-			effBalance, err := f.Meta.EffectiveBalance(i)
+			effBalance, err := input.EffectiveBalance(i)
 			if err != nil {
 				return nil, err
 			}

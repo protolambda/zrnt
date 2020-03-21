@@ -1,6 +1,7 @@
 package randao
 
 import (
+	"encoding/binary"
 	"errors"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/meta"
@@ -18,7 +19,7 @@ type RandaoProcessor interface {
 }
 
 // Randomness and committees
-type RandaoMixes struct { *VectorView }
+type RandaoMixes struct{ *VectorView }
 
 var RandaoMixesType = VectorType(Bytes32Type, uint64(EPOCHS_PER_HISTORICAL_VECTOR))
 
@@ -94,31 +95,28 @@ func (p *RandaoMixesProp) PrepareRandao(epoch Epoch) error {
 
 var RandaoEpochSSZ = zssz.GetSSZ((*Epoch)(nil))
 
-type RandaoFeature struct {
-	State RandaoMixesProp
-	Meta  interface {
-		meta.Versioning
-		meta.Proposers
-		meta.Pubkeys
-		meta.SigDomain
-	}
+type RandaoProcessInput interface {
+	meta.Versioning
+	meta.Proposers
+	meta.Pubkeys
+	meta.SigDomain
 }
 
-func (f *RandaoFeature) ProcessRandaoReveal(reveal BLSSignature) error {
-	slot, err := f.Meta.CurrentSlot()
+func (state *RandaoMixesProp) ProcessRandaoReveal(input RandaoProcessInput, reveal BLSSignature) error {
+	slot, err := input.CurrentSlot()
 	if err != nil {
 		return err
 	}
-	propIndex, err := f.Meta.GetBeaconProposerIndex(slot)
+	propIndex, err := input.GetBeaconProposerIndex(slot)
 	if err != nil {
 		return err
 	}
-	proposerPubkey, err := f.Meta.Pubkey(propIndex)
+	proposerPubkey, err := input.Pubkey(propIndex)
 	if err != nil {
 		return err
 	}
 	epoch := slot.ToEpoch()
-	domain, err := f.Meta.GetDomain(DOMAIN_RANDAO, epoch)
+	domain, err := input.GetDomain(DOMAIN_RANDAO, epoch)
 	if err != nil {
 		return err
 	}
@@ -133,7 +131,26 @@ func (f *RandaoFeature) ProcessRandaoReveal(reveal BLSSignature) error {
 		return errors.New("randao invalid")
 	}
 	// Mix in RANDAO reveal
-	randMix, err := f.State.GetRandomMix(epoch)
+	randMix, err := state.GetRandomMix(epoch)
 	mix := XorBytes32(randMix, Hash(reveal[:]))
-	return f.State.SetRandomMix(epoch%EPOCHS_PER_HISTORICAL_VECTOR, mix)
+	return state.SetRandomMix(epoch%EPOCHS_PER_HISTORICAL_VECTOR, mix)
+}
+
+func (state *RandaoMixesProp) GetSeed(epoch Epoch, domainType BLSDomainType) (Root, error) {
+	buf := make([]byte, 4+8+32)
+
+	// domain type
+	copy(buf[0:4], domainType[:])
+
+	// epoch
+	binary.LittleEndian.PutUint64(buf[4:4+8], uint64(epoch))
+
+	// Avoid underflow
+	mix, err := state.GetRandomMix(epoch + EPOCHS_PER_HISTORICAL_VECTOR - MIN_SEED_LOOKAHEAD - 1)
+	if err != nil {
+		return Root{}, err
+	}
+	copy(buf[4+8:], mix[:])
+
+	return Hash(buf), nil
 }

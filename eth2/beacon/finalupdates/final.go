@@ -6,23 +6,21 @@ import (
 )
 
 type FinalUpdatesEpochProcess interface {
-	ProcessEpochFinalUpdates() error
+	ProcessEpochFinalUpdates(input FinalUpdateProcessInput) error
 }
 
-type FinalUpdateFeature struct {
-	Meta interface {
-		meta.Versioning
-		meta.Eth1Voting
-		meta.EffectiveBalancesUpdate
-		meta.SlashingHistory
-		meta.Randao
-		meta.HistoryUpdate
-		meta.EpochAttestations
-	}
+type FinalUpdateProcessInput interface {
+	meta.Versioning
+	meta.Eth1Voting
+	meta.EffectiveBalancesUpdate
+	meta.SlashingHistory
+	meta.Randao
+	meta.HistoryUpdate
+	meta.EpochAttestations
 }
 
-func (f *FinalUpdateFeature) ProcessEpochFinalUpdates() error {
-	currentSlot, err := f.Meta.CurrentSlot()
+func ProcessEpochFinalUpdates(input FinalUpdateProcessInput) error {
+	currentSlot, err := input.CurrentSlot()
 	if err != nil {
 		return err
 	}
@@ -34,29 +32,29 @@ func (f *FinalUpdateFeature) ProcessEpochFinalUpdates() error {
 
 	// Reset eth1 data votes if it is the end of the voting period.
 	if nextEpoch%EPOCHS_PER_ETH1_VOTING_PERIOD == 0 {
-		if err := f.Meta.ResetEth1Votes(); err != nil {
+		if err := input.ResetEth1Votes(); err != nil {
 			return err
 		}
 	}
 
-	if err := f.Meta.UpdateEffectiveBalances(); err != nil {
+	if err := input.UpdateEffectiveBalances(); err != nil {
 		return err
 	}
-	if err := f.Meta.ResetSlashings(nextEpoch); err != nil {
+	if err := input.ResetSlashings(nextEpoch); err != nil {
 		return err
 	}
-	if err := f.Meta.PrepareRandao(nextEpoch); err != nil {
+	if err := input.PrepareRandao(nextEpoch); err != nil {
 		return err
 	}
 
 	// Set historical root accumulator
 	if nextEpoch%SLOTS_PER_HISTORICAL_ROOT.ToEpoch() == 0 {
-		if err := f.Meta.UpdateHistoricalRoots(); err != nil {
+		if err := input.UpdateHistoricalRoots(); err != nil {
 			return err
 		}
 	}
 
-	if err := f.Meta.RotateEpochAttestations(); err != nil {
+	if err := input.RotateEpochAttestations(); err != nil {
 		return err
 	}
 

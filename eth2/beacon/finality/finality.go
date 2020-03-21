@@ -3,7 +3,6 @@ package finality
 import (
 	"errors"
 	. "github.com/protolambda/zrnt/eth2/core"
-	"github.com/protolambda/zrnt/eth2/meta"
 	. "github.com/protolambda/ztyp/props"
 	. "github.com/protolambda/ztyp/view"
 )
@@ -27,21 +26,7 @@ func (state *FinalityProps) CurrentJustified() (Checkpoint, error) {
 	return state.CurrentJustifiedCheckpoint.CheckPoint()
 }
 
-type JustificationFeature struct {
-	State FinalityProps
-	Meta  interface {
-		meta.Versioning
-		meta.History
-		meta.Staking
-		meta.AttesterStatuses
-	}
-}
-
-func (f *JustificationFeature) Justify(checkpoint Checkpoint) error {
-	currentEpoch, err := f.Meta.CurrentEpoch()
-	if err != nil {
-		return err
-	}
+func (state *FinalityProps) Justify(currentEpoch Epoch, checkpoint Checkpoint) error {
 	if currentEpoch < checkpoint.Epoch {
 		return errors.New("cannot justify future epochs")
 	}
@@ -50,10 +35,10 @@ func (f *JustificationFeature) Justify(checkpoint Checkpoint) error {
 		return errors.New("cannot justify history past justification bitfield length")
 	}
 
-	if err := f.State.CurrentJustifiedCheckpoint.SetCheckPoint(checkpoint); err != nil {
+	if err := state.CurrentJustifiedCheckpoint.SetCheckPoint(checkpoint); err != nil {
 		return err
 	}
-	if err := f.State.JustificationBits.SetJustified(epochsAgo); err != nil {
+	if err := state.JustificationBits.SetJustified(epochsAgo); err != nil {
 		return err
 	}
 	return nil

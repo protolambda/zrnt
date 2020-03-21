@@ -39,7 +39,6 @@ type Pubkeys interface {
 
 type EffectiveBalances interface {
 	EffectiveBalance(index ValidatorIndex) (Gwei, error)
-	SumEffectiveBalanceOf(indices []ValidatorIndex) (sum Gwei, err error)
 }
 
 type EffectiveBalancesUpdate interface {
@@ -56,17 +55,17 @@ type Justification interface {
 	Justify(checkpoint Checkpoint) error
 }
 
+type PendingAttestations interface {
+	CurrentEpochPendingAttestations() ([]*PendingAttestation, error)
+	PreviousEpochPendingAttestations() ([]*PendingAttestation, error)
+}
+
 type EpochAttestations interface {
 	RotateEpochAttestations() error
 }
 
-type AttesterStatuses interface {
-	GetAttesterStatuses() ([]AttesterStatus, error)
-}
-
 type SlashedIndices interface {
 	IsSlashed(i ValidatorIndex) (bool, error)
-	FilterUnslashed(indices []ValidatorIndex) ([]ValidatorIndex, error)
 }
 
 type SlashableCheck interface {
@@ -83,12 +82,20 @@ type CompactCommittees interface {
 type Staking interface {
 	// Staked = Active effective balance
 	GetTotalStake() (Gwei, error)
-	GetAttestersStake(statuses []AttesterStatus, mask AttesterFlag) (Gwei, error)
+	PrevEpochStakeSummary() (EpochStakeSummary, error)
+	CurrEpochStakeSummary() (EpochStakeSummary, error)
+}
+
+type DetailedStaking interface {
+	GetAttesterStatuses() ([]AttesterStatus, error)
 }
 
 type Slashing interface {
-	SlashAndDelayWithdraw(index ValidatorIndex, withdrawalEpoch Epoch)
-	GetIndicesToSlash(withdrawal Epoch) (out []ValidatorIndex, err error)
+	SlashAndDelayWithdraw(index ValidatorIndex, withdrawalEpoch Epoch) error
+}
+
+type SlashingTask interface {
+	GetIndicesToSlash() (out []ValidatorIndex, err error)
 }
 
 type SlashingHistory interface {

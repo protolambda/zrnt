@@ -29,27 +29,25 @@ func (state *ProposersData) GetBeaconProposerIndex(slot Slot) (ValidatorIndex, e
 	}
 }
 
-type ProposingFeature struct {
-	Meta interface {
-		meta.Versioning
-		meta.BeaconCommittees
-		meta.EffectiveBalances
-		meta.ActiveIndices
-		meta.CommitteeCount
-		meta.EpochSeed
-	}
+type PrepareProposersInput interface {
+	meta.Versioning
+	meta.BeaconCommittees
+	meta.EffectiveBalances
+	meta.ActiveIndices
+	meta.CommitteeCount
+	meta.EpochSeed
 }
 
-func (f *ProposingFeature) LoadBeaconProposersData() (out *ProposersData, err error) {
-	currentEpoch, err := f.Meta.CurrentEpoch()
+func LoadBeaconProposersData(input PrepareProposersInput) (out *ProposersData, err error) {
+	currentEpoch, err := input.CurrentEpoch()
 	if err != nil {
 		return nil, err
 	}
-	curr, err := f.LoadBeaconProposerIndices(currentEpoch)
+	curr, err := LoadBeaconProposerIndices(input, currentEpoch)
 	if err != nil {
 		return nil, err
 	}
-	next, err := f.LoadBeaconProposerIndices(currentEpoch + 1)
+	next, err := LoadBeaconProposerIndices(input, currentEpoch + 1)
 	return &ProposersData{
 		Epoch:   currentEpoch,
 		Current: curr,
@@ -57,7 +55,7 @@ func (f *ProposingFeature) LoadBeaconProposersData() (out *ProposersData, err er
 	}, nil
 }
 
-func (f *ProposingFeature) computeProposerIndex(indices []ValidatorIndex, seed Root) (ValidatorIndex, error) {
+func computeProposerIndex(input PrepareProposersInput, indices []ValidatorIndex, seed Root) (ValidatorIndex, error) {
 	buf := make([]byte, 32+8, 32+8)
 	copy(buf[0:32], seed[:])
 	for i := uint64(0); i < 1000; i++ {
@@ -68,7 +66,7 @@ func (f *ProposingFeature) computeProposerIndex(indices []ValidatorIndex, seed R
 			absI := ValidatorIndex(((i << 5) | j) % uint64(len(indices)))
 			shuffledI := shuffle.PermuteIndex(absI, uint64(len(indices)), seed)
 			candidateIndex := indices[shuffledI]
-			effectiveBalance, err := f.Meta.EffectiveBalance(candidateIndex)
+			effectiveBalance, err := input.EffectiveBalance(candidateIndex)
 			if err != nil {
 				return 0, err
 			}
@@ -81,12 +79,12 @@ func (f *ProposingFeature) computeProposerIndex(indices []ValidatorIndex, seed R
 }
 
 // Return the beacon proposer index for the current slot
-func (f *ProposingFeature) LoadBeaconProposerIndices(epoch Epoch) (out *EpochProposerIndices, err error) {
-	seedSource, err := f.Meta.GetSeed(epoch, DOMAIN_BEACON_PROPOSER)
+func LoadBeaconProposerIndices(input PrepareProposersInput, epoch Epoch) (out *EpochProposerIndices, err error) {
+	seedSource, err := input.GetSeed(epoch, DOMAIN_BEACON_PROPOSER)
 	if err != nil {
 		return nil, err
 	}
-	indices, err := f.Meta.GetActiveValidatorIndices(epoch)
+	indices, err := input.GetActiveValidatorIndices(epoch)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +97,7 @@ func (f *ProposingFeature) LoadBeaconProposerIndices(epoch Epoch) (out *EpochPro
 		copy(buf[0:32], seedSource[:])
 		binary.LittleEndian.PutUint64(buf[32:], uint64(startSlot+i))
 		seed := Hash(buf)
-		proposerIndex, err := f.computeProposerIndex(indices, seed)
+		proposerIndex, err := computeProposerIndex(input, indices, seed)
 		if err != nil {
 			return nil, err
 		}

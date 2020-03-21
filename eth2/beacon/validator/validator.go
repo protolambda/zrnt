@@ -98,10 +98,26 @@ func (v *Validator) IsSlashable(epoch Epoch) (bool, error) {
 	return true, nil
 }
 
-func (v *Validator) IsEligibleForActivationQueue() bool {
-	return v.ActivationEligibilityEpoch == FAR_FUTURE_EPOCH && v.EffectiveBalance == MAX_EFFECTIVE_BALANCE
+func (v *Validator) IsEligibleForActivationQueue() (bool, error) {
+	actEligEpoch, err := v.ActivationEligibilityEpoch()
+	if err != nil {
+		return false, err
+	}
+	effBalance, err := v.EffectiveBalance()
+	if err != nil {
+		return false, err
+	}
+	return actEligEpoch == FAR_FUTURE_EPOCH && effBalance == MAX_EFFECTIVE_BALANCE, nil
 }
 
-func (v *Validator) IsEligibleForActivation(finalizedEpoch Epoch) bool {
-	return v.ActivationEligibilityEpoch <= finalizedEpoch && v.ActivationEpoch == FAR_FUTURE_EPOCH
+func (v *Validator) IsEligibleForActivation(finalizedEpoch Epoch) (bool, error) {
+	actEligEpoch, err := v.ActivationEligibilityEpoch()
+	if err != nil {
+		return false, err
+	}
+	actEpoch, err := v.ActivationEpoch()
+	if err != nil {
+		return false, err
+	}
+	return actEligEpoch <= finalizedEpoch && actEpoch == FAR_FUTURE_EPOCH, nil
 }

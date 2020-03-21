@@ -12,52 +12,50 @@ type BlockInput interface {
 	VerifyStateRoot(expected Root) bool
 }
 
-type TransitionFeature struct {
-	Meta interface {
-		StartEpoch()
-		CurrentSlot() Slot
-		IncrementSlot()
-		ProcessSlot()
-		ProcessEpoch()
-		StateRoot() Root
-		CurrentProposer() BLSPubkey
-		CurrentVersion() Version
-		GenesisValRoot() Root
-	}
+type SlotsProcessInput interface {
+	CurrentSlot() Slot
+	IncrementSlot()
+	ProcessSlot()
+	ProcessEpoch()
 }
 
 // Process the state to the given slot.
 // Returns an error if the slot is older than the state is already at.
 // Mutates the state, does not copy.
-func (f *TransitionFeature) ProcessSlots(slot Slot) {
+func ProcessSlots(input SlotsProcessInput, slot Slot) {
 	// happens at the start of every CurrentSlot
-	for f.Meta.CurrentSlot() < slot {
-		f.Meta.ProcessSlot()
+	for input.CurrentSlot() < slot {
+		input.ProcessSlot()
 		// Per-epoch transition happens at the start of the first slot of every epoch.
 		// (with the slot still at the end of the last epoch)
-		currentSlot := f.Meta.CurrentSlot()
+		currentSlot := input.CurrentSlot()
 		isEpochEnd := (currentSlot + 1).ToEpoch() != currentSlot.ToEpoch()
 		if isEpochEnd {
-			f.Meta.ProcessEpoch()
+			input.ProcessEpoch()
 		}
-		f.Meta.IncrementSlot()
-		if isEpochEnd {
-			f.Meta.StartEpoch()
-		}
+		input.IncrementSlot()
 	}
+}
+
+type TransitionProcessInput interface {
+	SlotsProcessInput
+	StateRoot() Root
+	CurrentProposer() BLSPubkey
+	CurrentVersion() Version
+	GenesisValRoot() Root
 }
 
 // Transition the state to the slot of the given block, then processes the block.
 // Returns an error if the slot is older than the state is already at.
 // Mutates the state, does not copy.
 //
-func (f *TransitionFeature) StateTransition(block BlockInput, validateResult bool) error {
-	if f.Meta.CurrentSlot() > block.Slot() {
+func StateTransition(input TransitionProcessInput, block BlockInput, validateResult bool) error {
+	if input.CurrentSlot() > block.Slot() {
 		return errors.New("cannot transition from pre-state with higher slot than transition target")
 	}
-	f.ProcessSlots(block.Slot())
+	ProcessSlots(input, block.Slot())
 	if validateResult {
-		if !block.VerifySignature(f.Meta.CurrentProposer(), f.Meta.CurrentVersion(), f.Meta.GenesisValRoot()) {
+		if !block.VerifySignature(input.CurrentProposer(), input.CurrentVersion(), input.GenesisValRoot()) {
 			return errors.New("block has invalid signature")
 		}
 	}
@@ -67,25 +65,8 @@ func (f *TransitionFeature) StateTransition(block BlockInput, validateResult boo
 	}
 
 	// State root verification
-	if !block.VerifyStateRoot(f.Meta.StateRoot()) {
+	if validateResult && !block.VerifyStateRoot(input.StateRoot()) {
 		return errors.New("block has invalid state root")
 	}
 	return nil
 }
-
-//// TODO block sig
-//func (f *TransitionFeature) VerifySig() {
-//
-//	pubkey, err := f.Meta.Pubkey(proposerIndex)
-//	if err != nil {
-//		return err
-//	}
-//	// Block signature
-//	if !bls.BlsVerify(
-//		pubkey.Bytes(),
-//		ssz.SigningRoot(header, BeaconBlockHeaderSSZ),
-//		header.Signature(),
-//		f.Meta.GetDomain(DOMAIN_BEACON_PROPOSER, f.Meta.CurrentEpoch())) {
-//		return errors.New("block signature invalid")
-//	}
-//}

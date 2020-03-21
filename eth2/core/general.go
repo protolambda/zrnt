@@ -74,3 +74,9 @@ func (p CheckpointProp) SetCheckPoint(ch Checkpoint) error {
 	}
 	return nil
 }
+
+type EpochStakeSummary struct {
+	SourceStake Gwei
+	TargetStake Gwei
+	HeadStake Gwei
+}

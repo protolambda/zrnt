@@ -11,26 +11,24 @@ import (
 )
 
 type VoluntaryExitProcessor interface {
-	ProcessVoluntaryExits(ops []SignedVoluntaryExit) error
-	ProcessVoluntaryExit(signedExit *SignedVoluntaryExit) error
+	ProcessVoluntaryExits(input VoluntaryExitProcessInput, ops []SignedVoluntaryExit) error
+	ProcessVoluntaryExit(input VoluntaryExitProcessInput, signedExit *SignedVoluntaryExit) error
 }
 
-type VoluntaryExitFeature struct {
-	Meta interface {
-		meta.ActiveIndices
-		meta.Pubkeys
-		meta.SigDomain
-		meta.ExitEpoch
-		meta.ActivationEpoch
-		meta.Versioning
-		meta.RegistrySize
-		meta.Exits
-	}
+type VoluntaryExitProcessInput interface {
+	meta.ActiveIndices
+	meta.Pubkeys
+	meta.SigDomain
+	meta.ExitEpoch
+	meta.ActivationEpoch
+	meta.Versioning
+	meta.RegistrySize
+	meta.Exits
 }
 
-func (f *VoluntaryExitFeature) ProcessVoluntaryExits(ops []SignedVoluntaryExit) error {
+func ProcessVoluntaryExits(input VoluntaryExitProcessInput, ops []SignedVoluntaryExit) error {
 	for i := range ops {
-		if err := f.ProcessVoluntaryExit(&ops[i]); err != nil {
+		if err := ProcessVoluntaryExit(input, &ops[i]); err != nil {
 			return err
 		}
 	}
@@ -63,24 +61,24 @@ var SignedVoluntaryExitType = &ContainerType{
 	{"signature", BLSSignatureType},
 }
 
-func (f *VoluntaryExitFeature) ProcessVoluntaryExit(signedExit *SignedVoluntaryExit) error {
+func ProcessVoluntaryExit(input VoluntaryExitProcessInput, signedExit *SignedVoluntaryExit) error {
 	exit := &signedExit.Message
-	currentEpoch, err := f.Meta.CurrentEpoch()
+	currentEpoch, err := input.CurrentEpoch()
 	if err != nil {
 		return err
 	}
-	if valid, err := f.Meta.IsValidIndex(exit.ValidatorIndex); err != nil {
+	if valid, err := input.IsValidIndex(exit.ValidatorIndex); err != nil {
 		return err
 	} else if !valid {
 		return errors.New("invalid exit validator index")
 	}
 	// Verify that the validator is active
-	if isActive, err := f.Meta.IsActive(exit.ValidatorIndex, currentEpoch); err != nil {
+	if isActive, err := input.IsActive(exit.ValidatorIndex, currentEpoch); err != nil {
 		return err
 	} else if !isActive {
 		return errors.New("validator must be active to be able to voluntarily exit")
 	}
-	scheduledExitEpoch, err := f.Meta.ExitEpoch(exit.ValidatorIndex)
+	scheduledExitEpoch, err := input.ExitEpoch(exit.ValidatorIndex)
 	if err != nil {
 		return err
 	}
@@ -92,7 +90,7 @@ func (f *VoluntaryExitFeature) ProcessVoluntaryExit(signedExit *SignedVoluntaryE
 	if currentEpoch < exit.Epoch {
 		return errors.New("invalid exit epoch")
 	}
-	registeredActivationEpoch, err := f.Meta.ActivationEpoch(exit.ValidatorIndex)
+	registeredActivationEpoch, err := input.ActivationEpoch(exit.ValidatorIndex)
 	if err != nil {
 		return err
 	}
@@ -100,11 +98,11 @@ func (f *VoluntaryExitFeature) ProcessVoluntaryExit(signedExit *SignedVoluntaryE
 	if currentEpoch < registeredActivationEpoch+PERSISTENT_COMMITTEE_PERIOD {
 		return errors.New("exit is too soon")
 	}
-	pubkey, err := f.Meta.Pubkey(exit.ValidatorIndex)
+	pubkey, err := input.Pubkey(exit.ValidatorIndex)
 	if err != nil {
 		return err
 	}
-	domain, err := f.Meta.GetDomain(DOMAIN_VOLUNTARY_EXIT, exit.Epoch)
+	domain, err := input.GetDomain(DOMAIN_VOLUNTARY_EXIT, exit.Epoch)
 	if err != nil {
 		return err
 	}
@@ -116,5 +114,5 @@ func (f *VoluntaryExitFeature) ProcessVoluntaryExit(signedExit *SignedVoluntaryE
 		return errors.New("voluntary exit signature could not be verified")
 	}
 	// Initiate exit
-	return f.Meta.InitiateValidatorExit(currentEpoch, exit.ValidatorIndex)
+	return input.InitiateValidatorExit(currentEpoch, exit.ValidatorIndex)
 }

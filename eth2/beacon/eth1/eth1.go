@@ -3,6 +3,8 @@ package eth1
 import (
 	"errors"
 	. "github.com/protolambda/zrnt/eth2/core"
+	. "github.com/protolambda/ztyp/props"
+	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
 
@@ -24,55 +26,131 @@ var Eth1DataType = &ContainerType{
 	{"block_hash", Bytes32Type},
 }
 
-type Eth1DataVotes []Eth1Data
+type Eth1DataNode struct { *ContainerView }
 
-func (_ *Eth1DataVotes) Limit() uint64 {
-	return uint64(SLOTS_PER_ETH1_VOTING_PERIOD)
+func NewEth1DataNode() *Eth1DataNode {
+	return &Eth1DataNode{ContainerView: Eth1DataType.New(nil)}
 }
+
+type Eth1DataProp ContainerReadProp
+
+func (p Eth1DataProp) Eth1Data() (*Eth1DataNode, error) {
+	if c, err := (ContainerReadProp)(p).Container(); err != nil {
+		return nil, err
+	} else {
+		return &Eth1DataNode{ContainerView: c}, nil
+	}
+}
+
+func (v *Eth1DataNode) DepositRoot() (Root, error) {
+	return RootReadProp(PropReader(v, 0)).Root()
+}
+
+func (v *Eth1DataNode) DepositCount() (DepositIndex, error) {
+	return DepositIndexReadProp(PropReader(v, 1)).DepositIndex()
+}
+
+func (v *Eth1DataNode) DepositIndex() (DepositIndex, error) {
+	return DepositIndexReadProp(PropReader(v, 2)).DepositIndex()
+}
+
+type StateDepositIndexProps struct {
+	DepositIndexReadProp
+	DepositIndexWriteProp
+}
+
+func (p *StateDepositIndexProps) IncrementDepositIndex() error {
+	d, err := p.DepositIndexReadProp.DepositIndex()
+	if err != nil {
+		return err
+	}
+	return p.DepositIndexWriteProp.SetDepositIndex(d + 1)
+}
+
+// Ethereum 1.0 chain data
+type Eth1Props struct {
+	Eth1Data      Eth1DataProp
+	Eth1DataVotes Eth1DataVotes
+	DepositIndex  StateDepositIndexProps
+}
+
+func (p *Eth1DataProp) DepIndex() (DepositIndex, error) {
+	data, err := p.Eth1Data()
+	if err != nil {
+		return 0, err
+	}
+	return data.DepositIndex()
+}
+
+func (p *Eth1DataProp) DepCount() (DepositIndex, error) {
+	data, err := p.Eth1Data()
+	if err != nil {
+		return 0, err
+	}
+	return data.DepositCount()
+}
+
+func (p *Eth1DataProp) DepRoot() (Root, error) {
+	data, err := p.Eth1Data()
+	if err != nil {
+		return Root{}, err
+	}
+	return data.DepositRoot()
+}
+
+type Eth1DataVotes struct{ *ListView }
 
 var Eth1DataVotesType = ListType(Eth1DataType, uint64(SLOTS_PER_ETH1_VOTING_PERIOD))
 
-//TODO
+type StateEth1DepositDataVotesProp ListReadProp
 
-// Ethereum 1.0 chain data
-type Eth1State struct {
-	Eth1Data      Eth1Data
-	Eth1DataVotes Eth1DataVotes
-	DepositIndex  DepositIndex
-}
-
-func (state *Eth1State) DepIndex() DepositIndex {
-	return state.DepositIndex
-}
-
-func (state *Eth1State) DepCount() DepositIndex {
-	return state.Eth1Data.DepositCount
-}
-
-func (state *Eth1State) DepRoot() Root {
-	return state.Eth1Data.DepositRoot
-}
-
-func (state *Eth1State) IncrementDepositIndex() {
-	state.DepositIndex += 1
+func (p StateEth1DepositDataVotesProp) Eth1DataVotes() (*Eth1DataVotes, error) {
+	v, err := ListReadProp(p).List()
+	if v != nil {
+		return nil, err
+	}
+	return &Eth1DataVotes{ListView: v}, nil
 }
 
 // Done at the end of every voting period
-func (state *Eth1State) ResetEth1Votes() {
-	if Slot(cap(state.Eth1DataVotes)) <= SLOTS_PER_ETH1_VOTING_PERIOD {
-		state.Eth1DataVotes = make([]Eth1Data, 0, SLOTS_PER_ETH1_VOTING_PERIOD)
-	} else {
-		state.Eth1DataVotes = state.Eth1DataVotes[:0]
+func (p *StateEth1DepositDataVotesProp) ResetEth1Votes() error {
+	votes, err := p.Eth1DataVotes()
+	if err != nil {
+		return err
 	}
+	// TODO; viewhooks
+	return votes.ViewHook.PropagateChange(Eth1DataVotesType.New(nil))
 }
 
-func (state *Eth1State) ProcessEth1Vote(data Eth1Data) error {
-	if Slot(len(state.Eth1DataVotes)) >= SLOTS_PER_ETH1_VOTING_PERIOD {
+func (p *StateEth1DepositDataVotesProp) ProcessEth1Vote(data Eth1Data) error {
+	votes, err := p.Eth1DataVotes()
+	if err != nil {
+		return err
+	}
+	voteCount, err := votes.Length()
+	if err != nil {
+		return err
+	}
+	if Slot(voteCount) >= SLOTS_PER_ETH1_VOTING_PERIOD {
 		return errors.New("cannot process Eth1 vote, already voted maximum times")
 	}
-	state.Eth1DataVotes = append(state.Eth1DataVotes, data)
+	vote := NewEth1DataNode()
+	if err := vote.Set(0, &data.DepositRoot); err != nil {
+		return err
+	}
+	if err := vote.Set(1, Uint64View(data.DepositCount)); err != nil {
+		return err
+	}
+	if err := vote.Set(2, &data.BlockHash); err != nil {
+		return err
+	}
+
+	if err := votes.Append(vote); err != nil {
+		return err
+	}
+	voteCount += 1
 	// only do costly counting if we have enough votes yet.
-	if (Slot(len(state.Eth1DataVotes)) << 1) > SLOTS_PER_ETH1_VOTING_PERIOD {
+	if Slot(voteCount << 1) > SLOTS_PER_ETH1_VOTING_PERIOD {
 		count := Slot(0)
 		for i := range state.Eth1DataVotes {
 			if state.Eth1DataVotes[i] == data {

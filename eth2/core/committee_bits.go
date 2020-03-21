@@ -1,14 +1,11 @@
-package attestations
+package core
 
 import (
-	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zssz/bitfields"
 	. "github.com/protolambda/ztyp/view"
 )
 
 type CommitteeBits []byte
-
-var CommitteeBitsType = BitlistType(MAX_VALIDATORS_PER_COMMITTEE)
 
 func (cb CommitteeBits) BitLen() uint64 {
 	return bitfields.BitlistLen(cb)

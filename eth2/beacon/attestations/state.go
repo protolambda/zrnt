@@ -2,24 +2,10 @@ package attestations
 
 import (
 	. "github.com/protolambda/zrnt/eth2/core"
-	"github.com/protolambda/zssz"
 	. "github.com/protolambda/ztyp/props"
 	. "github.com/protolambda/ztyp/view"
 )
 
-var AttestationDataSSZ = zssz.GetSSZ((*AttestationData)(nil))
-
-type AttestationData struct {
-	Slot  Slot
-	Index CommitteeIndex
-
-	// LMD GHOST vote
-	BeaconBlockRoot Root
-
-	// FFG vote
-	Source Checkpoint
-	Target Checkpoint
-}
 
 var AttestationDataType = &ContainerType{
 	{"slot", SlotType},
@@ -53,12 +39,6 @@ func (ad *AttestationDataNode) RawAttestationData() (res *AttestationData, err e
 	return
 }
 
-type PendingAttestation struct {
-	AggregationBits CommitteeBits
-	Data            AttestationData
-	InclusionDelay  Slot
-	ProposerIndex   ValidatorIndex
-}
 
 type PendingAttestationNode struct { *ContainerView }
 
@@ -183,4 +163,20 @@ func (state *AttestationsProps) RotateEpochAttestations() error {
 		return err
 	}
 	return nil
+}
+
+func (state *AttestationsProps) CurrentEpochPendingAttestations() ([]*PendingAttestation, error) {
+	atts, err := state.CurrentEpochAttestations.PendingAttestations()
+	if err != nil {
+		return nil, err
+	}
+	return atts.CollectRawPendingAttestations()
+}
+
+func (state *AttestationsProps) PreviousEpochPendingAttestations() ([]*PendingAttestation, error) {
+	atts, err := state.PreviousEpochAttestations.PendingAttestations()
+	if err != nil {
+		return nil, err
+	}
+	return atts.CollectRawPendingAttestations()
 }

@@ -6,35 +6,33 @@ import (
 )
 
 type RewardsAndPenaltiesEpochProcess interface {
-	ProcessEpochRewardsAndPenalties() error
+	ProcessEpochRewardsAndPenalties(input RewardsAndPenaltiesInput) error
 }
 
-type RewardsAndPenaltiesFeature struct {
-	Meta interface {
-		meta.Versioning
-		meta.RegistrySize
-		meta.BalanceDeltas
-		meta.AttestationDeltas
-	}
+type RewardsAndPenaltiesInput interface {
+	meta.Versioning
+	meta.RegistrySize
+	meta.BalanceDeltas
+	meta.AttestationDeltas
 }
 
-func (f *RewardsAndPenaltiesFeature) ProcessEpochRewardsAndPenalties() error {
-	currentEpoch, err := f.Meta.CurrentEpoch()
+func ProcessEpochRewardsAndPenalties(input RewardsAndPenaltiesInput) error {
+	currentEpoch, err := input.CurrentEpoch()
 	if err != nil {
 		return err
 	}
 	if currentEpoch == GENESIS_EPOCH {
 		return nil
 	}
-	valCount, err := f.Meta.ValidatorCount()
+	valCount, err := input.ValidatorCount()
 	if err != nil {
 		return err
 	}
 	sum := NewDeltas(valCount)
-	attDeltas, err := f.Meta.AttestationDeltas()
+	attDeltas, err := input.AttestationDeltas()
 	if err != nil {
 		return err
 	}
 	sum.Add(attDeltas)
-	return f.Meta.ApplyDeltas(sum)
+	return input.ApplyDeltas(sum)
 }

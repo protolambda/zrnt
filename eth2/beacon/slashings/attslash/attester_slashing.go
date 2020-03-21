@@ -11,27 +11,25 @@ import (
 )
 
 type AttesterSlashingProcessor interface {
-	ProcessAttesterSlashings(ops []AttesterSlashing) error
-	ProcessAttesterSlashing(attesterSlashing *AttesterSlashing) error
+	ProcessAttesterSlashings(input AttestSlashProcessInput, ops []AttesterSlashing) error
+	ProcessAttesterSlashing(input AttestSlashProcessInput, attesterSlashing *AttesterSlashing) error
 }
 
-type AttestSlashFeature struct {
-	Meta interface {
-		meta.RegistrySize
-		meta.Pubkeys
-		meta.SigDomain
-		meta.SlashableCheck
-		meta.Versioning
-		meta.Proposers
-		meta.Balance
-		meta.Slasher
-		meta.Exits
-	}
+type AttestSlashProcessInput interface {
+	meta.RegistrySize
+	meta.Pubkeys
+	meta.SigDomain
+	meta.SlashableCheck
+	meta.Versioning
+	meta.Proposers
+	meta.Balance
+	meta.Slasher
+	meta.Exits
 }
 
-func (f *AttestSlashFeature) ProcessAttesterSlashings(ops []AttesterSlashing) error {
+func ProcessAttesterSlashings(input AttestSlashProcessInput, ops []AttesterSlashing) error {
 	for i := range ops {
-		if err := f.ProcessAttesterSlashing(&ops[i]); err != nil {
+		if err := ProcessAttesterSlashing(input, &ops[i]); err != nil {
 			return err
 		}
 	}
@@ -50,7 +48,7 @@ var AttesterSlashingType = &ContainerType{
 	{"attestation_2", IndexedAttestationType},
 }
 
-func (f *AttestSlashFeature) ProcessAttesterSlashing(attesterSlashing *AttesterSlashing) error {
+func ProcessAttesterSlashing(input AttestSlashProcessInput, attesterSlashing *AttesterSlashing) error {
 	sa1 := &attesterSlashing.Attestation1
 	sa2 := &attesterSlashing.Attestation2
 
@@ -58,14 +56,14 @@ func (f *AttestSlashFeature) ProcessAttesterSlashing(attesterSlashing *AttesterS
 		return errors.New("attester slashing has no valid reasoning")
 	}
 
-	if err := sa1.Validate(f.Meta); err != nil {
+	if err := sa1.Validate(input); err != nil {
 		return errors.New("attestation 1 of attester slashing cannot be verified")
 	}
-	if err := sa2.Validate(f.Meta); err != nil {
+	if err := sa2.Validate(input); err != nil {
 		return errors.New("attestation 2 of attester slashing cannot be verified")
 	}
 
-	currentEpoch, err := f.Meta.CurrentEpoch()
+	currentEpoch, err := input.CurrentEpoch()
 	if err != nil {
 		return err
 	}
@@ -80,10 +78,10 @@ func (f *AttestSlashFeature) ProcessAttesterSlashing(attesterSlashing *AttesterS
 		if errorAny != nil {
 			return
 		}
-		if slashable, err := f.Meta.IsSlashable(i, currentEpoch); err != nil {
+		if slashable, err := input.IsSlashable(i, currentEpoch); err != nil {
 			errorAny = err
 		} else if slashable {
-			if err := f.Meta.SlashValidator(i, nil); err != nil {
+			if err := input.SlashValidator(i, nil); err != nil {
 				errorAny = err
 			} else {
 				slashedAny = true

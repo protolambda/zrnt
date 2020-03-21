@@ -13,28 +13,26 @@ import (
 )
 
 type DepositProcessor interface {
-	ProcessDeposits(ops []Deposit) error
-	ProcessDeposit(dep *Deposit) error
+	ProcessDeposits(input DepositProcessInput, ops []Deposit) error
+	ProcessDeposit(input DepositProcessInput, dep *Deposit) error
 }
 
-type DepositFeature struct {
-	Meta interface {
-		meta.Pubkeys
-		meta.Deposits
-		meta.Balance
-		meta.Onboarding
-		meta.Depositing
-	}
+type DepositProcessInput interface {
+	meta.Pubkeys
+	meta.Deposits
+	meta.Balance
+	meta.Onboarding
+	meta.Depositing
 }
 
 // Verify that outstanding deposits are processed up to the maximum number of deposits, then process all in order.
-func (f *DepositFeature) ProcessDeposits(ops []Deposit) error {
+func ProcessDeposits(input DepositProcessInput, ops []Deposit) error {
 	inputCount := DepositIndex(len(ops))
-	stateDepCount, err := f.Meta.DepCount()
+	stateDepCount, err := input.DepCount()
 	if err != nil {
 		return err
 	}
-	stateDepIndex, err := f.Meta.DepIndex()
+	stateDepIndex, err := input.DepIndex()
 	if err != nil {
 		return err
 	}
@@ -47,7 +45,7 @@ func (f *DepositFeature) ProcessDeposits(ops []Deposit) error {
 	}
 
 	for i := range ops {
-		if err := f.ProcessDeposit(&ops[i]); err != nil {
+		if err := ProcessDeposit(input, &ops[i]); err != nil {
 			return err
 		}
 	}
@@ -69,12 +67,12 @@ var DepositType = &ContainerType{
 }
 
 // Process an Eth1 deposit, registering a validator or increasing its balance.
-func (f *DepositFeature) ProcessDeposit(dep *Deposit) error {
-	depositIndex, err := f.Meta.DepIndex()
+func ProcessDeposit(input DepositProcessInput, dep *Deposit) error {
+	depositIndex, err := input.DepIndex()
 	if err != nil {
 		return err
 	}
-	depositsRoot, err := f.Meta.DepRoot()
+	depositsRoot, err := input.DepRoot()
 	if err != nil {
 		return err
 	}
@@ -93,11 +91,11 @@ func (f *DepositFeature) ProcessDeposit(dep *Deposit) error {
 	// needs to be done here because while the deposit contract will never
 	// create an invalid Merkle branch, it may admit an invalid deposit
 	// object, and we need to be able to skip over it
-	if err := f.Meta.IncrementDepositIndex(); err != nil {
+	if err := input.IncrementDepositIndex(); err != nil {
 		return err
 	}
 
-	valIndex, exists, err := f.Meta.ValidatorIndex(dep.Data.Pubkey)
+	valIndex, exists, err := input.ValidatorIndex(dep.Data.Pubkey)
 
 	// Check if it is a known validator that is depositing ("if pubkey not in validator_pubkeys")
 	if !exists {
@@ -116,10 +114,10 @@ func (f *DepositFeature) ProcessDeposit(dep *Deposit) error {
 		}
 
 		// Add validator and balance entries
-		return f.Meta.AddNewValidator(dep.Data.Pubkey, dep.Data.WithdrawalCredentials, dep.Data.Amount)
+		return input.AddNewValidator(dep.Data.Pubkey, dep.Data.WithdrawalCredentials, dep.Data.Amount)
 
 	} else {
 		// Increase balance by deposit amount
-		return f.Meta.IncreaseBalance(valIndex, dep.Data.Amount)
+		return input.IncreaseBalance(valIndex, dep.Data.Amount)
 	}
 }

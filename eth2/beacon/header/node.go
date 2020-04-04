@@ -7,18 +7,18 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
-var SignedBeaconBlockHeaderType = &ContainerType{
+var SignedBeaconBlockHeaderType = ContainerType("SignedBeaconBlockHeader", []FieldDef{
 	{"message", BeaconBlockHeaderType},
 	{"signature", BLSSignatureType},
-}
+})
 
-var BeaconBlockHeaderType = &ContainerType{
+var BeaconBlockHeaderType = ContainerType("BeaconBlockHeader", []FieldDef{
 	{"slot", SlotType},
 	{"proposer_index", ValidatorIndexType},
 	{"parent_root", RootType},
 	{"state_root", RootType},
 	{"body_root", RootType},
-}
+})
 
 type BeaconBlockHeaderNode struct { *ContainerView }
 
@@ -27,8 +27,9 @@ func NewBeaconBlockHeaderNode() *BeaconBlockHeaderNode {
 }
 
 func (v *BeaconBlockHeaderNode) HashTreeRoot() Root {
-	return v.ViewRoot(tree.Hash)
+	return v.ContainerView.HashTreeRoot(tree.GetHashFn())
 }
+
 func (v *BeaconBlockHeaderNode) Slot() (Slot, error) {
 	return SlotReadProp(PropReader(v, 0)).Slot()
 }
@@ -79,10 +80,10 @@ func (v *BeaconBlockHeaderNode) AsStruct() (*BeaconBlockHeader, error) {
 	}, nil
 }
 
-type BeaconBlockHeaderReadProp ContainerReadProp
+type BeaconBlockHeaderProp ContainerProp
 
-func (p BeaconBlockHeaderReadProp) BeaconBlockHeader() (*BeaconBlockHeaderNode, error) {
-	if c, err := (ContainerReadProp)(p).Container(); err != nil {
+func (p BeaconBlockHeaderProp) BeaconBlockHeader() (*BeaconBlockHeaderNode, error) {
+	if c, err := (ContainerProp)(p).Container(); err != nil {
 		return nil, err
 	} else {
 		return &BeaconBlockHeaderNode{ContainerView: c}, nil

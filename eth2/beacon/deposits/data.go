@@ -7,12 +7,12 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
-var DepositDataType = &ContainerType{
+var DepositDataType = ContainerType("DepositData", []FieldDef{
 	{"pubkey", BLSPubkeyType},
 	{"withdrawal_credentials", Bytes32Type},
 	{"amount", GweiType},
 	{"signature", BLSSignatureType},
-}
+})
 
 var DepositDataSSZ = zssz.GetSSZ((*DepositData)(nil))
 

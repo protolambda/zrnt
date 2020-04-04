@@ -21,7 +21,7 @@ func (state *ValidatorsRegistry) ValidatorCount() (uint64, error) {
 }
 
 func (state *ValidatorsRegistry) Validator(index ValidatorIndex) (*Validator, error) {
-	v, err := ContainerReadProp(PropReader(state, uint64(index))).Container()
+	v, err := ContainerProp(PropReader(state, uint64(index))).Container()
 	if err != nil {
 		return nil, err
 	}

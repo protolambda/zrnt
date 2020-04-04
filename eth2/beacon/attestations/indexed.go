@@ -24,11 +24,11 @@ type IndexedAttestation struct {
 	Signature        BLSSignature
 }
 
-var IndexedAttestationType = &ContainerType{
+var IndexedAttestationType = ContainerType("IndexedAttestation", []FieldDef{
 	{"attesting_indices", CommitteeIndicesType},
 	{"data", AttestationDataType},
 	{"signature", BLSSignatureType},
-}
+})
 
 type AttestationValidator interface {
 	meta.RegistrySize

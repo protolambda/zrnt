@@ -1,13 +1,15 @@
 package attestations
 
 import (
+	"bytes"
+	"fmt"
 	. "github.com/protolambda/zrnt/eth2/core"
 	. "github.com/protolambda/ztyp/props"
 	. "github.com/protolambda/ztyp/view"
 )
 
 
-var AttestationDataType = &ContainerType{
+var AttestationDataType = ContainerType("AttestationData", []FieldDef{
 	{"slot", SlotType},
 	{"index", CommitteeIndexType},
 	// LMD GHOST vote
@@ -15,7 +17,7 @@ var AttestationDataType = &ContainerType{
 	// FFG vote
 	{"source", CheckpointType},
 	{"target", CheckpointType},
-}
+})
 
 type AttestationDataNode struct { *ContainerView }
 
@@ -46,7 +48,7 @@ func (pa *PendingAttestationNode) RawPendingAttestation() (res *PendingAttestati
 	res = &PendingAttestation{}
 	// load aggregation bits
 	{
-		bits, err := BitListReadProp(PropReader(pa, 0)).BitList()
+		bits, err := BitListProp(PropReader(pa, 0)).BitList()
 		if err != nil {
 			return nil, err
 		}
@@ -56,15 +58,17 @@ func (pa *PendingAttestationNode) RawPendingAttestation() (res *PendingAttestati
 		}
 		// rounded up, and then an extra bit for delimiting. ((bitLength + 7 + 1)/ 8)
 		byteLength := (bitLength / 8) + 1
-		res.AggregationBits = make(CommitteeBits, byteLength, byteLength)
-		if err := bits.IntoBytes(res.AggregationBits); err != nil {
+		var buf bytes.Buffer
+		if err := bits.Serialize(&buf); err != nil {
 			return nil, err
 		}
-		// add delimiting bit
-		res.AggregationBits.SetBit(bitLength, true)
+		res.AggregationBits = buf.Bytes()
+		if uint64(len(res.AggregationBits)) != byteLength {
+			return nil, fmt.Errorf("failed to convert raw attestation bitfield to pending att node bits")
+		}
 	}
 	{
-		v, err := ContainerReadProp(PropReader(pa, 1)).Container()
+		v, err := ContainerProp(PropReader(pa, 1)).Container()
 		if err != nil {
 			return nil, err
 		}
@@ -92,15 +96,15 @@ func (pa *PendingAttestationNode) RawPendingAttestation() (res *PendingAttestati
 	return res, nil
 }
 
-var PendingAttestationType = &ContainerType{
+var PendingAttestationType = ContainerType("PendingAttestation", []FieldDef{
 	{"aggregation_bits", CommitteeBitsType},
 	{"data", AttestationDataType},
 	{"inclusion_delay", SlotType},
 	{"proposer_index", ValidatorIndexType},
-}
+})
 
 
-type EpochPendingAttestations struct { *ListView }
+type EpochPendingAttestations struct { *ComplexListView }
 
 func (ep *EpochPendingAttestations) CollectRawPendingAttestations() ([]*PendingAttestation, error) {
 	ll, err := ep.Length()
@@ -109,7 +113,7 @@ func (ep *EpochPendingAttestations) CollectRawPendingAttestations() ([]*PendingA
 	}
 	out := make([]*PendingAttestation, ll, ll)
 	for i := uint64(0); i < ll; i++ {
-		v, err := ContainerReadProp(PropReader(ep, i)).Container()
+		v, err := ContainerProp(PropReader(ep, i)).Container()
 		if err != nil {
 			return nil, err
 		}
@@ -123,17 +127,17 @@ func (ep *EpochPendingAttestations) CollectRawPendingAttestations() ([]*PendingA
 	return out, nil
 }
 
-type EpochPendingAttestationsProp ListReadProp
+type EpochPendingAttestationsProp ComplexListProp
 
 func (p EpochPendingAttestationsProp) PendingAttestations() (*EpochPendingAttestations, error) {
-	v, err := ListReadProp(p).List()
+	v, err := ComplexListProp(p).List()
 	if err != nil {
 		return nil, err
 	}
-	return &EpochPendingAttestations{ListView: v}, nil
+	return &EpochPendingAttestations{ComplexListView: v}, nil
 }
 
-var PendingAttestationsType = ListType(PendingAttestationType, uint64(MAX_ATTESTATIONS*SLOTS_PER_EPOCH))
+var PendingAttestationsType = ComplexListType(PendingAttestationType, uint64(MAX_ATTESTATIONS*SLOTS_PER_EPOCH))
 
 type AttestationsProps struct {
 	PreviousEpochAttestations EpochPendingAttestationsProp
@@ -150,16 +154,18 @@ func (state *AttestationsProps) RotateEpochAttestations() error {
 	if err != nil {
 		return err
 	}
-	nextPrevV, err := PendingAttestationsType.ViewFromBacking(curr.Backing(), curr.ViewHook)
+	nextPrevV, err := PendingAttestationsType.ViewFromBacking(curr.Backing(), prev.Hook)
 	if err != nil {
 		return err
 	}
-	nextPrev := &EpochPendingAttestations{ListView: nextPrevV.(*ListView)}
-	if err := prev.PropagateChange(nextPrev); err != nil {
+	nextCurrV := PendingAttestationsType.Default(curr.Hook)
+
+	nextPrev := &EpochPendingAttestations{ComplexListView: nextPrevV.(*ComplexListView)}
+	if err := prev.SetBacking(nextPrev.Backing()); err != nil {
 		return err
 	}
-	nextCurr := &EpochPendingAttestations{ListView: PendingAttestationsType.New(curr.ViewHook)}
-	if err := curr.PropagateChange(nextCurr); err != nil {
+	nextCurr := &EpochPendingAttestations{ComplexListView: nextCurrV.(*ComplexListView)}
+	if err := curr.SetBacking(nextCurr.Backing()); err != nil {
 		return err
 	}
 	return nil

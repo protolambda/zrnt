@@ -51,15 +51,15 @@ type SignedVoluntaryExit struct {
 	Signature BLSSignature
 }
 
-var VoluntaryExitType = &ContainerType{
+var VoluntaryExitType = ContainerType("VoluntaryExit", []FieldDef{
 	{"epoch", EpochType}, // Earliest epoch when voluntary exit can be processed
 	{"validator_index", ValidatorIndexType},
-}
+})
 
-var SignedVoluntaryExitType = &ContainerType{
+var SignedVoluntaryExitType = ContainerType("SignedVoluntaryExit", []FieldDef{
 	{"message", VoluntaryExitType},
 	{"signature", BLSSignatureType},
-}
+})
 
 func ProcessVoluntaryExit(input VoluntaryExitProcessInput, signedExit *SignedVoluntaryExit) error {
 	exit := &signedExit.Message

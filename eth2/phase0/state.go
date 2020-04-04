@@ -17,7 +17,7 @@ import (
 )
 
 // Beacon state
-var BeaconStateType = &ContainerType{
+var BeaconStateType = ContainerType("BeaconState", []FieldDef{
 	// Versioning
 	{"genesis_time", Uint64Type},
 	{"genesis_validators_root", RootType},
@@ -47,7 +47,7 @@ var BeaconStateType = &ContainerType{
 	{"previous_justified_checkpoint", CheckpointType}, // Previous epoch snapshot
 	{"current_justified_checkpoint", CheckpointType},
 	{"finalized_checkpoint", CheckpointType},
-}
+})
 
 type BeaconStateProps struct {
 	VersioningProps
@@ -73,7 +73,7 @@ func (state *BeaconStateView) Props() *BeaconStateProps {
 			GenesisValidatorsRootProp: GenesisValidatorsRootProp(PropReader(state, 1)),
 			CurrentSlotMutProp: CurrentSlotMutProp{
 				CurrentSlotReadProp: CurrentSlotReadProp(PropReader(state, 2)),
-				SlotWriteProp: SlotWriteProp(PropWriter(state, 3)),
+				SlotWriteProp: SlotWriteProp(PropWriter(state, 3)),// TODO
 			},
 			ForkProp:        ForkProp(PropReader(state, 4)),
 		},
@@ -101,5 +101,5 @@ func (state *BeaconStateView) Props() *BeaconStateProps {
 
 
 func (state *BeaconStateView) StateRoot() Root {
-	return state.ViewRoot(tree.Hash)
+	return state.HashTreeRoot(tree.GetHashFn())
 }

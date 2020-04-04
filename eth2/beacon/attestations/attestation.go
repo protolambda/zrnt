@@ -43,13 +43,13 @@ type Attestation struct {
 	Signature       BLSSignature
 }
 
-var CommitteeBitsType = BitlistType(MAX_VALIDATORS_PER_COMMITTEE)
+var CommitteeBitsType = BitListType(MAX_VALIDATORS_PER_COMMITTEE)
 
-var AttestationType = &ContainerType{
+var AttestationType = ContainerType("Attestation", []FieldDef{
 	{"aggregation_bits", CommitteeBitsType},
 	{"data", AttestationDataType},
 	{"signature", BLSSignatureType},
-}
+})
 
 func (state *AttestationsProps) ProcessAttestation(input AttestationProcessInput, attestation *Attestation) error {
 	data := &attestation.Data

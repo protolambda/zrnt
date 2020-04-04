@@ -6,7 +6,7 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
-const VersionType = Bytes4
+const VersionType = Bytes4Type
 
 // 32 bits, not strictly an integer, hence represented as 4 bytes
 // (bytes not necessarily corresponding to versions)

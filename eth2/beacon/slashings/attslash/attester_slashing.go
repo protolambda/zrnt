@@ -43,10 +43,10 @@ type AttesterSlashing struct {
 	Attestation2 IndexedAttestation
 }
 
-var AttesterSlashingType = &ContainerType{
+var AttesterSlashingType = ContainerType("AttesterSlashing", []FieldDef{
 	{"attestation_1", IndexedAttestationType},
 	{"attestation_2", IndexedAttestationType},
-}
+})
 
 func ProcessAttesterSlashing(input AttestSlashProcessInput, attesterSlashing *AttesterSlashing) error {
 	sa1 := &attesterSlashing.Attestation1

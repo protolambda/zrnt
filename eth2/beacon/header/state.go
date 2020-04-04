@@ -5,6 +5,8 @@ import (
 	"fmt"
 	. "github.com/protolambda/zrnt/eth2/core"
 	"github.com/protolambda/zrnt/eth2/meta"
+	"github.com/protolambda/ztyp/props"
+	"github.com/protolambda/ztyp/tree"
 )
 
 type HeaderProcessor interface {
@@ -20,10 +22,18 @@ type BlockHeaderProcessInput interface {
 	meta.LatestHeaderUpdate
 }
 
-type LatestBlockHeaderProp BeaconBlockHeaderReadProp
+type LatestBlockHeaderProp BeaconBlockHeaderProp
 
 func (p LatestBlockHeaderProp) GetLatestHeader() (*BeaconBlockHeaderNode, error) {
-	return BeaconBlockHeaderReadProp(p).BeaconBlockHeader()
+	return BeaconBlockHeaderProp(p).BeaconBlockHeader()
+}
+
+func (p LatestBlockHeaderProp) SetLatestHeader(node tree.Node) error {
+	h, err := props.ContainerProp(p)()
+	if err != nil {
+		return err
+	}
+	return h.SetBacking(node)
 }
 
 func (p LatestBlockHeaderProp) GetLatestBlockRoot() (Root, error) {
@@ -35,7 +45,7 @@ func (p LatestBlockHeaderProp) GetLatestBlockRoot() (Root, error) {
 }
 
 func (p LatestBlockHeaderProp) UpdateLatestBlockStateRoot(root Root) error {
-	prev, err := BeaconBlockHeaderReadProp(p).BeaconBlockHeader()
+	prev, err := BeaconBlockHeaderProp(p).BeaconBlockHeader()
 	if err != nil {
 		return err
 	}
@@ -83,9 +93,5 @@ func ProcessHeader(input BlockHeaderProcessInput, header *BeaconBlockHeader) err
 	// with BlockHeaderState.UpdateStateRoot(), once the post state is available.
 
 	// Store as the new latest block
-	h, err := f.State.GetLatestHeader()
-	if err != nil {
-		return err
-	}
-	return h.PropagateChange(newLatest)
+	return input.SetLatestHeader(newLatest.Backing())
 }

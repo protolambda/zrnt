@@ -9,7 +9,7 @@ import (
 
 var BatchRootsType = VectorType(RootType, uint64(SLOTS_PER_HISTORICAL_ROOT))
 
-type BatchRoots struct{ *VectorView }
+type BatchRoots struct{ *ComplexVectorView }
 
 func (br *BatchRoots) GetRoot(slot Slot) (Root, error) {
 	return RootReadProp(PropReader(br, uint64(slot%SLOTS_PER_HISTORICAL_ROOT))).Root()
@@ -19,14 +19,14 @@ func (br *BatchRoots) SetRoot(slot Slot, v Root) error {
 	return RootWriteProp(PropWriter(br, uint64(slot%SLOTS_PER_HISTORICAL_ROOT))).SetRoot(v)
 }
 
-type BatchRootsProp VectorReadProp
+type BatchRootsProp ComplexVectorProp
 
 func (p BatchRootsProp) BatchRoots() (*BatchRoots, error) {
-	v, err := VectorReadProp(p).Vector()
+	v, err := ComplexVectorProp(p).Vector()
 	if err != nil {
 		return nil, err
 	}
-	return &BatchRoots{VectorView: v}, nil
+	return &BatchRoots{ComplexVectorView: v}, nil
 }
 
 type BlockRootsProp BatchRootsProp
@@ -65,24 +65,24 @@ func (hb *HistoricalBatch) StateRoots() (*BatchRoots, error) {
 	return StateRootsProp(PropReader(hb, 1)).StateRoots()
 }
 
-var HistoricalBatchType = &ContainerType{
+var HistoricalBatchType = ContainerType("HistoricalBatch", []FieldDef{
 	{"block_roots", BatchRootsType},
 	{"state_roots", BatchRootsType},
-}
+})
 
 // roots of HistoricalBatch
-type HistoricalRoots struct{ *ListView }
+type HistoricalRoots struct{ *ComplexListView }
 
 var HistoricalRootsType = ListType(RootType, HISTORICAL_ROOTS_LIMIT)
 
-type HistoricalRootsProp ListReadProp
+type HistoricalRootsProp ComplexListProp
 
 func (p HistoricalRootsProp) HistoricalRoots() (*HistoricalRoots, error) {
-	v, err := ListReadProp(p).List()
+	v, err := ComplexListProp(p).List()
 	if v != nil {
 		return nil, err
 	}
-	return &HistoricalRoots{ListView: v}, nil
+	return &HistoricalRoots{ComplexListView: v}, nil
 }
 
 type HistoryProps struct {
@@ -123,6 +123,7 @@ func (p *HistoryProps) UpdateHistoricalRoots() error {
 		return err
 	}
 	// emulating HistoricalBatch here
-	newHistoricalRoot := tree.Hash(blockRoots.ViewRoot(tree.Hash), stateRoots.ViewRoot(tree.Hash))
+	hFn := tree.GetHashFn()
+	newHistoricalRoot := RootView(tree.Hash(blockRoots.HashTreeRoot(hFn), stateRoots.HashTreeRoot(hFn)))
 	return histRoots.Append(&newHistoricalRoot)
 }

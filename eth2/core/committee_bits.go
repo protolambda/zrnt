@@ -2,7 +2,6 @@ package core
 
 import (
 	"github.com/protolambda/zssz/bitfields"
-	. "github.com/protolambda/ztyp/view"
 )
 
 type CommitteeBits []byte

@@ -45,13 +45,13 @@ func (state *FinalityProps) Justify(currentEpoch Epoch, checkpoint Checkpoint) e
 }
 
 
-var JustificationBitsType = BitvectorType(JUSTIFICATION_BITS_LENGTH)
+var JustificationBitsType = BitVectorType(JUSTIFICATION_BITS_LENGTH)
 
-type JustificationBitsProp BitVectorReadProp
+type JustificationBitsProp BitVectorProp
 
 // Prepare bitfield for next epoch by shifting previous bits (truncating to bitfield length)
 func (p JustificationBitsProp) NextEpoch() error {
-	v, err := BitVectorReadProp(p).BitVector()
+	v, err := BitVectorProp(p).BitVector()
 	if err != nil {
 		return err
 	}
@@ -59,7 +59,7 @@ func (p JustificationBitsProp) NextEpoch() error {
 }
 
 func (p JustificationBitsProp) IsJustified(epochsAgo ...Epoch) (bool, error) {
-	v, err := BitVectorReadProp(p).BitVector()
+	v, err := BitVectorProp(p).BitVector()
 	if err != nil {
 		return false, err
 	}
@@ -74,7 +74,7 @@ func (p JustificationBitsProp) IsJustified(epochsAgo ...Epoch) (bool, error) {
 }
 
 func (p JustificationBitsProp) SetJustified(epochsAgo Epoch) error {
-	v, err := BitVectorReadProp(p).BitVector()
+	v, err := BitVectorProp(p).BitVector()
 	if err != nil {
 		return err
 	}

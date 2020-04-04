@@ -1,6 +1,9 @@
 package meta
 
-import . "github.com/protolambda/zrnt/eth2/core"
+import (
+	. "github.com/protolambda/zrnt/eth2/core"
+	"github.com/protolambda/ztyp/tree"
+)
 
 type Exits interface {
 	InitiateValidatorExit(currentEpoch Epoch, index ValidatorIndex) error
@@ -132,6 +135,7 @@ type SigDomain interface {
 
 type Eth1Voting interface {
 	ResetEth1Votes() error
+	SetEth1Data(node tree.Node) error
 }
 
 type Deposits interface {
@@ -151,6 +155,7 @@ type Depositing interface {
 type LatestHeader interface {
 	// Signing root of latest_block_header
 	GetLatestBlockRoot() (Root, error)
+	SetLatestHeader(node tree.Node) error
 }
 
 type LatestHeaderUpdate interface {

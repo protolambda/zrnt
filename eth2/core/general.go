@@ -38,15 +38,15 @@ type Checkpoint struct {
 	Epoch Epoch
 	Root  Root
 }
-var CheckpointType = &ContainerType{
+var CheckpointType = ContainerType("Checkpoint", []FieldDef{
 	{"epoch", EpochType},
 	{"root", RootType},
-}
+})
 
-type CheckpointProp ContainerReadProp
+type CheckpointProp ContainerProp
 
 func (p CheckpointProp) CheckPoint() (Checkpoint, error) {
-	v, err := ContainerReadProp(p).Container()
+	v, err := ContainerProp(p).Container()
 	if err != nil {
 		return Checkpoint{}, err
 	}
@@ -62,7 +62,7 @@ func (p CheckpointProp) CheckPoint() (Checkpoint, error) {
 }
 
 func (p CheckpointProp) SetCheckPoint(ch Checkpoint) error {
-	v, err := ContainerReadProp(p).Container()
+	v, err := ContainerProp(p).Container()
 	if err != nil {
 		return err
 	}

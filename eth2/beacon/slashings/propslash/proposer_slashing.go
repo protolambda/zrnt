@@ -35,10 +35,10 @@ type ProposerSlashing struct {
 }
 
 // Beacon operations
-var ProposerSlashingType = &ContainerType{
+var ProposerSlashingType =  ContainerType("ProposerSlashing", []FieldDef{
 	{"header_1", SignedBeaconBlockHeaderType},
 	{"header_2", SignedBeaconBlockHeaderType},
-}
+})
 
 func ProcessProposerSlashings(input PropSlashProcessInput, ops []ProposerSlashing) error {
 	for i := range ops {

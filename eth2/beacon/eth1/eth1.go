@@ -3,6 +3,7 @@ package eth1
 import (
 	"errors"
 	. "github.com/protolambda/zrnt/eth2/core"
+	"github.com/protolambda/zrnt/eth2/meta"
 	. "github.com/protolambda/ztyp/props"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
@@ -20,22 +21,22 @@ type Eth1Data struct {
 
 const SLOTS_PER_ETH1_VOTING_PERIOD = Slot(EPOCHS_PER_ETH1_VOTING_PERIOD) * SLOTS_PER_EPOCH
 
-var Eth1DataType = &ContainerType{
+var Eth1DataType = ContainerType("Eth1Data", []FieldDef{
 	{"deposit_root", RootType},
 	{"deposit_count", Uint64Type},
 	{"block_hash", Bytes32Type},
-}
+})
 
 type Eth1DataNode struct { *ContainerView }
 
 func NewEth1DataNode() *Eth1DataNode {
-	return &Eth1DataNode{ContainerView: Eth1DataType.New(nil)}
+	return &Eth1DataNode{ContainerView: Eth1DataType.New()}
 }
 
-type Eth1DataProp ContainerReadProp
+type Eth1DataProp ContainerProp
 
 func (p Eth1DataProp) Eth1Data() (*Eth1DataNode, error) {
-	if c, err := (ContainerReadProp)(p).Container(); err != nil {
+	if c, err := (ContainerProp)(p).Container(); err != nil {
 		return nil, err
 	} else {
 		return &Eth1DataNode{ContainerView: c}, nil
@@ -98,18 +99,26 @@ func (p *Eth1DataProp) DepRoot() (Root, error) {
 	return data.DepositRoot()
 }
 
-type Eth1DataVotes struct{ *ListView }
+func (p *Eth1DataProp) SetEth1Data(node tree.Node) error {
+	v, err := p.Eth1Data()
+	if err != nil {
+		return err
+	}
+	return v.SetBacking(node)
+}
+
+type Eth1DataVotes struct{ *ComplexListView }
 
 var Eth1DataVotesType = ListType(Eth1DataType, uint64(SLOTS_PER_ETH1_VOTING_PERIOD))
 
-type StateEth1DepositDataVotesProp ListReadProp
+type StateEth1DepositDataVotesProp ComplexListProp
 
 func (p StateEth1DepositDataVotesProp) Eth1DataVotes() (*Eth1DataVotes, error) {
-	v, err := ListReadProp(p).List()
+	v, err := ComplexListProp(p).List()
 	if v != nil {
 		return nil, err
 	}
-	return &Eth1DataVotes{ListView: v}, nil
+	return &Eth1DataVotes{ComplexListView: v}, nil
 }
 
 // Done at the end of every voting period
@@ -118,11 +127,14 @@ func (p *StateEth1DepositDataVotesProp) ResetEth1Votes() error {
 	if err != nil {
 		return err
 	}
-	// TODO; viewhooks
-	return votes.ViewHook.PropagateChange(Eth1DataVotesType.New(nil))
+	return votes.SetBacking(Eth1DataVotesType.DefaultNode())
 }
 
-func (p *StateEth1DepositDataVotesProp) ProcessEth1Vote(data Eth1Data) error {
+type EthDataProcessInput interface {
+	meta.Eth1Voting
+}
+
+func (p *StateEth1DepositDataVotesProp) ProcessEth1Vote(input EthDataProcessInput, data Eth1Data) error {
 	votes, err := p.Eth1DataVotes()
 	if err != nil {
 		return err
@@ -135,13 +147,15 @@ func (p *StateEth1DepositDataVotesProp) ProcessEth1Vote(data Eth1Data) error {
 		return errors.New("cannot process Eth1 vote, already voted maximum times")
 	}
 	vote := NewEth1DataNode()
-	if err := vote.Set(0, &data.DepositRoot); err != nil {
+	depRoot := RootView(data.DepositRoot)
+	blockHash := RootView(data.BlockHash)
+	if err := vote.Set(0, &depRoot); err != nil {
 		return err
 	}
 	if err := vote.Set(1, Uint64View(data.DepositCount)); err != nil {
 		return err
 	}
-	if err := vote.Set(2, &data.BlockHash); err != nil {
+	if err := vote.Set(2, &blockHash); err != nil {
 		return err
 	}
 
@@ -152,13 +166,23 @@ func (p *StateEth1DepositDataVotesProp) ProcessEth1Vote(data Eth1Data) error {
 	// only do costly counting if we have enough votes yet.
 	if Slot(voteCount << 1) > SLOTS_PER_ETH1_VOTING_PERIOD {
 		count := Slot(0)
-		for i := range state.Eth1DataVotes {
-			if state.Eth1DataVotes[i] == data {
+		iter := votes.ReadonlyIter()
+		hFn := tree.GetHashFn()
+		voteRoot := vote.HashTreeRoot(hFn)
+		for {
+			existingVote, ok, err := iter.Next()
+			if err != nil {
+				return err
+			}
+			if !ok {
+				break
+			}
+			if existingVote.HashTreeRoot(hFn) == voteRoot {
 				count++
 			}
 		}
 		if (count << 1) > SLOTS_PER_ETH1_VOTING_PERIOD {
-			state.Eth1Data = data
+			return input.SetEth1Data(vote.Backing())
 		}
 	}
 	return nil

@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"github.com/protolambda/zrnt/eth2/util/hashing"
 	"github.com/protolambda/zssz"
 	"github.com/protolambda/zssz/htr"
@@ -81,18 +82,22 @@ type BLSPubkeyNode struct {
 }
 
 func NewBLSPubkeyNode() (b *BLSPubkeyNode) {
-	return &BLSPubkeyNode{BasicVectorView: BLSPubkeyType.New(nil)}
+	return &BLSPubkeyNode{BasicVectorView: BLSPubkeyType.New()}
 }
 
-type BLSPubkeyReadProp BasicVectorReadProp
+type BLSPubkeyProp BasicVectorProp
 
-func (p BLSPubkeyReadProp) BLSPubkey() (out BLSPubkey, err error) {
-	if v, err := BasicVectorReadProp(p).BasicVector(); err != nil {
+func (p BLSPubkeyProp) BLSPubkey() (out BLSPubkey, err error) {
+	if v, err := BasicVectorProp(p).BasicVector(); err != nil {
 		return BLSPubkey{}, err
 	} else {
 		pub := BLSPubkeyNode{BasicVectorView: v}
-		err = pub.IntoBytes(out[:])
-		return out, err
+		buf := bytes.NewBuffer(out[:])
+		if err := pub.Serialize(buf); err != nil {
+			return BLSPubkey{}, nil
+		}
+		copy(out[:], buf.Bytes())
+		return out, nil
 	}
 }
 
@@ -102,17 +107,21 @@ type BLSSignatureNode struct {
 }
 
 func NewBLSSignatureNode() (b *BLSSignatureNode) {
-	return &BLSSignatureNode{BasicVectorView: BLSSignatureType.New(nil)}
+	return &BLSSignatureNode{BasicVectorView: BLSSignatureType.New()}
 }
 
-type BLSSignatureReadProp BasicVectorReadProp
+type BLSSignatureProp BasicVectorProp
 
-func (p BLSSignatureReadProp) BLSSignature() (out BLSSignature, err error) {
-	if v, err := BasicVectorReadProp(p).BasicVector(); err != nil {
+func (p BLSSignatureProp) BLSSignature() (out BLSSignature, err error) {
+	if v, err := BasicVectorProp(p).BasicVector(); err != nil {
 		return BLSSignature{}, err
 	} else {
 		sig := BLSSignatureNode{BasicVectorView: v}
-		err = sig.IntoBytes(out[:])
-		return out, err
+		buf := bytes.NewBuffer(out[:])
+		if err := sig.Serialize(buf); err != nil {
+			return BLSSignature{}, nil
+		}
+		copy(out[:], buf.Bytes())
+		return out, nil
 	}
 }

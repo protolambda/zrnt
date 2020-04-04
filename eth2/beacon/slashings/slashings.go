@@ -46,7 +46,7 @@ func (sl *Slashings) Total() (sum Gwei, err error) {
 	return
 }
 
-type SlashingsProp ReadPropFn
+type SlashingsProp PropFn
 
 func (p SlashingsProp) Slashings() (*Slashings, error) {
 	if v, err := p(); err != nil {
@@ -69,6 +69,7 @@ type SlashingProcessInput interface {
 	meta.Staking
 	meta.EffectiveBalances
 	meta.Slashing
+	meta.SlashingTask
 	meta.Exits
 }
 

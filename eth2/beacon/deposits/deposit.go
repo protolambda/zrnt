@@ -61,10 +61,10 @@ type Deposit struct {
 	Data  DepositData
 }
 
-var DepositType = &ContainerType{
+var DepositType = ContainerType("Deposit", []FieldDef{
 	{"proof", DepositProofType}, // Merkle path to deposit data list root
 	{"data", DepositDataType},
-}
+})
 
 // Process an Eth1 deposit, registering a validator or increasing its balance.
 func ProcessDeposit(input DepositProcessInput, dep *Deposit) error {

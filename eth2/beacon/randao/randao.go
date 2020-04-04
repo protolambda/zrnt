@@ -19,7 +19,7 @@ type RandaoProcessor interface {
 }
 
 // Randomness and committees
-type RandaoMixes struct{ *VectorView }
+type RandaoMixes struct{ *ComplexVectorView }
 
 var RandaoMixesType = VectorType(Bytes32Type, uint64(EPOCHS_PER_HISTORICAL_VECTOR))
 
@@ -41,10 +41,10 @@ func (mixes *RandaoMixes) PrepareRandao(epoch Epoch) error {
 	return mixes.SetRandomMix(epoch, prev)
 }
 
-func SeedRandao(seed Root, hook ViewHook) (*RandaoMixes, error) {
+func SeedRandao(seed Root, hook BackingHook) (*RandaoMixes, error) {
 	filler := seed
 	length := uint64(EPOCHS_PER_HISTORICAL_VECTOR)
-	c, err := tree.SubtreeFillToLength(&filler, tree.GetDepth(length), length)
+	c, err := tree.SubtreeFillToLength(&filler, tree.CoverDepth(length), length)
 	if err != nil {
 		return nil, err
 	}
@@ -52,21 +52,21 @@ func SeedRandao(seed Root, hook ViewHook) (*RandaoMixes, error) {
 	if err != nil {
 		return nil, err
 	}
-	vecView, ok := v.(*VectorView)
+	vecView, ok := v.(*ComplexVectorView)
 	if !ok {
 		return nil, errors.New("expected vector view from RandaoMixesType")
 	}
-	return &RandaoMixes{VectorView: vecView}, nil
+	return &RandaoMixes{ComplexVectorView: vecView}, nil
 }
 
-type RandaoMixesProp VectorReadProp
+type RandaoMixesProp ComplexVectorProp
 
 func (p RandaoMixesProp) RandaoMixes() (*RandaoMixes, error) {
-	v, err := VectorReadProp(p).Vector()
+	v, err := ComplexVectorProp(p).Vector()
 	if err != nil {
 		return nil, err
 	}
-	return &RandaoMixes{VectorView: v}, nil
+	return &RandaoMixes{ComplexVectorView: v}, nil
 }
 
 func (p *RandaoMixesProp) GetRandomMix(epoch Epoch) (Root, error) {

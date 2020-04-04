@@ -19,11 +19,11 @@ func (p GenesisValidatorsRootProp) GenesisValidatorsRoot() (Root, error) {
 	return (RootReadProp)(p).Root()
 }
 
-var ForkType = &ContainerType{
+var ForkType = ContainerType("Fork", []FieldDef{
 	{"previous_version", VersionType},
 	{"current_version", VersionType},
 	{"epoch", EpochType}, // Epoch of latest fork
-}
+})
 
 type Fork struct { *ContainerView }
 

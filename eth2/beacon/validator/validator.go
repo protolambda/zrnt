@@ -6,7 +6,7 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
-var ValidatorType = &ContainerType{
+var ValidatorType = ContainerType("Validator", []FieldDef{
 	{"pubkey", BLSPubkeyType},
 	{"withdrawal_credentials", Bytes32Type}, // Commitment to pubkey for withdrawals
 	{"effective_balance", GweiType},         // Balance at stake
@@ -16,18 +16,18 @@ var ValidatorType = &ContainerType{
 	{"activation_epoch", EpochType},
 	{"exit_epoch", EpochType},
 	{"withdrawable_epoch", EpochType}, // When validator can withdraw funds
-}
+})
 
 type Validator struct {
 	*ContainerView
 }
 
 func NewValidator() *Validator {
-	return &Validator{ContainerView: ValidatorType.New(nil)}
+	return &Validator{ContainerView: ValidatorType.New()}
 }
 
 func (v *Validator) Pubkey() (BLSPubkey, error) {
-	return BLSPubkeyReadProp(PropReader(v, 1)).BLSPubkey()
+	return BLSPubkeyProp(PropReader(v, 1)).BLSPubkey()
 }
 func (v *Validator) WithdrawalCredentials() (out Root, err error) {
 	return RootReadProp(PropReader(v, 1)).Root()

@@ -6,7 +6,7 @@ import (
 	"github.com/protolambda/zrnt/eth2/beacon/registry"
 	"github.com/protolambda/zrnt/eth2/beacon/rewardpenalty"
 	"github.com/protolambda/zrnt/eth2/beacon/slashings"
-	"github.com/protolambda/zrnt/eth2/meta"
+
 
 	"github.com/protolambda/zrnt/eth2/util/math"
 	"sort"

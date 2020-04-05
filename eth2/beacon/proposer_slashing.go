@@ -2,8 +2,6 @@ package beacon
 
 import (
 	"errors"
-	. "github.com/protolambda/zrnt/eth2/beacon/header"
-	"github.com/protolambda/zrnt/eth2/meta"
 
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zssz"
@@ -23,9 +21,9 @@ var ProposerSlashingType =  ContainerType("ProposerSlashing", []FieldDef{
 	{"header_2", SignedBeaconBlockHeaderType},
 })
 
-func ProcessProposerSlashings(input PropSlashProcessInput, ops []ProposerSlashing) error {
+func (state *BeaconStateView) ProcessProposerSlashings(ops []ProposerSlashing) error {
 	for i := range ops {
-		if err := ProcessProposerSlashing(input, &ops[i]); err != nil {
+		if err := state.ProcessProposerSlashing(&ops[i]); err != nil {
 			return err
 		}
 	}

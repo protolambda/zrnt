@@ -1,7 +1,7 @@
 package beacon
 
 import (
-	"github.com/protolambda/zrnt/eth2/meta"
+
 )
 
 func (state *BeaconStateView) ProcessEpochFinalUpdates() error {

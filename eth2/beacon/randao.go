@@ -3,7 +3,7 @@ package beacon
 import (
 	"encoding/binary"
 	"errors"
-	"github.com/protolambda/zrnt/eth2/meta"
+
 
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	. "github.com/protolambda/zrnt/eth2/util/hashing"

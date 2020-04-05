@@ -5,6 +5,32 @@ import (
 	"github.com/protolambda/ztyp/tree"
 )
 
+func (state *BeaconStateView) ProcessSlot() error {
+	// Cache latest known state root (for previous slot)
+	latestStateRoot := f.Meta.StateRoot()
+
+	if err := f.Meta.UpdateLatestBlockStateRoot(latestStateRoot); err != nil {
+		return err
+	}
+
+	previousBlockRoot, err := f.Meta.GetLatestBlockRoot()
+	if err != nil {
+		return err
+	}
+
+	currentSlot, err := f.Meta.CurrentSlot()
+	if err != nil {
+		return err
+	}
+
+	// Cache latest known block and state root
+	if err := state.SetRecentRoots(currentSlot, previousBlockRoot, latestStateRoot); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Process the state to the given slot.
 // Returns an error if the slot is older than the state is already at.
 // Mutates the state, does not copy.

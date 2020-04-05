@@ -2,7 +2,7 @@ package beacon
 
 import (
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/meta"
+
 
 	. "github.com/protolambda/ztyp/props"
 	. "github.com/protolambda/ztyp/view"

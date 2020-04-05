@@ -1,7 +1,6 @@
 package beacon
 
 import (
-	. "github.com/protolambda/ztyp/props"
 	. "github.com/protolambda/ztyp/view"
 )
 
@@ -31,37 +30,37 @@ func AsValidator(v View, err error) (*ValidatorView, error) {
 }
 
 func (v *ValidatorView) Pubkey() (BLSPubkey, error) {
-	return BLSPubkeyProp(PropReader(v, 1)).BLSPubkey()
+	return AsBLSPubkey(v.Get(0))
 }
 func (v *ValidatorView) WithdrawalCredentials() (out Root, err error) {
-	return RootReadProp(PropReader(v, 1)).Root()
+	return AsRoot(v.Get(1))
 }
 func (v *ValidatorView) EffectiveBalance() (Gwei, error) {
-	return GweiReadProp(PropReader(v, 2)).Gwei()
+	return AsGwei(v.Get(2))
 }
-func (v *ValidatorView) Slashed() (bool, error) {
-	return BoolReadProp(PropReader(v, 3)).Bool()
+func (v *ValidatorView) Slashed() (BoolView, error) {
+	return AsBool(v.Get(3))
 }
 func (v *ValidatorView) MakeSlashed() error {
-	return BoolWriteProp(PropWriter(v, 3)).SetBool(true)
+	return v.Set(3, BoolView(true))
 }
 func (v *ValidatorView) ActivationEligibilityEpoch() (Epoch, error) {
-	return EpochReadProp(PropReader(v, 4)).Epoch()
+	return AsEpoch(v.Get(4))
 }
 func (v *ValidatorView) ActivationEpoch() (Epoch, error) {
-	return EpochReadProp(PropReader(v, 5)).Epoch()
+	return AsEpoch(v.Get(5))
 }
 func (v *ValidatorView) SetActivationEpoch(epoch Epoch) error {
-	return EpochWriteProp(PropWriter(v, 5)).SetEpoch(epoch)
+	return v.Set(5, Uint64View(epoch))
 }
 func (v *ValidatorView) ExitEpoch() (Epoch, error) {
-	return EpochReadProp(PropReader(v, 6)).Epoch()
+	return AsEpoch(v.Get(6))
 }
 func (v *ValidatorView) WithdrawableEpoch() (Epoch, error) {
-	return EpochReadProp(PropReader(v, 7)).Epoch()
+	return AsEpoch(v.Get(7))
 }
 func (v *ValidatorView) SetWithdrawableEpoch(epoch Epoch) error {
-	return EpochWriteProp(PropWriter(v, 7)).SetEpoch(epoch)
+	return v.Set(6, Uint64View(epoch))
 }
 
 func (v *ValidatorView) IsActive(epoch Epoch) (bool, error) {

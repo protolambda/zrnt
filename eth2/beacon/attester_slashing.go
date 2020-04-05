@@ -3,9 +3,6 @@ package beacon
 import (
 	"errors"
 	"fmt"
-	. "github.com/protolambda/zrnt/eth2/beacon/attestations"
-	"github.com/protolambda/zrnt/eth2/meta"
-
 	"github.com/protolambda/zssz"
 	. "github.com/protolambda/ztyp/view"
 )

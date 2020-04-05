@@ -1,6 +1,9 @@
 package beacon
 
 import (
+	"github.com/protolambda/zrnt/eth2/util/hashing"
+	"github.com/protolambda/zssz"
+	"github.com/protolambda/zssz/htr"
 	. "github.com/protolambda/ztyp/view"
 )
 
@@ -20,6 +23,33 @@ func (v Version) View() SmallByteVecView {
 
 func AsVersion(v View, err error) (Version, error) {
 	return AsBytes4(v, err)
+}
+
+
+// A digest of the current fork data
+type ForkDigest [4]byte
+
+type ForkData struct {
+	CurrentVersion Version
+	GenesisValidatorsRoot Root
+}
+
+var ForkDataSSZ = zssz.GetSSZ((*ForkData)(nil))
+
+func ComputeForkDataRoot(currentVersion Version, genesisValidatorsRoot Root) Root {
+	data := ForkData{
+		CurrentVersion: currentVersion,
+		GenesisValidatorsRoot: genesisValidatorsRoot,
+	}
+	hFn := hashing.GetHashFn()
+	return zssz.HashTreeRoot(htr.HashFn(hFn), &data, ForkDataSSZ)
+}
+
+func ComputeForkDigest(currentVersion Version, genesisValidatorsRoot Root) ForkDigest {
+	var digest ForkDigest
+	dataRoot := ComputeForkDataRoot(currentVersion, genesisValidatorsRoot)
+	copy(digest[:], dataRoot[:4])
+	return digest
 }
 
 type Fork struct {

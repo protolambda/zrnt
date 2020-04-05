@@ -25,32 +25,6 @@ type BLSDomainType [4]byte
 // BLS domain (8 bytes): fork version (32 bits) concatenated with BLS domain type (32 bits)
 type BLSDomain [32]byte
 
-// A digest of the current fork data
-type ForkDigest [4]byte
-
-type ForkData struct {
-	CurrentVersion Version
-	GenesisValidatorsRoot Root
-}
-
-var ForkDataSSZ = zssz.GetSSZ((*ForkData)(nil))
-
-func ComputeForkDataRoot(currentVersion Version, genesisValidatorsRoot Root) Root {
-	data := ForkData{
-		CurrentVersion: currentVersion,
-		GenesisValidatorsRoot: genesisValidatorsRoot,
-	}
-	hFn := hashing.GetHashFn()
-	return zssz.HashTreeRoot(htr.HashFn(hFn), &data, ForkDataSSZ)
-}
-
-func ComputeForkDigest(currentVersion Version, genesisValidatorsRoot Root) ForkDigest {
-	var digest ForkDigest
-	dataRoot := ComputeForkDataRoot(currentVersion, genesisValidatorsRoot)
-	copy(digest[:], dataRoot[:4])
-	return digest
-}
-
 func ComputeDomain(domainType BLSDomainType, forkVersion Version, genesisValidatorsRoot Root) (out BLSDomain) {
 	copy(out[0:4], domainType[:])
 	forkDataRoot := ComputeForkDataRoot(forkVersion, genesisValidatorsRoot)

@@ -46,28 +46,6 @@ func LoadBeaconProposersData(input PrepareProposersInput) (out *ProposersData, e
 	}, nil
 }
 
-func computeProposerIndex(input PrepareProposersInput, indices []ValidatorIndex, seed Root) (ValidatorIndex, error) {
-	buf := make([]byte, 32+8, 32+8)
-	copy(buf[0:32], seed[:])
-	for i := uint64(0); i < 1000; i++ {
-		binary.LittleEndian.PutUint64(buf[32:], i)
-		h := Hash(buf)
-		for j := uint64(0); j < 32; j++ {
-			randomByte := h[j]
-			absI := ValidatorIndex(((i << 5) | j) % uint64(len(indices)))
-			shuffledI := shuffle.PermuteIndex(absI, uint64(len(indices)), seed)
-			candidateIndex := indices[shuffledI]
-			effectiveBalance, err := input.EffectiveBalance(candidateIndex)
-			if err != nil {
-				return 0, err
-			}
-			if effectiveBalance*0xff >= MAX_EFFECTIVE_BALANCE*Gwei(randomByte) {
-				return candidateIndex, nil
-			}
-		}
-	}
-	return 0, errors.New("random (but balance-biased) infinite scrolling through a committee should always find a proposer")
-}
 
 // Return the beacon proposer index for the current slot
 func LoadBeaconProposerIndices(input PrepareProposersInput, epoch Epoch) (out *EpochProposerIndices, err error) {

@@ -12,6 +12,57 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
+var DepositDataType = ContainerType("DepositData", []FieldDef{
+	{"pubkey", BLSPubkeyType},
+	{"withdrawal_credentials", Bytes32Type},
+	{"amount", GweiType},
+	{"signature", BLSSignatureType},
+})
+
+var DepositDataSSZ = zssz.GetSSZ((*DepositData)(nil))
+
+type DepositData struct {
+	Pubkey                BLSPubkey
+	WithdrawalCredentials Root
+	Amount                Gwei
+	// Signing over DepositMessage
+	Signature BLSSignature
+}
+
+func (d *DepositData) ToMessage() *DepositMessage {
+	return &DepositMessage{
+		Pubkey:                d.Pubkey,
+		WithdrawalCredentials: d.WithdrawalCredentials,
+		Amount:                d.Amount,
+	}
+}
+
+func (d *DepositData) MessageRoot() Root {
+	return ssz.HashTreeRoot(d.ToMessage(), DepositMessageSSZ)
+}
+
+var DepositMessageSSZ = zssz.GetSSZ((*DepositMessage)(nil))
+
+type DepositMessage struct {
+	Pubkey                BLSPubkey
+	WithdrawalCredentials Root
+	Amount                Gwei
+}
+
+var DepositProofType = VectorType(Bytes32Type, DEPOSIT_CONTRACT_TREE_DEPTH+1)
+
+var DepositSSZ = zssz.GetSSZ((*Deposit)(nil))
+
+type Deposit struct {
+	Proof [DEPOSIT_CONTRACT_TREE_DEPTH + 1]Root // Merkle-path to deposit root
+	Data  DepositData
+}
+
+var DepositType = ContainerType("Deposit", []FieldDef{
+	{"proof", DepositProofType}, // Merkle path to deposit data list root
+	{"data", DepositDataType},
+})
+
 // Verify that outstanding deposits are processed up to the maximum number of deposits, then process all in order.
 func (state *BeaconStateView) ProcessDeposits(ops []Deposit) error {
 	inputCount := DepositIndex(len(ops))
@@ -42,20 +93,6 @@ func (state *BeaconStateView) ProcessDeposits(ops []Deposit) error {
 	}
 	return nil
 }
-
-var DepositProofType = VectorType(Bytes32Type, DEPOSIT_CONTRACT_TREE_DEPTH+1)
-
-var DepositSSZ = zssz.GetSSZ((*Deposit)(nil))
-
-type Deposit struct {
-	Proof [DEPOSIT_CONTRACT_TREE_DEPTH + 1]Root // Merkle-path to deposit root
-	Data  DepositData
-}
-
-var DepositType = ContainerType("Deposit", []FieldDef{
-	{"proof", DepositProofType}, // Merkle path to deposit data list root
-	{"data", DepositDataType},
-})
 
 // Process an Eth1 deposit, registering a validator or increasing its balance.
 func (state *BeaconStateView) ProcessDeposit(dep *Deposit) error {

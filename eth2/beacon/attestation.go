@@ -12,7 +12,7 @@ import (
 
 func (state *AttestationsProps) ProcessAttestations(ops []Attestation) error {
 	for i := range ops {
-		if err := state.ProcessAttestation(input, &ops[i]); err != nil {
+		if err := state.ProcessAttestation(&ops[i]); err != nil {
 			return err
 		}
 	}
@@ -35,7 +35,7 @@ var AttestationType = ContainerType("Attestation", []FieldDef{
 	{"signature", BLSSignatureType},
 })
 
-func (state *AttestationsProps) ProcessAttestation(input AttestationProcessInput, attestation *Attestation) error {
+func (state *AttestationsProps) ProcessAttestation(attestation *Attestation) error {
 	data := &attestation.Data
 
 	// Check slot

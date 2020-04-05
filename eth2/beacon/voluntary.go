@@ -2,17 +2,15 @@ package beacon
 
 import (
 	"errors"
-	"github.com/protolambda/zrnt/eth2/meta"
-
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/protolambda/zssz"
 	. "github.com/protolambda/ztyp/view"
 )
 
-func ProcessVoluntaryExits(input VoluntaryExitProcessInput, ops []SignedVoluntaryExit) error {
+func (state *BeaconStateView) ProcessVoluntaryExits(ops []SignedVoluntaryExit) error {
 	for i := range ops {
-		if err := ProcessVoluntaryExit(input, &ops[i]); err != nil {
+		if err := state.ProcessVoluntaryExit(&ops[i]); err != nil {
 			return err
 		}
 	}
@@ -45,7 +43,7 @@ var SignedVoluntaryExitType = ContainerType("SignedVoluntaryExit", []FieldDef{
 	{"signature", BLSSignatureType},
 })
 
-func ProcessVoluntaryExit(input VoluntaryExitProcessInput, signedExit *SignedVoluntaryExit) error {
+func (state *BeaconStateView) ProcessVoluntaryExit(signedExit *SignedVoluntaryExit) error {
 	exit := &signedExit.Message
 	currentEpoch, err := input.CurrentEpoch()
 	if err != nil {

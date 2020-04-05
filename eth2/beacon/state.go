@@ -1,18 +1,6 @@
 package beacon
 
 import (
-	. "github.com/protolambda/zrnt/eth2/beacon/attestations"
-	. "github.com/protolambda/zrnt/eth2/beacon/eth1"
-	. "github.com/protolambda/zrnt/eth2/beacon/finality"
-	. "github.com/protolambda/zrnt/eth2/beacon/header"
-	. "github.com/protolambda/zrnt/eth2/beacon/history"
-	. "github.com/protolambda/zrnt/eth2/beacon/randao"
-	. "github.com/protolambda/zrnt/eth2/beacon/registry"
-	. "github.com/protolambda/zrnt/eth2/beacon/slashings"
-	. "github.com/protolambda/zrnt/eth2/beacon/versioning"
-
-	. "github.com/protolambda/ztyp/props"
-	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
 
@@ -66,44 +54,85 @@ func (state *BeaconStateView) Slot() (Slot, error) {
 }
 
 func (state *BeaconStateView) Fork() (*ForkView, error) {
-	return AsFork(state.Get(2))
+	return AsFork(state.Get(3))
 }
 
-// MutProps returns a mutable view of the BeaconState
-func (state *BeaconStateView) Props() *BeaconStateProps {
-	return &BeaconStateProps{
-		VersioningProps: VersioningProps{
-			GenesisTimeProp: GenesisTimeProp(PropReader(state, 0)),
-			GenesisValidatorsRootProp: GenesisValidatorsRootProp(PropReader(state, 1)),
-			CurrentSlotMutProp: CurrentSlotMutProp{
-				CurrentSlotReadProp: CurrentSlotReadProp(PropReader(state, 2)),
-				SlotWriteProp: SlotWriteProp(PropWriter(state, 3)),// TODO
-			},
-			ForkProp:        ForkProp(PropReader(state, 4)),
-		},
-		LatestBlockHeaderProp: LatestBlockHeaderProp(PropReader(state, 5)),
-		HistoryProps: HistoryProps{
-			BlockRootsProp:      BlockRootsProp(PropReader(state, 6)),
-			StateRootsProp:      StateRootsProp(PropReader(state, 7)),
-			HistoricalRootsProp: HistoricalRootsProp(PropReader(state, 8)),
-		},
-		// TODO remaining props
-		RandaoMixesProp:      RandaoMixesProp(PropReader(state, 9)),
-		SlashingsProp:      SlashingsProp(PropReader(state, 10)),
-		AttestationsProps:  AttestationsProps{
-			PreviousEpochAttestations: EpochPendingAttestationsProp(PropReader(state, 11)),
-			CurrentEpochAttestations:  EpochPendingAttestationsProp(PropReader(state, 12)),
-		},
-		FinalityProps: FinalityProps{
-			JustificationBits:           JustificationBitsProp(PropReader(state, 13)),
-			PreviousJustifiedCheckpoint: CheckpointProp(PropReader(state, 14)),
-			CurrentJustifiedCheckpoint:  CheckpointProp(PropReader(state, 15)),
-			FinalizedCheckpoint:         CheckpointProp(PropReader(state, 16)),
-		},
+func (state *BeaconStateView) LatestBlockHeader() (*BeaconBlockHeaderView, error) {
+	return AsBlockHeader(state.Get(4))
+}
+
+func (state *BeaconStateView) SetLatestBlockHeader(v *BeaconBlockHeaderView) error {
+	return state.Set(4, v)
+}
+
+func (state *BeaconStateView) BlockRoots() (*BlockRootsView, error) {
+	return AsBlockRoots(state.Get(5))
+}
+
+func (state *BeaconStateView) StateRoots() (*StateRootsView, error) {
+	return AsStateRoots(state.Get(6))
+}
+
+func (state *BeaconStateView) HistoricalRoots() (*HistoricalRootsView, error) {
+	return AsHistoricalRoots(state.Get(7))
+}
+
+func (state *BeaconStateView) Eth1Data() (*Eth1DataView, error) {
+	return AsEth1Data(state.Get(8))
+}
+
+func (state *BeaconStateView) Eth1DataVotes() (*Eth1DataVotesView, error) {
+	return AsEth1DataVotes(state.Get(9))
+}
+
+func (state *BeaconStateView) DepositIndex() (DepositIndex, error) {
+	return AsDepositIndex(state.Get(10))
+}
+
+func (state *BeaconStateView) IncrementDepositIndex() error {
+	depIndex, err := state.DepositIndex()
+	if err != nil {
+		return err
 	}
+	return state.Set(10, Uint64View(depIndex))
 }
 
+func (state *BeaconStateView) Validators() (*ValidatorsRegistryView, error) {
+	return AsValidatorsRegistry(state.Get(11))
+}
 
-func (state *BeaconStateView) StateRoot() Root {
-	return state.HashTreeRoot(tree.GetHashFn())
+func (state *BeaconStateView) Balances() (*RegistryBalancesView, error) {
+	return AsRegistryBalances(state.Get(12))
+}
+
+func (state *BeaconStateView) RandaoMixes() (*RandaoMixesView, error) {
+	return AsRandaoMixes(state.Get(13))
+}
+
+func (state *BeaconStateView) Slashings() (*SlashingsView, error) {
+	return AsSlashings(state.Get(14))
+}
+
+func (state *BeaconStateView) PreviousEpochAttestations() (*EpochAttestationsView, error) {
+	return EpochAttestations(state.Get(15))
+}
+
+func (state *BeaconStateView) CurrentEpochAttestations() (*EpochAttestationsView, error) {
+	return EpochAttestations(state.Get(16))
+}
+
+func (state *BeaconStateView) JustificationBits() (*JustificationBitsView, error) {
+	return AsJustificationBits(state.Get(17))
+}
+
+func (state *BeaconStateView) PreviousJustifiedCheckpoint() (*CheckpointView, error) {
+	return AsCheckPoint(state.Get(18))
+}
+
+func (state *BeaconStateView) CurrentJustifiedCheckpoint() (*CheckpointView, error) {
+	return AsCheckPoint(state.Get(19))
+}
+
+func (state *BeaconStateView) FinalizedCheckpoint() (*CheckpointView, error) {
+	return AsCheckPoint(state.Get(20))
 }

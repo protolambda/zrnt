@@ -1,102 +1,106 @@
 package beacon
 
 import (
-
-	. "github.com/protolambda/ztyp/props"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
 
-var BatchRootsType = VectorType(RootType, uint64(SLOTS_PER_HISTORICAL_ROOT))
+var BlockRootsType = VectorType(RootType, uint64(SLOTS_PER_HISTORICAL_ROOT))
 
-type BatchRoots struct{ *ComplexVectorView }
+type BlockRootsView struct{ *ComplexVectorView }
 
-func (br *BatchRoots) GetRoot(slot Slot) (Root, error) {
-	return RootReadProp(PropReader(br, uint64(slot%SLOTS_PER_HISTORICAL_ROOT))).Root()
+// Return the block root at the given slot. Only valid to SLOTS_PER_HISTORICAL_ROOT slots ago.
+func (v *BlockRootsView) GetRoot(slot Slot) (Root, error) {
+	i := uint64(slot%SLOTS_PER_HISTORICAL_ROOT)
+	return AsRoot(v.Get(i))
 }
 
-func (br *BatchRoots) SetRoot(slot Slot, v Root) error {
-	return RootWriteProp(PropWriter(br, uint64(slot%SLOTS_PER_HISTORICAL_ROOT))).SetRoot(v)
+func (v *BlockRootsView) SetRoot(slot Slot, r Root) error {
+	i := uint64(slot%SLOTS_PER_HISTORICAL_ROOT)
+	rv := RootView(r)
+	return v.Set(i, &rv)
 }
 
-type BatchRootsProp ComplexVectorProp
-
-func (p BatchRootsProp) BatchRoots() (*BatchRoots, error) {
-	v, err := ComplexVectorProp(p).Vector()
-	if err != nil {
-		return nil, err
-	}
-	return &BatchRoots{ComplexVectorView: v}, nil
-}
-
-type BlockRootsProp BatchRootsProp
-
-func (p BlockRootsProp) BlockRoots() (*BatchRoots, error) {
-	return BatchRootsProp(p).BatchRoots()
+func AsBlockRoots(v View, err error) (*BlockRootsView, error) {
+	c, err := AsComplexVector(v, err)
+	return &BlockRootsView{c}, err
 }
 
 // Return the block root at a recent slot. Only valid to SLOTS_PER_HISTORICAL_ROOT slots ago.
-func (p BlockRootsProp) GetBlockRootAtSlot(slot Slot) (Root, error) {
-	batch, err := p.BlockRoots()
+func (state *BeaconStateView) GetBlockRootAtSlot(slot Slot) (Root, error) {
+	blockRoots, err := state.BlockRoots()
 	if err != nil {
 		return Root{}, err
 	}
-	return batch.GetRoot(slot % SLOTS_PER_HISTORICAL_ROOT)
+	return blockRoots.GetRoot(slot)
 }
 
 // Return the block root at a recent epoch. Only valid to SLOTS_PER_HISTORICAL_ROOT slots ago.
-func (p BlockRootsProp) GetBlockRoot(epoch Epoch) (Root, error) {
-	return p.GetBlockRootAtSlot(epoch.GetStartSlot())
+func (state *BeaconStateView) GetBlockRoot(epoch Epoch) (Root, error) {
+	blockRoots, err := state.BlockRoots()
+	if err != nil {
+		return Root{}, err
+	}
+	return blockRoots.GetRoot(epoch.GetStartSlot())
 }
 
-type StateRootsProp BatchRootsProp
+var StateRootsType = VectorType(RootType, uint64(SLOTS_PER_HISTORICAL_ROOT))
 
-func (p StateRootsProp) StateRoots() (*BatchRoots, error) {
-	return BatchRootsProp(p).BatchRoots()
+type StateRootsView struct{ *ComplexVectorView }
+
+// Return the state root at the given slot. Only valid to SLOTS_PER_HISTORICAL_ROOT slots ago.
+func (v *StateRootsView) GetRoot(slot Slot) (Root, error) {
+	i := uint64(slot%SLOTS_PER_HISTORICAL_ROOT)
+	return AsRoot(v.Get(i))
 }
 
-type HistoricalBatch struct{ *ContainerView }
-
-func (hb *HistoricalBatch) BlockRoots() (*BatchRoots, error) {
-	return BlockRootsProp(PropReader(hb, 0)).BlockRoots()
+func (v *StateRootsView) SetRoot(slot Slot, r Root) error {
+	i := uint64(slot%SLOTS_PER_HISTORICAL_ROOT)
+	rv := RootView(r)
+	return v.Set(i, &rv)
 }
 
-func (hb *HistoricalBatch) StateRoots() (*BatchRoots, error) {
-	return StateRootsProp(PropReader(hb, 1)).StateRoots()
+func AsStateRoots(v View, err error) (*StateRootsView, error) {
+	c, err := AsComplexVector(v, err)
+	return &StateRootsView{c}, err
 }
 
 var HistoricalBatchType = ContainerType("HistoricalBatch", []FieldDef{
-	{"block_roots", BatchRootsType},
-	{"state_roots", BatchRootsType},
+	{"block_roots", BlockRootsType},
+	{"state_roots", StateRootsType},
 })
 
-// roots of HistoricalBatch
-type HistoricalRoots struct{ *ComplexListView }
+type HistoricalBatchView struct{ *ContainerView }
+
+func (v *HistoricalBatchView) BlockRoots() (*BlockRootsView, error) {
+	return AsBlockRoots(v.Get(0))
+}
+
+func (v *HistoricalBatchView) StateRoots() (*StateRootsView, error) {
+	return AsStateRoots(v.Get(1))
+}
+
+func AsHistoricalBatch(v View, err error) (*HistoricalBatchView, error) {
+	c, err := AsContainer(v, err)
+	return &HistoricalBatchView{c}, err
+}
 
 var HistoricalRootsType = ListType(RootType, HISTORICAL_ROOTS_LIMIT)
 
-type HistoricalRootsProp ComplexListProp
+// roots of HistoricalBatch
+type HistoricalRootsView struct{ *ComplexListView }
 
-func (p HistoricalRootsProp) HistoricalRoots() (*HistoricalRoots, error) {
-	v, err := ComplexListProp(p).List()
-	if v != nil {
-		return nil, err
-	}
-	return &HistoricalRoots{ComplexListView: v}, nil
+func AsHistoricalRoots(v View, err error) (*HistoricalRootsView, error) {
+	c, err := AsComplexList(v, err)
+	return &HistoricalRootsView{c}, err
 }
 
-type HistoryProps struct {
-	BlockRootsProp
-	StateRootsProp
-	HistoricalRootsProp
-}
-
-func (p HistoryProps) SetRecentRoots(slot Slot, blockRoot Root, stateRoot Root) error {
-	blockRootsBatch, err := p.BlockRoots()
+func (state *BeaconStateView) SetRecentRoots(slot Slot, blockRoot Root, stateRoot Root) error {
+	blockRootsBatch, err := state.BlockRoots()
 	if err != nil {
 		return err
 	}
-	stateRootsBatch, err := p.StateRoots()
+	stateRootsBatch, err := state.StateRoots()
 	if err != nil {
 		return err
 	}
@@ -109,16 +113,16 @@ func (p HistoryProps) SetRecentRoots(slot Slot, blockRoot Root, stateRoot Root) 
 	return nil
 }
 
-func (p *HistoryProps) UpdateHistoricalRoots() error {
-	histRoots, err := p.HistoricalRoots()
+func (state *BeaconStateView) UpdateHistoricalRoots() error {
+	histRoots, err := state.HistoricalRoots()
 	if err != nil {
 		return err
 	}
-	blockRoots, err := p.BlockRoots()
+	blockRoots, err := state.BlockRoots()
 	if err != nil {
 		return err
 	}
-	stateRoots, err := p.StateRoots()
+	stateRoots, err := state.StateRoots()
 	if err != nil {
 		return err
 	}

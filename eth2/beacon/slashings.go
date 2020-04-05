@@ -11,9 +11,9 @@ import (
 // Balances slashed at every withdrawal period
 var SlashingsType = VectorType(GweiType, uint64(EPOCHS_PER_SLASHINGS_VECTOR))
 
-type Slashings struct { *BasicVectorView }
+type SlashingsView struct { *BasicVectorView }
 
-func (sl *Slashings) GetSlashingsValue(epoch Epoch) (Gwei, error) {
+func (sl *SlashingsView) GetSlashingsValue(epoch Epoch) (Gwei, error) {
 	prev, err := sl.Get(uint64(epoch%EPOCHS_PER_SLASHINGS_VECTOR))
 	if err != nil {
 		return 0, err
@@ -24,10 +24,10 @@ func (sl *Slashings) GetSlashingsValue(epoch Epoch) (Gwei, error) {
 	}
 }
 
-func (sl *Slashings) ResetSlashings(epoch Epoch) error {
+func (sl *SlashingsView) ResetSlashings(epoch Epoch) error {
 	return sl.Set(uint64(epoch%EPOCHS_PER_SLASHINGS_VECTOR), Uint64View(0))
 }
-func (sl *Slashings) AddSlashing(epoch Epoch, add Gwei) error {
+func (sl *SlashingsView) AddSlashing(epoch Epoch, add Gwei) error {
 	prev, err := sl.GetSlashingsValue(epoch)
 	if err != nil {
 		return err
@@ -35,7 +35,7 @@ func (sl *Slashings) AddSlashing(epoch Epoch, add Gwei) error {
 	return sl.Set(uint64(epoch%EPOCHS_PER_SLASHINGS_VECTOR), Uint64View(prev + add))
 }
 
-func (sl *Slashings) Total() (sum Gwei, err error) {
+func (sl *SlashingsView) Total() (sum Gwei, err error) {
 	for i := Epoch(0); i < EPOCHS_PER_SLASHINGS_VECTOR; i++ {
 		v, err := sl.GetSlashingsValue(i)
 		if err != nil {
@@ -48,10 +48,10 @@ func (sl *Slashings) Total() (sum Gwei, err error) {
 
 type SlashingsProp PropFn
 
-func (p SlashingsProp) Slashings() (*Slashings, error) {
+func (p SlashingsProp) Slashings() (*SlashingsView, error) {
 	if v, err := p(); err != nil {
 		return nil, err
-	} else if f, ok := v.(*Slashings); !ok {
+	} else if f, ok := v.(*SlashingsView); !ok {
 		return nil, fmt.Errorf("not a fork view: %v", v)
 	} else {
 		return f, nil

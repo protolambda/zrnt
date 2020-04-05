@@ -3,8 +3,6 @@ package beacon
 import (
 	"errors"
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/meta"
-
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 	. "github.com/protolambda/ztyp/view"
@@ -31,7 +29,7 @@ var IndexedAttestationType = ContainerType("IndexedAttestation", []FieldDef{
 })
 
 // Verify validity of slashable_attestation fields.
-func (indexedAttestation *IndexedAttestation) Validate(m AttestationValidator) error {
+func (state *BeaconStateView) Validate(indexedAttestation *IndexedAttestation)  error {
 	// wrap it in validator-sets. Does not sort it, but does make checking if it is a lot easier.
 	indices := ValidatorSet(indexedAttestation.AttestingIndices)
 
@@ -78,7 +76,7 @@ func (indexedAttestation *IndexedAttestation) Validate(m AttestationValidator) e
 		return nil
 	}
 
-	dom, err := m.GetDomain(DOMAIN_BEACON_ATTESTER, indexedAttestation.Data.Target.Epoch)
+	dom, err := state.GetDomain(DOMAIN_BEACON_ATTESTER, indexedAttestation.Data.Target.Epoch)
 	if err != nil {
 		return err
 	}

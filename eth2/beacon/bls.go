@@ -5,7 +5,6 @@ import (
 	"github.com/protolambda/zrnt/eth2/util/hashing"
 	"github.com/protolambda/zssz"
 	"github.com/protolambda/zssz/htr"
-	. "github.com/protolambda/ztyp/props"
 	. "github.com/protolambda/ztyp/view"
 )
 
@@ -45,7 +44,7 @@ func ComputeForkDataRoot(currentVersion Version, genesisValidatorsRoot Root) Roo
 	return zssz.HashTreeRoot(htr.HashFn(hFn), &data, ForkDataSSZ)
 }
 
-func CompureForkDigest(currentVersion Version, genesisValidatorsRoot Root) ForkDigest {
+func ComputeForkDigest(currentVersion Version, genesisValidatorsRoot Root) ForkDigest {
 	var digest ForkDigest
 	dataRoot := ComputeForkDataRoot(currentVersion, genesisValidatorsRoot)
 	copy(digest[:], dataRoot[:4])
@@ -75,53 +74,48 @@ func ComputeSigningRoot(msgRoot Root, dom BLSDomain) Root {
 	return zssz.HashTreeRoot(htr.HashFn(hFn), &withDomain, SigningRootSSZ)
 }
 
-// For pubkeys/signatures in state, a tree-representation is used.
+// For pubkeys/signatures in state, a tree-representation is used. (TODO: cache optimized deserialized/parsed bls points)
 
-type BLSPubkeyNode struct {
+type BLSPubkeyView struct {
 	*BasicVectorView
 }
 
-func NewBLSPubkeyNode() (b *BLSPubkeyNode) {
-	return &BLSPubkeyNode{BasicVectorView: BLSPubkeyType.New()}
-}
-
-type BLSPubkeyProp BasicVectorProp
-
-func (p BLSPubkeyProp) BLSPubkey() (out BLSPubkey, err error) {
-	if v, err := BasicVectorProp(p).BasicVector(); err != nil {
+func AsBLSPubkey(v View, err error) (BLSPubkey, error) {
+	if err != nil {
 		return BLSPubkey{}, err
-	} else {
-		pub := BLSPubkeyNode{BasicVectorView: v}
-		buf := bytes.NewBuffer(out[:])
-		if err := pub.Serialize(buf); err != nil {
-			return BLSPubkey{}, nil
-		}
-		copy(out[:], buf.Bytes())
-		return out, nil
 	}
+	bv, err := AsBasicVector(v, nil)
+	if err != nil {
+		return BLSPubkey{}, err
+	}
+	pub := BLSPubkeyView{BasicVectorView: bv}
+	var out BLSPubkey
+	buf := bytes.NewBuffer(out[:])
+	if err := pub.Serialize(buf); err != nil {
+		return BLSPubkey{}, nil
+	}
+	copy(out[:], buf.Bytes())
+	return out, nil
 }
 
-
-type BLSSignatureNode struct {
+type BLSSignatureView struct {
 	*BasicVectorView
 }
 
-func NewBLSSignatureNode() (b *BLSSignatureNode) {
-	return &BLSSignatureNode{BasicVectorView: BLSSignatureType.New()}
-}
-
-type BLSSignatureProp BasicVectorProp
-
-func (p BLSSignatureProp) BLSSignature() (out BLSSignature, err error) {
-	if v, err := BasicVectorProp(p).BasicVector(); err != nil {
+func AsBLSSignature(v View, err error) (BLSSignature, error) {
+	if err != nil {
 		return BLSSignature{}, err
-	} else {
-		sig := BLSSignatureNode{BasicVectorView: v}
-		buf := bytes.NewBuffer(out[:])
-		if err := sig.Serialize(buf); err != nil {
-			return BLSSignature{}, nil
-		}
-		copy(out[:], buf.Bytes())
-		return out, nil
 	}
+	bv, err := AsBasicVector(v, nil)
+	if err != nil {
+		return BLSSignature{}, err
+	}
+	pub := BLSSignatureView{BasicVectorView: bv}
+	var out BLSSignature
+	buf := bytes.NewBuffer(out[:])
+	if err := pub.Serialize(buf); err != nil {
+		return BLSSignature{}, nil
+	}
+	copy(out[:], buf.Bytes())
+	return out, nil
 }

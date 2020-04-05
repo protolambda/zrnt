@@ -24,45 +24,23 @@ var Eth1DataType = ContainerType("Eth1Data", []FieldDef{
 	{"block_hash", Bytes32Type},
 })
 
-type Eth1DataNode struct { *ContainerView }
+type Eth1DataView struct { *ContainerView }
 
-func NewEth1DataNode() *Eth1DataNode {
-	return &Eth1DataNode{ContainerView: Eth1DataType.New()}
+func AsEth1Data(v View, err error) (*Eth1DataView, error) {
+	c, err := AsContainer(v, err)
+	return &Eth1DataView{c}, err
 }
 
-type Eth1DataProp ContainerProp
-
-func (p Eth1DataProp) Eth1Data() (*Eth1DataNode, error) {
-	if c, err := (ContainerProp)(p).Container(); err != nil {
-		return nil, err
-	} else {
-		return &Eth1DataNode{ContainerView: c}, nil
-	}
+func (v *Eth1DataView) DepositRoot() (Root, error) {
+	return AsRoot(v.Get(0))
 }
 
-func (v *Eth1DataNode) DepositRoot() (Root, error) {
-	return RootReadProp(PropReader(v, 0)).Root()
+func (v *Eth1DataView) DepositCount() (DepositIndex, error) {
+	return AsDepositIndex(v.Get(1))
 }
 
-func (v *Eth1DataNode) DepositCount() (DepositIndex, error) {
-	return DepositIndexReadProp(PropReader(v, 1)).DepositIndex()
-}
-
-func (v *Eth1DataNode) DepositIndex() (DepositIndex, error) {
-	return DepositIndexReadProp(PropReader(v, 2)).DepositIndex()
-}
-
-type StateDepositIndexProps struct {
-	DepositIndexReadProp
-	DepositIndexWriteProp
-}
-
-func (p *StateDepositIndexProps) IncrementDepositIndex() error {
-	d, err := p.DepositIndexReadProp.DepositIndex()
-	if err != nil {
-		return err
-	}
-	return p.DepositIndexWriteProp.SetDepositIndex(d + 1)
+func (v *Eth1DataView) DepositIndex() (DepositIndex, error) {
+	return AsDepositIndex(v.Get(2))
 }
 
 // Ethereum 1.0 chain data

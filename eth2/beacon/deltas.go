@@ -29,7 +29,7 @@ func (deltas *Deltas) Add(other *Deltas) {
 	}
 }
 
-func AttestationDeltas(input AttestationDeltasInput) (*Deltas, error) {
+func (state *BeaconStateView) AttestationDeltas() (*Deltas, error) {
 	cres, err := input.ValidatorCount()
 	if err != nil {
 		return nil, err

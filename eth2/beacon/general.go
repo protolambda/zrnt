@@ -49,6 +49,10 @@ type CheckpointView struct {
 	*ContainerView
 }
 
+func (v *CheckpointView) Set(ch *Checkpoint) error {
+	return v.SetBacking(ch.View().Backing())
+}
+
 func (v *CheckpointView) Epoch() (Epoch, error) {
 	return AsEpoch(v.Get(0))
 }

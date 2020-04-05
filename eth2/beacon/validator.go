@@ -17,49 +17,54 @@ var ValidatorType = ContainerType("Validator", []FieldDef{
 	{"withdrawable_epoch", EpochType}, // When validator can withdraw funds
 })
 
-type Validator struct {
+type ValidatorView struct {
 	*ContainerView
 }
 
-func NewValidator() *Validator {
-	return &Validator{ContainerView: ValidatorType.New()}
+func NewValidatorView() *ValidatorView {
+	return &ValidatorView{ContainerView: ValidatorType.New()}
 }
 
-func (v *Validator) Pubkey() (BLSPubkey, error) {
+func AsValidator(v View, err error) (*ValidatorView, error) {
+	c, err := AsContainer(v, err)
+	return &ValidatorView{c}, err
+}
+
+func (v *ValidatorView) Pubkey() (BLSPubkey, error) {
 	return BLSPubkeyProp(PropReader(v, 1)).BLSPubkey()
 }
-func (v *Validator) WithdrawalCredentials() (out Root, err error) {
+func (v *ValidatorView) WithdrawalCredentials() (out Root, err error) {
 	return RootReadProp(PropReader(v, 1)).Root()
 }
-func (v *Validator) EffectiveBalance() (Gwei, error) {
+func (v *ValidatorView) EffectiveBalance() (Gwei, error) {
 	return GweiReadProp(PropReader(v, 2)).Gwei()
 }
-func (v *Validator) Slashed() (bool, error) {
+func (v *ValidatorView) Slashed() (bool, error) {
 	return BoolReadProp(PropReader(v, 3)).Bool()
 }
-func (v *Validator) MakeSlashed() error {
+func (v *ValidatorView) MakeSlashed() error {
 	return BoolWriteProp(PropWriter(v, 3)).SetBool(true)
 }
-func (v *Validator) ActivationEligibilityEpoch() (Epoch, error) {
+func (v *ValidatorView) ActivationEligibilityEpoch() (Epoch, error) {
 	return EpochReadProp(PropReader(v, 4)).Epoch()
 }
-func (v *Validator) ActivationEpoch() (Epoch, error) {
+func (v *ValidatorView) ActivationEpoch() (Epoch, error) {
 	return EpochReadProp(PropReader(v, 5)).Epoch()
 }
-func (v *Validator) SetActivationEpoch(epoch Epoch) error {
+func (v *ValidatorView) SetActivationEpoch(epoch Epoch) error {
 	return EpochWriteProp(PropWriter(v, 5)).SetEpoch(epoch)
 }
-func (v *Validator) ExitEpoch() (Epoch, error) {
+func (v *ValidatorView) ExitEpoch() (Epoch, error) {
 	return EpochReadProp(PropReader(v, 6)).Epoch()
 }
-func (v *Validator) WithdrawableEpoch() (Epoch, error) {
+func (v *ValidatorView) WithdrawableEpoch() (Epoch, error) {
 	return EpochReadProp(PropReader(v, 7)).Epoch()
 }
-func (v *Validator) SetWithdrawableEpoch(epoch Epoch) error {
+func (v *ValidatorView) SetWithdrawableEpoch(epoch Epoch) error {
 	return EpochWriteProp(PropWriter(v, 7)).SetEpoch(epoch)
 }
 
-func (v *Validator) IsActive(epoch Epoch) (bool, error) {
+func (v *ValidatorView) IsActive(epoch Epoch) (bool, error) {
 	activationEpoch, err := v.ActivationEpoch()
 	if err != nil {
 		return false, err
@@ -75,7 +80,7 @@ func (v *Validator) IsActive(epoch Epoch) (bool, error) {
 	return true, nil
 }
 
-func (v *Validator) IsSlashable(epoch Epoch) (bool, error) {
+func (v *ValidatorView) IsSlashable(epoch Epoch) (bool, error) {
 	slashed, err := v.Slashed()
 	if err != nil {
 		return false, err
@@ -97,7 +102,7 @@ func (v *Validator) IsSlashable(epoch Epoch) (bool, error) {
 	return true, nil
 }
 
-func (v *Validator) IsEligibleForActivationQueue() (bool, error) {
+func (v *ValidatorView) IsEligibleForActivationQueue() (bool, error) {
 	actEligEpoch, err := v.ActivationEligibilityEpoch()
 	if err != nil {
 		return false, err
@@ -109,7 +114,7 @@ func (v *Validator) IsEligibleForActivationQueue() (bool, error) {
 	return actEligEpoch == FAR_FUTURE_EPOCH && effBalance == MAX_EFFECTIVE_BALANCE, nil
 }
 
-func (v *Validator) IsEligibleForActivation(finalizedEpoch Epoch) (bool, error) {
+func (v *ValidatorView) IsEligibleForActivation(finalizedEpoch Epoch) (bool, error) {
 	actEligEpoch, err := v.ActivationEligibilityEpoch()
 	if err != nil {
 		return false, err

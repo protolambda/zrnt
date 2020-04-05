@@ -4,7 +4,7 @@ import (
 	"github.com/protolambda/zrnt/eth2/meta"
 )
 
-func ProcessEpochFinalUpdates(input FinalUpdateProcessInput) error {
+func (state *BeaconStateView) ProcessEpochFinalUpdates() error {
 	currentSlot, err := input.CurrentSlot()
 	if err != nil {
 		return err

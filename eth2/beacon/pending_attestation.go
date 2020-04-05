@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/protolambda/zssz"
-	. "github.com/protolambda/ztyp/props"
 	. "github.com/protolambda/ztyp/view"
 )
 

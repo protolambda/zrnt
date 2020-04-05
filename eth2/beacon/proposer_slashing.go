@@ -32,7 +32,7 @@ func ProcessProposerSlashings(input PropSlashProcessInput, ops []ProposerSlashin
 	return nil
 }
 
-func ProcessProposerSlashing(input PropSlashProcessInput, ps *ProposerSlashing) error {
+func (state *BeaconStateView) ProcessProposerSlashing(ps *ProposerSlashing) error {
 	// Verify header slots match
 	if ps.SignedHeader1.Message.Slot != ps.SignedHeader2.Message.Slot {
 		return errors.New("proposer slashing requires slashing headers to have the same slot")
@@ -61,7 +61,7 @@ func ProcessProposerSlashing(input PropSlashProcessInput, ps *ProposerSlashing) 
 	} else if !slashable {
 		return errors.New("proposer slashing requires proposer to be slashable")
 	}
-	domain, err := input.GetDomain(DOMAIN_BEACON_PROPOSER, ps.SignedHeader1.Message.Slot.ToEpoch())
+	domain, err := state.GetDomain(DOMAIN_BEACON_PROPOSER, ps.SignedHeader1.Message.Slot.ToEpoch())
 	if err != nil {
 		return err
 	}

@@ -3,41 +3,109 @@ package beacon
 import (
 	"errors"
 	"fmt"
-	"github.com/protolambda/ztyp/props"
+	"github.com/protolambda/zrnt/eth2/util/ssz"
+	"github.com/protolambda/zssz"
 	"github.com/protolambda/ztyp/tree"
+	. "github.com/protolambda/ztyp/view"
 )
 
-type LatestBlockHeaderProp BeaconBlockHeaderProp
+var BeaconBlockHeaderSSZ = zssz.GetSSZ((*BeaconBlockHeader)(nil))
 
-func (p LatestBlockHeaderProp) GetLatestHeader() (*BeaconBlockHeaderNode, error) {
-	return BeaconBlockHeaderProp(p).BeaconBlockHeader()
+type BeaconBlockHeader struct {
+	Slot          Slot
+	ProposerIndex ValidatorIndex
+	ParentRoot    Root
+	StateRoot     Root
+	BodyRoot      Root
 }
 
-func (p LatestBlockHeaderProp) SetLatestHeader(node tree.Node) error {
-	h, err := props.ContainerProp(p)()
+func (b *BeaconBlockHeader) HashTreeRoot() Root {
+	return ssz.HashTreeRoot(b, BeaconBlockHeaderSSZ)
+}
+
+type SignedBeaconBlockHeader struct {
+	Message   BeaconBlockHeader
+	Signature BLSSignature
+}
+
+var SignedBeaconBlockHeaderSSZ = zssz.GetSSZ((*SignedBeaconBlockHeader)(nil))
+
+func (b *SignedBeaconBlockHeader) HashTreeRoot() Root {
+	return ssz.HashTreeRoot(b, SignedBeaconBlockHeaderSSZ)
+}
+
+var SignedBeaconBlockHeaderType = ContainerType("SignedBeaconBlockHeader", []FieldDef{
+	{"message", BeaconBlockHeaderType},
+	{"signature", BLSSignatureType},
+})
+
+var BeaconBlockHeaderType = ContainerType("BeaconBlockHeader", []FieldDef{
+	{"slot", SlotType},
+	{"proposer_index", ValidatorIndexType},
+	{"parent_root", RootType},
+	{"state_root", RootType},
+	{"body_root", RootType},
+})
+
+type BeaconBlockHeaderView struct {
+	*ContainerView
+}
+
+func AsBeaconBlockHeader(v View, err error) (*BeaconBlockHeaderView, error) {
+	c, err := AsContainer(v, err)
+	return &BeaconBlockHeaderView{c}, err
+}
+
+func (v *BeaconBlockHeaderView) HashTreeRoot() Root {
+	return v.ContainerView.HashTreeRoot(tree.GetHashFn())
+}
+
+func (v *BeaconBlockHeaderView) Slot() (Slot, error) {
+	return AsSlot(v.Get(0))
+}
+
+func (v *BeaconBlockHeaderView) ProposerIndex() (ValidatorIndex, error) {
+	return AsValidatorIndex(v.Get(1))
+}
+
+func (v *BeaconBlockHeaderView) ParentRoot() (Root, error) {
+	return AsRoot(v.Get(2))
+}
+
+func (v *BeaconBlockHeaderView) StateRoot() (Root, error) {
+	return AsRoot(v.Get(3))
+}
+
+func (v *BeaconBlockHeaderView) BodyRoot() (Root, error) {
+	return AsRoot(v.Get(4))
+}
+
+func (v *BeaconBlockHeaderView) Raw() (*BeaconBlockHeader, error) {
+	slot, err := v.Slot()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return h.SetBacking(node)
-}
-
-func (p LatestBlockHeaderProp) GetLatestBlockRoot() (Root, error) {
-	h, err := p.GetLatestHeader()
+	parentRoot, err := v.ParentRoot()
 	if err != nil {
-		return Root{}, err
+		return nil, err
 	}
-	return h.HashTreeRoot(), nil
-}
-
-func (p LatestBlockHeaderProp) UpdateLatestBlockStateRoot(root Root) error {
-	prev, err := BeaconBlockHeaderProp(p).BeaconBlockHeader()
+	stateRoot, err := v.StateRoot()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return prev.SetStateRoot(root)
+	bodyRoot, err := v.BodyRoot()
+	if err != nil {
+		return nil, err
+	}
+	return &BeaconBlockHeader{
+		Slot:       slot,
+		ParentRoot: parentRoot,
+		StateRoot:  stateRoot,
+		BodyRoot:   bodyRoot,
+	}, nil
 }
 
-func ProcessHeader(input BlockHeaderProcessInput, header *BeaconBlockHeader) error {
+func (state *BeaconStateView) ProcessHeader(header *BeaconBlock) error {
 	currentSlot, err := input.CurrentSlot()
 	if err != nil {
 		return err
@@ -64,19 +132,18 @@ func ProcessHeader(input BlockHeaderProcessInput, header *BeaconBlockHeader) err
 		return errors.New("cannot accept block header from slashed proposer")
 	}
 
-	newLatest := NewBeaconBlockHeaderNode()
-	if err := newLatest.SetSlot(header.Slot); err != nil {
-		return err
-	}
-	if err := newLatest.SetParentRoot(header.ParentRoot); err != nil {
-		return err
-	}
-	if err := newLatest.SetBodyRoot(header.StateRoot); err != nil {
-		return err
-	}
+	pr := RootView(header.ParentRoot)
 	// state_root is zeroed and overwritten in the next `process_slot` call.
 	// with BlockHeaderState.UpdateStateRoot(), once the post state is available.
-
+	sr := RootView{}
+	br := RootView(header.Body.HashTreeRoot())
+	headerContainer, _ := BeaconBlockHeaderType.FromFields(
+		Uint64View(header.Slot),
+		Uint64View(header.ProposerIndex),
+		&pr,
+		&sr,
+		&br,
+	)
 	// Store as the new latest block
-	return input.SetLatestHeader(newLatest.Backing())
+	return state.SetLatestBlockHeader(&BeaconBlockHeaderView{headerContainer})
 }

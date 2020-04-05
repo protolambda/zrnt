@@ -1,15 +1,144 @@
 package beacon
 
 import (
-
-
+	"github.com/protolambda/zrnt/eth2/meta"
+	. "github.com/protolambda/ztyp/view"
 )
 
-// Validator registry
-type RegistryState struct {
-	//ValidatorsState
-	//BalancesState
+var ValidatorsRegistryType = ComplexListType(ValidatorType, VALIDATOR_REGISTRY_LIMIT)
+
+type ValidatorsRegistryView struct { *ComplexListView }
+
+func AsValidatorsRegistry(v View, err error) (*ValidatorsRegistryView, error) {
+	c, err := AsComplexList(v, err)
+	return &ValidatorsRegistryView{c}, nil
 }
+
+func (registry *ValidatorsRegistryView) IsValidIndex(index ValidatorIndex) (bool, error) {
+	count, err := registry.ValidatorCount()
+	return index < ValidatorIndex(count), err
+}
+
+func (registry *ValidatorsRegistryView) ValidatorCount() (uint64, error) {
+	return registry.Length()
+}
+
+func (registry *ValidatorsRegistryView) Validator(index ValidatorIndex) (*ValidatorView, error) {
+	return AsValidator(registry.Get(uint64(index)))
+}
+
+// TODO: probably really slow, should have a pubkey cache or something
+func (registry *ValidatorsRegistryView) ValidatorIndex(pubkey BLSPubkey) (index ValidatorIndex, exists bool, err error) {
+	count, err := registry.ValidatorCount()
+	if err != nil {
+		return 0, false, err
+	}
+	for i := ValidatorIndex(0); i < ValidatorIndex(count); i++ {
+		v, err := registry.Validator(i)
+		if err != nil {
+			return 0, false, err
+		}
+		valPub, err := v.Pubkey()
+		if err != nil {
+			return 0, false, err
+		}
+		if valPub == pubkey {
+			return i, true, nil
+		}
+	}
+	return 0, false, err
+}
+
+func (state *ValidatorsRegistryView) SlashAndDelayWithdraw(index ValidatorIndex, withdrawalEpoch Epoch) error {
+	v, err := state.Validator(index)
+	if err != nil {
+		return err
+	}
+	if err := v.MakeSlashed(); err != nil {
+		return err
+	}
+	prevWithdrawalEpoch, err := v.WithdrawableEpoch()
+	if err != nil {
+		return err
+	}
+	if withdrawalEpoch > prevWithdrawalEpoch {
+		if err := v.SetWithdrawableEpoch(withdrawalEpoch); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (state *ValidatorsRegistryView) GetActiveValidatorIndices(epoch Epoch) (RegistryIndices, error) {
+	count, err := state.ValidatorCount()
+	if err != nil {
+		return nil, err
+	}
+	res := make(RegistryIndices, 0, count)
+	for i := ValidatorIndex(0); i < ValidatorIndex(count); i++ {
+		v, err := state.Validator(i)
+		if err != nil {
+			return nil, err
+		}
+		if active, err := v.IsActive(epoch); err != nil {
+			return nil, err
+		} else if active {
+			res = append(res, i)
+		}
+	}
+	return res, nil
+}
+
+func (state *ValidatorsRegistryView) ComputeActiveIndexRoot(epoch Epoch) (Root, error) {
+	indices, err := state.GetActiveValidatorIndices(epoch)
+	if err != nil {
+		return Root{}, err
+	}
+	return indices.HashTreeRoot(), nil
+}
+
+func (state *ValidatorsRegistryView) GetActiveValidatorCount(epoch Epoch) (activeCount uint64, err error) {
+	count, err := state.ValidatorCount()
+	if err != nil {
+		return 0, err
+	}
+	for i := ValidatorIndex(0); i < ValidatorIndex(count); i++ {
+		v, err := state.Validator(i)
+		if err != nil {
+			return 0, err
+		}
+		if active, err := v.IsActive(epoch); err != nil {
+			return 0, err
+		} else if active {
+			activeCount++
+		}
+	}
+	return
+}
+
+func (state *ValidatorsRegistryView) ProcessActivationQueue(currentEpoch Epoch) error {
+	// Dequeued validators for activation up to churn limit (without resetting activation epoch)
+	queueLen := uint64(len(activationQueue))
+	if churnLimit, err := state.GetChurnLimit(); err != nil {
+		return err
+	} else if churnLimit < queueLen {
+		queueLen = churnLimit
+	}
+
+	for _, item := range activationQueue[:queueLen] {
+		if item.activation == FAR_FUTURE_EPOCH {
+			v, err := state.Validator(item.valIndex)
+			if err != nil {
+				return err
+			}
+			if err := v.SetActivationEpoch(currentEpoch.ComputeActivationExitEpoch()); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 
 // Update effective balances with hysteresis
 func (state *RegistryState) UpdateEffectiveBalances() error { // TODO
@@ -59,20 +188,7 @@ func (state *RegistryState) AddNewValidator(pubkey BLSPubkeyNode, withdrawalCred
 	return nil
 }
 
-type RegistryUpdateEpochProcess interface {
-	ProcessEpochRegistryUpdates() error
-}
-
-type RegistryUpdatesFeature struct {
-	State *RegistryState
-	Meta  interface {
-		meta.Versioning
-		meta.Finality
-		meta.ActivationExit
-	}
-}
-
-func (f *RegistryUpdatesFeature) ProcessEpochRegistryUpdates() error {
+func (state *BeaconStateView) ProcessEpochRegistryUpdates() error {
 	// Process activation eligibility and ejections
 	//currentEpoch := f.Meta.CurrentEpoch()
 	//for i, v := range f.State.Validators {

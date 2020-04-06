@@ -5,25 +5,25 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
-var BlockRootsType = VectorType(RootType, uint64(SLOTS_PER_HISTORICAL_ROOT))
+var BatchRootsType = VectorType(RootType, uint64(SLOTS_PER_HISTORICAL_ROOT))
 
-type BlockRootsView struct{ *ComplexVectorView }
+type BatchRootsView struct{ *ComplexVectorView }
 
-// Return the block root at the given slot. Only valid to SLOTS_PER_HISTORICAL_ROOT slots ago.
-func (v *BlockRootsView) GetRoot(slot Slot) (Root, error) {
+// Return the root at the given slot. Only valid to SLOTS_PER_HISTORICAL_ROOT slots ago.
+func (v *BatchRootsView) GetRoot(slot Slot) (Root, error) {
 	i := uint64(slot%SLOTS_PER_HISTORICAL_ROOT)
 	return AsRoot(v.Get(i))
 }
 
-func (v *BlockRootsView) SetRoot(slot Slot, r Root) error {
+func (v *BatchRootsView) SetRoot(slot Slot, r Root) error {
 	i := uint64(slot%SLOTS_PER_HISTORICAL_ROOT)
 	rv := RootView(r)
 	return v.Set(i, &rv)
 }
 
-func AsBlockRoots(v View, err error) (*BlockRootsView, error) {
+func AsBatchRoots(v View, err error) (*BatchRootsView, error) {
 	c, err := AsComplexVector(v, err)
-	return &BlockRootsView{c}, err
+	return &BatchRootsView{c}, err
 }
 
 // Return the block root at a recent slot. Only valid to SLOTS_PER_HISTORICAL_ROOT slots ago.
@@ -44,40 +44,19 @@ func (state *BeaconStateView) GetBlockRoot(epoch Epoch) (Root, error) {
 	return blockRoots.GetRoot(epoch.GetStartSlot())
 }
 
-var StateRootsType = VectorType(RootType, uint64(SLOTS_PER_HISTORICAL_ROOT))
-
-type StateRootsView struct{ *ComplexVectorView }
-
-// Return the state root at the given slot. Only valid to SLOTS_PER_HISTORICAL_ROOT slots ago.
-func (v *StateRootsView) GetRoot(slot Slot) (Root, error) {
-	i := uint64(slot%SLOTS_PER_HISTORICAL_ROOT)
-	return AsRoot(v.Get(i))
-}
-
-func (v *StateRootsView) SetRoot(slot Slot, r Root) error {
-	i := uint64(slot%SLOTS_PER_HISTORICAL_ROOT)
-	rv := RootView(r)
-	return v.Set(i, &rv)
-}
-
-func AsStateRoots(v View, err error) (*StateRootsView, error) {
-	c, err := AsComplexVector(v, err)
-	return &StateRootsView{c}, err
-}
-
 var HistoricalBatchType = ContainerType("HistoricalBatch", []FieldDef{
-	{"block_roots", BlockRootsType},
-	{"state_roots", StateRootsType},
+	{"block_roots", BatchRootsType},
+	{"state_roots", BatchRootsType},
 })
 
 type HistoricalBatchView struct{ *ContainerView }
 
-func (v *HistoricalBatchView) BlockRoots() (*BlockRootsView, error) {
-	return AsBlockRoots(v.Get(0))
+func (v *HistoricalBatchView) BlockRoots() (*BatchRootsView, error) {
+	return AsBatchRoots(v.Get(0))
 }
 
-func (v *HistoricalBatchView) StateRoots() (*StateRootsView, error) {
-	return AsStateRoots(v.Get(1))
+func (v *HistoricalBatchView) StateRoots() (*BatchRootsView, error) {
+	return AsBatchRoots(v.Get(1))
 }
 
 func AsHistoricalBatch(v View, err error) (*HistoricalBatchView, error) {

@@ -21,16 +21,16 @@ var ProposerSlashingType =  ContainerType("ProposerSlashing", []FieldDef{
 	{"header_2", SignedBeaconBlockHeaderType},
 })
 
-func (state *BeaconStateView) ProcessProposerSlashings(ops []ProposerSlashing) error {
+func (state *BeaconStateView) ProcessProposerSlashings(epc *EpochsContext, ops []ProposerSlashing) error {
 	for i := range ops {
-		if err := state.ProcessProposerSlashing(&ops[i]); err != nil {
+		if err := state.ProcessProposerSlashing(epc, &ops[i]); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (state *BeaconStateView) ProcessProposerSlashing(ps *ProposerSlashing) error {
+func (state *BeaconStateView) ProcessProposerSlashing(epc *EpochsContext, ps *ProposerSlashing) error {
 	// Verify header slots match
 	if ps.SignedHeader1.Message.Slot != ps.SignedHeader2.Message.Slot {
 		return errors.New("proposer slashing requires slashing headers to have the same slot")

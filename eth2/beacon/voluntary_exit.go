@@ -8,9 +8,9 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
-func (state *BeaconStateView) ProcessVoluntaryExits(ops []SignedVoluntaryExit) error {
+func (state *BeaconStateView) ProcessVoluntaryExits(epc *EpochsContext, ops []SignedVoluntaryExit) error {
 	for i := range ops {
-		if err := state.ProcessVoluntaryExit(&ops[i]); err != nil {
+		if err := state.ProcessVoluntaryExit(epc, &ops[i]); err != nil {
 			return err
 		}
 	}
@@ -43,7 +43,7 @@ var SignedVoluntaryExitType = ContainerType("SignedVoluntaryExit", []FieldDef{
 	{"signature", BLSSignatureType},
 })
 
-func (state *BeaconStateView) ProcessVoluntaryExit(signedExit *SignedVoluntaryExit) error {
+func (state *BeaconStateView) ProcessVoluntaryExit(epc *EpochsContext, signedExit *SignedVoluntaryExit) error {
 	exit := &signedExit.Message
 	currentEpoch, err := input.CurrentEpoch()
 	if err != nil {
@@ -96,5 +96,19 @@ func (state *BeaconStateView) ProcessVoluntaryExit(signedExit *SignedVoluntaryEx
 		return errors.New("voluntary exit signature could not be verified")
 	}
 	// Initiate exit
-	return input.InitiateValidatorExit(currentEpoch, exit.ValidatorIndex)
+	return state.InitiateValidatorExit(epc, currentEpoch, exit.ValidatorIndex)
+}
+
+// Initiate the exit of the validator of the given index
+func (state *BeaconStateView) InitiateValidatorExit(epc *EpochsContext, currentEpoch Epoch, index ValidatorIndex) error {
+	//validator := state.Validators[index]
+	//// Return if validator already initiated exit
+	//if validator.ExitEpoch != FAR_FUTURE_EPOCH {
+	//	return
+	//}
+	//
+	//// Set validator exit epoch and withdrawable epoch
+	//validator.ExitEpoch = state.ExitQueueEnd(currentEpoch)
+	//validator.WithdrawableEpoch = validator.ExitEpoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY
+	return nil
 }

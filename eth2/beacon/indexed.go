@@ -29,7 +29,7 @@ var IndexedAttestationType = ContainerType("IndexedAttestation", []FieldDef{
 })
 
 // Verify validity of slashable_attestation fields.
-func (state *BeaconStateView) Validate(indexedAttestation *IndexedAttestation)  error {
+func (state *BeaconStateView) Validate(epc *EpochsContext, indexedAttestation *IndexedAttestation)  error {
 	// wrap it in validator-sets. Does not sort it, but does make checking if it is a lot easier.
 	indices := ValidatorSet(indexedAttestation.AttestingIndices)
 

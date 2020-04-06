@@ -7,9 +7,9 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
-func (state *BeaconStateView) ProcessAttesterSlashings(ops []AttesterSlashing) error {
+func (state *BeaconStateView) ProcessAttesterSlashings(epc *EpochsContext, ops []AttesterSlashing) error {
 	for i := range ops {
-		if err := state.ProcessAttesterSlashing(&ops[i]); err != nil {
+		if err := state.ProcessAttesterSlashing(epc, &ops[i]); err != nil {
 			return err
 		}
 	}
@@ -28,7 +28,7 @@ var AttesterSlashingType = ContainerType("AttesterSlashing", []FieldDef{
 	{"attestation_2", IndexedAttestationType},
 })
 
-func (state *BeaconStateView) ProcessAttesterSlashing(attesterSlashing *AttesterSlashing) error {
+func (state *BeaconStateView) ProcessAttesterSlashing(epc *EpochsContext, attesterSlashing *AttesterSlashing) error {
 	sa1 := &attesterSlashing.Attestation1
 	sa2 := &attesterSlashing.Attestation2
 

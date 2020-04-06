@@ -5,35 +5,13 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
-func (state *BeaconStateView) ProcessEpochJustification() error {
-	currentEpoch, err := input.CurrentEpoch()
-	if err != nil {
-		return err
-	}
+func (state *BeaconStateView) ProcessEpochJustification(epc *EpochsContext, process *EpochProcess) error {
+	previousEpoch := process.PrevEpoch
+	currentEpoch := process.PrevEpoch
+
 	// skip if genesis.
 	if currentEpoch <= GENESIS_EPOCH+1 {
 		return nil
-	}
-	previousEpoch, err := input.PreviousEpoch()
-	if err != nil {
-		return err
-	}
-
-	// stake = effective balances of active validators
-	// Get the total stake of the epoch attesters
-	prevEpochStake, err := input.PrevEpochStakeSummary()
-	if err != nil {
-		return err
-	}
-	currEpochStake, err := input.CurrEpochStakeSummary()
-	if err != nil {
-		return err
-	}
-
-	// Get the total current stake
-	totalStake, err := input.GetTotalStake()
-	if err != nil {
-		return err
 	}
 
 	prJustCh, err := state.PreviousJustifiedCheckpoint()
@@ -69,44 +47,37 @@ func (state *BeaconStateView) ProcessEpochJustification() error {
 
 	bits.NextEpoch()
 
-	var newJustifiedCheckpoint *Checkpoint
-	justify := func(ep Epoch, ch *Checkpoint) error {
-		currentEpoch := f.Meta.CurrentEpoch()
-		if currentEpoch < ch.Epoch {
-			panic("cannot justify future epochs")
-		}
-		epochsAgo := currentEpoch - ch.Epoch
-		if epochsAgo >= Epoch(JUSTIFICATION_BITS_LENGTH) {
-			panic("cannot justify history past justification bitfield length")
-		}
+	// stake = effective balances of active validators
+	// Get the total stake of the epoch attesters
+	prevEpochStake := process.PrevEpochStake
+	currEpochStake := process.CurrEpochStake
 
-		newJustifiedCheckpoint = ch
-		bits[0] |= 1 << epochsAgo
-	}
+	// Get the total current stake
+	totalStake := process.TotalActiveStake
+
+	var newJustifiedCheckpoint *Checkpoint
 	// > Justification
 	if prevEpochStake.TargetStake*3 >= totalStake*2 {
 		root, err := state.GetBlockRoot(previousEpoch)
 		if err != nil {
 			return err
 		}
-		if err := justify(currentEpoch, &Checkpoint{
+		newJustifiedCheckpoint = &Checkpoint{
 			Epoch: previousEpoch,
 			Root:  root,
-		}); err != nil {
-			return err
 		}
+		bits[0] |= 1 << 1
 	}
 	if currEpochStake.TargetStake*3 >= totalStake*2 {
 		root, err := state.GetBlockRoot(currentEpoch)
 		if err != nil {
 			return err
 		}
-		if err := justify(currentEpoch, &Checkpoint{
+		newJustifiedCheckpoint = &Checkpoint{
 			Epoch: currentEpoch,
 			Root:  root,
-		}); err != nil {
-			return err
 		}
+		bits[0] |= 1 << 0
 	}
 	if newJustifiedCheckpoint != nil {
 		if err := cuJustCh.Set(newJustifiedCheckpoint); err != nil {
@@ -189,4 +160,9 @@ func (v *JustificationBitsView) Raw() (JustificationBits, error) {
 func (v *JustificationBitsView) Set(bits JustificationBits) error {
 	root := Root{0: bits[0]}
 	return v.SetBacking(&root)
+}
+
+func AsJustificationBits(v View, err error) (*JustificationBitsView, error) {
+	c, err := AsBitVector(v, err)
+	return &JustificationBitsView{c}, err
 }

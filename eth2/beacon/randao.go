@@ -84,7 +84,7 @@ func SeedRandao(seed Root, hook BackingHook) (*RandaoMixesView, error) {
 
 var RandaoEpochSSZ = zssz.GetSSZ((*Epoch)(nil))
 
-func (state *BeaconStateView) ProcessRandaoReveal(reveal BLSSignature) error {
+func (state *BeaconStateView) ProcessRandaoReveal(epc *EpochsContext, reveal BLSSignature) error {
 	slot, err := state.Slot()
 	if err != nil {
 		return err

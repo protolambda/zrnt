@@ -1,10 +1,6 @@
 package beacon
 
 import (
-	"fmt"
-
-
-	. "github.com/protolambda/ztyp/props"
 	. "github.com/protolambda/ztyp/view"
 )
 
@@ -13,26 +9,28 @@ var SlashingsType = VectorType(GweiType, uint64(EPOCHS_PER_SLASHINGS_VECTOR))
 
 type SlashingsView struct { *BasicVectorView }
 
+func AsSlashings(v View, err error) (*SlashingsView, error) {
+	c, err := AsBasicVector(v, err)
+	return &SlashingsView{c}, nil
+}
+
 func (sl *SlashingsView) GetSlashingsValue(epoch Epoch) (Gwei, error) {
-	prev, err := sl.Get(uint64(epoch%EPOCHS_PER_SLASHINGS_VECTOR))
-	if err != nil {
-		return 0, err
-	} else if prevSlashed, ok := prev.(Uint64View); !ok {
-		return 0, fmt.Errorf("cannot read previous slashed stake as Uint64: %v", prev)
-	} else {
-		return Gwei(prevSlashed), nil
-	}
+	i := uint64(epoch%EPOCHS_PER_SLASHINGS_VECTOR)
+	return AsGwei(sl.Get(i))
 }
 
 func (sl *SlashingsView) ResetSlashings(epoch Epoch) error {
-	return sl.Set(uint64(epoch%EPOCHS_PER_SLASHINGS_VECTOR), Uint64View(0))
+	i := uint64(epoch%EPOCHS_PER_SLASHINGS_VECTOR)
+	return sl.Set(i, Uint64View(0))
 }
+
 func (sl *SlashingsView) AddSlashing(epoch Epoch, add Gwei) error {
 	prev, err := sl.GetSlashingsValue(epoch)
 	if err != nil {
 		return err
 	}
-	return sl.Set(uint64(epoch%EPOCHS_PER_SLASHINGS_VECTOR), Uint64View(prev + add))
+	i := uint64(epoch%EPOCHS_PER_SLASHINGS_VECTOR)
+	return sl.Set(i, Uint64View(prev + add))
 }
 
 func (sl *SlashingsView) Total() (sum Gwei, err error) {
@@ -46,20 +44,8 @@ func (sl *SlashingsView) Total() (sum Gwei, err error) {
 	return
 }
 
-type SlashingsProp PropFn
-
-func (p SlashingsProp) Slashings() (*SlashingsView, error) {
-	if v, err := p(); err != nil {
-		return nil, err
-	} else if f, ok := v.(*SlashingsView); !ok {
-		return nil, fmt.Errorf("not a fork view: %v", v)
-	} else {
-		return f, nil
-	}
-}
-
 // Slash the validator with the given index.
-func (state *SlashingsProp) SlashValidator(input SlashingProcessInput, slashedIndex ValidatorIndex, whistleblowerIndex *ValidatorIndex) error {
+func (state *BeaconStateView) SlashValidator(epc *EpochsContext, slashedIndex ValidatorIndex, whistleblowerIndex *ValidatorIndex) error {
 	slot, err := input.CurrentSlot()
 	if err != nil {
 		return err
@@ -106,7 +92,7 @@ func (state *SlashingsProp) SlashValidator(input SlashingProcessInput, slashedIn
 	return nil
 }
 
-func (state *SlashingsProp) ProcessEpochSlashings(input SlashingProcessInput) error {
+func (state *BeaconStateView) ProcessEpochSlashings(epc *EpochsContext, process *EpochProcess) error {
 	totalBalance, err := input.GetTotalStake()
 	if err != nil {
 		return err

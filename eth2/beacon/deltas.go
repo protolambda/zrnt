@@ -29,7 +29,7 @@ func (deltas *Deltas) Add(other *Deltas) {
 	}
 }
 
-func (state *BeaconStateView) AttestationDeltas() (*Deltas, error) {
+func (state *BeaconStateView) AttestationDeltas(epc *EpochsContext, process *EpochProcess) (*Deltas, error) {
 	cres, err := input.ValidatorCount()
 	if err != nil {
 		return nil, err
@@ -130,7 +130,7 @@ func (state *BeaconStateView) AttestationDeltas() (*Deltas, error) {
 	return deltas, nil
 }
 
-func (state *BeaconStateView) ProcessEpochRewardsAndPenalties() error {
+func (state *BeaconStateView) ProcessEpochRewardsAndPenalties(epc *EpochsContext, process *EpochProcess) error {
 	currentEpoch, err := input.CurrentEpoch()
 	if err != nil {
 		return err

@@ -2,13 +2,9 @@ package beacon
 
 import (
 	"errors"
-
-
-	. "github.com/protolambda/ztyp/props"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
-
 
 type Eth1Data struct {
 	DepositRoot  Root // Hash-tree-root of DepositData tree.
@@ -43,69 +39,25 @@ func (v *Eth1DataView) DepositIndex() (DepositIndex, error) {
 	return AsDepositIndex(v.Get(2))
 }
 
-// Ethereum 1.0 chain data
-type Eth1Props struct {
-	Eth1Data      Eth1DataProp
-	Eth1DataVotes Eth1DataVotes
-	DepositIndex  StateDepositIndexProps
-}
-
-func (p *Eth1DataProp) DepIndex() (DepositIndex, error) {
-	data, err := p.Eth1Data()
-	if err != nil {
-		return 0, err
-	}
-	return data.DepositIndex()
-}
-
-func (p *Eth1DataProp) DepCount() (DepositIndex, error) {
-	data, err := p.Eth1Data()
-	if err != nil {
-		return 0, err
-	}
-	return data.DepositCount()
-}
-
-func (p *Eth1DataProp) DepRoot() (Root, error) {
-	data, err := p.Eth1Data()
-	if err != nil {
-		return Root{}, err
-	}
-	return data.DepositRoot()
-}
-
-func (p *Eth1DataProp) SetEth1Data(node tree.Node) error {
-	v, err := p.Eth1Data()
-	if err != nil {
-		return err
-	}
-	return v.SetBacking(node)
-}
-
-type Eth1DataVotes struct{ *ComplexListView }
-
 var Eth1DataVotesType = ListType(Eth1DataType, uint64(SLOTS_PER_ETH1_VOTING_PERIOD))
 
-type StateEth1DepositDataVotesProp ComplexListProp
+type Eth1DataVotesView struct{ *ComplexListView }
 
-func (p StateEth1DepositDataVotesProp) Eth1DataVotes() (*Eth1DataVotes, error) {
-	v, err := ComplexListProp(p).List()
-	if v != nil {
-		return nil, err
-	}
-	return &Eth1DataVotes{ComplexListView: v}, nil
+func AsEth1DataVotes(v View, err error) (*Eth1DataVotesView, error) {
+	c, err := AsComplexList(v, err)
+	return &Eth1DataVotesView{c}, err
 }
 
 // Done at the end of every voting period
-func (p *StateEth1DepositDataVotesProp) ResetEth1Votes() error {
-	votes, err := p.Eth1DataVotes()
+func (v *BeaconStateView) ResetEth1Votes() error {
+	votes, err := v.Eth1DataVotes()
 	if err != nil {
 		return err
 	}
 	return votes.SetBacking(Eth1DataVotesType.DefaultNode())
 }
 
-func (p *StateEth1DepositDataVotesProp) ProcessEth1Vote(input EthDataProcessInput, data Eth1Data) error {
+func (v *BeaconStateView) ProcessEth1Vote(epc *EpochsContext, data Eth1Data) error {
 	votes, err := p.Eth1DataVotes()
 	if err != nil {
 		return err

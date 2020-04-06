@@ -4,7 +4,7 @@ import (
 
 )
 
-func (state *BeaconStateView) ProcessEpochFinalUpdates() error {
+func (state *BeaconStateView) ProcessEpochFinalUpdates(epc *EpochsContext, process *EpochProcess) error {
 	currentSlot, err := input.CurrentSlot()
 	if err != nil {
 		return err

@@ -56,10 +56,6 @@ func AsBeaconBlockHeader(v View, err error) (*BeaconBlockHeaderView, error) {
 	return &BeaconBlockHeaderView{c}, err
 }
 
-func (v *BeaconBlockHeaderView) HashTreeRoot() Root {
-	return v.ContainerView.HashTreeRoot(tree.GetHashFn())
-}
-
 func (v *BeaconBlockHeaderView) Slot() (Slot, error) {
 	return AsSlot(v.Get(0))
 }
@@ -74,6 +70,11 @@ func (v *BeaconBlockHeaderView) ParentRoot() (Root, error) {
 
 func (v *BeaconBlockHeaderView) StateRoot() (Root, error) {
 	return AsRoot(v.Get(3))
+}
+
+func (v *BeaconBlockHeaderView) SetStateRoot(root Root) error {
+	rv := RootView(root)
+	return v.Set(3, &rv)
 }
 
 func (v *BeaconBlockHeaderView) BodyRoot() (Root, error) {
@@ -105,7 +106,7 @@ func (v *BeaconBlockHeaderView) Raw() (*BeaconBlockHeader, error) {
 	}, nil
 }
 
-func (state *BeaconStateView) ProcessHeader(header *BeaconBlock) error {
+func (state *BeaconStateView) ProcessHeader(epc *EpochsContext, header *BeaconBlock) error {
 	currentSlot, err := input.CurrentSlot()
 	if err != nil {
 		return err
@@ -120,7 +121,10 @@ func (state *BeaconStateView) ProcessHeader(header *BeaconBlock) error {
 	} else if header.ParentRoot != latestRoot {
 		return fmt.Errorf("previous block root %x does not match root %x from latest state block header", header.ParentRoot, latestRoot)
 	}
-
+	// TODO
+	if !epc.IsValidIndex(block.ProposerIndex) {
+		return false
+	}
 	proposerIndex, err := input.GetBeaconProposerIndex(currentSlot)
 	if err != nil {
 		return err

@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/protolambda/zrnt/eth2/beacon/registry"
 	"github.com/protolambda/zrnt/eth2/util/hashing"
 	"github.com/protolambda/zrnt/eth2/util/shuffle"
 )
@@ -260,6 +261,22 @@ func (epc *EpochsContext) getSlotComms(slot Slot) ([][]ValidatorIndex, error) {
 
 func (epc *EpochsContext) ValCount() uint64 {
 	return uint64(len(epc.Index2Pubkey))
+}
+
+func (epc *EpochsContext) IsValidIndex(index ValidatorIndex) bool {
+	return index < ValidatorIndex(epc.ValCount())
+}
+
+func (epc *EpochsContext) Pubkey(index ValidatorIndex) (BLSPubkey, bool) {
+	if index < ValidatorIndex(len(epc.Index2Pubkey)) {
+		return BLSPubkey{}, false
+	}
+	return epc.Index2Pubkey[index], true
+}
+
+func (epc *EpochsContext) ValidatorIndex(pub BLSPubkey) (ValidatorIndex, bool) {
+	idx, ok := epc.Pubkey2Index[pub]
+	return idx, ok
 }
 
 // Return the beacon committee at slot for index.

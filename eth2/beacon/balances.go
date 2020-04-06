@@ -20,6 +20,11 @@ type RegistryBalancesView struct {
 	*BasicListView
 }
 
+func AsRegistryBalances(v View, err error) (*RegistryBalancesView, error) {
+	c, err := AsBasicList(v, err)
+	return &RegistryBalancesView{c}, err
+}
+
 func (v *RegistryBalancesView) GetBalance(index ValidatorIndex) (Gwei, error) {
 	return AsGwei(v.Get(uint64(index)))
 }

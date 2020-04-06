@@ -53,24 +53,28 @@ func (state *BeaconStateView) Slot() (Slot, error) {
 	return AsSlot(state.Get(2))
 }
 
+func (state *BeaconStateView) SetSlot(slot Slot) error {
+	return state.Set(2, Uint64View(slot))
+}
+
 func (state *BeaconStateView) Fork() (*ForkView, error) {
 	return AsFork(state.Get(3))
 }
 
 func (state *BeaconStateView) LatestBlockHeader() (*BeaconBlockHeaderView, error) {
-	return AsBlockHeader(state.Get(4))
+	return AsBeaconBlockHeader(state.Get(4))
 }
 
 func (state *BeaconStateView) SetLatestBlockHeader(v *BeaconBlockHeaderView) error {
 	return state.Set(4, v)
 }
 
-func (state *BeaconStateView) BlockRoots() (*BlockRootsView, error) {
-	return AsBlockRoots(state.Get(5))
+func (state *BeaconStateView) BlockRoots() (*BatchRootsView, error) {
+	return AsBatchRoots(state.Get(5))
 }
 
-func (state *BeaconStateView) StateRoots() (*StateRootsView, error) {
-	return AsStateRoots(state.Get(6))
+func (state *BeaconStateView) StateRoots() (*BatchRootsView, error) {
+	return AsBatchRoots(state.Get(6))
 }
 
 func (state *BeaconStateView) HistoricalRoots() (*HistoricalRootsView, error) {

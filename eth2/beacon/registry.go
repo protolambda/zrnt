@@ -14,11 +14,6 @@ func AsValidatorsRegistry(v View, err error) (*ValidatorsRegistryView, error) {
 	return &ValidatorsRegistryView{c}, nil
 }
 
-func (registry *ValidatorsRegistryView) IsValidIndex(index ValidatorIndex) (bool, error) {
-	count, err := registry.ValidatorCount()
-	return index < ValidatorIndex(count), err
-}
-
 func (registry *ValidatorsRegistryView) ValidatorCount() (uint64, error) {
 	return registry.Length()
 }
@@ -155,20 +150,6 @@ func (state *RegistryState) UpdateEffectiveBalances() error { // TODO
 	return nil
 }
 
-// Initiate the exit of the validator of the given index
-func (state *RegistryState) InitiateValidatorExit(currentEpoch Epoch, index ValidatorIndex) error {
-	//validator := state.Validators[index]
-	//// Return if validator already initiated exit
-	//if validator.ExitEpoch != FAR_FUTURE_EPOCH {
-	//	return
-	//}
-	//
-	//// Set validator exit epoch and withdrawable epoch
-	//validator.ExitEpoch = state.ExitQueueEnd(currentEpoch)
-	//validator.WithdrawableEpoch = validator.ExitEpoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY
-	return nil
-}
-
 func (state *RegistryState) AddNewValidator(pubkey BLSPubkeyNode, withdrawalCreds Root, balance Gwei) error {
 	//effBalance := balance - (balance % EFFECTIVE_BALANCE_INCREMENT)
 	//if effBalance > MAX_EFFECTIVE_BALANCE {
@@ -188,7 +169,7 @@ func (state *RegistryState) AddNewValidator(pubkey BLSPubkeyNode, withdrawalCred
 	return nil
 }
 
-func (state *BeaconStateView) ProcessEpochRegistryUpdates() error {
+func (state *BeaconStateView) ProcessEpochRegistryUpdates(epc *EpochsContext, process *EpochProcess) error {
 	// Process activation eligibility and ejections
 	//currentEpoch := f.Meta.CurrentEpoch()
 	//for i, v := range f.State.Validators {

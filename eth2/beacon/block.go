@@ -30,6 +30,10 @@ type BeaconBlock struct {
 	Body          BeaconBlockBody
 }
 
+func (b *BeaconBlock) HashTreeRoot() Root {
+	return ssz.HashTreeRoot(b, BeaconBlockSSZ)
+}
+
 var BeaconBlockType =  ContainerType("BeaconBlock", []FieldDef{
 	{"slot", SlotType},
 	{"proposer_index", ValidatorIndexType},

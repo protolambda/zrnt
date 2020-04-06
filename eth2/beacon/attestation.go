@@ -22,16 +22,16 @@ type Attestation struct {
 	Signature       BLSSignature
 }
 
-func (state *BeaconStateView) ProcessAttestations(ops []Attestation) error {
+func (state *BeaconStateView) ProcessAttestations(epc *EpochsContext, ops []Attestation) error {
 	for i := range ops {
-		if err := state.ProcessAttestation(&ops[i]); err != nil {
+		if err := state.ProcessAttestation(epc, &ops[i]); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (state *BeaconStateView) ProcessAttestation(attestation *Attestation) error {
+func (state *BeaconStateView) ProcessAttestation(epc *EpochsContext, attestation *Attestation) error {
 	data := &attestation.Data
 
 	// Check slot

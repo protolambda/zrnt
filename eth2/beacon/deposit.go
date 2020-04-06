@@ -64,7 +64,7 @@ var DepositType = ContainerType("Deposit", []FieldDef{
 })
 
 // Verify that outstanding deposits are processed up to the maximum number of deposits, then process all in order.
-func (state *BeaconStateView) ProcessDeposits(ops []Deposit) error {
+func (state *BeaconStateView) ProcessDeposits(epc *EpochsContext, ops []Deposit) error {
 	inputCount := DepositIndex(len(ops))
 	eth1Data, err := state.Eth1Data()
 	if err != nil {
@@ -87,7 +87,7 @@ func (state *BeaconStateView) ProcessDeposits(ops []Deposit) error {
 	}
 
 	for i := range ops {
-		if err := state.ProcessDeposit(&ops[i]); err != nil {
+		if err := state.ProcessDeposit(epc, &ops[i]); err != nil {
 			return err
 		}
 	}
@@ -95,7 +95,7 @@ func (state *BeaconStateView) ProcessDeposits(ops []Deposit) error {
 }
 
 // Process an Eth1 deposit, registering a validator or increasing its balance.
-func (state *BeaconStateView) ProcessDeposit(dep *Deposit) error {
+func (state *BeaconStateView) ProcessDeposit(epc *EpochsContext, dep *Deposit) error {
 	depositIndex, err := state.DepositIndex()
 	if err != nil {
 		return err

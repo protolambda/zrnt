@@ -44,17 +44,14 @@ func (state *BeaconStateView) ProcessAttesterSlashing(epc *EpochsContext, attest
 		return errors.New("attester slashing has no valid reasoning")
 	}
 
-	if err := sa1.Validate(input); err != nil {
+	if err := state.ValidateIndexedAttestation(epc, sa1); err != nil {
 		return errors.New("attestation 1 of attester slashing cannot be verified")
 	}
-	if err := sa2.Validate(input); err != nil {
+	if err := state.ValidateIndexedAttestation(epc, sa2); err != nil {
 		return errors.New("attestation 2 of attester slashing cannot be verified")
 	}
 
-	currentEpoch, err := input.CurrentEpoch()
-	if err != nil {
-		return err
-	}
+	currentEpoch := epc.CurrentEpoch.Epoch
 
 	// keep track of effectiveness
 	slashedAny := false
@@ -69,7 +66,7 @@ func (state *BeaconStateView) ProcessAttesterSlashing(epc *EpochsContext, attest
 		if slashable, err := input.IsSlashable(i, currentEpoch); err != nil {
 			errorAny = err
 		} else if slashable {
-			if err := input.SlashValidator(i, nil); err != nil {
+			if err := state.SlashValidator(epc, i, nil); err != nil {
 				errorAny = err
 			} else {
 				slashedAny = true

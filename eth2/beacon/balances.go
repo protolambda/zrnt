@@ -1,7 +1,6 @@
 package beacon
 
 import (
-	"errors"
 	"github.com/protolambda/zssz"
 	. "github.com/protolambda/ztyp/view"
 )
@@ -54,28 +53,4 @@ func (v *RegistryBalancesView) DecreaseBalance(index ValidatorIndex, delta Gwei)
 		bal = 0
 	}
 	return v.SetBalance(index, delta)
-}
-
-func (state *BeaconStateView) ApplyDeltas(deltas *Deltas) error {
-	balances, err := state.Balances()
-	if err != nil {
-		return err
-	}
-	balLen, err := balances.Length()
-	if err != nil {
-		return err
-	}
-	if uint64(len(deltas.Penalties)) != balLen || uint64(len(deltas.Rewards)) != balLen {
-		return errors.New("cannot apply deltas to balances list with different length")
-	}
-	// TODO: can be optimized a lot, make a new tree in one go
-	for i := ValidatorIndex(0); i < ValidatorIndex(balLen); i++ {
-		if err := balances.IncreaseBalance(i, deltas.Rewards[i]); err != nil {
-			return err
-		}
-		if err := balances.DecreaseBalance(i, deltas.Penalties[i]); err != nil {
-			return err
-		}
-	}
-	return nil
 }

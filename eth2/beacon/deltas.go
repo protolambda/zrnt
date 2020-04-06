@@ -1,8 +1,7 @@
 package beacon
 
 import (
-
-
+	"errors"
 	"github.com/protolambda/zrnt/eth2/util/math"
 )
 
@@ -30,42 +29,29 @@ func (deltas *Deltas) Add(other *Deltas) {
 }
 
 func (state *BeaconStateView) AttestationDeltas(epc *EpochsContext, process *EpochProcess) (*Deltas, error) {
-	cres, err := input.ValidatorCount()
-	if err != nil {
-		return nil, err
-	}
-	validatorCount := ValidatorIndex(cres)
-	deltas := NewDeltas(uint64(validatorCount))
+	deltas := NewDeltas(epc.ValCount())
 
-	previousEpoch, err := input.PreviousEpoch()
-	if err != nil {
-		return nil, err
-	}
+	previousEpoch := epc.PreviousEpoch.Epoch
 
-	attesterStatuses, err := input.GetAttesterStatuses()
-	if err != nil {
-		return nil, err
-	}
+	attesterStatuses := process.Statuses
 
-	totalBalance, err := input.GetTotalStake()
-	if err != nil {
-		return nil, err
-	}
+	totalBalance := process.TotalActiveUnslashedStake
 
-	prevEpochStake, err := input.PrevEpochStakeSummary()
-	if err != nil {
-		return nil, err
-	}
+	prevEpochStake := &process.PrevEpochStake
 	prevEpochSourceStake := prevEpochStake.SourceStake
 	prevEpochTargetStake := prevEpochStake.TargetStake
 	prevEpochHeadStake := prevEpochStake.HeadStake
 
 	balanceSqRoot := Gwei(math.IntegerSquareroot(uint64(totalBalance)))
-	finalized, err := input.Finalized()
+	finalized, err := state.FinalizedCheckpoint()
 	if err != nil {
 		return nil, err
 	}
-	finalityDelay := previousEpoch - finalized.Epoch
+	finalizedEpoch, err := finalized.Epoch()
+	if err != nil {
+		return nil, err
+	}
+	finalityDelay := previousEpoch - finalizedEpoch
 
 	// All summed effective balances are normalized to effective-balance increments, to avoid overflows.
 	totalBalance /= EFFECTIVE_BALANCE_INCREMENT
@@ -73,14 +59,12 @@ func (state *BeaconStateView) AttestationDeltas(epc *EpochsContext, process *Epo
 	prevEpochTargetStake /= EFFECTIVE_BALANCE_INCREMENT
 	prevEpochHeadStake /= EFFECTIVE_BALANCE_INCREMENT
 
+	validatorCount := ValidatorIndex(epc.ValCount())
 	for i := ValidatorIndex(0); i < validatorCount; i++ {
 		status := attesterStatuses[i]
 		if status.Flags&EligibleAttester != 0 {
 
-			effBalance, err := input.EffectiveBalance(i)
-			if err != nil {
-				return nil, err
-			}
+			effBalance := status.Validator.EffectiveBalance
 			baseReward := effBalance * BASE_REWARD_FACTOR /
 				balanceSqRoot / BASE_REWARDS_PER_EPOCH
 
@@ -131,23 +115,38 @@ func (state *BeaconStateView) AttestationDeltas(epc *EpochsContext, process *Epo
 }
 
 func (state *BeaconStateView) ProcessEpochRewardsAndPenalties(epc *EpochsContext, process *EpochProcess) error {
-	currentEpoch, err := input.CurrentEpoch()
-	if err != nil {
-		return err
-	}
+	currentEpoch := epc.CurrentEpoch.Epoch
 	if currentEpoch == GENESIS_EPOCH {
 		return nil
 	}
-	valCount, err := input.ValidatorCount()
-	if err != nil {
-		return err
-	}
+	valCount := epc.ValCount()
 	sum := NewDeltas(valCount)
-	attDeltas, err := input.AttestationDeltas()
+	attDeltas, err := state.AttestationDeltas(epc, process)
 	if err != nil {
 		return err
 	}
 	sum.Add(attDeltas)
-	return input.ApplyDeltas(sum)
+
+	balances, err := state.Balances()
+	if err != nil {
+		return err
+	}
+	balLen, err := balances.Length()
+	if err != nil {
+		return err
+	}
+	if uint64(len(sum.Penalties)) != balLen || uint64(len(sum.Rewards)) != balLen {
+		return errors.New("cannot apply deltas to balances list with different length")
+	}
+	// TODO: can be optimized a lot, make a new tree in one go
+	for i := ValidatorIndex(0); i < ValidatorIndex(balLen); i++ {
+		if err := balances.IncreaseBalance(i, sum.Rewards[i]); err != nil {
+			return err
+		}
+		if err := balances.DecreaseBalance(i, sum.Penalties[i]); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 

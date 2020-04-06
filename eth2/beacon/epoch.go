@@ -1,13 +1,7 @@
 package beacon
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon/finality"
-	"github.com/protolambda/zrnt/eth2/beacon/finalupdates"
-	"github.com/protolambda/zrnt/eth2/beacon/registry"
-	"github.com/protolambda/zrnt/eth2/beacon/rewardpenalty"
-	"github.com/protolambda/zrnt/eth2/beacon/slashings"
-
-
+	"errors"
 	"github.com/protolambda/zrnt/eth2/util/math"
 	"sort"
 )
@@ -18,164 +12,177 @@ type EpochStakeSummary struct {
 	HeadStake Gwei
 }
 
-type EpochProcessState struct {
+type EpochProcess struct {
+	PrevEpoch Epoch
+	CurrEpoch Epoch
+
 	Statuses []AttesterStatus
+
 	TotalActiveStake Gwei
-	PrevEpoch EpochStakeSummary
-	CurrEpoch EpochStakeSummary
+	TotalActiveUnslashedStake Gwei
+
+	PrevEpochStake EpochStakeSummary
+	CurrEpochStake EpochStakeSummary
+
+	// Thanks to exit delay, this does not change within the epoch processing.
 	ActiveValidators uint64
+
 	IndicesToSlash []ValidatorIndex
-	IndicesToActivate []ValidatorIndex
+	IndicesToSetActivationEligibility []ValidatorIndex
+	// Ignores churn. Apply churn-limit manually.
+	// Maybe, because finality affects it still.
+	IndicesToMaybeActivate []ValidatorIndex
+
+	IndicesToEject []ValidatorIndex
+
 	ExitQueueEnd Epoch
+	ExitQueueEndChurn uint64
 	ChurnLimit uint64
 }
-
-func (state *EpochProcessState) ProcessEpoch(proc EpochProcessors) error {
-	if err := proc.ProcessEpochJustification(state); err != nil {
-		return err
-	}
-	if err := proc.ProcessEpochRewardsAndPenalties(state); err != nil {
-		return err
-	}
-	if err := proc.ProcessEpochRegistryUpdates(state); err != nil {
-		return err
-	}
-	if err := proc.ProcessEpochSlashings(state); err != nil {
-		return err
-	}
-	if err := proc.ProcessEpochFinalUpdates(state); err != nil {
-		return err
-	}
-	return nil
-}
-
 
 func GetChurnLimit(activeValidatorCount uint64) uint64 {
 	return math.MaxU64(MIN_PER_EPOCH_CHURN_LIMIT, activeValidatorCount/CHURN_LIMIT_QUOTIENT)
 }
 
-func PrepareEpochProcessState(input EpochPreparationInput) (out *EpochProcessState, err error) {
-	count, err := input.ValidatorCount()
-	if err != nil {
-		return nil, err
-	}
+func (state *BeaconStateView) PrepareEpochProcess(epc *EpochsContext) (out *EpochProcess, err error) {
+	count := epc.ValCount()
 
-	currentEpoch, err := input.CurrentEpoch()
-	if err != nil {
-		return nil, err
-	}
-	prevEpoch, err := input.PreviousEpoch()
-	if err != nil {
-		return nil, err
-	}
+	prevEpoch := epc.PreviousEpoch.Epoch
+	currentEpoch := epc.CurrentEpoch.Epoch
 
-	out = &EpochProcessState{
+	out = &EpochProcess{
 		Statuses: make([]AttesterStatus, count, count),
 	}
 
-	finality, err := input.Finalized()
+	slashingsEpoch := currentEpoch + (EPOCHS_PER_SLASHINGS_VECTOR / 2)
+	exitQueueEnd := currentEpoch.ComputeActivationExitEpoch()
+
+	validators, err := state.Validators()
 	if err != nil {
 		return nil, err
 	}
-	activationEpoch := finality.Epoch.ComputeActivationExitEpoch()
-
-	withdrawableEpoch := currentEpoch + (EPOCHS_PER_SLASHINGS_VECTOR / 2)
-	exitQueueEnd := currentEpoch.ComputeActivationExitEpoch()
+	if valCount, err := validators.Length(); err != nil {
+		return nil, err
+	} else if valCount != count {
+		return nil, errors.New("validator count mismatch in epoch processing preparation")
+	}
 
 	activeCount := uint64(0)
-	for i := ValidatorIndex(0); i < ValidatorIndex(count); i++ {
+	valIter := validators.ReadonlyIter()
+	i := ValidatorIndex(0)
+	for {
+		valContainer, ok, err := valIter.Next()
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			break
+		}
+		val, err := AsValidator(valContainer, nil)
+		if err != nil {
+			return nil, err
+		}
+		flat, err := ToFlatValidator(val)
+		if err != nil {
+			return nil, err
+		}
+
 		status := &out.Statuses[i]
-		slashed, err := input.IsSlashed(i)
-		if err != nil {
-			return nil, err
-		}
-		if !slashed {
-			status.Flags |= UnslashedAttester
-		}
-		if effBal, err := input.EffectiveBalance(i); err != nil {
-			return nil, err
-		} else {
-			status.EffectiveBalance = effBal
-		}
-		if active, err := input.IsActive(i, currentEpoch); err != nil {
-			return nil, err
-		} else if active {
-			status.Flags |= EligibleAttester
-			status.Active = true
-			out.TotalActiveStake += status.EffectiveBalance
-			activeCount++
-		} else if slashed {
-			valWithdrawableEpoch, err := input.WithdrawableEpoch(i)
-			if err != nil {
-				return nil, err
-			} else if prevEpoch+1 < valWithdrawableEpoch {
-				status.Flags |= EligibleAttester
-			}
-			if withdrawableEpoch == valWithdrawableEpoch {
-				out.IndicesToSlash = append(out.IndicesToSlash, i)
-			}
-		}
-		valExit, err := input.ExitEpoch(i)
-		if err != nil {
-			return nil, err
-		}
-		status.ExitEpoch = valExit
-		if valExit != FAR_FUTURE_EPOCH && valExit > exitQueueEnd {
-			exitQueueEnd = valExit
-		}
+		status.Validator = flat
 		status.AttestedProposer = ValidatorIndexMarker
 
-		valActivationEligibilityEpoch, err := input.ActivationEligibilityEpoch(i)
-		if err != nil {
-			return nil, err
+		if flat.Slashed {
+			if slashingsEpoch == flat.WithdrawableEpoch {
+				out.IndicesToSlash = append(out.IndicesToSlash, i)
+			}
+		} else {
+			status.Flags |= UnslashedAttester
 		}
-		status.ActivationEligibilityEpoch = valActivationEligibilityEpoch
-		valActivationEpoch, err := input.ActivationEpoch(i)
-		if err != nil {
-			return nil, err
+
+		if flat.IsActive(prevEpoch) || (flat.Slashed && (prevEpoch + 1 < flat.WithdrawableEpoch)) {
+			status.Flags |= EligibleAttester
 		}
-		status.ActivationEpoch = valActivationEpoch
-		if valActivationEligibilityEpoch != FAR_FUTURE_EPOCH && valActivationEpoch >= activationEpoch {
-			out.IndicesToActivate = append(out.IndicesToActivate, i)
+
+		status.Active = flat.IsActive(currentEpoch)
+		if status.Active {
+			activeCount++
+			out.TotalActiveStake += flat.EffectiveBalance
+			if !flat.Slashed {
+				out.TotalActiveUnslashedStake += flat.EffectiveBalance
+			}
+		}
+
+		if flat.ActivationEligibilityEpoch == FAR_FUTURE_EPOCH && flat.EffectiveBalance == MAX_EFFECTIVE_BALANCE {
+			out.IndicesToSetActivationEligibility = append(out.IndicesToSetActivationEligibility, i)
+		}
+
+		if flat.ActivationEpoch == FAR_FUTURE_EPOCH && flat.ActivationEligibilityEpoch <= currentEpoch {
+			out.IndicesToMaybeActivate = append(out.IndicesToMaybeActivate, i)
+		}
+
+		if !status.Active && flat.EffectiveBalance <= EJECTION_BALANCE && flat.ExitEpoch == FAR_FUTURE_EPOCH {
+			out.IndicesToEject = append(out.IndicesToEject, i)
 		}
 	}
 
 	// Order by the sequence of activation_eligibility_epoch setting and then index
-	sort.Slice(out.IndicesToActivate, func(i int, j int) bool {
-		return out.Statuses[out.IndicesToActivate[i]].activationEligibility < out.Statuses[out.IndicesToActivate[j]].activationEligibility
+	sort.Slice(out.IndicesToMaybeActivate, func(i int, j int) bool {
+		return out.Statuses[out.IndicesToMaybeActivate[i]].Validator.ActivationEligibilityEpoch <
+			out.Statuses[out.IndicesToMaybeActivate[j]].Validator.ActivationEligibilityEpoch
 	})
 
-	exitQueueChurn := uint64(0)
+	exitQueueEndChurn := uint64(0)
 	for i := ValidatorIndex(0); i < ValidatorIndex(count); i++ {
 		status := &out.Statuses[i]
-		if status.ExitEpoch == exitQueueEnd {
-			exitQueueChurn++
+		if status.Validator.ExitEpoch == exitQueueEnd {
+			exitQueueEndChurn++
 		}
 	}
 	churnLimit := GetChurnLimit(activeCount)
-	if exitQueueChurn >= churnLimit {
+	if exitQueueEndChurn >= churnLimit {
 		exitQueueEnd++
+		exitQueueEndChurn = 0
 	}
+	out.ExitQueueEndChurn = exitQueueEndChurn
 	out.ExitQueueEnd = exitQueueEnd
 	out.ChurnLimit = churnLimit
 
 	processEpoch := func(
-		attestations []*PendingAttestation, epochSum *EpochStakeSummary, epoch Epoch,
+		attestations *PendingAttestationsView,
+		epochStakeSum *EpochStakeSummary,
+		epoch Epoch,
 		sourceFlag, targetFlag, headFlag AttesterFlag) error {
 
-		targetBlockRoot, err := input.GetBlockRootAtSlot(epoch.GetStartSlot())
+		actualTargetBlockRoot, err := state.GetBlockRootAtSlot(epoch.GetStartSlot())
 		if err != nil {
 			return err
 		}
 		participants := make([]ValidatorIndex, 0, MAX_VALIDATORS_PER_COMMITTEE)
-		for _, att := range attestations {
-			attBlockRoot, err := input.GetBlockRootAtSlot(att.Data.Slot)
+		attIter := attestations.ReadonlyIter()
+		for {
+			el, ok, err := attIter.Next()
+			if err != nil {
+				return err
+			}
+			if !ok {
+				break
+			}
+			attView, err := AsPendingAttestation(el, nil)
+			if err != nil {
+				return err
+			}
+			att, err := attView.Raw()
+			if err != nil {
+				return err
+			}
+
+			attBlockRoot, err := state.GetBlockRootAtSlot(att.Data.Slot)
 			if err != nil {
 				return err
 			}
 
 			// attestation-target is already known to be this epoch, get it from the pre-computed shuffling directly.
-			committee, err := input.GetBeaconCommittee(att.Data.Slot, att.Data.Index)
+			committee, err := epc.GetBeaconCommittee(att.Data.Slot, att.Data.Index)
 			if err != nil {
 				return err
 			}
@@ -201,36 +208,36 @@ func PrepareEpochProcessState(input EpochPreparationInput) (out *EpochProcessSta
 
 				// remember the participant as one of the good validators
 				status.Flags |= sourceFlag
-				epochSum.SourceStake += status.EffectiveBalance
+				epochStakeSum.SourceStake += status.Validator.EffectiveBalance
 
 				// If the attestation is for the boundary:
-				if att.Data.Target.Root == targetBlockRoot {
+				if att.Data.Target.Root == actualTargetBlockRoot {
 					status.Flags |= targetFlag
-					epochSum.TargetStake += status.EffectiveBalance
+					epochStakeSum.TargetStake += status.Validator.EffectiveBalance
 
 					// If the attestation is for the head (att the time of attestation):
 					if att.Data.BeaconBlockRoot == attBlockRoot {
 						status.Flags |= headFlag
-						epochSum.HeadStake += status.EffectiveBalance
+						epochStakeSum.HeadStake += status.Validator.EffectiveBalance
 					}
 				}
 			}
 		}
 		return nil
 	}
-	prevPendingRawAtts, err := input.PreviousEpochPendingAttestations()
+	prevAtts, err := state.PreviousEpochAttestations()
 	if err != nil {
 		return nil, err
 	}
-	if err := processEpoch(prevPendingRawAtts, &out.PrevEpoch, prevEpoch,
+	if err := processEpoch(prevAtts, &out.PrevEpochStake, prevEpoch,
 		PrevSourceAttester, PrevTargetAttester, PrevHeadAttester); err != nil {
 		return nil, err
 	}
-	currPendingRawAtts, err := input.CurrentEpochPendingAttestations()
+	currAtts, err := state.CurrentEpochAttestations()
 	if err != nil {
 		return nil, err
 	}
-	if err := processEpoch(currPendingRawAtts, &out.PrevEpoch, currentEpoch,
+	if err := processEpoch(currAtts, &out.PrevEpochStake, currentEpoch,
 		CurrSourceAttester, CurrTargetAttester, CurrHeadAttester); err != nil {
 		return nil, err
 	}

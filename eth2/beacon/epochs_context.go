@@ -41,6 +41,12 @@ func (state *BeaconStateView) computeProposerIndex(indices []ValidatorIndex, see
 	return 0, errors.New("random (but balance-biased) infinite scrolling through a committee should always find a proposer")
 }
 
+type BoundedIndex struct {
+	Index ValidatorIndex
+	Activation Epoch
+	Exit Epoch
+}
+
 func (state *BeaconStateView) loadIndicesBounded() ([]BoundedIndex, error) {
 	validators, err := state.Validators()
 	if err != nil {
@@ -250,6 +256,10 @@ func (epc *EpochsContext) getSlotComms(slot Slot) ([][]ValidatorIndex, error) {
 	} else {
 		return nil, fmt.Errorf("crosslink committee retrieval: out of range epoch: %d", epoch)
 	}
+}
+
+func (epc *EpochsContext) ValCount() uint64 {
+	return uint64(len(epc.Index2Pubkey))
 }
 
 // Return the beacon committee at slot for index.

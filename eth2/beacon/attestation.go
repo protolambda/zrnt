@@ -3,21 +3,16 @@ package beacon
 import (
 	"errors"
 	"fmt"
-
-
 	"github.com/protolambda/zssz"
 	. "github.com/protolambda/ztyp/view"
 	"sort"
 )
 
-func (state *AttestationsProps) ProcessAttestations(ops []Attestation) error {
-	for i := range ops {
-		if err := state.ProcessAttestation(&ops[i]); err != nil {
-			return err
-		}
-	}
-	return nil
-}
+var AttestationType = ContainerType("Attestation", []FieldDef{
+	{"aggregation_bits", CommitteeBitsType},
+	{"data", AttestationDataType},
+	{"signature", BLSSignatureType},
+})
 
 var AttestationSSZ = zssz.GetSSZ((*Attestation)(nil))
 
@@ -27,15 +22,16 @@ type Attestation struct {
 	Signature       BLSSignature
 }
 
-var CommitteeBitsType = BitListType(MAX_VALIDATORS_PER_COMMITTEE)
+func (state *BeaconStateView) ProcessAttestations(ops []Attestation) error {
+	for i := range ops {
+		if err := state.ProcessAttestation(&ops[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
-var AttestationType = ContainerType("Attestation", []FieldDef{
-	{"aggregation_bits", CommitteeBitsType},
-	{"data", AttestationDataType},
-	{"signature", BLSSignatureType},
-})
-
-func (state *AttestationsProps) ProcessAttestation(attestation *Attestation) error {
+func (state *BeaconStateView) ProcessAttestation(attestation *Attestation) error {
 	data := &attestation.Data
 
 	// Check slot

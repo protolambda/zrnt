@@ -39,7 +39,19 @@ func (state *BeaconStateView) ProcessEpochFinalUpdates() error {
 		}
 	}
 
-	if err := input.RotateEpochAttestations(); err != nil {
+	// Rotate current/previous epoch attestations
+	prevAtts, err := state.PreviousEpochAttestations()
+	if err != nil {
+		return err
+	}
+	currAtts, err := state.CurrentEpochAttestations()
+	if err != nil {
+		return err
+	}
+	if err := prevAtts.SetBacking(currAtts.Backing()); err != nil {
+		return err
+	}
+	if err := currAtts.SetBacking(PendingAttestationsType.DefaultNode()); err != nil {
 		return err
 	}
 

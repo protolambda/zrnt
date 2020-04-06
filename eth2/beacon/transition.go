@@ -31,6 +31,25 @@ func (state *BeaconStateView) ProcessSlot() error {
 	return nil
 }
 
+func (state *BeaconStateView) ProcessEpoch() error {
+	if err := state.ProcessEpochJustification(); err != nil {
+		return err
+	}
+	if err := state.ProcessEpochRewardsAndPenalties(); err != nil {
+		return err
+	}
+	if err := state.ProcessEpochRegistryUpdates(); err != nil {
+		return err
+	}
+	if err := state.ProcessEpochSlashings(); err != nil {
+		return err
+	}
+	if err := state.ProcessEpochFinalUpdates(); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Process the state to the given slot.
 // Returns an error if the slot is older than the state is already at.
 // Mutates the state, does not copy.

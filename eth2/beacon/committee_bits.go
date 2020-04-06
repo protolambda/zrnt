@@ -1,7 +1,10 @@
 package beacon
 
 import (
+	"bytes"
+	"fmt"
 	"github.com/protolambda/zssz/bitfields"
+	. "github.com/protolambda/ztyp/view"
 )
 
 type CommitteeBits []byte
@@ -59,4 +62,33 @@ func (cb CommitteeBits) FilterNonParticipants(committee []ValidatorIndex) []Vali
 		}
 	}
 	return out
+}
+
+var CommitteeBitsType = BitListType(MAX_VALIDATORS_PER_COMMITTEE)
+
+type CommitteeBitsView struct {
+	*BitListView
+}
+
+func AsCommitteeBits(v View, err error) (*CommitteeBitsView, error) {
+	c, err := AsBitList(v, err)
+	return &CommitteeBitsView{c}, err
+}
+
+func (v *CommitteeBitsView) Raw() (CommitteeBits, error) {
+	bitLength, err := v.Length()
+	if err != nil {
+		return nil, err
+	}
+	// rounded up, and then an extra bit for delimiting. ((bitLength + 7 + 1)/ 8)
+	byteLength := (bitLength / 8) + 1
+	var buf bytes.Buffer
+	if err := v.Serialize(&buf); err != nil {
+		return nil, err
+	}
+	out := CommitteeBits(buf.Bytes())
+	if uint64(len(out)) != byteLength {
+		return nil, fmt.Errorf("failed to convert attestation tree bits view to raw bits")
+	}
+	return out, nil
 }

@@ -130,7 +130,7 @@ func (state *BeaconStateView) AttestationDeltas() (*Deltas, error) {
 	return deltas, nil
 }
 
-func ProcessEpochRewardsAndPenalties(input RewardsAndPenaltiesInput) error {
+func (state *BeaconStateView) ProcessEpochRewardsAndPenalties() error {
 	currentEpoch, err := input.CurrentEpoch()
 	if err != nil {
 		return err

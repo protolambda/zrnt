@@ -26,12 +26,6 @@ func CommitteeCount(activeValidators uint64) uint64 {
 	return committeesPerSlot
 }
 
-type BoundedIndex struct {
-	Index ValidatorIndex
-	Activation Epoch
-	Exit Epoch
-}
-
 func (state *BeaconStateView) ShufflingEpoch(indicesBounded []BoundedIndex, epoch Epoch) (*ShufflingEpoch, error) {
 	mixes, err := state.RandaoMixes()
 	if err != nil {

@@ -34,28 +34,35 @@ func (sl *SlashingsView) AddSlashing(epoch Epoch, add Gwei) error {
 }
 
 func (sl *SlashingsView) Total() (sum Gwei, err error) {
-	for i := Epoch(0); i < EPOCHS_PER_SLASHINGS_VECTOR; i++ {
-		v, err := sl.GetSlashingsValue(i)
+	iter := sl.ReadonlyIter()
+	for {
+		el, ok, err := iter.Next()
 		if err != nil {
 			return 0, err
 		}
-		sum += v
+		if !ok {
+			break
+		}
+		value, err := AsGwei(el, nil)
+		if err != nil {
+			return 0, err
+		}
+		sum += value
 	}
 	return
 }
 
 // Slash the validator with the given index.
 func (state *BeaconStateView) SlashValidator(epc *EpochsContext, slashedIndex ValidatorIndex, whistleblowerIndex *ValidatorIndex) error {
-	slot, err := input.CurrentSlot()
+	currentEpoch := epc.CurrentEpoch.Epoch
+	if err := state.InitiateValidatorExit(epc, slashedIndex); err != nil {
+		return err
+	}
+	vals, err := state.Validators()
 	if err != nil {
 		return err
 	}
-	currentEpoch := slot.ToEpoch()
-
-	if err := input.InitiateValidatorExit(currentEpoch, slashedIndex); err != nil {
-		return err
-	}
-	v, err := state.Validator(index)
+	v, err := vals.Validator(slashedIndex)
 	if err != nil {
 		return err
 	}
@@ -73,7 +80,7 @@ func (state *BeaconStateView) SlashValidator(epc *EpochsContext, slashedIndex Va
 		}
 	}
 
-	effectiveBalance, err := input.EffectiveBalance(slashedIndex)
+	effectiveBalance, err := v.EffectiveBalance()
 	if err != nil {
 		return err
 	}
@@ -86,11 +93,19 @@ func (state *BeaconStateView) SlashValidator(epc *EpochsContext, slashedIndex Va
 		return err
 	}
 
-	if err := input.DecreaseBalance(slashedIndex, effectiveBalance/MIN_SLASHING_PENALTY_QUOTIENT); err != nil {
+	bals, err := state.Balances()
+	if err != nil {
+		return err
+	}
+	if err := bals.DecreaseBalance(slashedIndex, effectiveBalance/MIN_SLASHING_PENALTY_QUOTIENT); err != nil {
 		return err
 	}
 
-	propIndex, err := input.GetBeaconProposerIndex(slot)
+	slot, err := state.Slot()
+	if err != nil {
+		return err
+	}
+	propIndex, err := epc.GetBeaconProposer(slot)
 	if err != nil {
 		return err
 	}
@@ -99,20 +114,17 @@ func (state *BeaconStateView) SlashValidator(epc *EpochsContext, slashedIndex Va
 	}
 	whistleblowerReward := effectiveBalance / WHISTLEBLOWER_REWARD_QUOTIENT
 	proposerReward := whistleblowerReward / PROPOSER_REWARD_QUOTIENT
-	if err := input.IncreaseBalance(propIndex, proposerReward); err != nil {
+	if err := bals.IncreaseBalance(propIndex, proposerReward); err != nil {
 		return err
 	}
-	if err := input.IncreaseBalance(*whistleblowerIndex, whistleblowerReward-proposerReward); err != nil {
+	if err := bals.IncreaseBalance(*whistleblowerIndex, whistleblowerReward-proposerReward); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (state *BeaconStateView) ProcessEpochSlashings(epc *EpochsContext, process *EpochProcess) error {
-	totalBalance, err := input.GetTotalStake()
-	if err != nil {
-		return err
-	}
+	totalBalance := process.TotalActiveStake
 
 	slashings, err := state.Slashings()
 	if err != nil {
@@ -124,16 +136,13 @@ func (state *BeaconStateView) ProcessEpochSlashings(epc *EpochsContext, process 
 		return err
 	}
 
-	toSlash, err := input.GetIndicesToSlash()
+	bals, err := state.Balances()
 	if err != nil {
 		return err
 	}
-	for _, index := range toSlash {
+	for _, index := range process.IndicesToSlash {
 		// Factored out from penalty numerator to avoid uint64 overflow
-		slashedEffectiveBal, err := input.EffectiveBalance(index)
-		if err != nil {
-			return err
-		}
+		slashedEffectiveBal := process.Statuses[index].Validator.EffectiveBalance
 		penaltyNumerator := slashedEffectiveBal / EFFECTIVE_BALANCE_INCREMENT
 		if slashingsWeight := slashingsSum * 3; totalBalance < slashingsWeight {
 			penaltyNumerator *= totalBalance
@@ -141,7 +150,8 @@ func (state *BeaconStateView) ProcessEpochSlashings(epc *EpochsContext, process 
 			penaltyNumerator *= slashingsWeight
 		}
 		penalty := penaltyNumerator / totalBalance * EFFECTIVE_BALANCE_INCREMENT
-		if err := input.DecreaseBalance(index, penalty); err != nil {
+
+		if err := bals.DecreaseBalance(index, penalty); err != nil {
 			return err
 		}
 	}

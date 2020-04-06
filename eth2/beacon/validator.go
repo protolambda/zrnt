@@ -78,6 +78,9 @@ func (v *ValidatorView) MakeSlashed() error {
 func (v *ValidatorView) ActivationEligibilityEpoch() (Epoch, error) {
 	return AsEpoch(v.Get(4))
 }
+func (v *ValidatorView) SetActivationEligibilityEpoch(epoch Epoch) error {
+	return v.Set(4, Uint64View(epoch))
+}
 func (v *ValidatorView) ActivationEpoch() (Epoch, error) {
 	return AsEpoch(v.Get(5))
 }

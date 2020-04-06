@@ -23,37 +23,71 @@ func (registry *ValidatorsRegistryView) Validator(index ValidatorIndex) (*Valida
 }
 
 func (state *BeaconStateView) ProcessEpochRegistryUpdates(epc *EpochsContext, process *EpochProcess) error {
-	// Process activation eligibility and ejections
-	currentEpoch := epc.CurrentEpoch.Epoch
-	for i, v := range f.State.Validators {
-		if v.ActivationEligibilityEpoch == FAR_FUTURE_EPOCH &&
-			v.EffectiveBalance == MAX_EFFECTIVE_BALANCE {
-			v.ActivationEligibilityEpoch = currentEpoch
-		}
-		if v.IsActive(currentEpoch) &&
-			v.EffectiveBalance <= EJECTION_BALANCE {
-			f.State.InitiateValidatorExit(currentEpoch, ValidatorIndex(i))
-		}
-	}
-	// Queue validators eligible for activation and not dequeued for activation prior to finalized epoch
-	activationEpoch := f.Meta.Finalized().Epoch.ComputeActivationExitEpoch()
-	f.State.ProcessActivationQueue(activationEpoch, currentEpoch)
-
-
-	queueLen := uint64(len(activationQueue))
-	if churnLimit, err := state.GetChurnLimit(); err != nil {
+	vals, err := state.Validators()
+	if err != nil {
 		return err
-	} else if churnLimit < queueLen {
-		queueLen = churnLimit
 	}
-
-	for _, item := range activationQueue[:queueLen] {
-		if item.activation == FAR_FUTURE_EPOCH {
-			v, err := state.Validator(item.valIndex)
+	// process ejections
+	{
+		exitEnd := process.ExitQueueEnd
+		endChurn := process.ExitQueueEndChurn
+		for _, index := range process.IndicesToEject {
+			val, err := vals.Validator(index)
 			if err != nil {
 				return err
 			}
-			if err := v.SetActivationEpoch(currentEpoch.ComputeActivationExitEpoch()); err != nil {
+			if err := val.SetExitEpoch(exitEnd); err != nil {
+				return err
+			}
+			if err := val.SetWithdrawableEpoch(exitEnd + MIN_VALIDATOR_WITHDRAWABILITY_DELAY); err != nil {
+				return err
+			}
+			endChurn += 1
+			if endChurn >= process.ChurnLimit {
+				endChurn = 0
+				exitEnd += 1
+			}
+		}
+	}
+
+	// Process activation eligibility
+	{
+		eligibilityEpoch := epc.CurrentEpoch.Epoch + 1
+		for _, index := range process.IndicesToSetActivationEligibility {
+			val, err := vals.Validator(index)
+			if err != nil {
+				return err
+			}
+			if err := val.SetActivationEligibilityEpoch(eligibilityEpoch); err != nil {
+				return err
+			}
+		}
+	}
+	// Process activations
+	{
+		finality, err := state.FinalizedCheckpoint()
+		if err != nil {
+			return err
+		}
+		finalizedEpoch, err := finality.Epoch()
+		if err != nil {
+			return err
+		}
+		dequeued := process.IndicesToMaybeActivate
+		if uint64(len(dequeued)) > process.ChurnLimit {
+			dequeued = dequeued[:process.ChurnLimit]
+		}
+		activationEpoch := epc.CurrentEpoch.Epoch.ComputeActivationExitEpoch()
+		for _, index := range dequeued {
+			if process.Statuses[index].Validator.ActivationEligibilityEpoch > finalizedEpoch {
+				// remaining validators all have an activation_eligibility_epoch that is higher anyway, break early
+				break
+			}
+			val, err := vals.Validator(index)
+			if err != nil {
+				return err
+			}
+			if err := val.SetActivationEpoch(activationEpoch); err != nil {
 				return err
 			}
 		}

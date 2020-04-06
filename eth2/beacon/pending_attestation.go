@@ -12,20 +12,14 @@ type PendingAttestation struct {
 	ProposerIndex   ValidatorIndex
 }
 
-func (att *PendingAttestation) View() (*PendingAttestationView, error) {
-	// TODO
-	bitsView, err := att.AggregationBits.View()
-	dataView, err := att.Data.View()
-	c, err := PendingAttestationType.FromFields(
-		bitsView,
-		dataView,
+func (att *PendingAttestation) View() *PendingAttestationView {
+	c, _ := PendingAttestationType.FromFields(
+		att.AggregationBits.View(),
+		att.Data.View(),
 		Uint64View(att.InclusionDelay),
 		Uint64View(att.ProposerIndex),
 	)
-	if err != nil {
-		return nil, err
-	}
-	return &PendingAttestationView{c}, nil
+	return &PendingAttestationView{c}
 }
 
 var AttestationDataSSZ = zssz.GetSSZ((*AttestationData)(nil))
@@ -40,6 +34,18 @@ type AttestationData struct {
 	// FFG vote
 	Source Checkpoint
 	Target Checkpoint
+}
+
+func (data *AttestationData) View() *AttestationDataView {
+	rv := RootView(data.BeaconBlockRoot)
+	c, _ := AttestationDataType.FromFields(
+		Uint64View(data.Slot),
+		Uint64View(data.Index),
+		&rv,
+		data.Source.View(),
+		data.Target.View(),
+	)
+	return &AttestationDataView{c}
 }
 
 var AttestationDataType = ContainerType("AttestationData", []FieldDef{

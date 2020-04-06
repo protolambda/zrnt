@@ -9,6 +9,11 @@ import (
 
 type CommitteeBits []byte
 
+func (cb CommitteeBits) View() *CommitteeBitsView {
+	c, _ := CommitteeBitsType.Deserialize(bytes.NewReader(cb), uint64(len(cb)))
+	return &CommitteeBitsView{c.(*BitListView)}
+}
+
 func (cb CommitteeBits) BitLen() uint64 {
 	return bitfields.BitlistLen(cb)
 }

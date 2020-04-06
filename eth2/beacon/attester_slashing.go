@@ -57,13 +57,22 @@ func (state *BeaconStateView) ProcessAttesterSlashing(epc *EpochsContext, attest
 	slashedAny := false
 	var errorAny error
 
+	validators, err := state.Validators()
+	if err != nil {
+		return err
+	}
 	// run slashings where applicable
 	// use ZigZagJoin for efficient intersection: the indicies are already sorted (as validated above)
 	ValidatorSet(sa1.AttestingIndices).ZigZagJoin(ValidatorSet(sa2.AttestingIndices), func(i ValidatorIndex) {
 		if errorAny != nil {
 			return
 		}
-		if slashable, err := input.IsSlashable(i, currentEpoch); err != nil {
+		validator, err := validators.Validator(i)
+		if err != nil {
+			errorAny = err
+			return
+		}
+		if slashable, err := validator.IsSlashable(currentEpoch); err != nil {
 			errorAny = err
 		} else if slashable {
 			if err := state.SlashValidator(epc, i, nil); err != nil {

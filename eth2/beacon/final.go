@@ -1,9 +1,5 @@
 package beacon
 
-import (
-
-)
-
 func (state *BeaconStateView) ProcessEpochFinalUpdates(epc *EpochsContext, process *EpochProcess) error {
 	nextEpoch := epc.NextEpoch.Epoch
 
@@ -15,14 +11,42 @@ func (state *BeaconStateView) ProcessEpochFinalUpdates(epc *EpochsContext, proce
 	}
 
 	// update effective balances
-	for i, v := range state.Validators {
-		// TODO
-		balance := state.Balances[i]
-		if balance < v.EffectiveBalance ||
-			v.EffectiveBalance+3*HALF_INCREMENT < balance {
-			v.EffectiveBalance = balance - (balance % EFFECTIVE_BALANCE_INCREMENT)
-			if MAX_EFFECTIVE_BALANCE < v.EffectiveBalance {
-				v.EffectiveBalance = MAX_EFFECTIVE_BALANCE
+	{
+		vals, err := state.Validators()
+		if err != nil {
+			return err
+		}
+		bals, err := state.Balances()
+		if err != nil {
+			return err
+		}
+		balIter := bals.ReadonlyIter()
+		i := ValidatorIndex(0)
+		for {
+			el, ok, err := balIter.Next()
+			if err != nil {
+				return err
+			}
+			if !ok {
+				break
+			}
+			balance, err := AsGwei(el, nil)
+			if err != nil {
+				return err
+			}
+			effBalance := process.Statuses[i].Validator.EffectiveBalance
+			if balance < effBalance || effBalance+3*HALF_INCREMENT < balance {
+				effBalance = balance - (balance % EFFECTIVE_BALANCE_INCREMENT)
+				if MAX_EFFECTIVE_BALANCE < effBalance {
+					effBalance = MAX_EFFECTIVE_BALANCE
+				}
+				val, err := vals.Validator(i)
+				if err != nil {
+					return err
+				}
+				if err := val.SetEffectiveBalance(effBalance); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -34,6 +58,7 @@ func (state *BeaconStateView) ProcessEpochFinalUpdates(epc *EpochsContext, proce
 	if err := slashings.ResetSlashings(nextEpoch); err != nil {
 		return err
 	}
+
 	mixes, err := state.RandaoMixes()
 	if err != nil {
 		return err

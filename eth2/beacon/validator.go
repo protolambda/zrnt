@@ -4,6 +4,34 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
+type Validator struct {
+	Pubkey                BLSPubkey
+	WithdrawalCredentials Root // Commitment to pubkey for withdrawals
+	EffectiveBalance      Gwei // Balance at stake
+	Slashed               bool
+
+	// Status epochs
+	ActivationEligibilityEpoch Epoch // When criteria for activation were met
+	ActivationEpoch            Epoch
+	ExitEpoch                  Epoch
+	WithdrawableEpoch          Epoch // When validator can withdraw funds
+}
+
+func (v *Validator) View() *ValidatorView {
+	wCred := RootView(v.WithdrawalCredentials)
+	c, _ := ValidatorType.FromFields(
+		v.Pubkey.View(),
+		&wCred,
+		Uint64View(v.EffectiveBalance),
+		BoolView(v.Slashed),
+		Uint64View(v.ActivationEligibilityEpoch),
+		Uint64View(v.ActivationEpoch),
+		Uint64View(v.ExitEpoch),
+		Uint64View(v.WithdrawableEpoch),
+	)
+	return &ValidatorView{c}
+}
+
 var ValidatorType = ContainerType("Validator", []FieldDef{
 	{"pubkey", BLSPubkeyType},
 	{"withdrawal_credentials", Bytes32Type}, // Commitment to pubkey for withdrawals
@@ -37,6 +65,9 @@ func (v *ValidatorView) WithdrawalCredentials() (out Root, err error) {
 }
 func (v *ValidatorView) EffectiveBalance() (Gwei, error) {
 	return AsGwei(v.Get(2))
+}
+func (v *ValidatorView) SetEffectiveBalance(b Gwei) error {
+	return v.Set(2, Uint64View(b))
 }
 func (v *ValidatorView) Slashed() (BoolView, error) {
 	return AsBool(v.Get(3))

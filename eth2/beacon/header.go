@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/protolambda/zssz"
+	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
 
@@ -16,6 +17,20 @@ type BeaconBlockHeader struct {
 	ParentRoot    Root
 	StateRoot     Root
 	BodyRoot      Root
+}
+
+func (h *BeaconBlockHeader) View() *BeaconBlockHeaderView {
+	pr := RootView(h.ParentRoot)
+	sr := RootView(h.StateRoot)
+	br := RootView(h.BodyRoot)
+	c, _ := BeaconBlockHeaderType.FromFields(
+		Uint64View(h.Slot),
+		Uint64View(h.ProposerIndex),
+		&pr,
+		&sr,
+		&br,
+	)
+	return &BeaconBlockHeaderView{c}
 }
 
 func (b *BeaconBlockHeader) HashTreeRoot() Root {
@@ -114,39 +129,45 @@ func (state *BeaconStateView) ProcessHeader(epc *EpochsContext, header *BeaconBl
 	if header.Slot != currentSlot {
 		return errors.New("slot of block does not match slot of state")
 	}
-	// Verify that the parent matches
-	if latestRoot, err := state.GetLatestBlockRoot(); err != nil {
+	if !epc.IsValidIndex(header.ProposerIndex) {
+		return fmt.Errorf("beacon block header proposer index is invalid: %d", header.ProposerIndex)
+	}
+	proposerIndex, err := epc.GetBeaconProposer(currentSlot)
+	if err != nil {
 		return err
-	} else if header.ParentRoot != latestRoot {
+	}
+	// Verify that the parent matches
+	latestHeader, err := state.LatestBlockHeader()
+	if err != nil {
+		return err
+	}
+	latestRoot := latestHeader.HashTreeRoot(tree.GetHashFn())
+	if header.ParentRoot != latestRoot {
 		return fmt.Errorf("previous block root %x does not match root %x from latest state block header", header.ParentRoot, latestRoot)
 	}
-	// TODO
-	if !epc.IsValidIndex(header.ProposerIndex) {
-		return false
+	validators, err := state.Validators()
+	if err != nil {
+		return err
 	}
-	proposerIndex, err := input.GetBeaconProposerIndex(currentSlot)
+	validator, err := validators.Validator(proposerIndex)
 	if err != nil {
 		return err
 	}
 	// Verify proposer is not slashed
-	if slashed, err := input.IsSlashed(proposerIndex); err != nil {
+	if slashed, err := validator.Slashed(); err != nil {
 		return err
 	} else if slashed {
 		return errors.New("cannot accept block header from slashed proposer")
 	}
 
-	pr := RootView(header.ParentRoot)
-	// state_root is zeroed and overwritten in the next `process_slot` call.
-	// with BlockHeaderState.UpdateStateRoot(), once the post state is available.
-	sr := RootView{}
-	br := RootView(header.Body.HashTreeRoot())
-	headerContainer, _ := BeaconBlockHeaderType.FromFields(
-		Uint64View(header.Slot),
-		Uint64View(header.ProposerIndex),
-		&pr,
-		&sr,
-		&br,
-	)
 	// Store as the new latest block
-	return state.SetLatestBlockHeader(&BeaconBlockHeaderView{headerContainer})
+	return state.SetLatestBlockHeader(BeaconBlockHeader{
+		Slot:          header.Slot,
+		ProposerIndex: header.ProposerIndex,
+		ParentRoot:    header.ParentRoot,
+		// state_root is zeroed and overwritten in the next `process_slot` call.
+		// with BlockHeaderState.UpdateStateRoot(), once the post state is available.
+		StateRoot:     Root{},
+		BodyRoot:      header.Body.HashTreeRoot(),
+	}.View())
 }

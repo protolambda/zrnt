@@ -9,9 +9,21 @@ import (
 )
 
 type BLSPubkey [48]byte
+
+func (pub *BLSPubkey) View() *BLSPubkeyView {
+	v, _ := BLSPubkeyType.Deserialize(bytes.NewReader(pub[:]), 48)
+	return &BLSPubkeyView{v.(*BasicVectorView)}
+}
+
 var BLSPubkeyType = BasicVectorType(ByteType, 48)
 
 type BLSSignature [96]byte
+
+func (sig *BLSSignature) View() *BLSSignatureView {
+	v, _ := BLSSignatureType.Deserialize(bytes.NewReader(sig[:]), 48)
+	return &BLSSignatureView{v.(*BasicVectorView)}
+}
+
 var BLSSignatureType = BasicVectorType(ByteType, 96)
 
 type BLSPubkeyMessagePair struct {

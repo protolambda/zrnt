@@ -47,8 +47,9 @@ func (state *BeaconStateView) ProcessProposerSlashing(epc *EpochsContext, ps *Pr
 	if ps.SignedHeader1.Message.ProposerIndex != ps.SignedHeader2.Message.ProposerIndex {
 		return errors.New("proposer slashing headers proposer-indices do not match")
 	}
+	proposerIndex := ps.SignedHeader1.Message.ProposerIndex
 	// Verify header proposer index is valid
-	if valid := epc.IsValidIndex(ps.SignedHeader1.Message.ProposerIndex); !valid {
+	if valid := epc.IsValidIndex(proposerIndex); !valid {
 		return errors.New("invalid proposer index")
 	}
 	// Verify the headers are different
@@ -57,7 +58,15 @@ func (state *BeaconStateView) ProcessProposerSlashing(epc *EpochsContext, ps *Pr
 	}
 	currentEpoch := epc.CurrentEpoch.Epoch
 	// Verify the proposer is slashable
-	if slashable, err := input.IsSlashable(ps.SignedHeader1.Message.ProposerIndex, currentEpoch); err != nil {
+	validators, err := state.Validators()
+	if err != nil {
+		return err
+	}
+	validator, err := validators.Validator(proposerIndex)
+	if err != nil {
+		return err
+	}
+	if slashable, err := validator.IsSlashable(currentEpoch); err != nil {
 		return err
 	} else if !slashable {
 		return errors.New("proposer slashing requires proposer to be slashable")
@@ -66,7 +75,7 @@ func (state *BeaconStateView) ProcessProposerSlashing(epc *EpochsContext, ps *Pr
 	if err != nil {
 		return err
 	}
-	pubkey, ok := epc.Pubkey(ps.SignedHeader1.Message.ProposerIndex)
+	pubkey, ok := epc.Pubkey(proposerIndex)
 	if !ok {
 		return errors.New("could not find pubkey of proposer")
 	}

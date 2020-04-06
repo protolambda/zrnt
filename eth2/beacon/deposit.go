@@ -162,7 +162,7 @@ func (state *BeaconStateView) ProcessDeposit(epc *EpochsContext, dep *Deposit) e
 			effBalance = MAX_EFFECTIVE_BALANCE
 		}
 		// TODO
-		validator := &Validator{
+		validator := Validator{
 			Pubkey:                     pubkey,
 			WithdrawalCredentials:      withdrawalCreds,
 			ActivationEligibilityEpoch: FAR_FUTURE_EPOCH,
@@ -170,11 +170,30 @@ func (state *BeaconStateView) ProcessDeposit(epc *EpochsContext, dep *Deposit) e
 			ExitEpoch:                  FAR_FUTURE_EPOCH,
 			WithdrawableEpoch:          FAR_FUTURE_EPOCH,
 			EffectiveBalance:           effBalance,
+		}.View()
+		vals, err := state.Validators()
+		if err != nil {
+			return err
 		}
-		state.Validators = append(state.Validators, validator)
-		state.Balances = append(state.Balances, balance)
+		if err := vals.Append(validator); err != nil {
+			return err
+		}
+		bals, err := state.Balances()
+		if err != nil {
+			return err
+		}
+		if err := bals.Append(Uint64View(balance)); err != nil {
+			return err
+		}
 	} else {
 		// Increase balance by deposit amount
-		return input.IncreaseBalance(valIndex, dep.Data.Amount)
+		bals, err := state.Balances()
+		if err != nil {
+			return err
+		}
+		if err := bals.IncreaseBalance(valIndex, dep.Data.Amount); err != nil {
+			return err
+		}
 	}
+	return epc.syncPubkeys(state)
 }

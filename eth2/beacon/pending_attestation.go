@@ -12,6 +12,22 @@ type PendingAttestation struct {
 	ProposerIndex   ValidatorIndex
 }
 
+func (att *PendingAttestation) View() (*PendingAttestationView, error) {
+	// TODO
+	bitsView, err := att.AggregationBits.View()
+	dataView, err := att.Data.View()
+	c, err := PendingAttestationType.FromFields(
+		bitsView,
+		dataView,
+		Uint64View(att.InclusionDelay),
+		Uint64View(att.ProposerIndex),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &PendingAttestationView{c}, nil
+}
+
 var AttestationDataSSZ = zssz.GetSSZ((*AttestationData)(nil))
 
 type AttestationData struct {

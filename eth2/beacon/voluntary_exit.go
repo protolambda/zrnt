@@ -8,6 +8,14 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
+var VoluntaryExitsType = ListType(SignedVoluntaryExitType, MAX_VOLUNTARY_EXITS)
+
+type VoluntaryExits []SignedVoluntaryExit
+
+func (*VoluntaryExits) Limit() uint64 {
+	return MAX_VOLUNTARY_EXITS
+}
+
 func (state *BeaconStateView) ProcessVoluntaryExits(epc *EpochsContext, ops []SignedVoluntaryExit) error {
 	for i := range ops {
 		if err := state.ProcessVoluntaryExit(epc, &ops[i]); err != nil {
@@ -45,22 +53,25 @@ var SignedVoluntaryExitType = ContainerType("SignedVoluntaryExit", []FieldDef{
 
 func (state *BeaconStateView) ProcessVoluntaryExit(epc *EpochsContext, signedExit *SignedVoluntaryExit) error {
 	exit := &signedExit.Message
-	currentEpoch, err := input.CurrentEpoch()
+	currentEpoch := epc.CurrentEpoch.Epoch
+	if valid := epc.IsValidIndex(exit.ValidatorIndex); !valid {
+		return errors.New("invalid exit validator index")
+	}
+	vals, err := state.Validators()
 	if err != nil {
 		return err
 	}
-	if valid, err := input.IsValidIndex(exit.ValidatorIndex); err != nil {
+	validator, err := vals.Validator(exit.ValidatorIndex)
+	if err != nil {
 		return err
-	} else if !valid {
-		return errors.New("invalid exit validator index")
 	}
 	// Verify that the validator is active
-	if isActive, err := input.IsActive(exit.ValidatorIndex, currentEpoch); err != nil {
+	if isActive, err := validator.IsActive(currentEpoch); err != nil {
 		return err
 	} else if !isActive {
 		return errors.New("validator must be active to be able to voluntarily exit")
 	}
-	scheduledExitEpoch, err := input.ExitEpoch(exit.ValidatorIndex)
+	scheduledExitEpoch, err := validator.ExitEpoch()
 	if err != nil {
 		return err
 	}
@@ -72,7 +83,7 @@ func (state *BeaconStateView) ProcessVoluntaryExit(epc *EpochsContext, signedExi
 	if currentEpoch < exit.Epoch {
 		return errors.New("invalid exit epoch")
 	}
-	registeredActivationEpoch, err := input.ActivationEpoch(exit.ValidatorIndex)
+	registeredActivationEpoch, err := validator.ActivationEpoch()
 	if err != nil {
 		return err
 	}
@@ -80,11 +91,11 @@ func (state *BeaconStateView) ProcessVoluntaryExit(epc *EpochsContext, signedExi
 	if currentEpoch < registeredActivationEpoch+PERSISTENT_COMMITTEE_PERIOD {
 		return errors.New("exit is too soon")
 	}
-	pubkey, err := input.Pubkey(exit.ValidatorIndex)
-	if err != nil {
-		return err
+	pubkey, ok := epc.Pubkey(exit.ValidatorIndex)
+	if !ok {
+		return errors.New("could not find index of exiting validator")
 	}
-	domain, err := input.GetDomain(DOMAIN_VOLUNTARY_EXIT, exit.Epoch)
+	domain, err := state.GetDomain(DOMAIN_VOLUNTARY_EXIT, exit.Epoch)
 	if err != nil {
 		return err
 	}
@@ -96,19 +107,71 @@ func (state *BeaconStateView) ProcessVoluntaryExit(epc *EpochsContext, signedExi
 		return errors.New("voluntary exit signature could not be verified")
 	}
 	// Initiate exit
-	return state.InitiateValidatorExit(epc, currentEpoch, exit.ValidatorIndex)
+	return state.InitiateValidatorExit(epc, exit.ValidatorIndex)
 }
 
 // Initiate the exit of the validator of the given index
-func (state *BeaconStateView) InitiateValidatorExit(epc *EpochsContext, currentEpoch Epoch, index ValidatorIndex) error {
-	//validator := state.Validators[index]
-	//// Return if validator already initiated exit
-	//if validator.ExitEpoch != FAR_FUTURE_EPOCH {
-	//	return
-	//}
-	//
-	//// Set validator exit epoch and withdrawable epoch
-	//validator.ExitEpoch = state.ExitQueueEnd(currentEpoch)
-	//validator.WithdrawableEpoch = validator.ExitEpoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY
+func (state *BeaconStateView) InitiateValidatorExit(epc *EpochsContext, index ValidatorIndex) error {
+	validators, err := state.Validators()
+	if err != nil {
+		return err
+	}
+	v, err := validators.Validator(index)
+	if err != nil {
+		return err
+	}
+	exitEp, err := v.ExitEpoch()
+	if err != nil {
+		return err
+	}
+	// Return if validator already initiated exit
+	if exitEp != FAR_FUTURE_EPOCH {
+		return nil
+	}
+	currentEpoch := epc.CurrentEpoch.Epoch
+
+	// Set validator exit epoch and withdrawable epoch
+	valIter := validators.ReadonlyIter()
+
+	exitQueueEnd := currentEpoch.ComputeActivationExitEpoch()
+	exitQueueEndChurn := uint64(0)
+	for {
+		valContainer, ok, err := valIter.Next()
+		if err != nil {
+			return err
+		}
+		if !ok {
+			break
+		}
+		val, err := AsValidator(valContainer, nil)
+		if err != nil {
+			return err
+		}
+		valExit, err := val.ExitEpoch()
+		if err != nil {
+			return err
+		}
+		if valExit == FAR_FUTURE_EPOCH {
+			continue
+		}
+		if valExit == exitQueueEnd {
+			exitQueueEndChurn++
+		} else if valExit > exitQueueEnd {
+			exitQueueEnd = valExit
+			exitQueueEndChurn = 1
+		}
+	}
+	churnLimit := GetChurnLimit(uint64(len(epc.CurrentEpoch.ActiveIndices)))
+	if exitQueueEndChurn >= churnLimit {
+		exitQueueEnd++
+	}
+
+	exitEp = exitQueueEnd
+	if err := v.SetExitEpoch(exitEp); err != nil {
+		return err
+	}
+	if err := v.SetWithdrawableEpoch(exitEp + MIN_VALIDATOR_WITHDRAWABILITY_DELAY); err != nil {
+		return err
+	}
 	return nil
 }

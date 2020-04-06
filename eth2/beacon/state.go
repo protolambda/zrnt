@@ -84,6 +84,9 @@ func (state *BeaconStateView) HistoricalRoots() (*HistoricalRootsView, error) {
 func (state *BeaconStateView) Eth1Data() (*Eth1DataView, error) {
 	return AsEth1Data(state.Get(8))
 }
+func (state *BeaconStateView) SetEth1Data(v *Eth1DataView) error {
+	return state.Set(8, v)
+}
 
 func (state *BeaconStateView) Eth1DataVotes() (*Eth1DataVotesView, error) {
 	return AsEth1DataVotes(state.Get(9))

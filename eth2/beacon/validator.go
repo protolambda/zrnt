@@ -56,6 +56,9 @@ func (v *ValidatorView) SetActivationEpoch(epoch Epoch) error {
 func (v *ValidatorView) ExitEpoch() (Epoch, error) {
 	return AsEpoch(v.Get(6))
 }
+func (v *ValidatorView) SetExitEpoch(ep Epoch) error {
+	return v.Set(6, Uint64View(ep))
+}
 func (v *ValidatorView) WithdrawableEpoch() (Epoch, error) {
 	return AsEpoch(v.Get(7))
 }

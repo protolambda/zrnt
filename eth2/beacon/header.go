@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/protolambda/zssz"
-	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
 

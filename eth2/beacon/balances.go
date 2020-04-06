@@ -70,8 +70,12 @@ func (state *BeaconStateView) ApplyDeltas(deltas *Deltas) error {
 	}
 	// TODO: can be optimized a lot, make a new tree in one go
 	for i := ValidatorIndex(0); i < ValidatorIndex(balLen); i++ {
-		balances.IncreaseBalance(i, deltas.Rewards[i])
-		balances.DecreaseBalance(i, deltas.Penalties[i])
+		if err := balances.IncreaseBalance(i, deltas.Rewards[i]); err != nil {
+			return err
+		}
+		if err := balances.DecreaseBalance(i, deltas.Penalties[i]); err != nil {
+			return err
+		}
 	}
 	return nil
 }

@@ -63,6 +63,14 @@ var DepositType = ContainerType("Deposit", []FieldDef{
 	{"data", DepositDataType},
 })
 
+var DepositsType = ListType(DepositType, MAX_DEPOSITS)
+
+type Deposits []Deposit
+
+func (*Deposits) Limit() uint64 {
+	return MAX_DEPOSITS
+}
+
 // Verify that outstanding deposits are processed up to the maximum number of deposits, then process all in order.
 func (state *BeaconStateView) ProcessDeposits(epc *EpochsContext, ops []Deposit) error {
 	inputCount := DepositIndex(len(ops))
@@ -127,7 +135,7 @@ func (state *BeaconStateView) ProcessDeposit(epc *EpochsContext, dep *Deposit) e
 		return err
 	}
 
-	valIndex, exists, err := input.ValidatorIndex(dep.Data.Pubkey)
+	valIndex, exists := epc.ValidatorIndex(dep.Data.Pubkey)
 
 	// Check if it is a known validator that is depositing ("if pubkey not in validator_pubkeys")
 	if !exists {
@@ -146,8 +154,25 @@ func (state *BeaconStateView) ProcessDeposit(epc *EpochsContext, dep *Deposit) e
 		}
 
 		// Add validator and balance entries
-		return input.AddNewValidator(dep.Data.Pubkey, dep.Data.WithdrawalCredentials, dep.Data.Amount)
-
+		balance := dep.Data.Amount
+		withdrawalCreds :=  dep.Data.WithdrawalCredentials
+		pubkey := dep.Data.Pubkey
+		effBalance := balance - (balance % EFFECTIVE_BALANCE_INCREMENT)
+		if effBalance > MAX_EFFECTIVE_BALANCE {
+			effBalance = MAX_EFFECTIVE_BALANCE
+		}
+		// TODO
+		validator := &Validator{
+			Pubkey:                     pubkey,
+			WithdrawalCredentials:      withdrawalCreds,
+			ActivationEligibilityEpoch: FAR_FUTURE_EPOCH,
+			ActivationEpoch:            FAR_FUTURE_EPOCH,
+			ExitEpoch:                  FAR_FUTURE_EPOCH,
+			WithdrawableEpoch:          FAR_FUTURE_EPOCH,
+			EffectiveBalance:           effBalance,
+		}
+		state.Validators = append(state.Validators, validator)
+		state.Balances = append(state.Balances, balance)
 	} else {
 		// Increase balance by deposit amount
 		return input.IncreaseBalance(valIndex, dep.Data.Amount)

@@ -3,13 +3,10 @@ package beacon
 import (
 	"encoding/binary"
 	"errors"
-
-
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	. "github.com/protolambda/zrnt/eth2/util/hashing"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/protolambda/zssz"
-	. "github.com/protolambda/ztyp/props"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
@@ -89,13 +86,13 @@ func (state *BeaconStateView) ProcessRandaoReveal(epc *EpochsContext, reveal BLS
 	if err != nil {
 		return err
 	}
-	propIndex, err := input.GetBeaconProposerIndex(slot)
+	propIndex, err := epc.GetBeaconProposer(slot)
 	if err != nil {
 		return err
 	}
-	proposerPubkey, err := input.Pubkey(propIndex)
-	if err != nil {
-		return err
+	proposerPubkey, ok := epc.Pubkey(propIndex)
+	if !ok {
+		return errors.New("could not find pubkey of proposer")
 	}
 	epoch := slot.ToEpoch()
 	domain, err := state.GetDomain(DOMAIN_RANDAO, epoch)

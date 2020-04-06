@@ -28,6 +28,14 @@ var AttesterSlashingType = ContainerType("AttesterSlashing", []FieldDef{
 	{"attestation_2", IndexedAttestationType},
 })
 
+var AttesterSlashingsType = ListType(AttesterSlashingType, MAX_ATTESTER_SLASHINGS)
+
+type AttesterSlashings []AttesterSlashing
+
+func (*AttesterSlashings) Limit() uint64 {
+	return MAX_ATTESTER_SLASHINGS
+}
+
 func (state *BeaconStateView) ProcessAttesterSlashing(epc *EpochsContext, attesterSlashing *AttesterSlashing) error {
 	sa1 := &attesterSlashing.Attestation1
 	sa2 := &attesterSlashing.Attestation2

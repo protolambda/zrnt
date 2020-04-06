@@ -29,7 +29,7 @@ var IndexedAttestationType = ContainerType("IndexedAttestation", []FieldDef{
 })
 
 // Verify validity of slashable_attestation fields.
-func (state *BeaconStateView) Validate(epc *EpochsContext, indexedAttestation *IndexedAttestation)  error {
+func (state *BeaconStateView) ValidateIndexedAttestation(epc *EpochsContext, indexedAttestation *IndexedAttestation)  error {
 	// wrap it in validator-sets. Does not sort it, but does make checking if it is a lot easier.
 	indices := ValidatorSet(indexedAttestation.AttestingIndices)
 
@@ -53,19 +53,17 @@ func (state *BeaconStateView) Validate(epc *EpochsContext, indexedAttestation *I
 	// Check the last item of the sorted list to be a valid index,
 	// if this one is valid, the others are as well, since they are lower.
 	if len(indices) > 0 {
-		valid, err := m.IsValidIndex(indices[len(indices)-1])
-		if err != nil {
-			return err
-		} else if !valid {
-			return errors.New("attestation indices contains out of range index")
+		valid := epc.IsValidIndex(indices[len(indices)-1])
+		if !valid {
+			return errors.New("attestation indices contain out of range index")
 		}
 	}
 
 	pubkeys := make([]BLSPubkey, 0, 2)
 	for _, i := range indices {
-		pub, err := m.Pubkey(i)
-		if err != nil {
-			return err
+		pub, ok := epc.Pubkey(i)
+		if !ok {
+			return fmt.Errorf("could not find pubkey for index %d", i)
 		}
 		pubkeys = append(pubkeys, pub)
 	}

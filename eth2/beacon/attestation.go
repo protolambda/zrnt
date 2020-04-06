@@ -8,6 +8,8 @@ import (
 	"sort"
 )
 
+var AttestationsType = ListType(AttestationType, MAX_ATTESTATIONS)
+
 var AttestationType = ContainerType("Attestation", []FieldDef{
 	{"aggregation_bits", CommitteeBitsType},
 	{"data", AttestationDataType},
@@ -20,6 +22,12 @@ type Attestation struct {
 	AggregationBits CommitteeBits
 	Data            AttestationData
 	Signature       BLSSignature
+}
+
+type Attestations []Attestation
+
+func (*Attestations) Limit() uint64 {
+	return MAX_ATTESTATIONS
 }
 
 func (state *BeaconStateView) ProcessAttestations(epc *EpochsContext, ops []Attestation) error {
@@ -35,7 +43,7 @@ func (state *BeaconStateView) ProcessAttestation(epc *EpochsContext, attestation
 	data := &attestation.Data
 
 	// Check slot
-	currentSlot, err := input.CurrentSlot()
+	currentSlot, err := state.Slot()
 	if err != nil {
 		return err
 	}
@@ -61,7 +69,7 @@ func (state *BeaconStateView) ProcessAttestation(epc *EpochsContext, attestation
 	}
 
 	// Check committee index
-	if commCount, err := input.GetCommitteeCountAtSlot(data.Slot); err != nil {
+	if commCount, err := epc.GetCommitteeCountAtSlot(data.Slot); err != nil {
 		return err
 	} else if uint64(data.Index) >= commCount {
 		return errors.New("attestation data is invalid, committee index out of range")
@@ -69,47 +77,75 @@ func (state *BeaconStateView) ProcessAttestation(epc *EpochsContext, attestation
 
 	// Check source
 	if data.Target.Epoch == currentEpoch {
-		if currentJustified, err := input.CurrentJustified(); err != nil {
+		currentJustified, err := state.CurrentJustifiedCheckpoint()
+		if err != nil {
 			return err
-		} else if data.Source != currentJustified {
+		}
+		currJustRaw, err := currentJustified.Raw()
+		if err != nil {
+			return err
+		}
+		if data.Source != currJustRaw {
 			return errors.New("attestation source does not match current justified checkpoint")
 		}
 	} else {
-		if previousJustified, err := input.PreviousJustified(); err != nil {
+		previousJustified, err := state.PreviousJustifiedCheckpoint()
+		if err != nil {
 			return err
-		} else if data.Source != previousJustified {
+		}
+		prevJustRaw, err := previousJustified.Raw()
+		if err != nil {
+			return err
+		}
+		if data.Source != prevJustRaw {
 			return errors.New("attestation source does not match previous justified checkpoint")
 		}
 	}
 
 	// Check signature and bitfields
-	committee, err := input.GetBeaconCommittee(data.Slot, data.Index)
+	committee, err := epc.GetBeaconCommittee(data.Slot, data.Index)
 	if err != nil {
 		return err
 	}
 	if indexedAtt, err := attestation.ConvertToIndexed(committee); err != nil {
 		return fmt.Errorf("attestation could not be converted to an indexed attestation: %v", err)
-	} else if err := indexedAtt.Validate(input); err != nil {
+	} else if err := state.ValidateIndexedAttestation(epc, indexedAtt); err != nil {
 		return fmt.Errorf("attestation could not be verified in its indexed form: %v", err)
 	}
 
 	// TODO pending attestation to att node, append to tree
-	//proposerIndex, err := input.GetBeaconProposerIndex(currentSlot)
-	//if err != nil {
-	//	return err
-	//}
-	//// Cache pending attestation
-	//pendingAttestation := &PendingAttestation{
-	//	Data:            *data,
-	//	AggregationBits: attestation.AggregationBits,
-	//	InclusionDelay:  currentSlot - data.Slot,
-	//	ProposerIndex:   proposerIndex,
-	//}
-	//if data.Target.Epoch == currentEpoch {
-	//	f.State.CurrentEpochAttestations = append(f.State.CurrentEpochAttestations, pendingAttestation)
-	//} else {
-	//	f.State.PreviousEpochAttestations = append(f.State.PreviousEpochAttestations, pendingAttestation)
-	//}
+	proposerIndex, err := epc.GetBeaconProposer(currentSlot)
+	if err != nil {
+		return err
+	}
+	// Cache pending attestation
+	pendingAttestation, err := PendingAttestation{
+		Data:            *data,
+		AggregationBits: attestation.AggregationBits,
+		InclusionDelay:  currentSlot - data.Slot,
+		ProposerIndex:   proposerIndex,
+	}.View()
+	if err != nil {
+		return err
+	}
+
+	if data.Target.Epoch == currentEpoch {
+		atts, err := state.CurrentEpochAttestations()
+		if err != nil {
+			return err
+		}
+		if err := atts.Append(pendingAttestation); err != nil {
+			return err
+		}
+	} else {
+		atts, err := state.PreviousEpochAttestations()
+		if err != nil {
+			return err
+		}
+		if err := atts.Append(pendingAttestation); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

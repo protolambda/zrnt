@@ -55,7 +55,23 @@ func (state *BeaconStateView) SlashValidator(epc *EpochsContext, slashedIndex Va
 	if err := input.InitiateValidatorExit(currentEpoch, slashedIndex); err != nil {
 		return err
 	}
-	input.SlashAndDelayWithdraw(slashedIndex, currentEpoch + EPOCHS_PER_SLASHINGS_VECTOR)
+	v, err := state.Validator(index)
+	if err != nil {
+		return err
+	}
+	if err := v.MakeSlashed(); err != nil {
+		return err
+	}
+	prevWithdrawalEpoch, err := v.WithdrawableEpoch()
+	if err != nil {
+		return err
+	}
+	withdrawalEpoch := currentEpoch + EPOCHS_PER_SLASHINGS_VECTOR
+	if withdrawalEpoch > prevWithdrawalEpoch {
+		if err := v.SetWithdrawableEpoch(withdrawalEpoch); err != nil {
+			return err
+		}
+	}
 
 	effectiveBalance, err := input.EffectiveBalance(slashedIndex)
 	if err != nil {

@@ -119,12 +119,13 @@ func (state *BeaconStateView) ProcessAttestation(epc *EpochsContext, attestation
 		return err
 	}
 	// Cache pending attestation
-	pendingAttestation := PendingAttestation{
+	pendingAttestationRaw := PendingAttestation{
 		Data:            *data,
 		AggregationBits: attestation.AggregationBits,
 		InclusionDelay:  currentSlot - data.Slot,
 		ProposerIndex:   proposerIndex,
-	}.View()
+	}
+	pendingAttestation := pendingAttestationRaw.View()
 
 	if data.Target.Epoch == currentEpoch {
 		atts, err := state.CurrentEpochAttestations()

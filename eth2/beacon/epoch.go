@@ -69,8 +69,7 @@ func (state *BeaconStateView) PrepareEpochProcess(epc *EpochsContext) (out *Epoc
 
 	activeCount := uint64(0)
 	valIter := validators.ReadonlyIter()
-	i := ValidatorIndex(0)
-	for {
+	for i := ValidatorIndex(0); true; i++{
 		valContainer, ok, err := valIter.Next()
 		if err != nil {
 			return nil, err

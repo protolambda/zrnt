@@ -5,6 +5,11 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
+type HistoricalBatch struct {
+	BlockRoots [SLOTS_PER_HISTORICAL_ROOT]Root
+	StateRoots [SLOTS_PER_HISTORICAL_ROOT]Root
+}
+
 var BatchRootsType = VectorType(RootType, uint64(SLOTS_PER_HISTORICAL_ROOT))
 
 type BatchRootsView struct{ *ComplexVectorView }
@@ -62,6 +67,13 @@ func (v *HistoricalBatchView) StateRoots() (*BatchRootsView, error) {
 func AsHistoricalBatch(v View, err error) (*HistoricalBatchView, error) {
 	c, err := AsContainer(v, err)
 	return &HistoricalBatchView{c}, err
+}
+
+// roots of HistoricalBatch
+type HistoricalRoots []Root
+
+func (_ *HistoricalRoots) Limit() uint64 {
+	return HISTORICAL_ROOTS_LIMIT
 }
 
 var HistoricalRootsType = ListType(RootType, HISTORICAL_ROOTS_LIMIT)

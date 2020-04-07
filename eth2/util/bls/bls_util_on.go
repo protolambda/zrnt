@@ -4,7 +4,6 @@ package bls
 
 import (
 	hbls "github.com/herumi/bls-eth-go-binary/bls"
-	. "github.com/protolambda/zrnt/eth2/core"
 )
 
 func init() {

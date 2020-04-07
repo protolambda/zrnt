@@ -2,7 +2,7 @@ package sanity
 
 import (
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/phase0"
+	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"gopkg.in/yaml.v2"
 	"testing"
@@ -10,7 +10,7 @@ import (
 
 type BlocksTestCase struct {
 	test_util.BaseTransitionTest
-	Blocks []*phase0.SignedBeaconBlock
+	Blocks []*beacon.SignedBeaconBlock
 }
 
 type BlocksCountMeta struct {
@@ -24,9 +24,9 @@ func (c *BlocksTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
 	m := &BlocksCountMeta{}
 	test_util.Check(t, dec.Decode(&m))
 	test_util.Check(t, p.Close())
-	loadBlock := func(i uint64) *phase0.SignedBeaconBlock {
-		dst := new(phase0.SignedBeaconBlock)
-		test_util.LoadSSZ(t, fmt.Sprintf("blocks_%d", i), dst, phase0.SignedBeaconBlockSSZ, readPart)
+	loadBlock := func(i uint64) *beacon.SignedBeaconBlock {
+		dst := new(beacon.SignedBeaconBlock)
+		test_util.LoadSSZ(t, fmt.Sprintf("blocks_%d", i), dst, beacon.SignedBeaconBlockSSZ, readPart)
 		return dst
 	}
 	for i := uint64(0); i < m.BlocksCount; i++ {
@@ -35,10 +35,13 @@ func (c *BlocksTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
 }
 
 func (c *BlocksTestCase) Run() error {
-	state := c.Prepare()
+	epc, err := c.Pre.NewEpochsContext()
+	if err != nil {
+		return err
+	}
+	state := c.Pre
 	for _, b := range c.Blocks {
-		blockProc := &phase0.BlockProcessFeature{Block: b, Meta: state}
-		if err := state.StateTransition(blockProc, true); err != nil {
+		if err := state.StateTransition(epc, b, true); err != nil {
 			return err
 		}
 	}

@@ -2,8 +2,6 @@
 
 package bls
 
-import . "github.com/protolambda/zrnt/eth2/core"
-
 const BLS_ACTIVE = false
 
 func Verify(pubkey BLSPubkey, message [32]byte, signature BLSSignature) bool {

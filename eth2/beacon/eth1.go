@@ -49,6 +49,12 @@ func (v *Eth1DataView) DepositIndex() (DepositIndex, error) {
 	return AsDepositIndex(v.Get(2))
 }
 
+type Eth1DataVotes []Eth1Data
+
+func (_ *Eth1DataVotes) Limit() uint64 {
+	return uint64(SLOTS_PER_ETH1_VOTING_PERIOD)
+}
+
 var Eth1DataVotesType = ListType(Eth1DataType, uint64(SLOTS_PER_ETH1_VOTING_PERIOD))
 
 type Eth1DataVotesView struct{ *ComplexListView }

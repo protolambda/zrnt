@@ -132,6 +132,12 @@ func AsPendingAttestation(v View, err error) (*PendingAttestationView, error) {
 	return &PendingAttestationView{c}, err
 }
 
+type PendingAttestations []*PendingAttestation
+
+func (*PendingAttestations) Limit() uint64 {
+	return MAX_ATTESTATIONS * uint64(SLOTS_PER_EPOCH)
+}
+
 var PendingAttestationsType = ComplexListType(PendingAttestationType, uint64(MAX_ATTESTATIONS*SLOTS_PER_EPOCH))
 
 type PendingAttestationsView struct { *ComplexListView }

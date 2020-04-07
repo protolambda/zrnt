@@ -2,7 +2,7 @@ package test_util
 
 import (
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/core"
+	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zssz"
 	"github.com/protolambda/zssz/types"
 	"io"
@@ -18,7 +18,7 @@ type ConfigMismatchError struct {
 }
 
 func (confErr ConfigMismatchError) Error() string {
-	return fmt.Sprintf("cannot load suite for config: %s, current config is: %s", confErr.Config, core.PRESET_NAME)
+	return fmt.Sprintf("cannot load suite for config: %s, current config is: %s", confErr.Config, beacon.PRESET_NAME)
 }
 
 type TestPart interface {
@@ -58,9 +58,9 @@ func (p *testPartFile) Exists() bool {
 
 func RunHandler(t *testing.T, handlerPath string, caseRunner CaseRunner, config string) {
 	// general config is allowed
-	if config != core.PRESET_NAME && config != "general" {
+	if config != beacon.PRESET_NAME && config != "general" {
 		t.Logf("Config %s does not match current config %s, "+
-			"skipping handler %s", config, core.PRESET_NAME, handlerPath)
+			"skipping handler %s", config, beacon.PRESET_NAME, handlerPath)
 	}
 
 	// get the current path, go to the root, and get the tests path

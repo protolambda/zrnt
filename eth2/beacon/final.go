@@ -12,6 +12,10 @@ func (state *BeaconStateView) ProcessEpochFinalUpdates(epc *EpochsContext, proce
 
 	// update effective balances
 	{
+		const HYSTERESIS_INCREMENT = EFFECTIVE_BALANCE_INCREMENT / Gwei(HYSTERESIS_QUOTIENT)
+		const DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * Gwei(HYSTERESIS_DOWNWARD_MULTIPLIER)
+		const UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * Gwei(HYSTERESIS_UPWARD_MULTIPLIER)
+
 		vals, err := state.Validators()
 		if err != nil {
 			return err
@@ -21,8 +25,7 @@ func (state *BeaconStateView) ProcessEpochFinalUpdates(epc *EpochsContext, proce
 			return err
 		}
 		balIter := bals.ReadonlyIter()
-		i := ValidatorIndex(0)
-		for {
+		for i := ValidatorIndex(0); true; i++ {
 			el, ok, err := balIter.Next()
 			if err != nil {
 				return err
@@ -35,7 +38,7 @@ func (state *BeaconStateView) ProcessEpochFinalUpdates(epc *EpochsContext, proce
 				return err
 			}
 			effBalance := process.Statuses[i].Validator.EffectiveBalance
-			if balance < effBalance || effBalance+3*HALF_INCREMENT < balance {
+			if balance+DOWNWARD_THRESHOLD < effBalance || effBalance+UPWARD_THRESHOLD < balance {
 				effBalance = balance - (balance % EFFECTIVE_BALANCE_INCREMENT)
 				if MAX_EFFECTIVE_BALANCE < effBalance {
 					effBalance = MAX_EFFECTIVE_BALANCE

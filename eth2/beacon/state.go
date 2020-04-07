@@ -1,8 +1,42 @@
 package beacon
 
 import (
+	"github.com/protolambda/zssz"
 	. "github.com/protolambda/ztyp/view"
 )
+
+var BeaconStateSSZ = zssz.GetSSZ((*BeaconState)(nil))
+
+type BeaconState struct {
+	// Versioning
+	GenesisTime           Timestamp
+	GenesisValidatorsRoot Root
+	Slot                  Slot
+	Fork                  Fork
+	// History
+	LatestBlockHeader BeaconBlockHeader
+	HistoricalBatch   // embedded BlockRoots and StateRoots
+	HistoricalRoots   HistoricalRoots
+	// Eth1
+	Eth1Data      Eth1Data
+	Eth1DataVotes Eth1DataVotes
+	DepositIndex  DepositIndex
+	// Registry
+	Validators ValidatorRegistry
+	Balances   Balances
+	// Randomness
+	RandaoMixes [EPOCHS_PER_HISTORICAL_VECTOR]Root
+	// Slashings
+	Slashings [EPOCHS_PER_SLASHINGS_VECTOR]Gwei
+	// Attestations
+	PreviousEpochAttestations PendingAttestations
+	CurrentEpochAttestations  PendingAttestations
+	// Finality
+	JustificationBits           JustificationBits
+	PreviousJustifiedCheckpoint Checkpoint
+	CurrentJustifiedCheckpoint  Checkpoint
+	FinalizedCheckpoint         Checkpoint
+}
 
 // Beacon state
 var BeaconStateType = ContainerType("BeaconState", []FieldDef{
@@ -29,13 +63,18 @@ var BeaconStateType = ContainerType("BeaconState", []FieldDef{
 	{"slashings", SlashingsType}, // Per-epoch sums of slashed effective balances
 	// Attestations
 	{"previous_epoch_attestations", PendingAttestationsType},
-	{"current_epoch_attestations", PendingAttestationType},
+	{"current_epoch_attestations", PendingAttestationsType},
 	// Finality
 	{"justification_bits", JustificationBitsType},     // Bit set for every recent justified epoch
 	{"previous_justified_checkpoint", CheckpointType}, // Previous epoch snapshot
 	{"current_justified_checkpoint", CheckpointType},
 	{"finalized_checkpoint", CheckpointType},
 })
+
+func AsBeaconStateView(v View, err error) (*BeaconStateView, error) {
+	c, err := AsContainer(v, err)
+	return &BeaconStateView{c}, err
+}
 
 type BeaconStateView struct {
 	*ContainerView

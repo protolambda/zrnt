@@ -52,5 +52,5 @@ func (v *RegistryBalancesView) DecreaseBalance(index ValidatorIndex, delta Gwei)
 	} else {
 		bal = 0
 	}
-	return v.SetBalance(index, delta)
+	return v.SetBalance(index, bal)
 }

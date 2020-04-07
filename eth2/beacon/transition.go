@@ -82,12 +82,16 @@ func (state *BeaconStateView) ProcessSlots(epc *EpochsContext, slot Slot) error 
 		return err
 	}
 	for currentSlot < slot {
-		state.ProcessSlot()
+		if err := state.ProcessSlot(); err != nil {
+			return err
+		}
 		// Per-epoch transition happens at the start of the first slot of every epoch.
 		// (with the slot still at the end of the last epoch)
 		isEpochEnd := (currentSlot + 1).ToEpoch() != currentSlot.ToEpoch()
 		if isEpochEnd {
-			state.ProcessEpoch(epc)
+			if err := state.ProcessEpoch(epc); err != nil {
+				return err
+			}
 		}
 		currentSlot += 1
 		if err := state.SetSlot(currentSlot); err != nil {

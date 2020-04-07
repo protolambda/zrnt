@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/util/hashing"
-	"github.com/protolambda/zrnt/eth2/util/shuffle"
 )
 
 func (state *BeaconStateView) computeProposerIndex(indices []ValidatorIndex, seed Root) (ValidatorIndex, error) {
@@ -23,7 +22,7 @@ func (state *BeaconStateView) computeProposerIndex(indices []ValidatorIndex, see
 		for j := uint64(0); j < 32; j++ {
 			randomByte := h[j]
 			absI := ValidatorIndex(((i << 5) | j) % uint64(len(indices)))
-			shuffledI := shuffle.PermuteIndex(absI, uint64(len(indices)), seed)
+			shuffledI := PermuteIndex(absI, uint64(len(indices)), seed)
 			candidateIndex := indices[int(shuffledI)]
 			validator, err := registry.Validator(candidateIndex)
 			if err != nil {

@@ -24,4 +24,5 @@ func HashTreeRoot(value interface{}, sszTyp types.SSZ) [32]byte {
 // without unnecessary duplicate hashing of zeroes, or hashes of, or higher order, up to 32.
 func InitZeroHashes(hashFn hashing.HashFn) {
 	htr.InitZeroHashes(htr.HashFn(hashFn))
+	// TODO: init zero-hashes of ztyp
 }

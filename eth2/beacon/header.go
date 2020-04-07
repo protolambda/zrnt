@@ -161,7 +161,7 @@ func (state *BeaconStateView) ProcessHeader(epc *EpochsContext, header *BeaconBl
 	}
 
 	// Store as the new latest block
-	return state.SetLatestBlockHeader(BeaconBlockHeader{
+	headerRaw := BeaconBlockHeader{
 		Slot:          header.Slot,
 		ProposerIndex: header.ProposerIndex,
 		ParentRoot:    header.ParentRoot,
@@ -169,5 +169,6 @@ func (state *BeaconStateView) ProcessHeader(epc *EpochsContext, header *BeaconBl
 		// with BlockHeaderState.UpdateStateRoot(), once the post state is available.
 		StateRoot:     Root{},
 		BodyRoot:      header.Body.HashTreeRoot(),
-	}.View())
+	}
+	return state.SetLatestBlockHeader(headerRaw.View())
 }

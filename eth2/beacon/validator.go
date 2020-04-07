@@ -20,7 +20,7 @@ type Validator struct {
 func (v *Validator) View() *ValidatorView {
 	wCred := RootView(v.WithdrawalCredentials)
 	c, _ := ValidatorType.FromFields(
-		v.Pubkey.View(),
+		ViewPubkey(&v.Pubkey),
 		&wCred,
 		Uint64View(v.EffectiveBalance),
 		BoolView(v.Slashed),

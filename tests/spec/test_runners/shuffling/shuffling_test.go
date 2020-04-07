@@ -3,8 +3,7 @@ package operations
 import (
 	"encoding/hex"
 	"fmt"
-	. "github.com/protolambda/zrnt/eth2/core"
-	"github.com/protolambda/zrnt/eth2/util/shuffle"
+	. "github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"gopkg.in/yaml.v2"
 	"testing"
@@ -27,7 +26,7 @@ func (testCase *ShufflingTestCase) Run(t *testing.T) {
 			for i := 0; i < len(data); i++ {
 				data[i] = ValidatorIndex(i)
 			}
-			shuffle.UnshuffleList(data, testCase.Seed)
+			UnshuffleList(data, testCase.Seed)
 			for i := uint64(0); i < testCase.Count; i++ {
 				unshuffledIndex := data[i]
 				expectedIndex := testCase.Mapping[i]
@@ -42,7 +41,7 @@ func (testCase *ShufflingTestCase) Run(t *testing.T) {
 			for i := 0; i < len(data); i++ {
 				data[i] = ValidatorIndex(i)
 			}
-			shuffle.ShuffleList(data, testCase.Seed)
+			ShuffleList(data, testCase.Seed)
 			for i := uint64(0); i < testCase.Count; i++ {
 				shuffleOut := testCase.Mapping[i]
 				shuffledIndex := data[shuffleOut]
@@ -56,7 +55,7 @@ func (testCase *ShufflingTestCase) Run(t *testing.T) {
 		t.Run("UnpermuteIndex", func(t *testing.T) {
 			for i := uint64(0); i < testCase.Count; i++ {
 				shuffledIndex := testCase.Mapping[i]
-				unshuffledIndex := shuffle.UnpermuteIndex(shuffledIndex, testCase.Count, testCase.Seed)
+				unshuffledIndex := UnpermuteIndex(shuffledIndex, testCase.Count, testCase.Seed)
 				if unshuffledIndex != ValidatorIndex(i) {
 					t.Errorf("different un-permuted index: %d (at %d) unshuffled to %d", shuffledIndex, i, unshuffledIndex)
 					break
@@ -66,7 +65,7 @@ func (testCase *ShufflingTestCase) Run(t *testing.T) {
 		t.Run("PermuteIndex", func(t *testing.T) {
 			for i := uint64(0); i < testCase.Count; i++ {
 				expectedIndex := testCase.Mapping[i]
-				shuffledIndex := shuffle.PermuteIndex(ValidatorIndex(i), testCase.Count, testCase.Seed)
+				shuffledIndex := PermuteIndex(ValidatorIndex(i), testCase.Count, testCase.Seed)
 				if shuffledIndex != expectedIndex {
 					t.Errorf("different shuffled index: %d, expected %d, at index %d", shuffledIndex, expectedIndex, i)
 					break

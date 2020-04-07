@@ -2,34 +2,30 @@ package beacon
 
 import (
 	"bytes"
+	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/hashing"
 	"github.com/protolambda/zssz"
 	"github.com/protolambda/zssz/htr"
 	. "github.com/protolambda/ztyp/view"
 )
 
-type BLSPubkey [48]byte
+type BLSPubkey = bls.BLSPubkey
 
-func (pub *BLSPubkey) View() *BLSPubkeyView {
+func ViewPubkey(pub *BLSPubkey) *BLSPubkeyView {
 	v, _ := BLSPubkeyType.Deserialize(bytes.NewReader(pub[:]), 48)
 	return &BLSPubkeyView{v.(*BasicVectorView)}
 }
 
 var BLSPubkeyType = BasicVectorType(ByteType, 48)
 
-type BLSSignature [96]byte
+type BLSSignature = bls.BLSSignature
 
-func (sig *BLSSignature) View() *BLSSignatureView {
+func ViewSignature(sig *BLSSignature)  *BLSSignatureView {
 	v, _ := BLSSignatureType.Deserialize(bytes.NewReader(sig[:]), 48)
 	return &BLSSignatureView{v.(*BasicVectorView)}
 }
 
 var BLSSignatureType = BasicVectorType(ByteType, 96)
-
-type BLSPubkeyMessagePair struct {
-	PK      BLSPubkey
-	Message []byte
-}
 
 // Mixed into a BLS domain to define its type
 type BLSDomainType [4]byte

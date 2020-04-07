@@ -1,9 +1,5 @@
 package beacon
 
-import (
-	"github.com/protolambda/zrnt/eth2/util/shuffle"
-)
-
 // With a high amount of shards, or low amount of validators,
 // some shards may not have a committee this epoch.
 type ShufflingEpoch struct {
@@ -57,7 +53,7 @@ func NewShufflingEpoch(indicesBounded []BoundedIndex, seed Root, epoch Epoch) *S
 	}
 	// shuffles the active indices into the shuffling
 	// (name is misleading, unshuffle as a list results in original indices to be traced back to their functional committee position)
-	shuffle.UnshuffleList(shep.Shuffling, seed)
+	UnshuffleList(shep.Shuffling, seed)
 
 	validatorCount := uint64(len(shep.Shuffling))
 	committeesPerSlot := CommitteeCount(validatorCount)

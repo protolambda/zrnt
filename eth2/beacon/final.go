@@ -4,7 +4,7 @@ func (state *BeaconStateView) ProcessEpochFinalUpdates(epc *EpochsContext, proce
 	nextEpoch := epc.NextEpoch.Epoch
 
 	// Reset eth1 data votes if it is the end of the voting period.
-	if nextEpoch%EPOCHS_PER_ETH1_VOTING_PERIOD == 0 {
+	if nextEpoch.GetStartSlot()%SLOTS_PER_ETH1_VOTING_PERIOD == 0 {
 		if err := state.ResetEth1Votes(); err != nil {
 			return err
 		}
@@ -12,9 +12,10 @@ func (state *BeaconStateView) ProcessEpochFinalUpdates(epc *EpochsContext, proce
 
 	// update effective balances
 	{
-		const HYSTERESIS_INCREMENT = EFFECTIVE_BALANCE_INCREMENT / Gwei(HYSTERESIS_QUOTIENT)
-		const DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * Gwei(HYSTERESIS_DOWNWARD_MULTIPLIER)
-		const UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * Gwei(HYSTERESIS_UPWARD_MULTIPLIER)
+		const HALF_INCREMENT = EFFECTIVE_BALANCE_INCREMENT / 2
+		//const HYSTERESIS_INCREMENT = EFFECTIVE_BALANCE_INCREMENT / Gwei(HYSTERESIS_QUOTIENT)
+		//const DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * Gwei(HYSTERESIS_DOWNWARD_MULTIPLIER)
+		//const UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * Gwei(HYSTERESIS_UPWARD_MULTIPLIER)
 
 		vals, err := state.Validators()
 		if err != nil {
@@ -38,7 +39,7 @@ func (state *BeaconStateView) ProcessEpochFinalUpdates(epc *EpochsContext, proce
 				return err
 			}
 			effBalance := process.Statuses[i].Validator.EffectiveBalance
-			if balance+DOWNWARD_THRESHOLD < effBalance || effBalance+UPWARD_THRESHOLD < balance {
+			if balance+(HALF_INCREMENT*3) < effBalance || effBalance < balance {
 				effBalance = balance - (balance % EFFECTIVE_BALANCE_INCREMENT)
 				if MAX_EFFECTIVE_BALANCE < effBalance {
 					effBalance = MAX_EFFECTIVE_BALANCE

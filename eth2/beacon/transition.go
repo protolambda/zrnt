@@ -167,9 +167,13 @@ func (state *BeaconStateView) StateTransition(epc *EpochsContext, block *SignedB
 	return nil
 }
 
-// Assuming the proposer and slot are valid, check if the signature is valid
+// Assuming the slot is valid, check if the signature is valid
 func (state *BeaconStateView) VerifySignature(epc *EpochsContext, block *SignedBeaconBlock) bool {
-	pub, ok := epc.Pubkey(block.Message.ProposerIndex)
+	proposerIndex, err := epc.GetBeaconProposer(block.Message.Slot)
+	if err != nil {
+		return false
+	}
+	pub, ok := epc.Pubkey(proposerIndex)
 	if !ok {
 		return false
 	}

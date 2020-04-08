@@ -42,7 +42,6 @@ type BeaconState struct {
 var BeaconStateType = ContainerType("BeaconState", []FieldDef{
 	// Versioning
 	{"genesis_time", Uint64Type},
-	{"genesis_validators_root", RootType},
 	{"slot", SlotType},
 	{"fork", ForkType},
 	// History
@@ -84,55 +83,51 @@ func (state *BeaconStateView) GenesisTime() (Timestamp, error) {
 	return AsTimestamp(state.Get(0))
 }
 
-func (state *BeaconStateView) GenesisValidatorsRoot() (Root, error) {
-	return AsRoot(state.Get(1))
-}
-
 func (state *BeaconStateView) Slot() (Slot, error) {
-	return AsSlot(state.Get(2))
+	return AsSlot(state.Get(1))
 }
 
 func (state *BeaconStateView) SetSlot(slot Slot) error {
-	return state.Set(2, Uint64View(slot))
+	return state.Set(1, Uint64View(slot))
 }
 
 func (state *BeaconStateView) Fork() (*ForkView, error) {
-	return AsFork(state.Get(3))
+	return AsFork(state.Get(2))
 }
 
 func (state *BeaconStateView) LatestBlockHeader() (*BeaconBlockHeaderView, error) {
-	return AsBeaconBlockHeader(state.Get(4))
+	return AsBeaconBlockHeader(state.Get(3))
 }
 
 func (state *BeaconStateView) SetLatestBlockHeader(v *BeaconBlockHeaderView) error {
-	return state.Set(4, v)
+	return state.Set(3, v)
 }
 
 func (state *BeaconStateView) BlockRoots() (*BatchRootsView, error) {
-	return AsBatchRoots(state.Get(5))
+	return AsBatchRoots(state.Get(4))
 }
 
 func (state *BeaconStateView) StateRoots() (*BatchRootsView, error) {
-	return AsBatchRoots(state.Get(6))
+	return AsBatchRoots(state.Get(5))
 }
 
 func (state *BeaconStateView) HistoricalRoots() (*HistoricalRootsView, error) {
-	return AsHistoricalRoots(state.Get(7))
+	return AsHistoricalRoots(state.Get(6))
 }
 
 func (state *BeaconStateView) Eth1Data() (*Eth1DataView, error) {
-	return AsEth1Data(state.Get(8))
+	return AsEth1Data(state.Get(7))
 }
 func (state *BeaconStateView) SetEth1Data(v *Eth1DataView) error {
-	return state.Set(8, v)
+	return state.Set(7, v)
 }
 
 func (state *BeaconStateView) Eth1DataVotes() (*Eth1DataVotesView, error) {
-	return AsEth1DataVotes(state.Get(9))
+	return AsEth1DataVotes(state.Get(8))
 }
 
 func (state *BeaconStateView) DepositIndex() (DepositIndex, error) {
-	return AsDepositIndex(state.Get(10))
+	return AsDepositIndex(state.Get(9))
 }
 
 func (state *BeaconStateView) IncrementDepositIndex() error {
@@ -140,45 +135,45 @@ func (state *BeaconStateView) IncrementDepositIndex() error {
 	if err != nil {
 		return err
 	}
-	return state.Set(10, Uint64View(depIndex + 1))
+	return state.Set(9, Uint64View(depIndex + 1))
 }
 
 func (state *BeaconStateView) Validators() (*ValidatorsRegistryView, error) {
-	return AsValidatorsRegistry(state.Get(11))
+	return AsValidatorsRegistry(state.Get(10))
 }
 
 func (state *BeaconStateView) Balances() (*RegistryBalancesView, error) {
-	return AsRegistryBalances(state.Get(12))
+	return AsRegistryBalances(state.Get(11))
 }
 
 func (state *BeaconStateView) RandaoMixes() (*RandaoMixesView, error) {
-	return AsRandaoMixes(state.Get(13))
+	return AsRandaoMixes(state.Get(12))
 }
 
 func (state *BeaconStateView) Slashings() (*SlashingsView, error) {
-	return AsSlashings(state.Get(14))
+	return AsSlashings(state.Get(13))
 }
 
 func (state *BeaconStateView) PreviousEpochAttestations() (*PendingAttestationsView, error) {
-	return AsPendingAttestations(state.Get(15))
+	return AsPendingAttestations(state.Get(14))
 }
 
 func (state *BeaconStateView) CurrentEpochAttestations() (*PendingAttestationsView, error) {
-	return AsPendingAttestations(state.Get(16))
+	return AsPendingAttestations(state.Get(15))
 }
 
 func (state *BeaconStateView) JustificationBits() (*JustificationBitsView, error) {
-	return AsJustificationBits(state.Get(17))
+	return AsJustificationBits(state.Get(16))
 }
 
 func (state *BeaconStateView) PreviousJustifiedCheckpoint() (*CheckpointView, error) {
-	return AsCheckPoint(state.Get(18))
+	return AsCheckPoint(state.Get(17))
 }
 
 func (state *BeaconStateView) CurrentJustifiedCheckpoint() (*CheckpointView, error) {
-	return AsCheckPoint(state.Get(19))
+	return AsCheckPoint(state.Get(18))
 }
 
 func (state *BeaconStateView) FinalizedCheckpoint() (*CheckpointView, error) {
-	return AsCheckPoint(state.Get(20))
+	return AsCheckPoint(state.Get(19))
 }

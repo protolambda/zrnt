@@ -24,7 +24,6 @@ var BeaconBlockSSZ = zssz.GetSSZ((*BeaconBlock)(nil))
 
 type BeaconBlock struct {
 	Slot          Slot
-	ProposerIndex ValidatorIndex
 	ParentRoot    Root
 	StateRoot     Root
 	Body          BeaconBlockBody
@@ -36,7 +35,6 @@ func (b *BeaconBlock) HashTreeRoot() Root {
 
 var BeaconBlockType =  ContainerType("BeaconBlock", []FieldDef{
 	{"slot", SlotType},
-	{"proposer_index", ValidatorIndexType},
 	{"parent_root", RootType},
 	{"state_root", RootType},
 	{"body", BeaconBlockBodyType},
@@ -50,7 +48,6 @@ var SignedBeaconBlockType = ContainerType("SignedBeaconBlock", []FieldDef{
 func (block *BeaconBlock) Header() *BeaconBlockHeader {
 	return &BeaconBlockHeader{
 		Slot:          block.Slot,
-		ProposerIndex: block.ProposerIndex,
 		ParentRoot:    block.ParentRoot,
 		StateRoot:     block.StateRoot,
 		BodyRoot:      block.Body.HashTreeRoot(),

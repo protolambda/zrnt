@@ -145,7 +145,7 @@ func (state *BeaconStateView) ProcessDeposit(epc *EpochsContext, dep *Deposit) e
 			ComputeSigningRoot(
 				dep.Data.MessageRoot(),
 				// Fork-agnostic domain since deposits are valid across forks
-				ComputeDomain(DOMAIN_DEPOSIT, GENESIS_FORK_VERSION, Root{})),
+				ComputeDomain(DOMAIN_DEPOSIT, GENESIS_FORK_VERSION)),
 			dep.Data.Signature) {
 			// invalid signatures are OK,
 			// the depositor will not receive anything because of their mistake,

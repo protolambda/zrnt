@@ -22,8 +22,6 @@ func (dat *Eth1Data) View() (*Eth1DataView, error) {
 	return &Eth1DataView{c}, nil
 }
 
-const SLOTS_PER_ETH1_VOTING_PERIOD = Slot(EPOCHS_PER_ETH1_VOTING_PERIOD) * SLOTS_PER_EPOCH
-
 var Eth1DataType = ContainerType("Eth1Data", []FieldDef{
 	{"deposit_root", RootType},
 	{"deposit_count", Uint64Type},

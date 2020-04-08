@@ -13,7 +13,6 @@ var BeaconBlockHeaderSSZ = zssz.GetSSZ((*BeaconBlockHeader)(nil))
 
 type BeaconBlockHeader struct {
 	Slot          Slot
-	ProposerIndex ValidatorIndex
 	ParentRoot    Root
 	StateRoot     Root
 	BodyRoot      Root
@@ -25,7 +24,6 @@ func (h *BeaconBlockHeader) View() *BeaconBlockHeaderView {
 	br := RootView(h.BodyRoot)
 	c, _ := BeaconBlockHeaderType.FromFields(
 		Uint64View(h.Slot),
-		Uint64View(h.ProposerIndex),
 		&pr,
 		&sr,
 		&br,
@@ -55,7 +53,6 @@ var SignedBeaconBlockHeaderType = ContainerType("SignedBeaconBlockHeader", []Fie
 
 var BeaconBlockHeaderType = ContainerType("BeaconBlockHeader", []FieldDef{
 	{"slot", SlotType},
-	{"proposer_index", ValidatorIndexType},
 	{"parent_root", RootType},
 	{"state_root", RootType},
 	{"body_root", RootType},
@@ -74,25 +71,21 @@ func (v *BeaconBlockHeaderView) Slot() (Slot, error) {
 	return AsSlot(v.Get(0))
 }
 
-func (v *BeaconBlockHeaderView) ProposerIndex() (ValidatorIndex, error) {
-	return AsValidatorIndex(v.Get(1))
-}
-
 func (v *BeaconBlockHeaderView) ParentRoot() (Root, error) {
-	return AsRoot(v.Get(2))
+	return AsRoot(v.Get(1))
 }
 
 func (v *BeaconBlockHeaderView) StateRoot() (Root, error) {
-	return AsRoot(v.Get(3))
+	return AsRoot(v.Get(2))
 }
 
 func (v *BeaconBlockHeaderView) SetStateRoot(root Root) error {
 	rv := RootView(root)
-	return v.Set(3, &rv)
+	return v.Set(2, &rv)
 }
 
 func (v *BeaconBlockHeaderView) BodyRoot() (Root, error) {
-	return AsRoot(v.Get(4))
+	return AsRoot(v.Get(3))
 }
 
 func (v *BeaconBlockHeaderView) Raw() (*BeaconBlockHeader, error) {
@@ -129,15 +122,9 @@ func (state *BeaconStateView) ProcessHeader(epc *EpochsContext, header *BeaconBl
 	if header.Slot != currentSlot {
 		return errors.New("slot of block does not match slot of state")
 	}
-	if !epc.IsValidIndex(header.ProposerIndex) {
-		return fmt.Errorf("beacon block header proposer index is out of range: %d", header.ProposerIndex)
-	}
 	proposerIndex, err := epc.GetBeaconProposer(currentSlot)
 	if err != nil {
 		return err
-	}
-	if header.ProposerIndex != proposerIndex {
-		return fmt.Errorf("beacon block header proposer index does not match expected index: got: %d, expected: %d", header.ProposerIndex, proposerIndex)
 	}
 	// Verify that the parent matches
 	latestHeader, err := state.LatestBlockHeader()
@@ -166,7 +153,6 @@ func (state *BeaconStateView) ProcessHeader(epc *EpochsContext, header *BeaconBl
 	// Store as the new latest block
 	headerRaw := BeaconBlockHeader{
 		Slot:          header.Slot,
-		ProposerIndex: header.ProposerIndex,
 		ParentRoot:    header.ParentRoot,
 		// state_root is zeroed and overwritten in the next `process_slot` call.
 		// with BlockHeaderState.UpdateStateRoot(), once the post state is available.

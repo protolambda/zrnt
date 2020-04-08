@@ -31,12 +31,11 @@ var BLSSignatureType = BasicVectorType(ByteType, 96)
 type BLSDomainType [4]byte
 
 // BLS domain (8 bytes): fork version (32 bits) concatenated with BLS domain type (32 bits)
-type BLSDomain [32]byte
+type BLSDomain [8]byte
 
-func ComputeDomain(domainType BLSDomainType, forkVersion Version, genesisValidatorsRoot Root) (out BLSDomain) {
+func ComputeDomain(domainType BLSDomainType, forkVersion Version) (out BLSDomain) {
 	copy(out[0:4], domainType[:])
-	forkDataRoot := ComputeForkDataRoot(forkVersion, genesisValidatorsRoot)
-	copy(out[4:32], forkDataRoot[0:28])
+	copy(out[4:8], forkVersion[0:])
 	return
 }
 

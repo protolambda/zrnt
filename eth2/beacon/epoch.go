@@ -52,6 +52,8 @@ func (state *BeaconStateView) PrepareEpochProcess(epc *EpochsContext) (out *Epoc
 
 	out = &EpochProcess{
 		Statuses: make([]AttesterStatus, count, count),
+		PrevEpoch: prevEpoch,
+		CurrEpoch: currentEpoch,
 	}
 
 	slashingsEpoch := currentEpoch + (EPOCHS_PER_SLASHINGS_VECTOR / 2)
@@ -126,8 +128,14 @@ func (state *BeaconStateView) PrepareEpochProcess(epc *EpochsContext) (out *Epoc
 
 	// Order by the sequence of activation_eligibility_epoch setting and then index
 	sort.Slice(out.IndicesToMaybeActivate, func(i int, j int) bool {
-		return out.Statuses[out.IndicesToMaybeActivate[i]].Validator.ActivationEligibilityEpoch <
-			out.Statuses[out.IndicesToMaybeActivate[j]].Validator.ActivationEligibilityEpoch
+		valIndexA := out.IndicesToMaybeActivate[i]
+		valIndexB := out.IndicesToMaybeActivate[j]
+		a := out.Statuses[valIndexA].Validator.ActivationEligibilityEpoch
+		b := out.Statuses[valIndexB].Validator.ActivationEligibilityEpoch
+		if a == b {  // Order by the sequence of activation_eligibility_epoch setting and then index
+			return valIndexA < valIndexB
+		}
+		return a < b
 	})
 
 	exitQueueEndChurn := uint64(0)
@@ -236,7 +244,7 @@ func (state *BeaconStateView) PrepareEpochProcess(epc *EpochsContext) (out *Epoc
 	if err != nil {
 		return nil, err
 	}
-	if err := processEpoch(currAtts, &out.PrevEpochStake, currentEpoch,
+	if err := processEpoch(currAtts, &out.CurrEpochStake, currentEpoch,
 		CurrSourceAttester, CurrTargetAttester, CurrHeadAttester); err != nil {
 		return nil, err
 	}

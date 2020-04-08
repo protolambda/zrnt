@@ -51,8 +51,8 @@ func ToFlatValidator(v *ValidatorView) (*FlatValidator, error) {
 	}
 	effBal, err := AsGwei(fields[2], err)
 	slashed, err := view.AsBool(fields[3], err)
-	activEp, err := AsEpoch(fields[4], err)
-	acitvEligEp, err := AsEpoch(fields[5], err)
+	acitvEligEp, err := AsEpoch(fields[4], err)
+	activEp, err := AsEpoch(fields[5], err)
 	exitEp, err := AsEpoch(fields[6], err)
 	withEp, err := AsEpoch(fields[7], err)
 	if err != nil {

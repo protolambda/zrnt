@@ -1,12 +1,12 @@
 package epoch_processing
 
 import (
-	"github.com/protolambda/zrnt/eth2/phase0"
+	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"testing"
 )
 
-type stateFn func(state *phase0.FullFeaturedState)
+type stateFn func(state *beacon.BeaconStateView, epc *beacon.EpochsContext, process *beacon.EpochProcess) error
 
 type EpochTest struct {
 	test_util.BaseTransitionTest
@@ -14,42 +14,49 @@ type EpochTest struct {
 }
 
 func (c *EpochTest) Run() error {
-	c.fn(c.Prepare())
-	return nil
+	epc, err := c.Pre.NewEpochsContext()
+	if err != nil {
+		return err
+	}
+	process, err := c.Pre.PrepareEpochProcess(epc)
+	if err != nil {
+		return err
+	}
+	return c.fn(c.Pre, epc, process)
 }
 
 func NewEpochTest(fn stateFn) test_util.TransitionCaseMaker {
 	return func() test_util.TransitionTest {
-		return &EpochTest{fn: func(state *phase0.FullFeaturedState) {
-			fn(state)
+		return &EpochTest{fn: func(state *beacon.BeaconStateView, epc *beacon.EpochsContext, process *beacon.EpochProcess) error {
+			return fn(state, epc, process)
 		}}
 	}
 }
 
 func TestFinalUpdates(t *testing.T) {
 	test_util.RunTransitionTest(t, "epoch_processing", "final_updates",
-		NewEpochTest(func(state *phase0.FullFeaturedState) {
-			state.ProcessEpochFinalUpdates()
+		NewEpochTest(func(state *beacon.BeaconStateView, epc *beacon.EpochsContext, process *beacon.EpochProcess) error {
+			return state.ProcessEpochFinalUpdates(epc, process)
 		}))
 }
 
 func TestJustificationAndFinalization(t *testing.T) {
 	test_util.RunTransitionTest(t, "epoch_processing", "justification_and_finalization",
-		NewEpochTest(func(state *phase0.FullFeaturedState) {
-			state.ProcessEpochJustification()
+		NewEpochTest(func(state *beacon.BeaconStateView, epc *beacon.EpochsContext, process *beacon.EpochProcess) error {
+			return state.ProcessEpochJustification(epc, process)
 		}))
 }
 
 func TestRegistryUpdates(t *testing.T) {
 	test_util.RunTransitionTest(t, "epoch_processing", "registry_updates",
-		NewEpochTest(func(state *phase0.FullFeaturedState) {
-			state.ProcessEpochRegistryUpdates()
+		NewEpochTest(func(state *beacon.BeaconStateView, epc *beacon.EpochsContext, process *beacon.EpochProcess) error {
+			return state.ProcessEpochRegistryUpdates(epc, process)
 		}))
 }
 
 func TestSlashings(t *testing.T) {
 	test_util.RunTransitionTest(t, "epoch_processing", "slashings",
-		NewEpochTest(func(state *phase0.FullFeaturedState) {
-			state.ProcessEpochSlashings()
+		NewEpochTest(func(state *beacon.BeaconStateView, epc *beacon.EpochsContext, process *beacon.EpochProcess) error {
+			return state.ProcessEpochSlashings(epc, process)
 		}))
 }

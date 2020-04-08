@@ -87,6 +87,7 @@ func (state *BeaconStateView) ProcessEpochRegistryUpdates(epc *EpochsContext, pr
 		for _, index := range dequeued {
 			if process.Statuses[index].Validator.ActivationEligibilityEpoch > finalizedEpoch {
 				// remaining validators all have an activation_eligibility_epoch that is higher anyway, break early
+				// The tie-breaks were already sorted correctly in the IndicesToMaybeActivate queue.
 				break
 			}
 			val, err := vals.Validator(index)

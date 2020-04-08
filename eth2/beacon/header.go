@@ -130,11 +130,14 @@ func (state *BeaconStateView) ProcessHeader(epc *EpochsContext, header *BeaconBl
 		return errors.New("slot of block does not match slot of state")
 	}
 	if !epc.IsValidIndex(header.ProposerIndex) {
-		return fmt.Errorf("beacon block header proposer index is invalid: %d", header.ProposerIndex)
+		return fmt.Errorf("beacon block header proposer index is out of range: %d", header.ProposerIndex)
 	}
 	proposerIndex, err := epc.GetBeaconProposer(currentSlot)
 	if err != nil {
 		return err
+	}
+	if header.ProposerIndex != proposerIndex {
+		return fmt.Errorf("beacon block header proposer index does not match expected index: got: %d, expected: %d", header.ProposerIndex, proposerIndex)
 	}
 	// Verify that the parent matches
 	latestHeader, err := state.LatestBlockHeader()

@@ -7,7 +7,7 @@ import (
 
 func (state *BeaconStateView) ProcessEpochJustification(epc *EpochsContext, process *EpochProcess) error {
 	previousEpoch := process.PrevEpoch
-	currentEpoch := process.PrevEpoch
+	currentEpoch := process.CurrEpoch
 
 	// skip if genesis.
 	if currentEpoch <= GENESIS_EPOCH+1 {
@@ -103,11 +103,11 @@ func (state *BeaconStateView) ProcessEpochJustification(epc *EpochsContext, proc
 	if justified := bits.IsJustified(0, 1); justified && oldCurrentJustified.Epoch+1 == currentEpoch {
 		toFinalize = &oldCurrentJustified
 	}
-	finCh, err := state.FinalizedCheckpoint()
-	if err != nil {
-		return err
-	}
 	if toFinalize != nil {
+		finCh, err := state.FinalizedCheckpoint()
+		if err != nil {
+			return err
+		}
 		if err := finCh.Set(toFinalize); err != nil {
 			return err
 		}

@@ -1,27 +1,27 @@
 package operations
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon/header"
-	"github.com/protolambda/zrnt/eth2/phase0"
+	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"testing"
 )
 
 type BlockHeaderTestCase struct {
 	test_util.BaseTransitionTest
-	BlockHeader *header.BeaconBlockHeader
+	Block beacon.BeaconBlock
 }
 
 func (c *BlockHeaderTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
 	c.BaseTransitionTest.Load(t, readPart)
-	b := phase0.BeaconBlock{}
-	test_util.LoadSSZ(t, "block", &b, phase0.BeaconBlockSSZ, readPart)
-	c.BlockHeader = b.Header()
+	test_util.LoadSSZ(t, "block", &c.Block, beacon.BeaconBlockSSZ, readPart)
 }
 
 func (c *BlockHeaderTestCase) Run() error {
-	state := c.Prepare()
-	return state.ProcessHeader(c.BlockHeader)
+	epc, err := c.Pre.NewEpochsContext()
+	if err != nil {
+		return err
+	}
+	return c.Pre.ProcessHeader(epc, &c.Block)
 }
 
 func TestBlockHeader(t *testing.T) {

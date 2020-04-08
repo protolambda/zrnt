@@ -1,24 +1,27 @@
 package operations
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon/exits"
+	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"testing"
 )
 
 type VoluntaryExitTestCase struct {
 	test_util.BaseTransitionTest
-	VoluntaryExit exits.SignedVoluntaryExit
+	VoluntaryExit beacon.SignedVoluntaryExit
 }
 
 func (c *VoluntaryExitTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
 	c.BaseTransitionTest.Load(t, readPart)
-	test_util.LoadSSZ(t, "voluntary_exit", &c.VoluntaryExit, exits.SignedVoluntaryExitSSZ, readPart)
+	test_util.LoadSSZ(t, "voluntary_exit", &c.VoluntaryExit, beacon.SignedVoluntaryExitSSZ, readPart)
 }
 
 func (c *VoluntaryExitTestCase) Run() error {
-	state := c.Prepare()
-	return state.ProcessVoluntaryExit(&c.VoluntaryExit)
+	epc, err := c.Pre.NewEpochsContext()
+	if err != nil {
+		return err
+	}
+	return c.Pre.ProcessVoluntaryExit(epc, &c.VoluntaryExit)
 }
 
 func TestVoluntaryExit(t *testing.T) {

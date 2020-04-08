@@ -97,7 +97,7 @@ func (v *ValidatorView) WithdrawableEpoch() (Epoch, error) {
 	return AsEpoch(v.Get(7))
 }
 func (v *ValidatorView) SetWithdrawableEpoch(epoch Epoch) error {
-	return v.Set(6, Uint64View(epoch))
+	return v.Set(7, Uint64View(epoch))
 }
 
 func (v *ValidatorView) IsActive(epoch Epoch) (bool, error) {

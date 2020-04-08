@@ -152,7 +152,7 @@ func (epc *EpochsContext) resetProposers(state *BeaconStateView) error {
 	if err != nil {
 		return err
 	}
-	epochSeed, err := mixes.GetSeed(epc.CurrentEpoch.Epoch, DOMAIN_BEACON_ATTESTER)
+	epochSeed, err := mixes.GetSeed(epc.CurrentEpoch.Epoch, DOMAIN_BEACON_PROPOSER)
 	if err != nil {
 		return err
 	}
@@ -266,7 +266,7 @@ func (epc *EpochsContext) IsValidIndex(index ValidatorIndex) bool {
 }
 
 func (epc *EpochsContext) Pubkey(index ValidatorIndex) (BLSPubkey, bool) {
-	if index < ValidatorIndex(len(epc.Index2Pubkey)) {
+	if index >= ValidatorIndex(len(epc.Index2Pubkey)) {
 		return BLSPubkey{}, false
 	}
 	return epc.Index2Pubkey[index], true

@@ -119,7 +119,7 @@ func (state *BeaconStateView) PrepareEpochProcess(epc *EpochsContext) (out *Epoc
 			out.IndicesToMaybeActivate = append(out.IndicesToMaybeActivate, i)
 		}
 
-		if !status.Active && flat.EffectiveBalance <= EJECTION_BALANCE && flat.ExitEpoch == FAR_FUTURE_EPOCH {
+		if status.Active && flat.EffectiveBalance <= EJECTION_BALANCE && flat.ExitEpoch == FAR_FUTURE_EPOCH {
 			out.IndicesToEject = append(out.IndicesToEject, i)
 		}
 	}

@@ -161,7 +161,7 @@ func (state *BeaconStateView) StateTransition(epc *EpochsContext, block *SignedB
 	}
 
 	// State root verification
-	if validateResult && block.Message.StateRoot == state.HashTreeRoot(tree.GetHashFn()) {
+	if validateResult && block.Message.StateRoot != state.HashTreeRoot(tree.GetHashFn()) {
 		return errors.New("block has invalid state root")
 	}
 	return nil

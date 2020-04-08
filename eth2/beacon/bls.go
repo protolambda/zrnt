@@ -72,7 +72,7 @@ func AsBLSPubkey(v View, err error) (BLSPubkey, error) {
 	}
 	pub := BLSPubkeyView{BasicVectorView: bv}
 	var out BLSPubkey
-	buf := bytes.NewBuffer(out[:])
+	buf := bytes.NewBuffer(out[:0])
 	if err := pub.Serialize(buf); err != nil {
 		return BLSPubkey{}, nil
 	}
@@ -94,7 +94,7 @@ func AsBLSSignature(v View, err error) (BLSSignature, error) {
 	}
 	pub := BLSSignatureView{BasicVectorView: bv}
 	var out BLSSignature
-	buf := bytes.NewBuffer(out[:])
+	buf := bytes.NewBuffer(out[:0])
 	if err := pub.Serialize(buf); err != nil {
 		return BLSSignature{}, nil
 	}

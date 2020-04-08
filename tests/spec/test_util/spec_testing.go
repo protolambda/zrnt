@@ -87,7 +87,7 @@ func RunHandler(t *testing.T, handlerPath string, caseRunner CaseRunner, config 
 	}
 
 	runTest := func(t *testing.T, path string) {
-		t.Parallel()
+		//t.Parallel()
 		partReader := func(name string) TestPart {
 			partPath := filepath.Join(path, name)
 			if _, err := os.Stat(partPath); os.IsNotExist(err) {
@@ -102,12 +102,12 @@ func RunHandler(t *testing.T, handlerPath string, caseRunner CaseRunner, config 
 	}
 
 	runSuite := func(t *testing.T, path string) {
-		t.Parallel()
+		//t.Parallel()
 		forEachDir(t, path, runTest)
 	}
 
 	t.Run(handlerPath, func(t *testing.T) {
-		t.Parallel()
+		//t.Parallel()
 		forEachDir(t, handlerAbsPath, runSuite)
 	})
 }

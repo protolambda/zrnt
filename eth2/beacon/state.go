@@ -140,7 +140,7 @@ func (state *BeaconStateView) IncrementDepositIndex() error {
 	if err != nil {
 		return err
 	}
-	return state.Set(10, Uint64View(depIndex))
+	return state.Set(10, Uint64View(depIndex + 1))
 }
 
 func (state *BeaconStateView) Validators() (*ValidatorsRegistryView, error) {

@@ -39,7 +39,7 @@ func (state *BeaconStateView) ProcessEpochFinalUpdates(epc *EpochsContext, proce
 				return err
 			}
 			effBalance := process.Statuses[i].Validator.EffectiveBalance
-			if balance+(HALF_INCREMENT*3) < effBalance || effBalance < balance {
+			if balance < effBalance || effBalance+(HALF_INCREMENT*3) < balance {
 				effBalance = balance - (balance % EFFECTIVE_BALANCE_INCREMENT)
 				if MAX_EFFECTIVE_BALANCE < effBalance {
 					effBalance = MAX_EFFECTIVE_BALANCE

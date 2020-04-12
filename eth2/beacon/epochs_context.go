@@ -248,11 +248,6 @@ type EpochsContext struct {
 
 // NewEpochsContext constructs a new context for the processing of the current epoch.
 func (state *BeaconStateView) NewEpochsContext() (*EpochsContext, error) {
-	indicesBounded, err := state.loadIndicesBounded()
-	if err != nil {
-		return nil, err
-	}
-
 	pc, err := NewPubkeyCache(state)
 	if err != nil {
 		return nil, err
@@ -260,15 +255,28 @@ func (state *BeaconStateView) NewEpochsContext() (*EpochsContext, error) {
 	epc := &EpochsContext{
 		PubkeyCache: pc,
 	}
+	if err := epc.LoadShuffling(state); err != nil {
+		return nil, err
+	}
+	if err := epc.LoadProposers(state); err != nil {
+		return nil, err
+	}
+	return epc, nil
+}
 
+func (epc *EpochsContext) LoadShuffling(state *BeaconStateView) error {
+	indicesBounded, err := state.loadIndicesBounded()
+	if err != nil {
+		return err
+	}
 	slot, err := state.Slot()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	currentEpoch := slot.ToEpoch()
 	epc.CurrentEpoch, err = state.ShufflingEpoch(indicesBounded, currentEpoch)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	prevEpoch := currentEpoch.Previous()
 	if prevEpoch == currentEpoch { // in case of genesis
@@ -276,19 +284,24 @@ func (state *BeaconStateView) NewEpochsContext() (*EpochsContext, error) {
 	} else {
 		epc.PreviousEpoch, err = state.ShufflingEpoch(indicesBounded, prevEpoch)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 	epc.NextEpoch, err = state.ShufflingEpoch(indicesBounded, currentEpoch+1)
 	if err != nil {
-		return nil, err
+		return err
 	}
+	return nil
+}
 
-	if err := epc.resetProposers(state); err != nil {
-		return nil, err
+func (epc *EpochsContext) LoadProposers(state *BeaconStateView) error  {
+	// prerequisite to load shuffling: the list of active indices, same as in the shuffling. So load the shuffling first.
+	if epc.CurrentEpoch == nil {
+		if err := epc.LoadShuffling(state); err != nil {
+			return err
+		}
 	}
-
-	return epc, nil
+	return epc.resetProposers(state)
 }
 
 func (epc *EpochsContext) resetProposers(state *BeaconStateView) error {

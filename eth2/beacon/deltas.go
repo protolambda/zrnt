@@ -29,7 +29,7 @@ func (deltas *Deltas) Add(other *Deltas) {
 }
 
 func (state *BeaconStateView) AttestationDeltas(epc *EpochsContext, process *EpochProcess) (*Deltas, error) {
-	deltas := NewDeltas(epc.ValCount())
+	deltas := NewDeltas(uint64(len(process.Statuses)))
 
 	previousEpoch := epc.PreviousEpoch.Epoch
 
@@ -59,7 +59,7 @@ func (state *BeaconStateView) AttestationDeltas(epc *EpochsContext, process *Epo
 	prevEpochTargetStake /= EFFECTIVE_BALANCE_INCREMENT
 	prevEpochHeadStake /= EFFECTIVE_BALANCE_INCREMENT
 
-	validatorCount := ValidatorIndex(epc.ValCount())
+	validatorCount := ValidatorIndex(uint64(len(process.Statuses)))
 	for i := ValidatorIndex(0); i < validatorCount; i++ {
 		status := attesterStatuses[i]
 		if status.Flags&EligibleAttester != 0 {
@@ -119,7 +119,7 @@ func (state *BeaconStateView) ProcessEpochRewardsAndPenalties(epc *EpochsContext
 	if currentEpoch == GENESIS_EPOCH {
 		return nil
 	}
-	valCount := epc.ValCount()
+	valCount := uint64(len(process.Statuses))
 	sum := NewDeltas(valCount)
 	attDeltas, err := state.AttestationDeltas(epc, process)
 	if err != nil {

@@ -68,7 +68,7 @@ func (state *BeaconStateView) ProcessProposerSlashing(epc *EpochsContext, ps *Pr
 	if err != nil {
 		return err
 	}
-	pubkey, ok := epc.Pubkey(ps.ProposerIndex)
+	pubkey, ok := epc.PubkeyCache.Pubkey(ps.ProposerIndex)
 	if !ok {
 		return errors.New("could not find pubkey of proposer")
 	}

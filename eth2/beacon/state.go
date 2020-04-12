@@ -177,3 +177,15 @@ func (state *BeaconStateView) CurrentJustifiedCheckpoint() (*CheckpointView, err
 func (state *BeaconStateView) FinalizedCheckpoint() (*CheckpointView, error) {
 	return AsCheckPoint(state.Get(19))
 }
+
+func (state *BeaconStateView) IsValidIndex(index ValidatorIndex) (bool, error) {
+	vals, err := state.Validators()
+	if err != nil {
+		return false, err
+	}
+	count, err := vals.Length()
+	if err != nil {
+		return false, err
+	}
+	return uint64(index) < count, nil
+}

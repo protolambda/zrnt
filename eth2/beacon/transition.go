@@ -173,7 +173,7 @@ func (state *BeaconStateView) VerifySignature(epc *EpochsContext, block *SignedB
 	if err != nil {
 		return false
 	}
-	pub, ok := epc.Pubkey(proposerIndex)
+	pub, ok := epc.PubkeyCache.Pubkey(proposerIndex)
 	if !ok {
 		return false
 	}

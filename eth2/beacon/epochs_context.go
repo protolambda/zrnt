@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/util/hashing"
+	"sync"
 )
 
 func (state *BeaconStateView) computeProposerIndex(indices []ValidatorIndex, seed Root) (ValidatorIndex, error) {
@@ -88,11 +89,156 @@ func (state *BeaconStateView) loadIndicesBounded() ([]BoundedIndex, error) {
 	return indicesBounded, nil
 }
 
-type EpochsContext struct {
-	// TODO: replace with data-sharing lookups for better forking
-	Pubkey2Index map[BLSPubkey]ValidatorIndex
-	Index2Pubkey []BLSPubkey
+// PubkeyCache is shared between any state. However, if .Append(index, pubkey) conflicts, a new cache will be forked out.
+type PubkeyCache struct {
+	parent *PubkeyCache
+	// The count up until the conflicting validator index (cause of the pubkey cache fork).
+	trustedParentCount ValidatorIndex
+	pub2idx map[BLSPubkey]ValidatorIndex
+	// starting at trustedParentCount
+	idx2pub []BLSPubkey
+	// Can have many reads concurrently, but only 1 write.
+	rwLock sync.RWMutex
+}
 
+func NewPubkeyCache(state *BeaconStateView) (*PubkeyCache, error) {
+	vals, err := state.Validators()
+	if err != nil {
+		return nil, err
+	}
+	valCount, err := vals.Length()
+	if err != nil {
+		return nil, err
+	}
+	pc := &PubkeyCache{
+		parent: nil,
+		trustedParentCount: 0,
+		pub2idx: make(map[BLSPubkey]ValidatorIndex),
+		idx2pub: make([]BLSPubkey, 0),
+	}
+	currentCount := uint64(len(pc.idx2pub))
+	for i := currentCount; i < valCount; i++ {
+		v, err := AsValidator(vals.Get(i))
+		if err != nil {
+			return nil, err
+		}
+		pub, err := v.Pubkey()
+		if err != nil {
+			return nil, err
+		}
+		idx := ValidatorIndex(i)
+		pc.pub2idx[pub] = idx
+		pc.idx2pub = append(pc.idx2pub, pub)
+	}
+	return pc, nil
+}
+
+// Get the pubkey of a validator index.
+// Note: this does not mean the validator is part of the current state.
+// It merely means that this is a known pubkey for that particular validator
+// (could be in a later part of a forked version of the state).
+func (pc *PubkeyCache) Pubkey(index ValidatorIndex) (pub BLSPubkey, ok bool) {
+	pc.rwLock.RLock()
+	defer pc.rwLock.RUnlock()
+	return pc.unsafePubkey(index)
+}
+
+func (pc *PubkeyCache) unsafePubkey(index ValidatorIndex) (pub BLSPubkey, ok bool) {
+	if index >= pc.trustedParentCount {
+		if index >= pc.trustedParentCount + ValidatorIndex(len(pc.idx2pub)) {
+			return BLSPubkey{}, false
+		}
+		return pc.idx2pub[index - pc.trustedParentCount], true
+	} else if pc.parent != nil {
+		return pc.parent.Pubkey(index)
+	} else {
+		return BLSPubkey{}, false
+	}
+}
+
+// Get the validator index of a pubkey.
+// Note: this does not mean the validator is part of the current state.
+// It merely means that this is a known pubkey for that particular validator
+// (could be in a later part of a forked version of the state).
+func (pc *PubkeyCache) ValidatorIndex(pubkey BLSPubkey) (index ValidatorIndex, ok bool) {
+	pc.rwLock.RLock()
+	defer pc.rwLock.RUnlock()
+	return pc.unsafeValidatorIndex(pubkey)
+}
+
+func (pc *PubkeyCache) unsafeValidatorIndex(pubkey BLSPubkey) (index ValidatorIndex, ok bool) {
+	index, ok = pc.pub2idx[pubkey]
+	if !ok && pc.parent != nil {
+		return pc.parent.ValidatorIndex(pubkey)
+	}
+	return index, ok
+}
+
+// AddValidator appends the (index, pubkey) pair to the pubkey cache. It returns the same cache if the added entry is not conflicting.
+// If it conflicts, the common part is inherited, and a forked pubkey cache is returned.
+func (pc *PubkeyCache) AddValidator(index ValidatorIndex, pub BLSPubkey) (*PubkeyCache, error) {
+	pc.rwLock.Lock()
+	defer pc.rwLock.Unlock()
+
+	existingIndex, ok := pc.unsafeValidatorIndex(pub)
+	if ok {
+		if existingIndex != index {
+			// conflict detected! Deposit log fork!
+			forkedPc := &PubkeyCache{
+				parent: pc,
+				// fork out the existing index, only trust the common history
+				trustedParentCount: existingIndex,
+				pub2idx: make(map[BLSPubkey]ValidatorIndex),
+				idx2pub: make([]BLSPubkey, 0),
+			}
+			// Do not have to unlock this cache (parent of forkedPc) early, as the forkedPc is guaranteed to handle it.
+			return forkedPc.AddValidator(index, pub)
+		}
+		existingPubkey, ok := pc.unsafePubkey(index)
+		if ok {
+			if existingPubkey != pub {
+				// conflict detected! Deposit log fork!
+				forkedPc := &PubkeyCache{
+					parent: pc,
+					// fork out the existing index, only trust the common history
+					trustedParentCount: index,
+					pub2idx: make(map[BLSPubkey]ValidatorIndex),
+					idx2pub: make([]BLSPubkey, 0),
+				}
+				// Do not have to unlock this cache (parent of forkedPc) early, as the forkedPc is guaranteed to handle it.
+				return forkedPc.AddValidator(index, pub)
+			}
+		}
+		// append is no-op, validator already exists
+		return pc, nil
+	}
+	existingPubkey, ok := pc.unsafePubkey(index)
+	if ok {
+		if existingPubkey != pub {
+			// conflict detected! Deposit log fork!
+			forkedPc := &PubkeyCache{
+				parent: pc,
+				// fork out the existing index, only trust the common history
+				trustedParentCount: index,
+				pub2idx: make(map[BLSPubkey]ValidatorIndex),
+				idx2pub: make([]BLSPubkey, 0),
+			}
+			// Do not have to unlock this cache (parent of forkedPc) early, as the forkedPc is guaranteed to handle it.
+			return forkedPc.AddValidator(index, pub)
+		}
+	}
+	if expected := pc.trustedParentCount + ValidatorIndex(len(pc.idx2pub)); index != expected {
+		// index is unknown, but too far ahead of cache; in between indices are missing.
+		return nil, fmt.Errorf("AddValidator is incorrect, missing earlier index. got: (%d, %x), but currently expecting %d next", index, pub, expected)
+	}
+	pc.idx2pub = append(pc.idx2pub, pub)
+	pc.pub2idx[pub] = index
+	return pc, nil
+}
+
+type EpochsContext struct {
+	// PubkeyCache may be replaced when a new forked-out cache takes over to process an alternative Eth1 deposit chain.
+	PubkeyCache *PubkeyCache
 	Proposers [SLOTS_PER_EPOCH]ValidatorIndex
 
 	PreviousEpoch *ShufflingEpoch
@@ -100,21 +246,19 @@ type EpochsContext struct {
 	NextEpoch     *ShufflingEpoch
 }
 
+// NewEpochsContext constructs a new context for the processing of the current epoch.
 func (state *BeaconStateView) NewEpochsContext() (*EpochsContext, error) {
 	indicesBounded, err := state.loadIndicesBounded()
 	if err != nil {
 		return nil, err
 	}
 
-	valCount := len(indicesBounded)
-
-	epc := &EpochsContext{
-		Pubkey2Index: make(map[BLSPubkey]ValidatorIndex, valCount),
-		Index2Pubkey: make([]BLSPubkey, 0, valCount),
-	}
-
-	if err := epc.syncPubkeys(state); err != nil {
+	pc, err := NewPubkeyCache(state)
+	if err != nil {
 		return nil, err
+	}
+	epc := &EpochsContext{
+		PubkeyCache: pc,
 	}
 
 	slot, err := state.Slot()
@@ -173,60 +317,6 @@ func (epc *EpochsContext) resetProposers(state *BeaconStateView) error {
 	return nil
 }
 
-func (epc *EpochsContext) Copy() *EpochsContext {
-	// Go copies are ugly.
-	// TODO: replace with immutable datastructure, for cheap copy
-	pub2idx := make(map[BLSPubkey]ValidatorIndex, len(epc.Pubkey2Index))
-	for k, v := range epc.Pubkey2Index {
-		pub2idx[k] = v
-	}
-	idx2pub := make([]BLSPubkey, len(epc.Index2Pubkey), len(epc.Index2Pubkey))
-	for i, v := range epc.Index2Pubkey {
-		idx2pub[i] = v
-	}
-	return &EpochsContext{
-		Pubkey2Index: pub2idx,
-		Index2Pubkey: idx2pub,
-		// Only shallow-copy the other data, it doesn't mutate (only completely replaced on rotation)
-		Proposers: epc.Proposers,
-		PreviousEpoch: epc.PreviousEpoch,
-		CurrentEpoch: epc.CurrentEpoch,
-		NextEpoch: epc.NextEpoch,
-	}
-}
-
-func (epc *EpochsContext) syncPubkeys(state *BeaconStateView) error {
-	vals, err := state.Validators()
-	if err != nil {
-		return err
-	}
-	valCount, err := vals.Length()
-	if err != nil {
-		return err
-	}
-	if epc.Pubkey2Index == nil {
-		epc.Pubkey2Index = make(map[BLSPubkey]ValidatorIndex, valCount)
-	}
-	if epc.Index2Pubkey == nil {
-		epc.Index2Pubkey = make([]BLSPubkey, 0, valCount)
-	}
-	currentCount := uint64(len(epc.Index2Pubkey))
-	for i := currentCount; i < valCount; i++ {
-		v, err := AsValidator(vals.Get(i))
-		if err != nil {
-			return err
-		}
-		pub, err := v.Pubkey()
-		if err != nil {
-			return err
-		}
-		idx := ValidatorIndex(i)
-		epc.Pubkey2Index[pub] = idx
-		epc.Index2Pubkey = append(epc.Index2Pubkey, pub)
-	}
-	return nil
-}
-
 func (epc *EpochsContext) RotateEpochs(state *BeaconStateView) error {
 	epc.PreviousEpoch = epc.CurrentEpoch
 	epc.CurrentEpoch = epc.NextEpoch
@@ -255,26 +345,6 @@ func (epc *EpochsContext) getSlotComms(slot Slot) ([][]ValidatorIndex, error) {
 	} else {
 		return nil, fmt.Errorf("crosslink committee retrieval: out of range epoch: %d", epoch)
 	}
-}
-
-func (epc *EpochsContext) ValCount() uint64 {
-	return uint64(len(epc.Index2Pubkey))
-}
-
-func (epc *EpochsContext) IsValidIndex(index ValidatorIndex) bool {
-	return index < ValidatorIndex(epc.ValCount())
-}
-
-func (epc *EpochsContext) Pubkey(index ValidatorIndex) (BLSPubkey, bool) {
-	if index >= ValidatorIndex(len(epc.Index2Pubkey)) {
-		return BLSPubkey{}, false
-	}
-	return epc.Index2Pubkey[index], true
-}
-
-func (epc *EpochsContext) ValidatorIndex(pub BLSPubkey) (ValidatorIndex, bool) {
-	idx, ok := epc.Pubkey2Index[pub]
-	return idx, ok
 }
 
 // Return the beacon committee at slot for index.

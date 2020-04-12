@@ -53,7 +53,10 @@ func (state *BeaconStateView) ValidateIndexedAttestation(epc *EpochsContext, ind
 	// Check the last item of the sorted list to be a valid index,
 	// if this one is valid, the others are as well, since they are lower.
 	if len(indices) > 0 {
-		valid := epc.IsValidIndex(indices[len(indices)-1])
+		valid, err := state.IsValidIndex(indices[len(indices)-1])
+		if err != nil {
+			return err
+		}
 		if !valid {
 			return errors.New("attestation indices contain out of range index")
 		}
@@ -61,7 +64,7 @@ func (state *BeaconStateView) ValidateIndexedAttestation(epc *EpochsContext, ind
 
 	pubkeys := make([]BLSPubkey, 0, 2)
 	for _, i := range indices {
-		pub, ok := epc.Pubkey(i)
+		pub, ok := epc.PubkeyCache.Pubkey(i)
 		if !ok {
 			return fmt.Errorf("could not find pubkey for index %d", i)
 		}

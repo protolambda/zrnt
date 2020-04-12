@@ -56,7 +56,9 @@ var SignedVoluntaryExitType = ContainerType("SignedVoluntaryExit", []FieldDef{
 func (state *BeaconStateView) ProcessVoluntaryExit(epc *EpochsContext, signedExit *SignedVoluntaryExit) error {
 	exit := &signedExit.Message
 	currentEpoch := epc.CurrentEpoch.Epoch
-	if valid := epc.IsValidIndex(exit.ValidatorIndex); !valid {
+	if valid, err := state.IsValidIndex(exit.ValidatorIndex); err != nil {
+		return err
+	} else if !valid {
 		return errors.New("invalid exit validator index")
 	}
 	vals, err := state.Validators()
@@ -93,7 +95,7 @@ func (state *BeaconStateView) ProcessVoluntaryExit(epc *EpochsContext, signedExi
 	if currentEpoch < registeredActivationEpoch+PERSISTENT_COMMITTEE_PERIOD {
 		return errors.New("exit is too soon")
 	}
-	pubkey, ok := epc.Pubkey(exit.ValidatorIndex)
+	pubkey, ok := epc.PubkeyCache.Pubkey(exit.ValidatorIndex)
 	if !ok {
 		return errors.New("could not find index of exiting validator")
 	}

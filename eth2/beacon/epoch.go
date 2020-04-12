@@ -1,7 +1,6 @@
 package beacon
 
 import (
-	"errors"
 	"github.com/protolambda/zrnt/eth2/util/math"
 	"sort"
 )
@@ -45,7 +44,14 @@ func GetChurnLimit(activeValidatorCount uint64) uint64 {
 }
 
 func (state *BeaconStateView) PrepareEpochProcess(epc *EpochsContext) (out *EpochProcess, err error) {
-	count := epc.ValCount()
+	validators, err := state.Validators()
+	if err != nil {
+		return nil, err
+	}
+	count, err := validators.Length()
+	if err != nil {
+		return nil, err
+	}
 
 	prevEpoch := epc.PreviousEpoch.Epoch
 	currentEpoch := epc.CurrentEpoch.Epoch
@@ -58,16 +64,6 @@ func (state *BeaconStateView) PrepareEpochProcess(epc *EpochsContext) (out *Epoc
 
 	slashingsEpoch := currentEpoch + (EPOCHS_PER_SLASHINGS_VECTOR / 2)
 	exitQueueEnd := currentEpoch.ComputeActivationExitEpoch()
-
-	validators, err := state.Validators()
-	if err != nil {
-		return nil, err
-	}
-	if valCount, err := validators.Length(); err != nil {
-		return nil, err
-	} else if valCount != count {
-		return nil, errors.New("validator count mismatch in epoch processing preparation")
-	}
 
 	activeCount := uint64(0)
 	valIter := validators.ReadonlyIter()

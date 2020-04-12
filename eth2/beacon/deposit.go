@@ -135,7 +135,22 @@ func (state *BeaconStateView) ProcessDeposit(epc *EpochsContext, dep *Deposit) e
 		return err
 	}
 
-	valIndex, exists := epc.ValidatorIndex(dep.Data.Pubkey)
+	validators, err := state.Validators()
+	if err != nil {
+		return err
+	}
+
+	valIndex, ok := epc.PubkeyCache.ValidatorIndex(dep.Data.Pubkey)
+	// it exists if: it exists in the pubkey cache AND the validator index is lower than the current validator count.
+	exists := ok
+	if ok {
+
+		valCount, err := validators.Length()
+		if err != nil {
+			return err
+		}
+		exists = uint64(valIndex) < valCount
+	}
 
 	// Check if it is a known validator that is depositing ("if pubkey not in validator_pubkeys")
 	if !exists {
@@ -172,11 +187,7 @@ func (state *BeaconStateView) ProcessDeposit(epc *EpochsContext, dep *Deposit) e
 			EffectiveBalance:           effBalance,
 		}
 		validator := validatorRaw.View()
-		vals, err := state.Validators()
-		if err != nil {
-			return err
-		}
-		if err := vals.Append(validator); err != nil {
+		if err := validators.Append(validator); err != nil {
 			return err
 		}
 		bals, err := state.Balances()
@@ -185,6 +196,11 @@ func (state *BeaconStateView) ProcessDeposit(epc *EpochsContext, dep *Deposit) e
 		}
 		if err := bals.Append(Uint64View(balance)); err != nil {
 			return err
+		}
+		if pc, err := epc.PubkeyCache.AddValidator(valIndex, pubkey); err != nil {
+			return err
+		} else {
+			epc.PubkeyCache = pc
 		}
 	} else {
 		// Increase balance by deposit amount
@@ -196,5 +212,5 @@ func (state *BeaconStateView) ProcessDeposit(epc *EpochsContext, dep *Deposit) e
 			return err
 		}
 	}
-	return epc.syncPubkeys(state)
+	return nil
 }

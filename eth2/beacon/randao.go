@@ -90,7 +90,7 @@ func (state *BeaconStateView) ProcessRandaoReveal(epc *EpochsContext, reveal BLS
 	if err != nil {
 		return err
 	}
-	proposerPubkey, ok := epc.Pubkey(propIndex)
+	proposerPubkey, ok := epc.PubkeyCache.Pubkey(propIndex)
 	if !ok {
 		return errors.New("could not find pubkey of proposer")
 	}

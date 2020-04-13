@@ -62,7 +62,7 @@ func (state *BeaconStateView) ValidateIndexedAttestation(epc *EpochsContext, ind
 		}
 	}
 
-	pubkeys := make([]BLSPubkey, 0, 2)
+	pubkeys := make([]*CachedPubkey, 0, 2)
 	for _, i := range indices {
 		pub, ok := epc.PubkeyCache.Pubkey(i)
 		if !ok {

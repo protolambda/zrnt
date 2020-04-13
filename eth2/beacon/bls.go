@@ -9,6 +9,8 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
+type CachedPubkey = bls.CachedPubkey
+
 type BLSPubkey = bls.BLSPubkey
 
 func ViewPubkey(pub *BLSPubkey) *BLSPubkeyView {

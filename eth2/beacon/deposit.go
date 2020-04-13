@@ -140,23 +140,24 @@ func (state *BeaconStateView) ProcessDeposit(epc *EpochsContext, dep *Deposit) e
 		return err
 	}
 
+	valCount, err := validators.Length()
+	if err != nil {
+		return err
+	}
 	valIndex, ok := epc.PubkeyCache.ValidatorIndex(dep.Data.Pubkey)
 	// it exists if: it exists in the pubkey cache AND the validator index is lower than the current validator count.
 	exists := ok
 	if ok {
-
-		valCount, err := validators.Length()
-		if err != nil {
-			return err
-		}
 		exists = uint64(valIndex) < valCount
+	} else {
+		valIndex = ValidatorIndex(valCount)
 	}
 
 	// Check if it is a known validator that is depositing ("if pubkey not in validator_pubkeys")
 	if !exists {
 		// Verify the deposit signature (proof of possession) which is not checked by the deposit contract
 		if !bls.Verify(
-			dep.Data.Pubkey,
+			&CachedPubkey{Compressed: dep.Data.Pubkey},
 			ComputeSigningRoot(
 				dep.Data.MessageRoot(),
 				// Fork-agnostic domain since deposits are valid across forks

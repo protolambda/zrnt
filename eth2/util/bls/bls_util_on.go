@@ -7,15 +7,19 @@ import (
 )
 
 func init() {
-	hbls.Init(hbls.BLS12_381)
-	hbls.SetETHmode(1)
+	if err := hbls.Init(hbls.BLS12_381); err != nil {
+		panic(err)
+	}
+	if err := hbls.SetETHmode(1); err != nil {
+		panic(err)
+	}
 }
 
 const BLS_ACTIVE = true
 
-func Verify(pubkey BLSPubkey, message [32]byte, signature BLSSignature) bool {
-	var parsedPubkey hbls.PublicKey
-	if err := parsedPubkey.Deserialize(pubkey[:]); err != nil {
+func Verify(pubkey *CachedPubkey, message [32]byte, signature BLSSignature) bool {
+	parsedPubkey, err := pubkey.Pubkey()
+	if err != nil {
 		return false
 	}
 	var parsedSig hbls.Sign
@@ -23,20 +27,22 @@ func Verify(pubkey BLSPubkey, message [32]byte, signature BLSSignature) bool {
 		return false
 	}
 
-	return parsedSig.VerifyHash(&parsedPubkey, message[:])
+	return parsedSig.VerifyHash(parsedPubkey, message[:])
 }
 
-func parsePubkeys(pubkeys []BLSPubkey) []hbls.PublicKey {
+func parsePubkeys(pubkeys []*CachedPubkey) []hbls.PublicKey {
 	pubs := make([]hbls.PublicKey, len(pubkeys), len(pubkeys))
-	for i := range pubkeys {
-		if err := pubs[i].Deserialize(pubkeys[i][:]); err != nil {
+	for i, p := range pubkeys {
+		pub, err := p.Pubkey()
+		if err != nil {
 			panic(err)
 		}
+		pubs[i] = *pub
 	}
 	return pubs
 }
 
-func FastAggregateVerify(pubkeys []BLSPubkey, message [32]byte, signature BLSSignature) bool {
+func FastAggregateVerify(pubkeys []*CachedPubkey, message [32]byte, signature BLSSignature) bool {
 	pubs := parsePubkeys(pubkeys)
 	if len(pubs) == 0 {
 		return false

@@ -63,8 +63,8 @@ func AsEth1DataVotes(v View, err error) (*Eth1DataVotesView, error) {
 }
 
 // Done at the end of every voting period
-func (v *BeaconStateView) ResetEth1Votes() error {
-	votes, err := v.Eth1DataVotes()
+func (state *BeaconStateView) ResetEth1Votes() error {
+	votes, err := state.Eth1DataVotes()
 	if err != nil {
 		return err
 	}

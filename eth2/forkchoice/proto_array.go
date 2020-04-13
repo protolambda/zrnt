@@ -2,6 +2,7 @@ package forkchoice
 
 import (
 	"errors"
+	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon"
 )
 
@@ -104,6 +105,42 @@ func (pr *ProtoArray) CanonicalChain(anchorRoot Root) ([]BlockRef, error) {
 		index = node.Parent
 	}
 	return chain, nil
+}
+
+func (pr *ProtoArray) BlocksAroundSlot(anchor Root, slot Slot) (before BlockRef, at BlockRef, after BlockRef, err error) {
+	var head BlockRef
+	head, err = pr.FindHead(anchor)
+	if err != nil {
+		return
+	}
+	if slot > head.Slot {
+		err = fmt.Errorf("head is too old for slot. Head at %d, but request was %d", head.Slot, slot)
+		return
+	}
+	// Walk back the canonical chain, and stop as soon as we find the blocks around the slot of interest.
+	index := pr.indices[head.Root]
+	var node *ProtoNode
+	for index != NONE && index >= pr.indexOffset {
+		node, err = pr.getNode(index)
+		if err != nil {
+			return
+		}
+		if node.Block.Slot > slot {
+			after = node.Block
+		}
+		if node.Block.Slot == slot {
+			at = node.Block
+		}
+		if node.Block.Slot < head.Slot {
+			before = node.Block
+			break
+		}
+		index = node.Parent
+	}
+	if at.Root == (Root{}) {
+		err = errors.New("could not find block")
+	}
+	return
 }
 
 func (pr *ProtoArray) ContainsBlock(blockRoot Root) bool {
@@ -455,6 +492,22 @@ func (fc *ForkChoice) UpdateJustified(justified Checkpoint, finalized Checkpoint
 	fc.finalized = finalized
 
 	return nil
+}
+
+func (fc *ForkChoice) Justified() Checkpoint {
+	return fc.justified
+}
+
+func (fc *ForkChoice) Finalized() Checkpoint {
+	return fc.finalized
+}
+
+func (fc *ForkChoice) BlocksAroundSlot(anchor Root, slot Slot) (before BlockRef, at BlockRef, after BlockRef, err error) {
+	return fc.protoArray.BlocksAroundSlot(anchor, slot)
+}
+
+func (fc *ForkChoice) GetBlock(root Root) (block BlockRef, ok bool) {
+	return fc.protoArray.GetBlock(root)
 }
 
 func (fc *ForkChoice) FindHead() (BlockRef, error) {

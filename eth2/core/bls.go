@@ -25,7 +25,7 @@ type BLSDomain [32]byte
 type ForkDigest [4]byte
 
 type ForkData struct {
-	CurrentVersion Version
+	CurrentVersion        Version
 	GenesisValidatorsRoot Root
 }
 
@@ -33,7 +33,7 @@ var ForkDataSSZ = zssz.GetSSZ((*ForkData)(nil))
 
 func ComputeForkDataRoot(currentVersion Version, genesisValidatorsRoot Root) Root {
 	data := ForkData{
-		CurrentVersion: currentVersion,
+		CurrentVersion:        currentVersion,
 		GenesisValidatorsRoot: genesisValidatorsRoot,
 	}
 	hFn := hashing.GetHashFn()

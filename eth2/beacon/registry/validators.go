@@ -202,7 +202,7 @@ func (state *ValidatorsState) GetTotalStake() (out Gwei) {
 		out += state.Validators[i].EffectiveBalance
 	}
 	if out == 0 {
-		return 1
+		return EFFECTIVE_BALANCE_INCREMENT
 	}
 	return
 }

@@ -149,4 +149,3 @@ func (state *BeaconStateView) ProcessEpochRewardsAndPenalties(epc *EpochsContext
 	}
 	return nil
 }
-

@@ -16,12 +16,12 @@ type BatchRootsView struct{ *ComplexVectorView }
 
 // Return the root at the given slot. Only valid to SLOTS_PER_HISTORICAL_ROOT slots ago.
 func (v *BatchRootsView) GetRoot(slot Slot) (Root, error) {
-	i := uint64(slot%SLOTS_PER_HISTORICAL_ROOT)
+	i := uint64(slot % SLOTS_PER_HISTORICAL_ROOT)
 	return AsRoot(v.Get(i))
 }
 
 func (v *BatchRootsView) SetRoot(slot Slot, r Root) error {
-	i := uint64(slot%SLOTS_PER_HISTORICAL_ROOT)
+	i := uint64(slot % SLOTS_PER_HISTORICAL_ROOT)
 	rv := RootView(r)
 	return v.Set(i, &rv)
 }

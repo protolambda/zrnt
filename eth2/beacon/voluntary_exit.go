@@ -39,7 +39,7 @@ func (v *VoluntaryExit) HashTreeRoot() Root {
 var SignedVoluntaryExitSSZ = zssz.GetSSZ((*SignedVoluntaryExit)(nil))
 
 type SignedVoluntaryExit struct {
-	Message VoluntaryExit
+	Message   VoluntaryExit
 	Signature BLSSignature
 }
 

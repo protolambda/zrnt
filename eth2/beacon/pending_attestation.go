@@ -58,7 +58,7 @@ var AttestationDataType = ContainerType("AttestationData", []FieldDef{
 	{"target", CheckpointType},
 })
 
-type AttestationDataView struct { *ContainerView }
+type AttestationDataView struct{ *ContainerView }
 
 func (v *AttestationDataView) Raw() (*AttestationData, error) {
 	fields, err := v.FieldValues()
@@ -99,7 +99,7 @@ var PendingAttestationType = ContainerType("PendingAttestation", []FieldDef{
 	{"proposer_index", ValidatorIndexType},
 })
 
-type PendingAttestationView struct { *ContainerView }
+type PendingAttestationView struct{ *ContainerView }
 
 func (v *PendingAttestationView) Raw() (*PendingAttestation, error) {
 	// load aggregation bits
@@ -140,7 +140,7 @@ func (*PendingAttestations) Limit() uint64 {
 
 var PendingAttestationsType = ComplexListType(PendingAttestationType, uint64(MAX_ATTESTATIONS*SLOTS_PER_EPOCH))
 
-type PendingAttestationsView struct { *ComplexListView }
+type PendingAttestationsView struct{ *ComplexListView }
 
 func AsPendingAttestations(v View, err error) (*PendingAttestationsView, error) {
 	c, err := AsComplexList(v, err)

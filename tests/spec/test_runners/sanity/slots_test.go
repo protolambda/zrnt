@@ -29,7 +29,7 @@ func (c *SlotsTestCase) Run() error {
 	if err != nil {
 		return err
 	}
-	return c.Pre.ProcessSlots(epc, slot + c.Slots)
+	return c.Pre.ProcessSlots(epc, slot+c.Slots)
 }
 
 func TestSlots(t *testing.T) {

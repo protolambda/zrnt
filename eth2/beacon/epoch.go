@@ -8,7 +8,7 @@ import (
 type EpochStakeSummary struct {
 	SourceStake Gwei
 	TargetStake Gwei
-	HeadStake Gwei
+	HeadStake   Gwei
 }
 
 type EpochProcess struct {
@@ -17,7 +17,7 @@ type EpochProcess struct {
 
 	Statuses []AttesterStatus
 
-	TotalActiveStake Gwei
+	TotalActiveStake          Gwei
 	TotalActiveUnslashedStake Gwei
 
 	PrevEpochStake EpochStakeSummary
@@ -26,7 +26,7 @@ type EpochProcess struct {
 	// Thanks to exit delay, this does not change within the epoch processing.
 	ActiveValidators uint64
 
-	IndicesToSlash []ValidatorIndex
+	IndicesToSlash                    []ValidatorIndex
 	IndicesToSetActivationEligibility []ValidatorIndex
 	// Ignores churn. Apply churn-limit manually.
 	// Maybe, because finality affects it still.
@@ -34,9 +34,9 @@ type EpochProcess struct {
 
 	IndicesToEject []ValidatorIndex
 
-	ExitQueueEnd Epoch
+	ExitQueueEnd      Epoch
 	ExitQueueEndChurn uint64
-	ChurnLimit uint64
+	ChurnLimit        uint64
 }
 
 func GetChurnLimit(activeValidatorCount uint64) uint64 {
@@ -57,7 +57,7 @@ func (state *BeaconStateView) PrepareEpochProcess(epc *EpochsContext) (out *Epoc
 	currentEpoch := epc.CurrentEpoch.Epoch
 
 	out = &EpochProcess{
-		Statuses: make([]AttesterStatus, count, count),
+		Statuses:  make([]AttesterStatus, count, count),
 		PrevEpoch: prevEpoch,
 		CurrEpoch: currentEpoch,
 	}
@@ -67,7 +67,7 @@ func (state *BeaconStateView) PrepareEpochProcess(epc *EpochsContext) (out *Epoc
 
 	activeCount := uint64(0)
 	valIter := validators.ReadonlyIter()
-	for i := ValidatorIndex(0); true; i++{
+	for i := ValidatorIndex(0); true; i++ {
 		valContainer, ok, err := valIter.Next()
 		if err != nil {
 			return nil, err
@@ -96,7 +96,7 @@ func (state *BeaconStateView) PrepareEpochProcess(epc *EpochsContext) (out *Epoc
 			status.Flags |= UnslashedAttester
 		}
 
-		if flat.IsActive(prevEpoch) || (flat.Slashed && (prevEpoch + 1 < flat.WithdrawableEpoch)) {
+		if flat.IsActive(prevEpoch) || (flat.Slashed && (prevEpoch+1 < flat.WithdrawableEpoch)) {
 			status.Flags |= EligibleAttester
 		}
 
@@ -128,7 +128,7 @@ func (state *BeaconStateView) PrepareEpochProcess(epc *EpochsContext) (out *Epoc
 		valIndexB := out.IndicesToMaybeActivate[j]
 		a := out.Statuses[valIndexA].Validator.ActivationEligibilityEpoch
 		b := out.Statuses[valIndexB].Validator.ActivationEligibilityEpoch
-		if a == b {  // Order by the sequence of activation_eligibility_epoch setting and then index
+		if a == b { // Order by the sequence of activation_eligibility_epoch setting and then index
 			return valIndexA < valIndexB
 		}
 		return a < b

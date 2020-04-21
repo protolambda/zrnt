@@ -11,12 +11,12 @@ import (
 var ProposerSlashingSSZ = zssz.GetSSZ((*ProposerSlashing)(nil))
 
 type ProposerSlashing struct {
-	SignedHeader1       SignedBeaconBlockHeader
-	SignedHeader2       SignedBeaconBlockHeader
+	SignedHeader1 SignedBeaconBlockHeader
+	SignedHeader2 SignedBeaconBlockHeader
 }
 
 // Beacon operations
-var ProposerSlashingType =  ContainerType("ProposerSlashing", []FieldDef{
+var ProposerSlashingType = ContainerType("ProposerSlashing", []FieldDef{
 	{"header_1", SignedBeaconBlockHeaderType},
 	{"header_2", SignedBeaconBlockHeaderType},
 })
@@ -84,13 +84,13 @@ func (state *BeaconStateView) ProcessProposerSlashing(epc *EpochsContext, ps *Pr
 	// Verify signatures
 	if !bls.Verify(
 		pubkey,
-		ComputeSigningRoot(ps.SignedHeader1.Message.HashTreeRoot(),	domain),
+		ComputeSigningRoot(ps.SignedHeader1.Message.HashTreeRoot(), domain),
 		ps.SignedHeader1.Signature) {
 		return errors.New("proposer slashing header 1 has invalid BLS signature")
 	}
 	if !bls.Verify(
 		pubkey,
-		ComputeSigningRoot(ps.SignedHeader2.Message.HashTreeRoot(),	domain),
+		ComputeSigningRoot(ps.SignedHeader2.Message.HashTreeRoot(), domain),
 		ps.SignedHeader2.Signature) {
 		return errors.New("proposer slashing header 2 has invalid BLS signature")
 	}

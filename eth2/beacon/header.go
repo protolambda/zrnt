@@ -172,8 +172,8 @@ func (state *BeaconStateView) ProcessHeader(epc *EpochsContext, header *BeaconBl
 		ParentRoot:    header.ParentRoot,
 		// state_root is zeroed and overwritten in the next `process_slot` call.
 		// with BlockHeaderState.UpdateStateRoot(), once the post state is available.
-		StateRoot:     Root{},
-		BodyRoot:      header.Body.HashTreeRoot(),
+		StateRoot: Root{},
+		BodyRoot:  header.Body.HashTreeRoot(),
 	}
 	return state.SetLatestBlockHeader(headerRaw.View())
 }

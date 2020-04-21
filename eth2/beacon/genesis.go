@@ -7,7 +7,7 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
-var DepositRootsType = ComplexListType(RootType, 1 << DEPOSIT_CONTRACT_TREE_DEPTH)
+var DepositRootsType = ComplexListType(RootType, 1<<DEPOSIT_CONTRACT_TREE_DEPTH)
 
 type DepositRootsView struct {
 	*ComplexListView
@@ -19,7 +19,7 @@ func AsDepositRootsView(v View, err error) (*DepositRootsView, error) {
 }
 
 func NewDepositRootsView() *DepositRootsView {
-	return  &DepositRootsView{DepositRootsType.New()}
+	return &DepositRootsView{DepositRootsType.New()}
 }
 
 func GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit) (*BeaconStateView, *EpochsContext, error) {

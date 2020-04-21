@@ -1,7 +1,6 @@
 package beacon
 
 import (
-
 	. "github.com/protolambda/ztyp/view"
 )
 
@@ -13,7 +12,7 @@ func (_ *ValidatorRegistry) Limit() uint64 {
 
 var ValidatorsRegistryType = ComplexListType(ValidatorType, VALIDATOR_REGISTRY_LIMIT)
 
-type ValidatorsRegistryView struct { *ComplexListView }
+type ValidatorsRegistryView struct{ *ComplexListView }
 
 func AsValidatorsRegistry(v View, err error) (*ValidatorsRegistryView, error) {
 	c, err := AsComplexList(v, err)

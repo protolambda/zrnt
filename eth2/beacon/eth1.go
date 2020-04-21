@@ -27,7 +27,7 @@ var Eth1DataType = ContainerType("Eth1Data", []FieldDef{
 	{"block_hash", Bytes32Type},
 })
 
-type Eth1DataView struct { *ContainerView }
+type Eth1DataView struct{ *ContainerView }
 
 func AsEth1Data(v View, err error) (*Eth1DataView, error) {
 	c, err := AsContainer(v, err)
@@ -93,7 +93,7 @@ func (state *BeaconStateView) ProcessEth1Vote(epc *EpochsContext, data Eth1Data)
 	}
 	voteCount += 1
 	// only do costly counting if we have enough votes yet.
-	if Slot(voteCount << 1) > SLOTS_PER_ETH1_VOTING_PERIOD {
+	if Slot(voteCount<<1) > SLOTS_PER_ETH1_VOTING_PERIOD {
 		count := Slot(0)
 		iter := votes.ReadonlyIter()
 		hFn := tree.GetHashFn()

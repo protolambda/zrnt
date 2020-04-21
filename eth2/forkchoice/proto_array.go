@@ -319,9 +319,9 @@ func (pr *ProtoArray) OnPrune(anchorRoot Root) error {
 
 // Observe the parent at `parent_index` with respect to the child at `child_index` and
 // potentially modify the `parent.best_child` and `parent.best_descendant` values.
-// 
+//
 // There are four outcomes:
-// 
+//
 // - The child is already the best child but it's now invalid due to a FFG change and should be removed.
 // - The child is already the best child and the parent is updated with the new best-descendant.
 // - The child is not the best child but becomes the best child.

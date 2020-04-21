@@ -6,14 +6,17 @@ import (
 )
 
 type Root = tree.Root
+
 const Bytes32Type = RootType
 
 type Bytes []byte
 
 type Shard Uint64View
+
 const ShardType = Uint64Type
 
 type CommitteeIndex Uint64View
+
 const CommitteeIndexType = Uint64Type
 
 func AsCommitteeIndex(v View, err error) (CommitteeIndex, error) {
@@ -22,6 +25,7 @@ func AsCommitteeIndex(v View, err error) (CommitteeIndex, error) {
 }
 
 type Gwei Uint64View
+
 const GweiType = Uint64Type
 
 func AsGwei(v View, err error) (Gwei, error) {

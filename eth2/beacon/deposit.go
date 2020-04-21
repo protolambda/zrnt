@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 
-
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/merkle"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
@@ -171,7 +170,7 @@ func (state *BeaconStateView) ProcessDeposit(epc *EpochsContext, dep *Deposit) e
 
 		// Add validator and balance entries
 		balance := dep.Data.Amount
-		withdrawalCreds :=  dep.Data.WithdrawalCredentials
+		withdrawalCreds := dep.Data.WithdrawalCredentials
 		pubkey := dep.Data.Pubkey
 		effBalance := balance - (balance % EFFECTIVE_BALANCE_INCREMENT)
 		if effBalance > MAX_EFFECTIVE_BALANCE {

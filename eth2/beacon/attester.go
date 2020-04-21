@@ -22,12 +22,12 @@ const (
 )
 
 type FlatValidator struct {
-	EffectiveBalance Gwei
-	Slashed bool
+	EffectiveBalance           Gwei
+	Slashed                    bool
 	ActivationEligibilityEpoch Epoch
-	ActivationEpoch Epoch
-	ExitEpoch Epoch
-	WithdrawableEpoch Epoch
+	ActivationEpoch            Epoch
+	ExitEpoch                  Epoch
+	WithdrawableEpoch          Epoch
 }
 
 func (v *FlatValidator) IsActive(epoch Epoch) bool {
@@ -36,15 +36,15 @@ func (v *FlatValidator) IsActive(epoch Epoch) bool {
 
 func ToFlatValidator(v *ValidatorView) (*FlatValidator, error) {
 	/*
-	    pubkey: BLSPubkey
-	    withdrawal_credentials: Bytes32
-	    effective_balance: Gwei  # Balance at stake
-	    slashed: boolean
-	    activation_eligibility_epoch: Epoch
-	    activation_epoch: Epoch
-	    exit_epoch: Epoch
-	    withdrawable_epoch: Epoch
-	 */
+	   pubkey: BLSPubkey
+	   withdrawal_credentials: Bytes32
+	   effective_balance: Gwei  # Balance at stake
+	   slashed: boolean
+	   activation_eligibility_epoch: Epoch
+	   activation_epoch: Epoch
+	   exit_epoch: Epoch
+	   withdrawable_epoch: Epoch
+	*/
 	fields, err := v.FieldValues()
 	if err != nil {
 		return nil, err
@@ -76,7 +76,7 @@ type AttesterStatus struct {
 	// Only valid if the validator has an attesting flag set.
 	AttestedProposer ValidatorIndex
 	// A bitfield of markers describing the recent actions of the validator
-	Flags AttesterFlag
+	Flags     AttesterFlag
 	Validator *FlatValidator
 	// If the validator is active
 	Active bool

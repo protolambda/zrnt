@@ -42,9 +42,9 @@ func (state *BeaconStateView) computeProposerIndex(indices []ValidatorIndex, see
 }
 
 type BoundedIndex struct {
-	Index ValidatorIndex
+	Index      ValidatorIndex
 	Activation Epoch
-	Exit Epoch
+	Exit       Epoch
 }
 
 func (state *BeaconStateView) loadIndicesBounded() ([]BoundedIndex, error) {
@@ -94,7 +94,7 @@ type PubkeyCache struct {
 	parent *PubkeyCache
 	// The count up until the conflicting validator index (cause of the pubkey cache fork).
 	trustedParentCount ValidatorIndex
-	pub2idx map[BLSPubkey]ValidatorIndex
+	pub2idx            map[BLSPubkey]ValidatorIndex
 	// starting at trustedParentCount
 	idx2pub []CachedPubkey
 	// Can have many reads concurrently, but only 1 write.
@@ -111,10 +111,10 @@ func NewPubkeyCache(state *BeaconStateView) (*PubkeyCache, error) {
 		return nil, err
 	}
 	pc := &PubkeyCache{
-		parent: nil,
+		parent:             nil,
 		trustedParentCount: 0,
-		pub2idx: make(map[BLSPubkey]ValidatorIndex),
-		idx2pub: make([]CachedPubkey, 0),
+		pub2idx:            make(map[BLSPubkey]ValidatorIndex),
+		idx2pub:            make([]CachedPubkey, 0),
 	}
 	currentCount := uint64(len(pc.idx2pub))
 	for i := currentCount; i < valCount; i++ {
@@ -145,10 +145,10 @@ func (pc *PubkeyCache) Pubkey(index ValidatorIndex) (pub *CachedPubkey, ok bool)
 
 func (pc *PubkeyCache) unsafePubkey(index ValidatorIndex) (pub *CachedPubkey, ok bool) {
 	if index >= pc.trustedParentCount {
-		if index >= pc.trustedParentCount + ValidatorIndex(len(pc.idx2pub)) {
+		if index >= pc.trustedParentCount+ValidatorIndex(len(pc.idx2pub)) {
 			return nil, false
 		}
-		return &pc.idx2pub[index - pc.trustedParentCount], true
+		return &pc.idx2pub[index-pc.trustedParentCount], true
 	} else if pc.parent != nil {
 		return pc.parent.Pubkey(index)
 	} else {
@@ -187,8 +187,8 @@ func (pc *PubkeyCache) AddValidator(index ValidatorIndex, pub BLSPubkey) (*Pubke
 				parent: pc,
 				// fork out the existing index, only trust the common history
 				trustedParentCount: existingIndex,
-				pub2idx: make(map[BLSPubkey]ValidatorIndex),
-				idx2pub: make([]CachedPubkey, 0),
+				pub2idx:            make(map[BLSPubkey]ValidatorIndex),
+				idx2pub:            make([]CachedPubkey, 0),
 			}
 			// Do not have to unlock this cache (parent of forkedPc) early, as the forkedPc is guaranteed to handle it.
 			return forkedPc.AddValidator(index, pub)
@@ -200,8 +200,8 @@ func (pc *PubkeyCache) AddValidator(index ValidatorIndex, pub BLSPubkey) (*Pubke
 					parent: pc,
 					// fork out the existing index, only trust the common history
 					trustedParentCount: index,
-					pub2idx: make(map[BLSPubkey]ValidatorIndex),
-					idx2pub: make([]CachedPubkey, 0),
+					pub2idx:            make(map[BLSPubkey]ValidatorIndex),
+					idx2pub:            make([]CachedPubkey, 0),
 				}
 				// Do not have to unlock this cache (parent of forkedPc) early, as the forkedPc is guaranteed to handle it.
 				return forkedPc.AddValidator(index, pub)
@@ -217,8 +217,8 @@ func (pc *PubkeyCache) AddValidator(index ValidatorIndex, pub BLSPubkey) (*Pubke
 				parent: pc,
 				// fork out the existing index, only trust the common history
 				trustedParentCount: index,
-				pub2idx: make(map[BLSPubkey]ValidatorIndex),
-				idx2pub: make([]CachedPubkey, 0),
+				pub2idx:            make(map[BLSPubkey]ValidatorIndex),
+				idx2pub:            make([]CachedPubkey, 0),
 			}
 			// Do not have to unlock this cache (parent of forkedPc) early, as the forkedPc is guaranteed to handle it.
 			return forkedPc.AddValidator(index, pub)
@@ -238,7 +238,7 @@ func (pc *PubkeyCache) AddValidator(index ValidatorIndex, pub BLSPubkey) (*Pubke
 type EpochsContext struct {
 	// PubkeyCache may be replaced when a new forked-out cache takes over to process an alternative Eth1 deposit chain.
 	PubkeyCache *PubkeyCache
-	Proposers *[SLOTS_PER_EPOCH]ValidatorIndex
+	Proposers   *[SLOTS_PER_EPOCH]ValidatorIndex
 
 	PreviousEpoch *ShufflingEpoch
 	CurrentEpoch  *ShufflingEpoch
@@ -293,7 +293,7 @@ func (epc *EpochsContext) LoadShuffling(state *BeaconStateView) error {
 	return nil
 }
 
-func (epc *EpochsContext) LoadProposers(state *BeaconStateView) error  {
+func (epc *EpochsContext) LoadProposers(state *BeaconStateView) error {
 	// prerequisite to load shuffling: the list of active indices, same as in the shuffling. So load the shuffling first.
 	if epc.CurrentEpoch == nil {
 		if err := epc.LoadShuffling(state); err != nil {
@@ -354,7 +354,7 @@ func (epc *EpochsContext) RotateEpochs(state *BeaconStateView) error {
 
 func (epc *EpochsContext) getSlotComms(slot Slot) ([][]ValidatorIndex, error) {
 	epoch := slot.ToEpoch()
-	epochSlot := slot%SLOTS_PER_EPOCH
+	epochSlot := slot % SLOTS_PER_EPOCH
 	if epoch == epc.PreviousEpoch.Epoch {
 		return epc.PreviousEpoch.Committees[epochSlot], nil
 	} else if epoch == epc.CurrentEpoch.Epoch {
@@ -393,5 +393,5 @@ func (epc *EpochsContext) GetBeaconProposer(slot Slot) (ValidatorIndex, error) {
 	if epoch != epc.CurrentEpoch.Epoch {
 		return 0, fmt.Errorf("expected epoch %d for proposer lookup, but lookup was at slot %d (epoch %d)", epc.CurrentEpoch.Epoch, slot, epoch)
 	}
-	return epc.Proposers[slot % SLOTS_PER_EPOCH], nil
+	return epc.Proposers[slot%SLOTS_PER_EPOCH], nil
 }

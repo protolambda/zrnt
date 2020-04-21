@@ -7,7 +7,6 @@ import (
 	"sort"
 )
 
-
 const ValidatorIndexType = Uint64Type
 
 // Index of a validator, pointing to a validator registry location

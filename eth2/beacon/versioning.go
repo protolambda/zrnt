@@ -25,12 +25,11 @@ func AsVersion(v View, err error) (Version, error) {
 	return AsBytes4(v, err)
 }
 
-
 // A digest of the current fork data
 type ForkDigest [4]byte
 
 type ForkData struct {
-	CurrentVersion Version
+	CurrentVersion        Version
 	GenesisValidatorsRoot Root
 }
 
@@ -38,7 +37,7 @@ var ForkDataSSZ = zssz.GetSSZ((*ForkData)(nil))
 
 func ComputeForkDataRoot(currentVersion Version, genesisValidatorsRoot Root) Root {
 	data := ForkData{
-		CurrentVersion: currentVersion,
+		CurrentVersion:        currentVersion,
 		GenesisValidatorsRoot: genesisValidatorsRoot,
 	}
 	hFn := hashing.GetHashFn()
@@ -54,8 +53,8 @@ func ComputeForkDigest(currentVersion Version, genesisValidatorsRoot Root) ForkD
 
 type Fork struct {
 	PreviousVersion Version
-	CurrentVersion Version
-	Epoch Epoch
+	CurrentVersion  Version
+	Epoch           Epoch
 }
 
 func (f *Fork) View() *ForkView {
@@ -69,7 +68,7 @@ var ForkType = ContainerType("Fork", []FieldDef{
 	{"epoch", EpochType}, // Epoch of latest fork
 })
 
-type ForkView struct { *ContainerView }
+type ForkView struct{ *ContainerView }
 
 func (f *ForkView) PreviousVersion() (Version, error) {
 	return AsVersion(f.Get(0))

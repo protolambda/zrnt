@@ -7,7 +7,7 @@ type BLSPubkey [48]byte
 type BLSSignature [96]byte
 
 type CachedPubkey struct {
-	Compressed BLSPubkey
+	Compressed   BLSPubkey
 	decompressed *hbls.PublicKey
 }
 

@@ -22,7 +22,7 @@ var BLSPubkeyType = BasicVectorType(ByteType, 48)
 
 type BLSSignature = bls.BLSSignature
 
-func ViewSignature(sig *BLSSignature)  *BLSSignatureView {
+func ViewSignature(sig *BLSSignature) *BLSSignatureView {
 	v, _ := BLSSignatureType.Deserialize(bytes.NewReader(sig[:]), 48)
 	return &BLSSignatureView{v.(*BasicVectorView)}
 }

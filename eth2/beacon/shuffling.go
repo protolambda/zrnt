@@ -3,9 +3,9 @@ package beacon
 // With a high amount of shards, or low amount of validators,
 // some shards may not have a committee this epoch.
 type ShufflingEpoch struct {
-	Epoch      Epoch
+	Epoch         Epoch
 	ActiveIndices []ValidatorIndex
-	Shuffling  []ValidatorIndex                    // the active validator indices, shuffled into their committee
+	Shuffling     []ValidatorIndex // the active validator indices, shuffled into their committee
 	// slot -> index of committee (< MAX_COMMITTEES_PER_SLOT) -> index of validator within committee -> validator
 	Committees [SLOTS_PER_EPOCH][][]ValidatorIndex // slices of Shuffling, 1 per slot. Committee can be nil slice.
 }

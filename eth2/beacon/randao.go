@@ -23,12 +23,12 @@ func AsRandaoMixes(v View, err error) (*RandaoMixesView, error) {
 
 // Provides a source of randomness for the state, for e.g. shuffling
 func (mixes *RandaoMixesView) GetRandomMix(epoch Epoch) (Root, error) {
-	i := uint64(epoch%EPOCHS_PER_HISTORICAL_VECTOR)
+	i := uint64(epoch % EPOCHS_PER_HISTORICAL_VECTOR)
 	return AsRoot(mixes.Get(i))
 }
 
 func (mixes *RandaoMixesView) SetRandomMix(epoch Epoch, mix Root) error {
-	i := uint64(epoch%EPOCHS_PER_HISTORICAL_VECTOR)
+	i := uint64(epoch % EPOCHS_PER_HISTORICAL_VECTOR)
 	r := RootView(mix)
 	return mixes.Set(i, &r)
 }

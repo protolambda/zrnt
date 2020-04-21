@@ -7,7 +7,7 @@ import (
 // Balances slashed at every withdrawal period
 var SlashingsType = VectorType(GweiType, uint64(EPOCHS_PER_SLASHINGS_VECTOR))
 
-type SlashingsView struct { *BasicVectorView }
+type SlashingsView struct{ *BasicVectorView }
 
 func AsSlashings(v View, err error) (*SlashingsView, error) {
 	c, err := AsBasicVector(v, err)
@@ -15,12 +15,12 @@ func AsSlashings(v View, err error) (*SlashingsView, error) {
 }
 
 func (sl *SlashingsView) GetSlashingsValue(epoch Epoch) (Gwei, error) {
-	i := uint64(epoch%EPOCHS_PER_SLASHINGS_VECTOR)
+	i := uint64(epoch % EPOCHS_PER_SLASHINGS_VECTOR)
 	return AsGwei(sl.Get(i))
 }
 
 func (sl *SlashingsView) ResetSlashings(epoch Epoch) error {
-	i := uint64(epoch%EPOCHS_PER_SLASHINGS_VECTOR)
+	i := uint64(epoch % EPOCHS_PER_SLASHINGS_VECTOR)
 	return sl.Set(i, Uint64View(0))
 }
 
@@ -29,8 +29,8 @@ func (sl *SlashingsView) AddSlashing(epoch Epoch, add Gwei) error {
 	if err != nil {
 		return err
 	}
-	i := uint64(epoch%EPOCHS_PER_SLASHINGS_VECTOR)
-	return sl.Set(i, Uint64View(prev + add))
+	i := uint64(epoch % EPOCHS_PER_SLASHINGS_VECTOR)
+	return sl.Set(i, Uint64View(prev+add))
 }
 
 func (sl *SlashingsView) Total() (sum Gwei, err error) {

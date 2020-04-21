@@ -44,7 +44,7 @@ func parsePubkeys(pubkeys []*CachedPubkey) []hbls.PublicKey {
 
 func FastAggregateVerify(pubkeys []*CachedPubkey, message [32]byte, signature BLSSignature) bool {
 	pubs := parsePubkeys(pubkeys)
-	if len(pubs) == 0 {  // also if parsePubkeys errors and returns nil
+	if len(pubs) == 0 { // also if parsePubkeys errors and returns nil
 		return false
 	}
 

@@ -10,6 +10,7 @@ import (
 )
 
 type CommitteeIndices []ValidatorIndex
+
 var CommitteeIndicesType = ListType(ValidatorIndexType, MAX_VALIDATORS_PER_COMMITTEE)
 
 func (ci *CommitteeIndices) Limit() uint64 {
@@ -29,7 +30,7 @@ var IndexedAttestationType = ContainerType("IndexedAttestation", []FieldDef{
 })
 
 // Verify validity of slashable_attestation fields.
-func (state *BeaconStateView) ValidateIndexedAttestation(epc *EpochsContext, indexedAttestation *IndexedAttestation)  error {
+func (state *BeaconStateView) ValidateIndexedAttestation(epc *EpochsContext, indexedAttestation *IndexedAttestation) error {
 	// wrap it in validator-sets. Does not sort it, but does make checking if it is a lot easier.
 	indices := ValidatorSet(indexedAttestation.AttestingIndices)
 

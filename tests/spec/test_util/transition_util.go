@@ -61,24 +61,35 @@ func (c *BaseTransitionTest) Check(t *testing.T) {
 	if c.ExpectingFailure() {
 		t.Errorf("was expecting failure, but no error was raised")
 	} else {
-		hFn := tree.GetHashFn()
-		preRoot := c.Pre.HashTreeRoot(hFn)
-		postRoot := c.Post.HashTreeRoot(hFn)
-		if preRoot != postRoot {
-			// Hack to get the structural state representation, and then diff those.
-			pre, err := stateTreeToStateStruct(c.Pre)
-			if err != nil {
-				t.Fatal(err)
-			}
-			post, err := stateTreeToStateStruct(c.Post)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if diff, equal := messagediff.PrettyDiff(pre, post, messagediff.SliceWeakEmptyOption{}); !equal {
-				t.Errorf("end result does not match expectation!\n%s", diff)
-			}
+		diff, err := CompareStates(c.Pre, c.Post)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if diff != "" {
+			t.Errorf("end result does not match expectation!\n%s", diff)
 		}
 	}
+}
+
+func CompareStates(a *beacon.BeaconStateView, b *beacon.BeaconStateView) (diff string, err error) {
+	hFn := tree.GetHashFn()
+	preRoot := a.HashTreeRoot(hFn)
+	postRoot := b.HashTreeRoot(hFn)
+	if preRoot != postRoot {
+		// Hack to get the structural state representation, and then diff those.
+		pre, err := stateTreeToStateStruct(a)
+		if err != nil {
+			return "", err
+		}
+		post, err := stateTreeToStateStruct(b)
+		if err != nil {
+			return "", err
+		}
+		if diff, equal := messagediff.PrettyDiff(pre, post, messagediff.SliceWeakEmptyOption{}); !equal {
+			return diff, nil
+		}
+	}
+	return "", nil
 }
 
 type TransitionTest interface {

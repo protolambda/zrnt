@@ -61,14 +61,14 @@ func (mixes *RandaoMixesView) GetSeed(epoch Epoch, domainType BLSDomainType) (Ro
 	return Hash(buf), nil
 }
 
-func SeedRandao(seed Root, hook BackingHook) (*RandaoMixesView, error) {
+func SeedRandao(seed Root) (*RandaoMixesView, error) {
 	filler := seed
 	length := uint64(EPOCHS_PER_HISTORICAL_VECTOR)
 	c, err := tree.SubtreeFillToLength(&filler, tree.CoverDepth(length), length)
 	if err != nil {
 		return nil, err
 	}
-	v, err := RandaoMixesType.ViewFromBacking(c, hook)
+	v, err := RandaoMixesType.ViewFromBacking(c, nil)
 	if err != nil {
 		return nil, err
 	}

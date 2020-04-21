@@ -59,7 +59,7 @@ type Fork struct {
 }
 
 func (f *Fork) View() *ForkView {
-	res, _ := CheckpointType.FromFields(f.PreviousVersion.View(), f.CurrentVersion.View(), Uint64View(f.Epoch))
+	res, _ := ForkType.FromFields(f.PreviousVersion.View(), f.CurrentVersion.View(), Uint64View(f.Epoch))
 	return &ForkView{res}
 }
 

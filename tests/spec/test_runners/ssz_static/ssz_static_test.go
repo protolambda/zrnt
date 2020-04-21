@@ -4,18 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/hex"
-	"github.com/protolambda/zrnt/eth2/beacon/attestations"
-	"github.com/protolambda/zrnt/eth2/beacon/deposits"
-	"github.com/protolambda/zrnt/eth2/beacon/eth1"
-	"github.com/protolambda/zrnt/eth2/beacon/exits"
-	"github.com/protolambda/zrnt/eth2/beacon/header"
-	"github.com/protolambda/zrnt/eth2/beacon/history"
-	"github.com/protolambda/zrnt/eth2/beacon/slashings/attslash"
-	"github.com/protolambda/zrnt/eth2/beacon/slashings/propslash"
-	"github.com/protolambda/zrnt/eth2/beacon/validator"
-	"github.com/protolambda/zrnt/eth2/beacon/versioning"
-	. "github.com/protolambda/zrnt/eth2/core"
-	"github.com/protolambda/zrnt/eth2/phase0"
+	. "github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/util/hashing"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"github.com/protolambda/zssz"
@@ -104,23 +93,23 @@ type ObjData struct {
 }
 
 var objs = []*ObjData{
-	{TypeName: "Fork", Alloc: func() interface{} { return new(versioning.Fork) }},
-	{TypeName: "Eth1Data", Alloc: func() interface{} { return new(eth1.Eth1Data) }},
-	{TypeName: "AttestationData", Alloc: func() interface{} { return new(attestations.AttestationData) }},
-	{TypeName: "IndexedAttestation", Alloc: func() interface{} { return new(attestations.IndexedAttestation) }},
-	{TypeName: "DepositData", Alloc: func() interface{} { return new(deposits.DepositData) }},
-	{TypeName: "BeaconBlockHeader", Alloc: func() interface{} { return new(header.BeaconBlockHeader) }},
-	{TypeName: "Validator", Alloc: func() interface{} { return new(validator.Validator) }},
-	{TypeName: "PendingAttestation", Alloc: func() interface{} { return new(attestations.PendingAttestation) }},
-	{TypeName: "HistoricalBatch", Alloc: func() interface{} { return new(history.HistoricalBatch) }},
-	{TypeName: "ProposerSlashing", Alloc: func() interface{} { return new(propslash.ProposerSlashing) }},
-	{TypeName: "AttesterSlashing", Alloc: func() interface{} { return new(attslash.AttesterSlashing) }},
-	{TypeName: "Attestation", Alloc: func() interface{} { return new(attestations.Attestation) }},
-	{TypeName: "Deposit", Alloc: func() interface{} { return new(deposits.Deposit) }},
-	{TypeName: "VoluntaryExit", Alloc: func() interface{} { return new(exits.VoluntaryExit) }},
-	{TypeName: "BeaconBlockBody", Alloc: func() interface{} { return new(phase0.BeaconBlockBody) }},
-	{TypeName: "BeaconBlock", Alloc: func() interface{} { return new(phase0.BeaconBlock) }},
-	{TypeName: "BeaconState", Alloc: func() interface{} { return new(phase0.BeaconState) }},
+	{TypeName: "Fork", Alloc: func() interface{} { return new(Fork) }},
+	{TypeName: "Eth1Data", Alloc: func() interface{} { return new(Eth1Data) }},
+	{TypeName: "AttestationData", Alloc: func() interface{} { return new(AttestationData) }},
+	{TypeName: "IndexedAttestation", Alloc: func() interface{} { return new(IndexedAttestation) }},
+	{TypeName: "DepositData", Alloc: func() interface{} { return new(DepositData) }},
+	{TypeName: "BeaconBlockHeader", Alloc: func() interface{} { return new(BeaconBlockHeader) }},
+	{TypeName: "Validator", Alloc: func() interface{} { return new(Validator) }},
+	{TypeName: "PendingAttestation", Alloc: func() interface{} { return new(PendingAttestation) }},
+	{TypeName: "HistoricalBatch", Alloc: func() interface{} { return new(HistoricalBatch) }},
+	{TypeName: "ProposerSlashing", Alloc: func() interface{} { return new(ProposerSlashing) }},
+	{TypeName: "AttesterSlashing", Alloc: func() interface{} { return new(AttesterSlashing) }},
+	{TypeName: "Attestation", Alloc: func() interface{} { return new(Attestation) }},
+	{TypeName: "Deposit", Alloc: func() interface{} { return new(Deposit) }},
+	{TypeName: "VoluntaryExit", Alloc: func() interface{} { return new(VoluntaryExit) }},
+	{TypeName: "BeaconBlockBody", Alloc: func() interface{} { return new(BeaconBlockBody) }},
+	{TypeName: "BeaconBlock", Alloc: func() interface{} { return new(BeaconBlock) }},
+	{TypeName: "BeaconState", Alloc: func() interface{} { return new(BeaconState) }},
 }
 
 type RootsYAML struct {

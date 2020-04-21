@@ -3,21 +3,18 @@ package sanity
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/protolambda/messagediff"
-	"github.com/protolambda/zrnt/eth2/beacon/deposits"
-	. "github.com/protolambda/zrnt/eth2/core"
-	"github.com/protolambda/zrnt/eth2/phase0"
+	. "github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"gopkg.in/yaml.v2"
 	"testing"
 )
 
 type InitializationTestCase struct {
-	GenesisState  *phase0.BeaconState
-	ExpectedState *phase0.BeaconState
+	GenesisState  *BeaconStateView
+	ExpectedState *BeaconStateView
 	Eth1Timestamp Timestamp
 	Eth1BlockHash Root
-	Deposits      []deposits.Deposit
+	Deposits      []Deposit
 }
 
 type DepositsCountMeta struct {
@@ -25,10 +22,18 @@ type DepositsCountMeta struct {
 }
 
 func (c *InitializationTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
-	c.ExpectedState = new(phase0.BeaconState)
-	if !test_util.LoadSSZ(t, "state", c.ExpectedState, phase0.BeaconStateSSZ, readPart) {
-		// expecting a failed genesis
-		c.ExpectedState = nil
+	{
+		p := readPart("state.ssz")
+		if p.Exists() {
+			stateSize, err := p.Size()
+			test_util.Check(t, err)
+			state, err := AsBeaconStateView(BeaconStateType.Deserialize(p, stateSize))
+			test_util.Check(t, err)
+			c.ExpectedState = state
+		} else {
+			// expecting a failed genesis
+			c.ExpectedState = nil
+		}
 	}
 	{
 		p := readPart("eth1_block_hash.yaml")
@@ -56,19 +61,19 @@ func (c *InitializationTestCase) Load(t *testing.T, readPart test_util.TestPartR
 	}
 	{
 		for i := uint64(0); i < m.DepositsCount; i++ {
-			var dep deposits.Deposit
-			test_util.LoadSSZ(t, fmt.Sprintf("deposits_%d", i), &dep, deposits.DepositSSZ, readPart)
+			var dep Deposit
+			test_util.LoadSSZ(t, fmt.Sprintf("deposits_%d", i), &dep, DepositSSZ, readPart)
 			c.Deposits = append(c.Deposits, dep)
 		}
 	}
 }
 
 func (c *InitializationTestCase) Run() error {
-	res, err := phase0.GenesisFromEth1(c.Eth1BlockHash, c.Eth1Timestamp, c.Deposits, true)
+	res, _, err := GenesisFromEth1(c.Eth1BlockHash, c.Eth1Timestamp, c.Deposits)
 	if err != nil {
 		return err
 	}
-	c.GenesisState = res.BeaconState
+	c.GenesisState = res
 	return nil
 }
 
@@ -79,8 +84,14 @@ func (c *InitializationTestCase) ExpectingFailure() bool {
 func (c *InitializationTestCase) Check(t *testing.T) {
 	if c.ExpectingFailure() {
 		t.Errorf("was expecting failure, but no error was raised")
-	} else if diff, equal := messagediff.PrettyDiff(c.GenesisState, c.ExpectedState, messagediff.SliceWeakEmptyOption{}); !equal {
-		t.Errorf("genesis result does not match expectation!\n%s", diff)
+	} else {
+		diff, err := test_util.CompareStates(c.GenesisState, c.ExpectedState)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if diff != "" {
+			t.Errorf("genesis result does not match expectation!\n%s", diff)
+		}
 	}
 }
 

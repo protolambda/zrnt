@@ -12,14 +12,11 @@ type Eth1Data struct {
 	BlockHash    Root
 }
 
-func (dat *Eth1Data) View() (*Eth1DataView, error) {
+func (dat *Eth1Data) View() *Eth1DataView {
 	depRv := RootView(dat.DepositRoot)
 	blockRv := RootView(dat.BlockHash)
-	c, err := Eth1DataType.FromFields(&depRv, Uint64View(dat.DepositCount), &blockRv)
-	if err != nil {
-		return nil, err
-	}
-	return &Eth1DataView{c}, nil
+	c, _ := Eth1DataType.FromFields(&depRv, Uint64View(dat.DepositCount), &blockRv)
+	return &Eth1DataView{c}
 }
 
 const SLOTS_PER_ETH1_VOTING_PERIOD = Slot(EPOCHS_PER_ETH1_VOTING_PERIOD) * SLOTS_PER_EPOCH
@@ -39,6 +36,11 @@ func AsEth1Data(v View, err error) (*Eth1DataView, error) {
 
 func (v *Eth1DataView) DepositRoot() (Root, error) {
 	return AsRoot(v.Get(0))
+}
+
+func (v *Eth1DataView) SetDepositRoot(r Root) error {
+	rv := RootView(r)
+	return v.Set(0, &rv)
 }
 
 func (v *Eth1DataView) DepositCount() (DepositIndex, error) {
@@ -85,10 +87,7 @@ func (state *BeaconStateView) ProcessEth1Vote(epc *EpochsContext, data Eth1Data)
 	if Slot(voteCount) >= SLOTS_PER_ETH1_VOTING_PERIOD {
 		return errors.New("cannot process Eth1 vote, already voted maximum times")
 	}
-	vote, err := data.View()
-	if err != nil {
-		return err
-	}
+	vote := data.View()
 	if err := votes.Append(vote); err != nil {
 		return err
 	}

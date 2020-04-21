@@ -107,12 +107,25 @@ type BeaconStateView struct {
 	*ContainerView
 }
 
+func NewBeaconStateView() *BeaconStateView {
+	return &BeaconStateView{ContainerView: BeaconStateType.New()}
+}
+
 func (state *BeaconStateView) GenesisTime() (Timestamp, error) {
 	return AsTimestamp(state.Get(_stateGenesisTime))
 }
 
+func (state *BeaconStateView) SetGenesisTime(t Timestamp) error {
+	return state.Set(_stateGenesisTime, Uint64View(t))
+}
+
 func (state *BeaconStateView) GenesisValidatorsRoot() (Root, error) {
 	return AsRoot(state.Get(_stateGenesisValidatorsRoot))
+}
+
+func (state *BeaconStateView) SetGenesisValidatorsRoot(r Root) error {
+	rv := RootView(r)
+	return state.Set(_stateGenesisValidatorsRoot, &rv)
 }
 
 func (state *BeaconStateView) Slot() (Slot, error) {
@@ -125,6 +138,10 @@ func (state *BeaconStateView) SetSlot(slot Slot) error {
 
 func (state *BeaconStateView) Fork() (*ForkView, error) {
 	return AsFork(state.Get(_stateFork))
+}
+
+func (state *BeaconStateView) SetFork(f Fork) error {
+	return state.Set(_stateFork, f.View())
 }
 
 func (state *BeaconStateView) LatestBlockHeader() (*BeaconBlockHeaderView, error) {
@@ -180,6 +197,10 @@ func (state *BeaconStateView) Balances() (*RegistryBalancesView, error) {
 
 func (state *BeaconStateView) RandaoMixes() (*RandaoMixesView, error) {
 	return AsRandaoMixes(state.Get(_stateRandaoMixes))
+}
+
+func (state *BeaconStateView) SetRandaoMixes(v *RandaoMixesView) error {
+	return state.Set(_stateRandaoMixes, v)
 }
 
 func (state *BeaconStateView) Slashings() (*SlashingsView, error) {

@@ -217,14 +217,13 @@ func (state *BeaconStateView) PrepareEpochProcess(epc *EpochsContext) (out *Epoc
 				if att.Data.Target.Root == actualTargetBlockRoot {
 					status.Flags |= targetFlag
 					epochStakeSum.TargetStake += status.Validator.EffectiveBalance
-				}
 
 					// If the attestation is for the head (att the time of attestation):
 					if att.Data.BeaconBlockRoot == attBlockRoot {
 						status.Flags |= headFlag
 						epochStakeSum.HeadStake += status.Validator.EffectiveBalance
 					}
-				//}
+				}
 			}
 		}
 		return nil

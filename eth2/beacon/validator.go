@@ -44,6 +44,18 @@ var ValidatorType = ContainerType("Validator", []FieldDef{
 	{"withdrawable_epoch", EpochType}, // When validator can withdraw funds
 })
 
+const (
+	_validatorPubkey = iota
+	_validatorWithdrawalCredentials
+	_validatorEffectiveBalance
+	_validatorSlashed
+
+	_validatorActivationEligibilityEpoch
+	_validatorActivationEpoch
+	_validatorExitEpoch
+	_validatorWithdrawableEpoch
+)
+
 type ValidatorView struct {
 	*ContainerView
 }
@@ -58,46 +70,46 @@ func AsValidator(v View, err error) (*ValidatorView, error) {
 }
 
 func (v *ValidatorView) Pubkey() (BLSPubkey, error) {
-	return AsBLSPubkey(v.Get(0))
+	return AsBLSPubkey(v.Get(_validatorPubkey))
 }
 func (v *ValidatorView) WithdrawalCredentials() (out Root, err error) {
-	return AsRoot(v.Get(1))
+	return AsRoot(v.Get(_validatorWithdrawalCredentials))
 }
 func (v *ValidatorView) EffectiveBalance() (Gwei, error) {
-	return AsGwei(v.Get(2))
+	return AsGwei(v.Get(_validatorEffectiveBalance))
 }
 func (v *ValidatorView) SetEffectiveBalance(b Gwei) error {
-	return v.Set(2, Uint64View(b))
+	return v.Set(_validatorEffectiveBalance, Uint64View(b))
 }
 func (v *ValidatorView) Slashed() (BoolView, error) {
-	return AsBool(v.Get(3))
+	return AsBool(v.Get(_validatorSlashed))
 }
 func (v *ValidatorView) MakeSlashed() error {
-	return v.Set(3, BoolView(true))
+	return v.Set(_validatorSlashed, BoolView(true))
 }
 func (v *ValidatorView) ActivationEligibilityEpoch() (Epoch, error) {
-	return AsEpoch(v.Get(4))
+	return AsEpoch(v.Get(_validatorActivationEligibilityEpoch))
 }
 func (v *ValidatorView) SetActivationEligibilityEpoch(epoch Epoch) error {
-	return v.Set(4, Uint64View(epoch))
+	return v.Set(_validatorActivationEligibilityEpoch, Uint64View(epoch))
 }
 func (v *ValidatorView) ActivationEpoch() (Epoch, error) {
-	return AsEpoch(v.Get(5))
+	return AsEpoch(v.Get(_validatorActivationEpoch))
 }
 func (v *ValidatorView) SetActivationEpoch(epoch Epoch) error {
-	return v.Set(5, Uint64View(epoch))
+	return v.Set(_validatorActivationEpoch, Uint64View(epoch))
 }
 func (v *ValidatorView) ExitEpoch() (Epoch, error) {
-	return AsEpoch(v.Get(6))
+	return AsEpoch(v.Get(_validatorExitEpoch))
 }
 func (v *ValidatorView) SetExitEpoch(ep Epoch) error {
-	return v.Set(6, Uint64View(ep))
+	return v.Set(_validatorExitEpoch, Uint64View(ep))
 }
 func (v *ValidatorView) WithdrawableEpoch() (Epoch, error) {
-	return AsEpoch(v.Get(7))
+	return AsEpoch(v.Get(_validatorWithdrawableEpoch))
 }
 func (v *ValidatorView) SetWithdrawableEpoch(epoch Epoch) error {
-	return v.Set(7, Uint64View(epoch))
+	return v.Set(_validatorWithdrawableEpoch, Uint64View(epoch))
 }
 
 func (v *ValidatorView) IsActive(epoch Epoch) (bool, error) {

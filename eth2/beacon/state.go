@@ -15,7 +15,8 @@ type BeaconState struct {
 	Fork                  Fork
 	// History
 	LatestBlockHeader BeaconBlockHeader
-	HistoricalBatch   // embedded BlockRoots and StateRoots
+	BlockRoots        [SLOTS_PER_HISTORICAL_ROOT]Root
+	StateRoots        [SLOTS_PER_HISTORICAL_ROOT]Root
 	HistoricalRoots   HistoricalRoots
 	// Eth1
 	Eth1Data      Eth1Data
@@ -38,10 +39,37 @@ type BeaconState struct {
 	FinalizedCheckpoint         Checkpoint
 }
 
+// Hack to make state fields consistent and verifiable without using many hardcoded indices
+// A trade-off to interpret the state as tree, without generics, and access fields by index very fast.
+const (
+	_stateGenesisTime = iota
+	_stateGenesisValidatorsRoot
+	_stateSlot
+	_stateFork
+	_stateLatestBlockHeader
+	_stateBlockRoots
+	_stateStateRoots
+	_stateHistoricalRoots
+	_stateEth1Data
+	_stateEth1DataVotes
+	_stateDepositIndex
+	_stateValidators
+	_stateBalances
+	_stateRandaoMixes
+	_stateSlashings
+	_statePreviousEpochAttestations
+	_stateCurrentEpochAttestations
+	_stateJustificationBits
+	_statePreviousJustifiedCheckpoint
+	_stateCurrentJustifiedCheckpoint
+	_stateFinalizedCheckpoint
+)
+
 // Beacon state
 var BeaconStateType = ContainerType("BeaconState", []FieldDef{
 	// Versioning
 	{"genesis_time", Uint64Type},
+	{"genesis_validators_root", RootType},
 	{"slot", SlotType},
 	{"fork", ForkType},
 	// History
@@ -80,54 +108,58 @@ type BeaconStateView struct {
 }
 
 func (state *BeaconStateView) GenesisTime() (Timestamp, error) {
-	return AsTimestamp(state.Get(0))
+	return AsTimestamp(state.Get(_stateGenesisTime))
+}
+
+func (state *BeaconStateView) GenesisValidatorsRoot() (Root, error) {
+	return AsRoot(state.Get(_stateGenesisValidatorsRoot))
 }
 
 func (state *BeaconStateView) Slot() (Slot, error) {
-	return AsSlot(state.Get(1))
+	return AsSlot(state.Get(_stateSlot))
 }
 
 func (state *BeaconStateView) SetSlot(slot Slot) error {
-	return state.Set(1, Uint64View(slot))
+	return state.Set(_stateSlot, Uint64View(slot))
 }
 
 func (state *BeaconStateView) Fork() (*ForkView, error) {
-	return AsFork(state.Get(2))
+	return AsFork(state.Get(_stateFork))
 }
 
 func (state *BeaconStateView) LatestBlockHeader() (*BeaconBlockHeaderView, error) {
-	return AsBeaconBlockHeader(state.Get(3))
+	return AsBeaconBlockHeader(state.Get(_stateLatestBlockHeader))
 }
 
 func (state *BeaconStateView) SetLatestBlockHeader(v *BeaconBlockHeaderView) error {
-	return state.Set(3, v)
+	return state.Set(_stateLatestBlockHeader, v)
 }
 
 func (state *BeaconStateView) BlockRoots() (*BatchRootsView, error) {
-	return AsBatchRoots(state.Get(4))
+	return AsBatchRoots(state.Get(_stateBlockRoots))
 }
 
 func (state *BeaconStateView) StateRoots() (*BatchRootsView, error) {
-	return AsBatchRoots(state.Get(5))
+	return AsBatchRoots(state.Get(_stateStateRoots))
 }
 
 func (state *BeaconStateView) HistoricalRoots() (*HistoricalRootsView, error) {
-	return AsHistoricalRoots(state.Get(6))
+	return AsHistoricalRoots(state.Get(_stateHistoricalRoots))
 }
 
 func (state *BeaconStateView) Eth1Data() (*Eth1DataView, error) {
-	return AsEth1Data(state.Get(7))
+	return AsEth1Data(state.Get(_stateEth1Data))
 }
 func (state *BeaconStateView) SetEth1Data(v *Eth1DataView) error {
-	return state.Set(7, v)
+	return state.Set(_stateEth1Data, v)
 }
 
 func (state *BeaconStateView) Eth1DataVotes() (*Eth1DataVotesView, error) {
-	return AsEth1DataVotes(state.Get(8))
+	return AsEth1DataVotes(state.Get(_stateEth1DataVotes))
 }
 
 func (state *BeaconStateView) DepositIndex() (DepositIndex, error) {
-	return AsDepositIndex(state.Get(9))
+	return AsDepositIndex(state.Get(_stateDepositIndex))
 }
 
 func (state *BeaconStateView) IncrementDepositIndex() error {
@@ -135,47 +167,47 @@ func (state *BeaconStateView) IncrementDepositIndex() error {
 	if err != nil {
 		return err
 	}
-	return state.Set(9, Uint64View(depIndex + 1))
+	return state.Set(_stateDepositIndex, Uint64View(depIndex+1))
 }
 
 func (state *BeaconStateView) Validators() (*ValidatorsRegistryView, error) {
-	return AsValidatorsRegistry(state.Get(10))
+	return AsValidatorsRegistry(state.Get(_stateValidators))
 }
 
 func (state *BeaconStateView) Balances() (*RegistryBalancesView, error) {
-	return AsRegistryBalances(state.Get(11))
+	return AsRegistryBalances(state.Get(_stateBalances))
 }
 
 func (state *BeaconStateView) RandaoMixes() (*RandaoMixesView, error) {
-	return AsRandaoMixes(state.Get(12))
+	return AsRandaoMixes(state.Get(_stateRandaoMixes))
 }
 
 func (state *BeaconStateView) Slashings() (*SlashingsView, error) {
-	return AsSlashings(state.Get(13))
+	return AsSlashings(state.Get(_stateSlashings))
 }
 
 func (state *BeaconStateView) PreviousEpochAttestations() (*PendingAttestationsView, error) {
-	return AsPendingAttestations(state.Get(14))
+	return AsPendingAttestations(state.Get(_statePreviousEpochAttestations))
 }
 
 func (state *BeaconStateView) CurrentEpochAttestations() (*PendingAttestationsView, error) {
-	return AsPendingAttestations(state.Get(15))
+	return AsPendingAttestations(state.Get(_stateCurrentEpochAttestations))
 }
 
 func (state *BeaconStateView) JustificationBits() (*JustificationBitsView, error) {
-	return AsJustificationBits(state.Get(16))
+	return AsJustificationBits(state.Get(_stateJustificationBits))
 }
 
 func (state *BeaconStateView) PreviousJustifiedCheckpoint() (*CheckpointView, error) {
-	return AsCheckPoint(state.Get(17))
+	return AsCheckPoint(state.Get(_statePreviousJustifiedCheckpoint))
 }
 
 func (state *BeaconStateView) CurrentJustifiedCheckpoint() (*CheckpointView, error) {
-	return AsCheckPoint(state.Get(18))
+	return AsCheckPoint(state.Get(_stateCurrentJustifiedCheckpoint))
 }
 
 func (state *BeaconStateView) FinalizedCheckpoint() (*CheckpointView, error) {
-	return AsCheckPoint(state.Get(19))
+	return AsCheckPoint(state.Get(_stateFinalizedCheckpoint))
 }
 
 func (state *BeaconStateView) IsValidIndex(index ValidatorIndex) (bool, error) {

@@ -11,14 +11,12 @@ import (
 var ProposerSlashingSSZ = zssz.GetSSZ((*ProposerSlashing)(nil))
 
 type ProposerSlashing struct {
-	ProposerIndex       ValidatorIndex
 	SignedHeader1       SignedBeaconBlockHeader
 	SignedHeader2       SignedBeaconBlockHeader
 }
 
 // Beacon operations
 var ProposerSlashingType =  ContainerType("ProposerSlashing", []FieldDef{
-	{"proposer_index", ValidatorIndexType},
 	{"header_1", SignedBeaconBlockHeaderType},
 	{"header_2", SignedBeaconBlockHeaderType},
 })
@@ -45,6 +43,17 @@ func (state *BeaconStateView) ProcessProposerSlashing(epc *EpochsContext, ps *Pr
 	if ps.SignedHeader1.Message.Slot != ps.SignedHeader2.Message.Slot {
 		return errors.New("proposer slashing requires slashing headers to have the same slot")
 	}
+	// Verify header proposer indices match
+	if ps.SignedHeader1.Message.ProposerIndex != ps.SignedHeader2.Message.ProposerIndex {
+		return errors.New("proposer slashing headers proposer-indices do not match")
+	}
+	proposerIndex := ps.SignedHeader1.Message.ProposerIndex
+	// Verify header proposer index is valid
+	if valid, err := state.IsValidIndex(proposerIndex); err != nil {
+		return err
+	} else if !valid {
+		return errors.New("invalid proposer index")
+	}
 	// Verify the headers are different
 	if ps.SignedHeader1.Message == ps.SignedHeader2.Message {
 		return errors.New("proposer slashing requires two different headers")
@@ -55,7 +64,7 @@ func (state *BeaconStateView) ProcessProposerSlashing(epc *EpochsContext, ps *Pr
 	if err != nil {
 		return err
 	}
-	validator, err := validators.Validator(ps.ProposerIndex)
+	validator, err := validators.Validator(proposerIndex)
 	if err != nil {
 		return err
 	}
@@ -68,7 +77,7 @@ func (state *BeaconStateView) ProcessProposerSlashing(epc *EpochsContext, ps *Pr
 	if err != nil {
 		return err
 	}
-	pubkey, ok := epc.PubkeyCache.Pubkey(ps.ProposerIndex)
+	pubkey, ok := epc.Pubkey(proposerIndex)
 	if !ok {
 		return errors.New("could not find pubkey of proposer")
 	}
@@ -85,5 +94,5 @@ func (state *BeaconStateView) ProcessProposerSlashing(epc *EpochsContext, ps *Pr
 		ps.SignedHeader2.Signature) {
 		return errors.New("proposer slashing header 2 has invalid BLS signature")
 	}
-	return state.SlashValidator(epc, ps.ProposerIndex, nil)
+	return state.SlashValidator(epc, proposerIndex, nil)
 }

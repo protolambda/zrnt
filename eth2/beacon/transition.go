@@ -151,7 +151,8 @@ func (state *BeaconStateView) StateTransition(epc *EpochsContext, block *SignedB
 		return err
 	}
 	if validateResult {
-		if !state.VerifySignature(epc, block) {
+		// Safe to ignore proposer index, it will be checked as part of the ProcessHeader call.
+		if !state.VerifySignature(epc, block, false) {
 			return errors.New("block has invalid signature")
 		}
 	}
@@ -167,13 +168,18 @@ func (state *BeaconStateView) StateTransition(epc *EpochsContext, block *SignedB
 	return nil
 }
 
-// Assuming the slot is valid, check if the signature is valid
-func (state *BeaconStateView) VerifySignature(epc *EpochsContext, block *SignedBeaconBlock) bool {
-	proposerIndex, err := epc.GetBeaconProposer(block.Message.Slot)
-	if err != nil {
-		return false
+// Assuming the slot is valid, and optionally assume the proposer index is valid, check if the signature is valid
+func (state *BeaconStateView) VerifySignature(epc *EpochsContext, block *SignedBeaconBlock, validateProposerIndex bool) bool {
+	if validateProposerIndex {
+		proposerIndex, err := epc.GetBeaconProposer(block.Message.Slot)
+		if err != nil {
+			return false
+		}
+		if proposerIndex != block.Message.ProposerIndex {
+			return false
+		}
 	}
-	pub, ok := epc.PubkeyCache.Pubkey(proposerIndex)
+	pub, ok := epc.PubkeyCache.Pubkey(block.Message.ProposerIndex)
 	if !ok {
 		return false
 	}

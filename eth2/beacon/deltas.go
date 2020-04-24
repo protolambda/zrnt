@@ -35,9 +35,9 @@ func (state *BeaconStateView) AttestationDeltas(epc *EpochsContext, process *Epo
 
 	attesterStatuses := process.Statuses
 
-	totalBalance := process.TotalActiveUnslashedStake
+	totalBalance := process.TotalActiveStake
 
-	prevEpochStake := &process.PrevEpochStake
+	prevEpochStake := &process.PrevEpochUnslashedStake
 	prevEpochSourceStake := prevEpochStake.SourceStake
 	prevEpochTargetStake := prevEpochStake.TargetStake
 	prevEpochHeadStake := prevEpochStake.HeadStake

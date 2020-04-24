@@ -47,17 +47,12 @@ func (state *BeaconStateView) ProcessEpochJustification(epc *EpochsContext, proc
 
 	bits.NextEpoch()
 
-	// stake = effective balances of active validators
-	// Get the total stake of the epoch attesters
-	prevEpochStake := process.PrevEpochStake
-	currEpochStake := process.CurrEpochStake
-
 	// Get the total current stake
 	totalStake := process.TotalActiveStake
 
 	var newJustifiedCheckpoint *Checkpoint
 	// > Justification
-	if prevEpochStake.TargetStake*3 >= totalStake*2 {
+	if process.PrevEpochTargetStake*3 >= totalStake*2 {
 		root, err := state.GetBlockRoot(previousEpoch)
 		if err != nil {
 			return err
@@ -68,7 +63,7 @@ func (state *BeaconStateView) ProcessEpochJustification(epc *EpochsContext, proc
 		}
 		bits[0] |= 1 << 1
 	}
-	if currEpochStake.TargetStake*3 >= totalStake*2 {
+	if process.CurrEpochTargetStake*3 >= totalStake*2 {
 		root, err := state.GetBlockRoot(currentEpoch)
 		if err != nil {
 			return err

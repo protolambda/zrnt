@@ -1,5 +1,7 @@
 package math
 
+import "math"
+
 func MaxU64(a uint64, b uint64) uint64 {
 	if a > b {
 		return a
@@ -23,6 +25,27 @@ func IntegerSquareroot(n uint64) uint64 {
 		y = (x + n/x) >> 1
 	}
 	return x
+}
+var squareRootTable = map[uint64]uint64{
+	4:       2,
+	16:      4,
+	64:      8,
+	256:     16,
+	1024:    32,
+	4096:    64,
+	16384:   128,
+	65536:   256,
+	262144:  512,
+	1048576: 1024,
+	4194304: 2048,
+}
+
+func IntegerSquareRootPrysm(n uint64) uint64 {
+	if v, ok := squareRootTable[n]; ok {
+		return v
+	}
+
+	return uint64(math.Sqrt(float64(n)))
 }
 
 func IsPowerOfTwo(n uint64) bool {

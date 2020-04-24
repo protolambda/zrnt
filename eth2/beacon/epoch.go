@@ -20,8 +20,9 @@ type EpochProcess struct {
 	TotalActiveStake          Gwei
 	TotalActiveUnslashedStake Gwei
 
-	PrevEpochStake EpochStakeSummary
-	CurrEpochStake EpochStakeSummary
+	PrevEpochUnslashedStake EpochStakeSummary
+	PrevEpochTargetStake Gwei
+	CurrEpochTargetStake Gwei
 
 	// Thanks to exit delay, this does not change within the epoch processing.
 	ActiveValidators uint64
@@ -152,7 +153,6 @@ func (state *BeaconStateView) PrepareEpochProcess(epc *EpochsContext) (out *Epoc
 
 	processEpoch := func(
 		attestations *PendingAttestationsView,
-		epochStakeSum *EpochStakeSummary,
 		epoch Epoch,
 		sourceFlag, targetFlag, headFlag AttesterFlag) error {
 
@@ -192,6 +192,7 @@ func (state *BeaconStateView) PrepareEpochProcess(epc *EpochsContext) (out *Epoc
 
 			participants = participants[:0]                   // reset old slice (re-used in for loop)
 			participants = append(participants, committee...) // add committee indices
+			participants = att.AggregationBits.FilterParticipants(participants) // only keep the participants
 
 			if epoch == prevEpoch {
 				for _, p := range participants {
@@ -205,23 +206,19 @@ func (state *BeaconStateView) PrepareEpochProcess(epc *EpochsContext) (out *Epoc
 				}
 			}
 
-			participants = att.AggregationBits.FilterParticipants(participants) // only keep the participants
 			for _, p := range participants {
 				status := &out.Statuses[p]
 
 				// remember the participant as one of the good validators
 				status.Flags |= sourceFlag
-				epochStakeSum.SourceStake += status.Validator.EffectiveBalance
 
 				// If the attestation is for the boundary:
 				if att.Data.Target.Root == actualTargetBlockRoot {
 					status.Flags |= targetFlag
-					epochStakeSum.TargetStake += status.Validator.EffectiveBalance
 
 					// If the attestation is for the head (att the time of attestation):
 					if att.Data.BeaconBlockRoot == attBlockRoot {
 						status.Flags |= headFlag
-						epochStakeSum.HeadStake += status.Validator.EffectiveBalance
 					}
 				}
 			}
@@ -232,7 +229,7 @@ func (state *BeaconStateView) PrepareEpochProcess(epc *EpochsContext) (out *Epoc
 	if err != nil {
 		return nil, err
 	}
-	if err := processEpoch(prevAtts, &out.PrevEpochStake, prevEpoch,
+	if err := processEpoch(prevAtts, prevEpoch,
 		PrevSourceAttester, PrevTargetAttester, PrevHeadAttester); err != nil {
 		return nil, err
 	}
@@ -240,9 +237,30 @@ func (state *BeaconStateView) PrepareEpochProcess(epc *EpochsContext) (out *Epoc
 	if err != nil {
 		return nil, err
 	}
-	if err := processEpoch(currAtts, &out.CurrEpochStake, currentEpoch,
+	if err := processEpoch(currAtts, currentEpoch,
 		CurrSourceAttester, CurrTargetAttester, CurrHeadAttester); err != nil {
 		return nil, err
 	}
+
+	for i := 0; i < len(out.Statuses); i++ {
+		status := out.Statuses[i]
+		if status.Flags.HasMarkers(PrevSourceAttester | UnslashedAttester) {
+			out.PrevEpochUnslashedStake.SourceStake += status.Validator.EffectiveBalance
+		}
+		if status.Flags.HasMarkers(PrevTargetAttester | UnslashedAttester) {
+			out.PrevEpochUnslashedStake.TargetStake += status.Validator.EffectiveBalance
+		}
+		if status.Flags.HasMarkers(PrevHeadAttester | UnslashedAttester) {
+			out.PrevEpochUnslashedStake.HeadStake += status.Validator.EffectiveBalance
+		}
+		if status.Flags.HasMarkers(PrevTargetAttester) {
+			out.PrevEpochTargetStake += status.Validator.EffectiveBalance
+		}
+		if status.Flags.HasMarkers(CurrTargetAttester) {
+			out.CurrEpochTargetStake += status.Validator.EffectiveBalance
+		}
+	}
+	// TODO: stake sums should have minimum of 1 eff increment
+
 	return
 }

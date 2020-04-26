@@ -244,14 +244,16 @@ func (state *BeaconStateView) PrepareEpochProcess(epc *EpochsContext) (out *Epoc
 
 	for i := 0; i < len(out.Statuses); i++ {
 		status := out.Statuses[i]
+		// nested, since they are subsets anyway
 		if status.Flags.HasMarkers(PrevSourceAttester | UnslashedAttester) {
 			out.PrevEpochUnslashedStake.SourceStake += status.Validator.EffectiveBalance
-		}
-		if status.Flags.HasMarkers(PrevTargetAttester | UnslashedAttester) {
-			out.PrevEpochUnslashedStake.TargetStake += status.Validator.EffectiveBalance
-		}
-		if status.Flags.HasMarkers(PrevHeadAttester | UnslashedAttester) {
-			out.PrevEpochUnslashedStake.HeadStake += status.Validator.EffectiveBalance
+			// already know it's unslashed, just look if attesting target, then head
+			if status.Flags.HasMarkers(PrevTargetAttester) {
+				out.PrevEpochUnslashedStake.TargetStake += status.Validator.EffectiveBalance
+				if status.Flags.HasMarkers(PrevHeadAttester) {
+					out.PrevEpochUnslashedStake.HeadStake += status.Validator.EffectiveBalance
+				}
+			}
 		}
 		if status.Flags.HasMarkers(PrevTargetAttester) {
 			out.PrevEpochTargetStake += status.Validator.EffectiveBalance

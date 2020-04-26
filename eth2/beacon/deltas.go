@@ -3,6 +3,7 @@ package beacon
 import (
 	"errors"
 	"github.com/protolambda/zrnt/eth2/util/math"
+	. "github.com/protolambda/ztyp/view"
 )
 
 type Deltas struct {
@@ -138,14 +139,34 @@ func (state *BeaconStateView) ProcessEpochRewardsAndPenalties(epc *EpochsContext
 	if uint64(len(sum.Penalties)) != balLen || uint64(len(sum.Rewards)) != balLen {
 		return errors.New("cannot apply deltas to balances list with different length")
 	}
-	// TODO: can be optimized a lot, make a new tree in one go
-	for i := ValidatorIndex(0); i < ValidatorIndex(balLen); i++ {
-		if err := balances.IncreaseBalance(i, sum.Rewards[i]); err != nil {
+	balancesElements := make([]BasicView, 0, balLen)
+	balIter := balances.ReadonlyIter()
+	i := ValidatorIndex(0)
+	for {
+		el, ok, err := balIter.Next()
+		if err != nil {
 			return err
 		}
-		if err := balances.DecreaseBalance(i, sum.Penalties[i]); err != nil {
+		if !ok {
+			break
+		}
+		bal, err := AsGwei(el, err)
+		if err != nil {
 			return err
 		}
+		bal += sum.Rewards[i]
+		if penalty := sum.Penalties[i]; bal >= penalty {
+			bal -= penalty
+		} else {
+			bal = 0
+		}
+		balancesElements = append(balancesElements, Uint64View(bal))
+		i++
 	}
-	return nil
+
+	newBalancesTree, err := RegistryBalancesType.FromElements(balancesElements...)
+	if err != nil {
+		return err
+	}
+	return balances.SetBacking(newBalancesTree.Backing())
 }

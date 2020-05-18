@@ -207,6 +207,18 @@ func (state *ValidatorsState) GetTotalStake() (out Gwei) {
 	return
 }
 
+func (state *ValidatorsState) GetTotalActiveStake(epoch Epoch) (out Gwei) {
+	for i := range state.Validators {
+		if state.Validators[i].IsActive(epoch) {
+			out += state.Validators[i].EffectiveBalance
+		}
+	}
+	if out == 0 {
+		return EFFECTIVE_BALANCE_INCREMENT
+	}
+	return
+}
+
 func (state *ValidatorsState) EffectiveBalance(index ValidatorIndex) Gwei {
 	return state.Validators[index].EffectiveBalance
 }

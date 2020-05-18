@@ -75,6 +75,7 @@ type CompactCommittees interface {
 type Staking interface {
 	// Staked = Active effective balance
 	GetTotalStake() Gwei
+	GetTotalActiveStake(epoch Epoch) Gwei
 	GetAttestersStake(statuses []AttesterStatus, mask AttesterFlag) Gwei
 }
 

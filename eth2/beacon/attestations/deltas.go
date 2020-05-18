@@ -23,7 +23,7 @@ func (f *AttestationDeltasFeature) AttestationDeltas() *Deltas {
 
 	previousEpoch := f.Meta.PreviousEpoch()
 
-	totalBalance := f.Meta.GetTotalStake()
+	totalBalance := f.Meta.GetTotalActiveStake(f.Meta.CurrentEpoch())
 
 	attesterStatuses := f.Meta.GetAttesterStatuses()
 	prevEpochSourceStake := f.Meta.GetAttestersStake(attesterStatuses, PrevSourceAttester|UnslashedAttester)

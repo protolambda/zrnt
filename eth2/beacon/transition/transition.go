@@ -53,7 +53,7 @@ func (f *TransitionFeature) ProcessSlots(slot Slot) {
 //
 func (f *TransitionFeature) StateTransition(block BlockInput, validateResult bool) error {
 	if f.Meta.CurrentSlot() > block.Slot() {
-		return errors.New("cannot transition from pre-state with higher slot than transition target")
+		return errors.New("cannot transition from pre-state with higher or equal slot than transition target")
 	}
 	f.ProcessSlots(block.Slot())
 	if validateResult {

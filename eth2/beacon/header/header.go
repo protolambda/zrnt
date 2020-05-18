@@ -47,6 +47,9 @@ func (f *BlockHeaderFeature) ProcessHeader(header *BeaconBlockHeader) error {
 	if header.Slot != currentSlot {
 		return errors.New("slot of block does not match slot of state")
 	}
+	if header.Slot <= f.State.LatestBlockHeader.Slot {
+		return errors.New("bad block header")
+	}
 
 	proposerIndex := f.Meta.GetBeaconProposerIndex(currentSlot)
 	// Verify that proposer index is the correct index

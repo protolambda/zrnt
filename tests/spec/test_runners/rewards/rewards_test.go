@@ -65,10 +65,10 @@ func (c *RewardsTest) Load(t *testing.T, readPart test_util.TestPartReader) {
 
 func (c *RewardsTest) Check(t *testing.T) {
 	count := uint64(len(c.Input.Source.Rewards))
-	var buf strings.Builder
 	diffDeltas := func(name string, computed *Deltas, expected *Deltas) {
 		t.Run(name, func(t *testing.T) {
 			var failed bool
+			var buf strings.Builder
 			for i := uint64(0); i < count; i++ {
 				if computed.Rewards[i] != expected.Rewards[i] {
 					buf.WriteString(fmt.Sprintf("(%s) invalid reward: i: %d, expected: %d, got: %d\n",

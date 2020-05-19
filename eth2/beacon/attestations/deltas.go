@@ -6,7 +6,7 @@ import (
 	"github.com/protolambda/zrnt/eth2/util/math"
 )
 
-type AttestationDeltasFeature struct {
+type AttestationRewardsAndPenaltiesFeature struct {
 	Meta interface {
 		meta.Versioning
 		meta.RegistrySize
@@ -17,9 +17,10 @@ type AttestationDeltasFeature struct {
 	}
 }
 
-func (f *AttestationDeltasFeature) AttestationDeltas() *Deltas {
+func (f *AttestationRewardsAndPenaltiesFeature) AttestationRewardsAndPenalties() *RewardsAndPenalties {
 	validatorCount := ValidatorIndex(f.Meta.ValidatorCount())
-	deltas := NewDeltas(uint64(validatorCount))
+
+	res := NewRewardsAndPenalties(uint64(validatorCount))
 
 	previousEpoch := f.Meta.PreviousEpoch()
 
@@ -41,54 +42,58 @@ func (f *AttestationDeltasFeature) AttestationDeltas() *Deltas {
 
 	for i := ValidatorIndex(0); i < validatorCount; i++ {
 		status := attesterStatuses[i]
+
+		effBalance := f.Meta.EffectiveBalance(i)
+		baseReward := effBalance * BASE_REWARD_FACTOR /
+			balanceSqRoot / BASE_REWARDS_PER_EPOCH
+
+		// Inclusion delay
+		if status.Flags.HasMarkers(PrevSourceAttester | UnslashedAttester) {
+			// Inclusion speed bonus
+			proposerReward := baseReward / PROPOSER_REWARD_QUOTIENT
+			res.InclusionDelay.Rewards[status.AttestedProposer] += proposerReward
+			maxAttesterReward := baseReward - proposerReward
+			res.InclusionDelay.Rewards[i] += maxAttesterReward / Gwei(status.InclusionDelay)
+		}
+
 		if status.Flags&EligibleAttester != 0 {
-
-			effBalance := f.Meta.EffectiveBalance(i)
-			baseReward := effBalance * BASE_REWARD_FACTOR /
-				balanceSqRoot / BASE_REWARDS_PER_EPOCH
-
 			// Expected FFG source
 			if status.Flags.HasMarkers(PrevSourceAttester | UnslashedAttester) {
 				// Justification-participation reward
-				deltas.Rewards[i] += baseReward * prevEpochSourceStake / totalBalance
-
-				// Inclusion speed bonus
-				proposerReward := baseReward / PROPOSER_REWARD_QUOTIENT
-				deltas.Rewards[status.AttestedProposer] += proposerReward
-				maxAttesterReward := baseReward - proposerReward
-				deltas.Rewards[i] += maxAttesterReward / Gwei(status.InclusionDelay)
+				res.Source.Rewards[i] += baseReward * prevEpochSourceStake / totalBalance
 			} else {
 				//Justification-non-participation R-penalty
-				deltas.Penalties[i] += baseReward
+				res.Source.Penalties[i] += baseReward
 			}
 
 			// Expected FFG target
 			if status.Flags.HasMarkers(PrevTargetAttester | UnslashedAttester) {
 				// Boundary-attestation reward
-				deltas.Rewards[i] += baseReward * prevEpochTargetStake / totalBalance
+				res.Target.Rewards[i] += baseReward * prevEpochTargetStake / totalBalance
 			} else {
 				//Boundary-attestation-non-participation R-penalty
-				deltas.Penalties[i] += baseReward
+				res.Target.Penalties[i] += baseReward
 			}
 
 			// Expected head
 			if status.Flags.HasMarkers(PrevHeadAttester | UnslashedAttester) {
 				// Canonical-participation reward
-				deltas.Rewards[i] += baseReward * prevEpochHeadStake / totalBalance
+				res.Head.Rewards[i] += baseReward * prevEpochHeadStake / totalBalance
 			} else {
 				// Non-canonical-participation R-penalty
-				deltas.Penalties[i] += baseReward
+				res.Head.Penalties[i] += baseReward
 			}
 
 			// Take away max rewards if we're not finalizing
 			if finalityDelay > MIN_EPOCHS_TO_INACTIVITY_PENALTY {
-				deltas.Penalties[i] += baseReward * BASE_REWARDS_PER_EPOCH
-				if !status.Flags.HasMarkers(PrevHeadAttester | UnslashedAttester) {
-					deltas.Penalties[i] += effBalance * Gwei(finalityDelay) / INACTIVITY_PENALTY_QUOTIENT
+				res.Inactivity.Penalties[i] += baseReward * BASE_REWARDS_PER_EPOCH
+				if !status.Flags.HasMarkers(PrevTargetAttester|UnslashedAttester) {
+					t :=  effBalance * Gwei(finalityDelay) / INACTIVITY_PENALTY_QUOTIENT
+					res.Inactivity.Penalties[i] += t
 				}
 			}
 		}
 	}
 
-	return deltas
+	return res
 }

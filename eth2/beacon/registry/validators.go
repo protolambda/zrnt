@@ -173,16 +173,6 @@ func (state *ValidatorsState) ProcessActivationQueue(currentEpoch Epoch, finaliz
 	}
 }
 
-// Return the total balance sum (1 Gwei minimum to avoid divisions by zero.)
-func (state *ValidatorsState) GetTotalStakedBalance(epoch Epoch) (sum Gwei) {
-	for _, v := range state.Validators {
-		if v.IsActive(epoch) {
-			sum += v.EffectiveBalance
-		}
-	}
-	return sum
-}
-
 func (state *ValidatorsState) GetAttestersStake(statuses []AttesterStatus, mask AttesterFlag) (out Gwei) {
 	for i := range statuses {
 		status := &statuses[i]
@@ -191,8 +181,8 @@ func (state *ValidatorsState) GetAttestersStake(statuses []AttesterStatus, mask 
 			out += b
 		}
 	}
-	if out == 0 {
-		return 1
+	if out < EFFECTIVE_BALANCE_INCREMENT {
+		return EFFECTIVE_BALANCE_INCREMENT
 	}
 	return
 }
@@ -201,7 +191,7 @@ func (state *ValidatorsState) GetTotalStake() (out Gwei) {
 	for i := range state.Validators {
 		out += state.Validators[i].EffectiveBalance
 	}
-	if out == 0 {
+	if out < EFFECTIVE_BALANCE_INCREMENT {
 		return EFFECTIVE_BALANCE_INCREMENT
 	}
 	return
@@ -213,7 +203,7 @@ func (state *ValidatorsState) GetTotalActiveStake(epoch Epoch) (out Gwei) {
 			out += state.Validators[i].EffectiveBalance
 		}
 	}
-	if out == 0 {
+	if out < EFFECTIVE_BALANCE_INCREMENT {
 		return EFFECTIVE_BALANCE_INCREMENT
 	}
 	return
@@ -223,13 +213,14 @@ func (state *ValidatorsState) EffectiveBalance(index ValidatorIndex) Gwei {
 	return state.Validators[index].EffectiveBalance
 }
 
-// Return the combined effective balance of an array of validators. (1 Gwei minimum to avoid divisions by zero.)
+// Return the combined effective balance of an array of validators.
+// (EFFECTIVE_BALANCE_INCREMENT minimum to avoid divisions by zero.)
 func (state *ValidatorsState) SumEffectiveBalanceOf(indices []ValidatorIndex) (sum Gwei) {
 	for _, vIndex := range indices {
 		sum += state.Validators[vIndex].EffectiveBalance
 	}
-	if sum == 0 {
-		return 1
+	if sum < EFFECTIVE_BALANCE_INCREMENT {
+		return EFFECTIVE_BALANCE_INCREMENT
 	}
 	return sum
 }

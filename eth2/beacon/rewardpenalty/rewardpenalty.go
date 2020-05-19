@@ -23,6 +23,11 @@ func (f *RewardsAndPenaltiesFeature) ProcessEpochRewardsAndPenalties() {
 		return
 	}
 	sum := NewDeltas(f.Meta.ValidatorCount())
-	sum.Add(f.Meta.AttestationDeltas())
+	rewAndPenalties := f.Meta.AttestationRewardsAndPenalties()
+	sum.Add(rewAndPenalties.Source)
+	sum.Add(rewAndPenalties.Target)
+	sum.Add(rewAndPenalties.Head)
+	sum.Add(rewAndPenalties.InclusionDelay)
+	sum.Add(rewAndPenalties.Inactivity)
 	f.Meta.ApplyDeltas(sum)
 }

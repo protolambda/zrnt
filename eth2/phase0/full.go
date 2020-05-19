@@ -34,7 +34,7 @@ type FullFeaturedState struct {
 	*ProposersData
 
 	// Rewarding process, optimized to use precomputed crosslink/shuffling/etc. data
-	AttestationDeltasFeature // rewards/penalties computation for attestations
+	AttestationRewardsAndPenaltiesFeature // rewards/penalties computation for attestations
 
 	SeedFeature
 
@@ -92,7 +92,7 @@ func NewFullFeaturedState(state *BeaconState) *FullFeaturedState {
 	f.AttesterStatusFeature.State = &f.AttestationsState
 	f.AttesterStatusFeature.Meta = f
 
-	f.AttestationDeltasFeature.Meta = f
+	f.AttestationRewardsAndPenaltiesFeature.Meta = f
 
 	f.SeedFeature.Meta = f
 	f.ProposingFeature.Meta = f

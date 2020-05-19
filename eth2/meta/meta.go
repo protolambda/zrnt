@@ -20,7 +20,7 @@ type BalanceDeltas interface {
 }
 
 type AttestationDeltas interface {
-	AttestationDeltas() *Deltas
+	AttestationRewardsAndPenalties() *RewardsAndPenalties
 }
 
 type RegistrySize interface {

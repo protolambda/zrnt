@@ -10,9 +10,9 @@ import (
 )
 
 type RewardsTest struct {
-	Pre  *phase0.BeaconState
+	Pre *phase0.BeaconState
 
-	Input *RewardsAndPenalties
+	Input  *RewardsAndPenalties
 	Output *RewardsAndPenalties
 
 	// TODO refactor zrnt to split deltas
@@ -92,7 +92,6 @@ func (c *RewardsTest) Check(t *testing.T) {
 	diffDeltas("inclusion delay", c.Output.InclusionDelay, c.Input.InclusionDelay)
 	diffDeltas("inactivity", c.Output.Inactivity, c.Input.Inactivity)
 }
-
 
 func (c *RewardsTest) Run() error {
 	state := phase0.NewFullFeaturedState(c.Pre)

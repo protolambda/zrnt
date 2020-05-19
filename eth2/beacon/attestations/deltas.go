@@ -87,7 +87,7 @@ func (f *AttestationRewardsAndPenaltiesFeature) AttestationRewardsAndPenalties()
 			// Take away max rewards if we're not finalizing
 			if finalityDelay > MIN_EPOCHS_TO_INACTIVITY_PENALTY {
 				res.Inactivity.Penalties[i] += baseReward * BASE_REWARDS_PER_EPOCH
-				if !status.Flags.HasMarkers(PrevTargetAttester|UnslashedAttester) {
+				if !status.Flags.HasMarkers(PrevTargetAttester | UnslashedAttester) {
 					res.Inactivity.Penalties[i] += effBalance * Gwei(finalityDelay) / INACTIVITY_PENALTY_QUOTIENT
 				}
 			}

@@ -9,7 +9,7 @@ import (
 
 func init() {
 	hbls.Init(hbls.BLS12_381)
-	hbls.SetETHmode(3)  // draft 7
+	hbls.SetETHmode(3) // draft 7
 }
 
 const BLS_ACTIVE = true

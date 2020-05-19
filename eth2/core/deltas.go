@@ -9,12 +9,11 @@ func (_ *GweiList) Limit() uint64 {
 }
 
 type Deltas struct {
-	Rewards GweiList
+	Rewards   GweiList
 	Penalties GweiList
 }
 
 var DeltasSSZ = zssz.GetSSZ((*Deltas)(nil))
-
 
 func NewDeltas(validatorCount uint64) *Deltas {
 	return &Deltas{
@@ -33,11 +32,11 @@ func (deltas *Deltas) Add(other *Deltas) {
 }
 
 type RewardsAndPenalties struct {
-	Source *Deltas
-	Target *Deltas
-	Head *Deltas
+	Source         *Deltas
+	Target         *Deltas
+	Head           *Deltas
 	InclusionDelay *Deltas
-	Inactivity *Deltas
+	Inactivity     *Deltas
 }
 
 func NewRewardsAndPenalties(validatorCount uint64) *RewardsAndPenalties {

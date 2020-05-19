@@ -66,7 +66,7 @@ func (f *VoluntaryExitFeature) ProcessVoluntaryExit(signedExit *SignedVoluntaryE
 		return errors.New("invalid exit epoch")
 	}
 	// Verify the validator has been active long enough
-	if currentEpoch < validator.ActivationEpoch+PERSISTENT_COMMITTEE_PERIOD {
+	if currentEpoch < validator.ActivationEpoch+SHARD_COMMITTEE_PERIOD {
 		return errors.New("exit is too soon")
 	}
 	// Verify signature

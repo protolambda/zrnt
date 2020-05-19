@@ -88,8 +88,7 @@ func (f *AttestationRewardsAndPenaltiesFeature) AttestationRewardsAndPenalties()
 			if finalityDelay > MIN_EPOCHS_TO_INACTIVITY_PENALTY {
 				res.Inactivity.Penalties[i] += baseReward * BASE_REWARDS_PER_EPOCH
 				if !status.Flags.HasMarkers(PrevTargetAttester|UnslashedAttester) {
-					t :=  effBalance * Gwei(finalityDelay) / INACTIVITY_PENALTY_QUOTIENT
-					res.Inactivity.Penalties[i] += t
+					res.Inactivity.Penalties[i] += effBalance * Gwei(finalityDelay) / INACTIVITY_PENALTY_QUOTIENT
 				}
 			}
 		}

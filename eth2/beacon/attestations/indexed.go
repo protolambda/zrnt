@@ -63,12 +63,7 @@ func (indexedAttestation *IndexedAttestation) Validate(m AttestationValidator) e
 
 	// empty attestation
 	if len(pubkeys) <= 0 {
-		// TODO: the spec has this not standardized well, danger! See issue 1713
-		// check if the signature is default
-		if indexedAttestation.Signature != (BLSSignature{0: 0xc0}) {
-			return errors.New("no attestation participants, but signature is not standard empty signature")
-		}
-		return nil
+		return errors.New("in phase 0 no empty attestation signatures are allowed")
 	}
 
 	if !bls.FastAggregateVerify(pubkeys,

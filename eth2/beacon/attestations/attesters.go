@@ -32,7 +32,7 @@ func (f *AttesterStatusFeature) GetAttesterStatuses() (out []AttesterStatus) {
 		if !f.Meta.IsSlashed(i) {
 			status.Flags |= UnslashedAttester
 		}
-		if f.Meta.IsActive(i, currentEpoch) {
+		if f.Meta.IsActive(i, prevEpoch) {
 			status.Flags |= EligibleAttester
 		} else if f.Meta.IsSlashed(i) && prevEpoch+1 < f.Meta.WithdrawableEpoch(i) {
 			status.Flags |= EligibleAttester
@@ -51,7 +51,6 @@ func (f *AttesterStatusFeature) GetAttesterStatuses() (out []AttesterStatus) {
 
 			// attestation-target is already known to be this epoch, get it from the pre-computed shuffling directly.
 			committee := f.Meta.GetBeaconCommittee(att.Data.Slot, att.Data.Index)
-
 			participants = participants[:0]                   // reset old slice (re-used in for loop)
 			participants = append(participants, committee...) // add committee indices
 

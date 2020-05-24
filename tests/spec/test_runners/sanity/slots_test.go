@@ -22,8 +22,7 @@ func (c *SlotsTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
 
 func (c *SlotsTestCase) Run() error {
 	state := c.Prepare()
-	state.ProcessSlots(state.Slot + c.Slots)
-	return nil
+	return state.ProcessSlots(state.Slot + c.Slots)
 }
 
 func TestSlots(t *testing.T) {

@@ -29,7 +29,10 @@ type TransitionFeature struct {
 // Process the state to the given slot.
 // Returns an error if the slot is older than the state is already at.
 // Mutates the state, does not copy.
-func (f *TransitionFeature) ProcessSlots(slot Slot) {
+func (f *TransitionFeature) ProcessSlots(slot Slot) error {
+	if f.Meta.CurrentSlot() >= slot {
+		return errors.New("cannot transition from pre-state with higher or equal slot than transition target")
+	}
 	// happens at the start of every CurrentSlot
 	for f.Meta.CurrentSlot() < slot {
 		f.Meta.ProcessSlot()
@@ -45,6 +48,7 @@ func (f *TransitionFeature) ProcessSlots(slot Slot) {
 			f.Meta.StartEpoch()
 		}
 	}
+	return nil
 }
 
 // Transition the state to the slot of the given block, then processes the block.
@@ -52,10 +56,9 @@ func (f *TransitionFeature) ProcessSlots(slot Slot) {
 // Mutates the state, does not copy.
 //
 func (f *TransitionFeature) StateTransition(block BlockInput, validateResult bool) error {
-	if f.Meta.CurrentSlot() > block.Slot() {
-		return errors.New("cannot transition from pre-state with higher or equal slot than transition target")
+	if err := f.ProcessSlots(block.Slot()); err != nil {
+		return err
 	}
-	f.ProcessSlots(block.Slot())
 	if validateResult {
 		if !block.VerifySignature(f.Meta.CurrentProposer(), f.Meta.CurrentVersion(), f.Meta.GenesisValRoot()) {
 			return errors.New("block has invalid signature")

@@ -5,82 +5,62 @@ A minimal Go implementation of the ETH 2.0 spec, by @protolambda.
 The goal of this project is to have a Go version of the Python based spec,
  to enable use cases that are out of reach for unoptimized Python.
 
-Think of: 
+Think of:
 - Realtime use in test-network monitoring, fast enough to verify full network activity.
 - A much higher fuzzing speed, to explore for new bugs.
-- Not affected nearly as much when scaling to mainnet.
+- Not affected nearly as much as pyspec when scaling to mainnet.
 
 ## Structure of `eth2`
 
-### `core`
-
-The core package consists of basic data-types, and all constants.
-These can be imported with a `.` for brevity, as the name says: these are a core part of the framework ZRNT provides.
-
-```go
-import . "github.com/protolambda/zrnt/eth2/core"
-```
-
-### `meta`
-
-This package defines the interfaces for `eth2` functionality, some of which know multiple implementations.
-These implementations can freely use pre-computed data, or light-client logic, to implement the specific functions.
-
-
 ### `beacon`
 
-The beacon-chain package, the primary focus for Phase-0 of the ETH 2.0 roadmap.
+The beacon package covers the phase0 state transition, following the Beacon-chain spec, but optimized for performance.
 
-[The beacon-chain specs can be found here.](https://github.com/ethereum/eth2.0-specs/blob/dev/specs/core/0_beacon-chain.md)
+#### Globals
 
-Features are split in different packages, and are generally composed as:
-- A `State` struct: to embed in a bigger struct, like `phase0.BeaconState`, to implement the given state with.
-- A `Feature` struct: combines `meta` information to a feature-specific state, to transition this state, while fully isolated from the other features.
-  - This is optional, some features do not require any `meta` information, and consist of just a `State`.
+Globals are split up as following:
+- `<something>Type`: a ZTYP SSZ type description, used to create typed views with.
+- `<something>View`: a ZTYP SSZ view. This wraps a binary-tree backing,
+ to provide typed a mutable interface to the persistent cached binary-tree datastructure.
+- `<something>SSZ`: a ZSSZ SSZ definition. Used to enhance native Go datastructures with SSZ type info,
+ to directly hash/encode the raw data structures, without representing them as binary tree.
+- `<something>`: Other types are mostly just raw ZSSZ-compatible Go datastructures, and can be used with the corresponding `<something>SSZ`
+- `(state *BeaconStateView) Process<something>`: The processing functions are all prefixed, and attached to the beacon-state view.
+- `(state *BeaconStateView) StateTransition`: the main transition function
+- `EpochsContext` and `(state *BeaconStateView) NewEpochsContext`: to efficiently transition, data that is used accross the epoch slot is cached in a special container.
+ This includes beacon proposers, committee shuffling, pubkey cache, etc. Functions to efficiently copy and update are included.
+- `GenesisFromEth1` and `KickStartState` two functions to create a `*BeaconStateView` and accompanying `*EpochsContext` with.
 
-Then, there are several `Status` types, data that is pre-computed by other features, to provide `meta` information with.
+#### Working around lack of Generics
 
-### `phase0`
+A common pattern is to have `As<Something` functions that work like `(view View, err error) -> (typedView *SomethingView, err error)`.
+Since Go has no generics, ZTYP does not deserialize/get any typed views. If you load a new view, or get an attribute,
+it will have to be wrapped with an `As<Something>` function to be fully typed. The 2nd `err` input is for convenience:
+chaining getters and `As` functions together is much easier this way. If there is any error, it is proxied.
 
-The beacon-chain consists of 3 transition types:
+#### Importing
 
-- **Block transition** (occasional, can fork) `eth2/beacon/phase0/block.go > BlockProcessFeature.Process() error`
-- **Epoch transition** (every 64 slots, big change) `eth2/beacon/phase0/epoch.go > EpochProcessFeature.Process()`
-- **Slot transition** (every slot, small change) `eth2/beacon/phase0/slot.go > SlotProcessFeature.Process()`
+If you work with many of the types and functions, it may be handy to import with a `.` for brevity.
 
-The transition between those is standardized in `eth2/beacon/transition/transition.go > StateTransition(block BlockInput, verifyStateRoot bool) error`
-
-The different parts of the transition can be implemented by composing the different `State` and `Feature` structs to provide the necessary `meta` for the transition.
-In between forks, this `meta` can be a special implementation to deal with differences. Or a custom implementation to introduce new features and sub-transitions with.
-
-#### Genesis
-
-A genesis state is created with `eth2/beacon/phase0/genesis.go > GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit) (*FullFeaturedState, error)`.
-This creates a fully featured phase0 state.
-
-From here, a set of slot transitions, block transitions, and epoch transitions, are applied to run the chain.
-See `eth2/beacon/transition`.
-
-### `shard`
-
-Planned package, new type of chain introduced in Phase-1.
+```go
+import . "github.com/protolambda/zrnt/eth2/beacon"
+```
 
 ### `util`
 
 Hashing, merkleization, and other utils can be found in `eth2/util`.
 
-BLS is stubbed, integration of a BLS library is a work in progress.
+BLS is a package that wraps Herumi BLS. However, it is put behind a build-flag. Use `bls_on` and `bls_off` to use it or not.
 
-SSZ is provided by ZRNT-SSZ (ZSSZ), optimized for speed: [`github.com/protolambda/zssz`](https://github.com/protolambda/zssz)
-
-## Getting started
-
-This repo is still a work-in-progress.
-
+SSZ is provided by two components:
+- ZRNT-SSZ (ZSSZ), optimized for speed on small raw Go datasturctures (no hash-tree-root caching, but serialization is 10x as fast as Gob):
+ [`github.com/protolambda/zssz`](https://github.com/protolambda/zssz). Primarily used for inputs such as blocks and attestations.
+  Not repeatedly hashed, and important to quickly decode, read/mutate, and encode.
+- ZTYP, optimized for caching, representing data as binary trees. Primarily used for the `BeaconStateView`.
 
 ### Building
 
-Re-generate dynamic parts by running `go generate ./...` (make sure the presets submodule is pulled).
+Re-generate dynamic parts by running `go generate ./...` (make sure the needed configuration files are in `./presets/configs/`).
 
 Add a build-constraint (also known as "build tag") when building ZRNT, or using it as a dependency:
 
@@ -106,45 +86,6 @@ Instructions on the usage of these test-vectors with ZRNT can be found in the [t
 #### Coverage reports
 
 After running `make test`, run `make open-coverage` to open a Go-test coverage report in your browser.
-
-## Future plans
-
-### Fuzzing
-
-There is a fuzzing effort ongoing, based on ZRNT and ZSSZ as base packages for state transitions and encoding.
-
-The fuzzing repo can be found here: https://github.com/guidovranken/eth2.0-fuzzing/.
-If you are interested in helping, please open an issue, or contact us through Gitter/Twitter.
-
-#### Replacing the hash-function
-
-For fast fuzzing, the hash-function can be swapped for any other hash function that outputs 32 bytes:
-
-```go
-import (
-	"github.com/protolambda/zrnt/eth2/util/hashing"
-	"github.com/protolambda/zrnt/eth2/util/ssz"
-)
-
-// myHashFn: func(input []byte) [32]byte
-// e.g. sha256.Sum256
-
-ssz.InitZeroHashes(myHashFn)
-hashing.Hash = myHashFn
-hashing.GetHashFn = func() HashFn { // Better: re-use allocated working variables,
-	return myHashFn                 //  and reset on next call of returned hash-function.
-}                                   // A new hash function returned by GetHashFn is never called concurrently.
-```
-
-### Conformance testing
-
-Passing all spec-tests is the primary goal to build and direct the Eth 2.0 fuzzing effort.
-
-### Minimal client
-
-Besides testing, a Go codebase with full conformance to the eth2.0 spec is also a great play-ground
- to implement a minimal client around, and work on phase-1. If anyone is interested in helping out, contact on Gitter/Twitter.
-
 
 ## Contributing
 

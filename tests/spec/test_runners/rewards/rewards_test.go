@@ -15,8 +15,6 @@ type RewardsTest struct {
 	Input  *RewardsAndPenalties
 	Output *RewardsAndPenalties
 
-	// TODO refactor zrnt to split deltas
-	ResDeltas *Deltas
 }
 
 func (c *RewardsTest) ExpectingFailure() bool {

@@ -18,7 +18,7 @@ func (c *BaseTransitionTest) ExpectingFailure() bool {
 	return c.Post == nil
 }
 
-func loadState(t *testing.T, name string, readPart TestPartReader) *beacon.BeaconStateView {
+func LoadState(t *testing.T, name string, readPart TestPartReader) *beacon.BeaconStateView {
 	p := readPart(name + ".ssz")
 	if p.Exists() {
 		size, err := p.Size()
@@ -33,12 +33,12 @@ func loadState(t *testing.T, name string, readPart TestPartReader) *beacon.Beaco
 }
 func (c *BaseTransitionTest) Load(t *testing.T, readPart TestPartReader) {
 
-	if pre := loadState(t, "pre", readPart); pre != nil {
+	if pre := LoadState(t, "pre", readPart); pre != nil {
 		c.Pre = pre
 	} else {
 		t.Fatalf("failed to load pre state")
 	}
-	if post := loadState(t, "post", readPart); post != nil {
+	if post := LoadState(t, "post", readPart); post != nil {
 		c.Post = post
 	}
 	// post state is optional, no error if not present.

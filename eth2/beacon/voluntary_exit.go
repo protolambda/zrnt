@@ -92,7 +92,7 @@ func (state *BeaconStateView) ProcessVoluntaryExit(epc *EpochsContext, signedExi
 		return err
 	}
 	// Verify the validator has been active long enough
-	if currentEpoch < registeredActivationEpoch+PERSISTENT_COMMITTEE_PERIOD {
+	if currentEpoch < registeredActivationEpoch+SHARD_COMMITTEE_PERIOD {
 		return errors.New("exit is too soon")
 	}
 	pubkey, ok := epc.PubkeyCache.Pubkey(exit.ValidatorIndex)

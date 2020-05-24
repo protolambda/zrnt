@@ -26,6 +26,7 @@ func IntegerSquareroot(n uint64) uint64 {
 	}
 	return x
 }
+
 var squareRootTable = map[uint64]uint64{
 	4:       2,
 	16:      4,

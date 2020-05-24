@@ -17,11 +17,11 @@ type EpochProcess struct {
 
 	Statuses []AttesterStatus
 
-	TotalActiveStake          Gwei
+	TotalActiveStake Gwei
 
 	PrevEpochUnslashedStake EpochStakeSummary
-	PrevEpochTargetStake Gwei
-	CurrEpochTargetStake Gwei
+	PrevEpochTargetStake    Gwei
+	CurrEpochTargetStake    Gwei
 
 	// Thanks to exit delay, this does not change within the epoch processing.
 	ActiveValidators uint64
@@ -186,8 +186,8 @@ func (state *BeaconStateView) PrepareEpochProcess(epc *EpochsContext) (out *Epoc
 				return err
 			}
 
-			participants = participants[:0]                   // reset old slice (re-used in for loop)
-			participants = append(participants, committee...) // add committee indices
+			participants = participants[:0]                                     // reset old slice (re-used in for loop)
+			participants = append(participants, committee...)                   // add committee indices
 			participants = att.AggregationBits.FilterParticipants(participants) // only keep the participants
 
 			if epoch == prevEpoch {

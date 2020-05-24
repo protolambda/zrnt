@@ -7,7 +7,6 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
-
 type GweiList []Gwei
 
 func (_ *GweiList) Limit() uint64 {
@@ -54,7 +53,6 @@ func NewRewardsAndPenalties(validatorCount uint64) *RewardsAndPenalties {
 		Inactivity:     NewDeltas(validatorCount),
 	}
 }
-
 
 func (state *BeaconStateView) AttestationRewardsAndPenalties(epc *EpochsContext, process *EpochProcess) (*RewardsAndPenalties, error) {
 	validatorCount := ValidatorIndex(uint64(len(process.Statuses)))
@@ -153,7 +151,7 @@ func (state *BeaconStateView) AttestationRewardsAndPenalties(epc *EpochsContext,
 			if isInactivityLeak {
 				// If validator is performing optimally this cancels all rewards for a neutral balance
 				proposerReward := baseReward / PROPOSER_REWARD_QUOTIENT
-				res.Inactivity.Penalties[i] += BASE_REWARDS_PER_EPOCH * baseReward - proposerReward
+				res.Inactivity.Penalties[i] += BASE_REWARDS_PER_EPOCH*baseReward - proposerReward
 				if !status.Flags.HasMarkers(PrevTargetAttester | UnslashedAttester) {
 					res.Inactivity.Penalties[i] += effBalance * Gwei(finalityDelay) / INACTIVITY_PENALTY_QUOTIENT
 				}

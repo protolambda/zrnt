@@ -41,7 +41,7 @@ func TestJustificationAndFinalization(t *testing.T) {
 }
 
 func TestRewardsPenalties(t *testing.T) {
-	test_util.RunTransitionTest(t, "rewards_and_penalties", "rewards_and_penalties",
+	test_util.RunTransitionTest(t, "epoch_processing", "rewards_and_penalties",
 		NewEpochTest(func(state *phase0.FullFeaturedState) {
 			state.ProcessEpochRewardsAndPenalties()
 		}))

@@ -89,9 +89,6 @@ func (f *ShufflingFeature) LoadShufflingEpoch(epoch Epoch) *ShufflingEpoch {
 			index := (slot * committeesPerSlot) + slotIndex
 			startOffset := (validatorCount * index) / committeeCount
 			endOffset := (validatorCount * (index + 1)) / committeeCount
-			if startOffset == endOffset {
-				panic("empty committee")
-			}
 			committee := shep.Shuffling[startOffset:endOffset]
 			shep.Committees[slot][slotIndex] = committee
 		}

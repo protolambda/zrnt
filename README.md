@@ -10,7 +10,7 @@ Think of:
 - A much higher fuzzing speed, to explore for new bugs.
 - Not affected nearly as much as pyspec when scaling to mainnet.
 
-## Structure of `eth2`
+## Structure of `eth2` package
 
 ### `beacon`
 

@@ -34,14 +34,19 @@ type ProtoNode struct {
 	BestDescendant ProtoNodeIndex
 }
 
+type BlockSinkFn func(node *ProtoNode, canonical bool) error
+
+func (fn BlockSinkFn) OnPrunedBlock(node *ProtoNode, canonical bool) error {
+	return fn(node, canonical)
+}
+
 type BlockSink interface {
-	OnPrunedBlock(node *ProtoNode, canonical bool)
+	OnPrunedBlock(node *ProtoNode, canonical bool) error
 }
 
 type ProtoArray struct {
 	sink           BlockSink
 	indexOffset    ProtoNodeIndex
-	finalizedRoot  Root
 	justifiedEpoch Epoch
 	finalizedEpoch Epoch
 	nodes          []ProtoNode
@@ -50,28 +55,16 @@ type ProtoArray struct {
 	updatedConnections bool
 }
 
-func NewProtoArray(justifiedEpoch Epoch, finalizedBlock BlockRef, sink BlockSink) *ProtoArray {
-	finalizedEpoch := finalizedBlock.Slot.ToEpoch()
+func NewProtoArray(justifiedEpoch Epoch, finalizedEpoch Epoch, sink BlockSink) *ProtoArray {
 	arr := ProtoArray{
 		sink:               sink,
-		indexOffset:        1,
-		finalizedRoot:      finalizedBlock.Root,
+		indexOffset:        0,
 		justifiedEpoch:     justifiedEpoch,
 		finalizedEpoch:     finalizedEpoch,
 		nodes:              make([]ProtoNode, 0, beacon.SLOTS_PER_EPOCH*10),
 		indices:            make(map[Root]ProtoNodeIndex, beacon.SLOTS_PER_EPOCH*10),
 		updatedConnections: true,
 	}
-	arr.nodes = append(arr.nodes, ProtoNode{
-		Block:          finalizedBlock,
-		Parent:         NONE,
-		JustifiedEpoch: justifiedEpoch,
-		FinalizedEpoch: finalizedEpoch,
-		Weight:         0,
-		BestChild:      NONE,
-		BestDescendant: NONE,
-	})
-	arr.indices[finalizedBlock.Root] = 0
 	return &arr
 }
 
@@ -88,7 +81,7 @@ func (pr *ProtoArray) getNode(index ProtoNodeIndex) (*ProtoNode, error) {
 	return &pr.nodes[i], nil
 }
 
-// From head back to anchor root (including the anchor itself)
+// From head back to anchor root (including the anchor itself, if present)
 func (pr *ProtoArray) CanonicalChain(anchorRoot Root) ([]BlockRef, error) {
 	head, err := pr.FindHead(anchorRoot)
 	if err != nil {
@@ -283,7 +276,8 @@ var HeadUnknownErr = errors.New("array has invalid state, head has no index")
 func (pr *ProtoArray) OnPrune(anchorRoot Root) error {
 	anchorIndex, ok := pr.indices[anchorRoot]
 	if !ok {
-		return UnknownAnchorErr
+		// if the anchor is unknown, then there is nothing to prune anyway.
+		return nil
 	}
 	if anchorIndex == pr.indexOffset {
 		// nothing to do
@@ -305,15 +299,17 @@ func (pr *ProtoArray) OnPrune(anchorRoot Root) error {
 		node := &pr.nodes[j]
 		if pr.sink != nil {
 			canonical := node.BestDescendant == headIndex
-			pr.sink.OnPrunedBlock(node, canonical)
+			if err := pr.sink.OnPrunedBlock(node, canonical); err != nil {
+				return err
+			}
 		}
+		// Remove one by one (oldest first), so above errors cannot mess up forkchoice state
 		delete(pr.indices, node.Block.Root)
+		// TODO: is this slicing bad for GC?
+		pr.nodes = pr.nodes[1:]
+		// update offset
+		pr.indexOffset = i
 	}
-	// Drop all the nodes prior to finalization.
-	// TODO: is this slicing bad for GC?
-	pr.nodes = pr.nodes[pr.indexOffset-anchorIndex:]
-	// update offset
-	pr.indexOffset = anchorIndex
 	return nil
 }
 
@@ -446,19 +442,14 @@ type ForkChoice struct {
 	finalized  Checkpoint
 }
 
-var WrongFinalizedBlockErr = errors.New("wrong finalized block")
-
-func NewForkChoice(finalizedBlock BlockRef, finalized Checkpoint, justified Checkpoint, sink BlockSink) (*ForkChoice, error) {
-	if finalizedBlock.Slot.ToEpoch() != finalized.Epoch {
-		return nil, WrongFinalizedBlockErr
-	}
+func NewForkChoice(finalized Checkpoint, justified Checkpoint, sink BlockSink) *ForkChoice {
 	return &ForkChoice{
-		protoArray: NewProtoArray(justified.Epoch, finalizedBlock, sink),
+		protoArray: NewProtoArray(justified.Epoch, finalized.Epoch, sink),
 		votes:      nil,
 		balances:   nil,
 		justified:  justified,
 		finalized:  finalized,
-	}, nil
+	}
 }
 
 func (fc *ForkChoice) ProcessAttestation(index ValidatorIndex, blockRoot Root, targetEpoch Epoch) {

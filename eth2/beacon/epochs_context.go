@@ -133,6 +133,15 @@ func NewPubkeyCache(state *BeaconStateView) (*PubkeyCache, error) {
 	return pc, nil
 }
 
+func EmptyPubkeyCache() *PubkeyCache {
+	return &PubkeyCache{
+		parent:             nil,
+		trustedParentCount: 0,
+		pub2idx:            make(map[BLSPubkey]ValidatorIndex),
+		idx2pub:            make([]CachedPubkey, 0),
+	}
+}
+
 // Get the pubkey of a validator index.
 // Note: this does not mean the validator is part of the current state.
 // It merely means that this is a known pubkey for that particular validator

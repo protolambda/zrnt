@@ -105,7 +105,7 @@ func (f *AttestationRewardsAndPenaltiesFeature) AttestationRewardsAndPenalties()
 			if isInactivityLeak {
 				// If validator is performing optimally this cancels all rewards for a neutral balance
 				proposerReward := baseReward / PROPOSER_REWARD_QUOTIENT
-				res.Inactivity.Penalties[i] += BASE_REWARDS_PER_EPOCH * baseReward - proposerReward
+				res.Inactivity.Penalties[i] += BASE_REWARDS_PER_EPOCH*baseReward - proposerReward
 				if !status.Flags.HasMarkers(PrevTargetAttester | UnslashedAttester) {
 					res.Inactivity.Penalties[i] += effBalance * Gwei(finalityDelay) / INACTIVITY_PENALTY_QUOTIENT
 				}

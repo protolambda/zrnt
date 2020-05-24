@@ -14,7 +14,6 @@ type RewardsTest struct {
 
 	Input  *RewardsAndPenalties
 	Output *RewardsAndPenalties
-
 }
 
 func (c *RewardsTest) ExpectingFailure() bool {

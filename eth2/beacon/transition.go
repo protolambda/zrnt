@@ -81,6 +81,9 @@ func (state *BeaconStateView) ProcessSlots(epc *EpochsContext, slot Slot) error 
 	if err != nil {
 		return err
 	}
+	if currentSlot > slot {
+		return errors.New("cannot transition from pre-state with higher or equal slot than transition target")
+	}
 	for currentSlot < slot {
 		if err := state.ProcessSlot(); err != nil {
 			return err
@@ -140,13 +143,6 @@ func (state *BeaconStateView) ProcessBlock(epc *EpochsContext, block *BeaconBloc
 // Mutates the state, does not copy.
 //
 func (state *BeaconStateView) StateTransition(epc *EpochsContext, block *SignedBeaconBlock, validateResult bool) error {
-	currentSlot, err := state.Slot()
-	if err != nil {
-		return err
-	}
-	if currentSlot > block.Message.Slot {
-		return errors.New("cannot transition from pre-state with higher slot than transition target")
-	}
 	if err := state.ProcessSlots(epc, block.Message.Slot); err != nil {
 		return err
 	}

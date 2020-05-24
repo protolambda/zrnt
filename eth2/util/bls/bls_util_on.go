@@ -10,7 +10,7 @@ func init() {
 	if err := hbls.Init(hbls.BLS12_381); err != nil {
 		panic(err)
 	}
-	if err := hbls.SetETHmode(1); err != nil {
+	if err := hbls.SetETHmode(3); err != nil { // draft 7
 		panic(err)
 	}
 }

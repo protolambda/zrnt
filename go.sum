@@ -3,6 +3,8 @@ github.com/dlespiau/covertool v0.0.0-20180314162135-b0c4c6d0583a/go.mod h1:/eQMc
 github.com/google/pprof v0.0.0-20190309163659-77426154d546/go.mod h1:zfwlbNMJ+OItoe0UupaVj+oy1omPYYDuagoSzA8v9mc=
 github.com/herumi/bls-eth-go-binary v0.0.0-20200310092706-2b0aca401927 h1:kwrD3rx8t7PWFFgZx9CZ1CqMyG5tq5ufMaUoePjL9IA=
 github.com/herumi/bls-eth-go-binary v0.0.0-20200310092706-2b0aca401927/go.mod h1:WKIQeicfSedn/NDDV6IiaxUcthn5gp3w6RbIG/GOLAg=
+github.com/herumi/bls-eth-go-binary v0.0.0-20200522010937-01d282b5380b h1:mu+F5uA3Y68oB6KXZqWlASKMetbNufhQx2stMI+sD+Y=
+github.com/herumi/bls-eth-go-binary v0.0.0-20200522010937-01d282b5380b/go.mod h1:luAnRm3OsMQeokhGzpYmc0ZKwawY7o87PUEP11Z7r7U=
 github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=
 github.com/minio/blake2b-simd v0.0.0-20160723061019-3f5f724cb5b1/go.mod h1:pD8RvIylQ358TN4wwqatJ8rNavkEINozVn9DtGI3dfQ=
 github.com/minio/sha256-simd v0.1.0/go.mod h1:2FMWW+8GMoPweT6+pI63m9YE3Lmw4J71hV56Chs1E/U=

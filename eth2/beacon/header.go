@@ -129,6 +129,17 @@ func (state *BeaconStateView) ProcessHeader(epc *EpochsContext, header *BeaconBl
 	if header.Slot != currentSlot {
 		return errors.New("slot of block does not match slot of state")
 	}
+	latestHeader, err := state.LatestBlockHeader()
+	if err != nil {
+		return err
+	}
+	latestSlot, err := latestHeader.Slot()
+	if err != nil {
+		return err
+	}
+	if header.Slot <= latestSlot {
+		return errors.New("bad block header")
+	}
 	if isValid, err := state.IsValidIndex(header.ProposerIndex); err != nil {
 		return err
 	} else if !isValid {
@@ -142,10 +153,6 @@ func (state *BeaconStateView) ProcessHeader(epc *EpochsContext, header *BeaconBl
 		return fmt.Errorf("beacon block header proposer index does not match expected index: got: %d, expected: %d", header.ProposerIndex, proposerIndex)
 	}
 	// Verify that the parent matches
-	latestHeader, err := state.LatestBlockHeader()
-	if err != nil {
-		return err
-	}
 	latestRoot := latestHeader.HashTreeRoot(tree.GetHashFn())
 	if header.ParentRoot != latestRoot {
 		return fmt.Errorf("previous block root %x does not match root %x from latest state block header", header.ParentRoot, latestRoot)

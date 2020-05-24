@@ -74,11 +74,7 @@ func (state *BeaconStateView) ValidateIndexedAttestation(epc *EpochsContext, ind
 
 	// empty attestation
 	if len(pubkeys) <= 0 {
-		// TODO: the spec has this not standardized well, danger! See issue 1713
-		// check if the signature is default
-		if indexedAttestation.Signature != (BLSSignature{0: 0xc0}) {
-			return errors.New("no attestation participants, but signature is not standard empty signature")
-		}
+		return errors.New("in phase 0 no empty attestation signatures are allowed")
 	}
 
 	dom, err := state.GetDomain(DOMAIN_BEACON_ATTESTER, indexedAttestation.Data.Target.Epoch)

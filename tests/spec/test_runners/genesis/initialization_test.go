@@ -69,7 +69,7 @@ func (c *InitializationTestCase) Load(t *testing.T, readPart test_util.TestPartR
 }
 
 func (c *InitializationTestCase) Run() error {
-	res, _, err := GenesisFromEth1(c.Eth1BlockHash, c.Eth1Timestamp, c.Deposits)
+	res, _, err := GenesisFromEth1(c.Eth1BlockHash, c.Eth1Timestamp, c.Deposits, false)
 	if err != nil {
 		return err
 	}

@@ -21,7 +21,7 @@ func (c *DepositTestCase) Run() error {
 	if err != nil {
 		return err
 	}
-	return c.Pre.ProcessDeposit(epc, &c.Deposit)
+	return c.Pre.ProcessDeposit(epc, &c.Deposit, false)
 }
 
 func TestDeposit(t *testing.T) {

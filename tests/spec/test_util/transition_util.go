@@ -1,10 +1,8 @@
 package test_util
 
 import (
-	"bytes"
 	"github.com/protolambda/messagediff"
 	"github.com/protolambda/zrnt/eth2/beacon"
-	"github.com/protolambda/zssz"
 	"github.com/protolambda/ztyp/tree"
 	"testing"
 )
@@ -44,19 +42,6 @@ func (c *BaseTransitionTest) Load(t *testing.T, readPart TestPartReader) {
 	// post state is optional, no error if not present.
 }
 
-func stateTreeToStateStruct(v *beacon.BeaconStateView) (*beacon.BeaconState, error) {
-	var buf bytes.Buffer
-	if err := v.Serialize(&buf); err != nil {
-		return nil, err
-	}
-	var state beacon.BeaconState
-	err := zssz.Decode(bytes.NewReader(buf.Bytes()), uint64(len(buf.Bytes())), &state, beacon.BeaconStateSSZ)
-	if err != nil {
-		return nil, err
-	}
-	return &state, nil
-}
-
 func (c *BaseTransitionTest) Check(t *testing.T) {
 	if c.ExpectingFailure() {
 		t.Errorf("was expecting failure, but no error was raised")
@@ -77,11 +62,11 @@ func CompareStates(a *beacon.BeaconStateView, b *beacon.BeaconStateView) (diff s
 	postRoot := b.HashTreeRoot(hFn)
 	if preRoot != postRoot {
 		// Hack to get the structural state representation, and then diff those.
-		pre, err := stateTreeToStateStruct(a)
+		pre, err := a.Raw()
 		if err != nil {
 			return "", err
 		}
-		post, err := stateTreeToStateStruct(b)
+		post, err := b.Raw()
 		if err != nil {
 			return "", err
 		}

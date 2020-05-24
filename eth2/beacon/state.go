@@ -1,6 +1,7 @@
 package beacon
 
 import (
+	"bytes"
 	"github.com/protolambda/zssz"
 	. "github.com/protolambda/ztyp/view"
 )
@@ -241,4 +242,18 @@ func (state *BeaconStateView) IsValidIndex(index ValidatorIndex) (bool, error) {
 		return false, err
 	}
 	return uint64(index) < count, nil
+}
+
+// Raw converts the tree-structured state into a flattened native Go structure.
+func (state *BeaconStateView) Raw() (*BeaconState, error) {
+	var buf bytes.Buffer
+	if err := state.Serialize(&buf); err != nil {
+		return nil, err
+	}
+	var raw BeaconState
+	err := zssz.Decode(bytes.NewReader(buf.Bytes()), uint64(len(buf.Bytes())), &raw, BeaconStateSSZ)
+	if err != nil {
+		return nil, err
+	}
+	return &raw, nil
 }

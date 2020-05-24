@@ -94,7 +94,7 @@ func (state *BeaconStateView) ProcessDeposits(epc *EpochsContext, ops []Deposit)
 	}
 
 	for i := range ops {
-		if err := state.ProcessDeposit(epc, &ops[i]); err != nil {
+		if err := state.ProcessDeposit(epc, &ops[i], false); err != nil {
 			return err
 		}
 	}
@@ -102,7 +102,7 @@ func (state *BeaconStateView) ProcessDeposits(epc *EpochsContext, ops []Deposit)
 }
 
 // Process an Eth1 deposit, registering a validator or increasing its balance.
-func (state *BeaconStateView) ProcessDeposit(epc *EpochsContext, dep *Deposit) error {
+func (state *BeaconStateView) ProcessDeposit(epc *EpochsContext, dep *Deposit, ignoreSignatureAndProof bool) error {
 	depositIndex, err := state.DepositIndex()
 	if err != nil {
 		return err
@@ -117,7 +117,7 @@ func (state *BeaconStateView) ProcessDeposit(epc *EpochsContext, dep *Deposit) e
 	}
 
 	// Verify the Merkle branch
-	if !merkle.VerifyMerkleBranch(
+	if !ignoreSignatureAndProof && !merkle.VerifyMerkleBranch(
 		ssz.HashTreeRoot(&dep.Data, DepositDataSSZ),
 		dep.Proof[:],
 		DEPOSIT_CONTRACT_TREE_DEPTH+1, // Add 1 for the `List` length mix-in
@@ -155,7 +155,7 @@ func (state *BeaconStateView) ProcessDeposit(epc *EpochsContext, dep *Deposit) e
 	// Check if it is a known validator that is depositing ("if pubkey not in validator_pubkeys")
 	if !exists {
 		// Verify the deposit signature (proof of possession) which is not checked by the deposit contract
-		if !bls.Verify(
+		if !ignoreSignatureAndProof && !bls.Verify(
 			&CachedPubkey{Compressed: dep.Data.Pubkey},
 			ComputeSigningRoot(
 				dep.Data.MessageRoot(),
@@ -176,7 +176,6 @@ func (state *BeaconStateView) ProcessDeposit(epc *EpochsContext, dep *Deposit) e
 		if effBalance > MAX_EFFECTIVE_BALANCE {
 			effBalance = MAX_EFFECTIVE_BALANCE
 		}
-		// TODO
 		validatorRaw := Validator{
 			Pubkey:                     pubkey,
 			WithdrawalCredentials:      withdrawalCreds,

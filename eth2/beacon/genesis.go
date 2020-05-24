@@ -22,7 +22,7 @@ func NewDepositRootsView() *DepositRootsView {
 	return &DepositRootsView{DepositRootsType.New()}
 }
 
-func GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit) (*BeaconStateView, *EpochsContext, error) {
+func GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit, ignoreSignaturesAndProofs bool) (*BeaconStateView, *EpochsContext, error) {
 	state := NewBeaconStateView()
 	if err := state.SetGenesisTime(time - (time % MIN_GENESIS_DELAY) + (2 * MIN_GENESIS_DELAY)); err != nil {
 		return nil, nil, err
@@ -87,7 +87,7 @@ func GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit) (*Beaco
 			return nil, nil, err
 		}
 		// in the rare case someone tries to create a genesis block using invalid data, error.
-		if err := state.ProcessDeposit(epc, &deps[i]); err != nil {
+		if err := state.ProcessDeposit(epc, &deps[i], ignoreSignaturesAndProofs); err != nil {
 			return nil, nil, err
 		}
 	}

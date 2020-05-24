@@ -9,11 +9,10 @@ import (
 )
 
 type RewardsTest struct {
-	Pre  *BeaconStateView
+	Pre *BeaconStateView
 
 	Input  *RewardsAndPenalties
 	Output *RewardsAndPenalties
-
 }
 
 func (c *RewardsTest) ExpectingFailure() bool {

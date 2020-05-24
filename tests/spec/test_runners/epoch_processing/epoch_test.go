@@ -47,6 +47,13 @@ func TestJustificationAndFinalization(t *testing.T) {
 		}))
 }
 
+func TestRewardsPenalties(t *testing.T) {
+	test_util.RunTransitionTest(t, "epoch_processing", "rewards_and_penalties",
+		NewEpochTest(func(state *beacon.BeaconStateView, epc *beacon.EpochsContext, process *beacon.EpochProcess) error {
+			return state.ProcessEpochRewardsAndPenalties(epc, process)
+		}))
+}
+
 func TestRegistryUpdates(t *testing.T) {
 	test_util.RunTransitionTest(t, "epoch_processing", "registry_updates",
 		NewEpochTest(func(state *beacon.BeaconStateView, epc *beacon.EpochsContext, process *beacon.EpochProcess) error {

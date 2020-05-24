@@ -18,7 +18,6 @@ type EpochProcess struct {
 	Statuses []AttesterStatus
 
 	TotalActiveStake          Gwei
-	TotalActiveUnslashedStake Gwei
 
 	PrevEpochUnslashedStake EpochStakeSummary
 	PrevEpochTargetStake Gwei
@@ -105,9 +104,6 @@ func (state *BeaconStateView) PrepareEpochProcess(epc *EpochsContext) (out *Epoc
 		if status.Active {
 			activeCount++
 			out.TotalActiveStake += flat.EffectiveBalance
-			if !flat.Slashed {
-				out.TotalActiveUnslashedStake += flat.EffectiveBalance
-			}
 		}
 
 		if flat.ActivationEligibilityEpoch == FAR_FUTURE_EPOCH && flat.EffectiveBalance == MAX_EFFECTIVE_BALANCE {
@@ -262,7 +258,24 @@ func (state *BeaconStateView) PrepareEpochProcess(epc *EpochsContext) (out *Epoc
 			out.CurrEpochTargetStake += status.Validator.EffectiveBalance
 		}
 	}
-	// TODO: stake sums should have minimum of 1 eff increment
+	if out.TotalActiveStake < EFFECTIVE_BALANCE_INCREMENT {
+		out.TotalActiveStake = EFFECTIVE_BALANCE_INCREMENT
+	}
+	if out.PrevEpochUnslashedStake.SourceStake < EFFECTIVE_BALANCE_INCREMENT {
+		out.PrevEpochUnslashedStake.SourceStake = EFFECTIVE_BALANCE_INCREMENT
+	}
+	if out.PrevEpochUnslashedStake.TargetStake < EFFECTIVE_BALANCE_INCREMENT {
+		out.PrevEpochUnslashedStake.TargetStake = EFFECTIVE_BALANCE_INCREMENT
+	}
+	if out.PrevEpochUnslashedStake.HeadStake < EFFECTIVE_BALANCE_INCREMENT {
+		out.PrevEpochUnslashedStake.HeadStake = EFFECTIVE_BALANCE_INCREMENT
+	}
+	if out.PrevEpochTargetStake < EFFECTIVE_BALANCE_INCREMENT {
+		out.PrevEpochTargetStake = EFFECTIVE_BALANCE_INCREMENT
+	}
+	if out.CurrEpochTargetStake < EFFECTIVE_BALANCE_INCREMENT {
+		out.CurrEpochTargetStake = EFFECTIVE_BALANCE_INCREMENT
+	}
 
 	return
 }

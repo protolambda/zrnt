@@ -54,18 +54,18 @@ func ComputeDomain(domainType BLSDomainType, forkVersion Version, genesisValidat
 	return
 }
 
-type SigningRoot struct {
+type SigningData struct {
 	ObjectRoot Root
 	Domain     BLSDomain
 }
 
-var SigningRootSSZ = zssz.GetSSZ((*SigningRoot)(nil))
+var SigningDataSSZ = zssz.GetSSZ((*SigningData)(nil))
 
 func ComputeSigningRoot(msgRoot Root, dom BLSDomain) Root {
-	withDomain := SigningRoot{
+	withDomain := SigningData{
 		ObjectRoot: msgRoot,
 		Domain:     dom,
 	}
 	hFn := hashing.GetHashFn()
-	return zssz.HashTreeRoot(htr.HashFn(hFn), &withDomain, SigningRootSSZ)
+	return zssz.HashTreeRoot(htr.HashFn(hFn), &withDomain, SigningDataSSZ)
 }

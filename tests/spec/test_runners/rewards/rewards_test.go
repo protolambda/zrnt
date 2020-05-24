@@ -1,6 +1,7 @@
 package epoch_processing
 
 import (
+	"context"
 	"fmt"
 	. "github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
@@ -90,11 +91,11 @@ func (c *RewardsTest) Run() error {
 	if err != nil {
 		return err
 	}
-	process, err := c.Pre.PrepareEpochProcess(epc)
+	process, err := c.Pre.PrepareEpochProcess(context.Background(), epc)
 	if err != nil {
 		return err
 	}
-	c.Output, err = c.Pre.AttestationRewardsAndPenalties(epc, process)
+	c.Output, err = c.Pre.AttestationRewardsAndPenalties(context.Background(), epc, process)
 	return err
 }
 

@@ -1,6 +1,7 @@
 package beacon
 
 import (
+	"context"
 	"errors"
 
 	"github.com/protolambda/zrnt/eth2/util/bls"
@@ -29,8 +30,14 @@ func (*ProposerSlashings) Limit() uint64 {
 	return MAX_PROPOSER_SLASHINGS
 }
 
-func (state *BeaconStateView) ProcessProposerSlashings(epc *EpochsContext, ops []ProposerSlashing) error {
+func (state *BeaconStateView) ProcessProposerSlashings(ctx context.Context, epc *EpochsContext, ops []ProposerSlashing) error {
 	for i := range ops {
+		select {
+		case <-ctx.Done():
+			return TransitionCancelErr
+		default: // Don't block.
+			break
+		}
 		if err := state.ProcessProposerSlashing(epc, &ops[i]); err != nil {
 			return err
 		}

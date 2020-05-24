@@ -1,6 +1,7 @@
 package beacon
 
 import (
+	"context"
 	. "github.com/protolambda/ztyp/view"
 )
 
@@ -27,7 +28,13 @@ func (registry *ValidatorsRegistryView) Validator(index ValidatorIndex) (*Valida
 	return AsValidator(registry.Get(uint64(index)))
 }
 
-func (state *BeaconStateView) ProcessEpochRegistryUpdates(epc *EpochsContext, process *EpochProcess) error {
+func (state *BeaconStateView) ProcessEpochRegistryUpdates(ctx context.Context, epc *EpochsContext, process *EpochProcess) error {
+	select {
+	case <-ctx.Done():
+		return TransitionCancelErr
+	default: // Don't block.
+		break
+	}
 	vals, err := state.Validators()
 	if err != nil {
 		return err

@@ -1,6 +1,7 @@
 package beacon
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -71,7 +72,7 @@ func (*Deposits) Limit() uint64 {
 }
 
 // Verify that outstanding deposits are processed up to the maximum number of deposits, then process all in order.
-func (state *BeaconStateView) ProcessDeposits(epc *EpochsContext, ops []Deposit) error {
+func (state *BeaconStateView) ProcessDeposits(ctx context.Context, epc *EpochsContext, ops []Deposit) error {
 	inputCount := DepositIndex(len(ops))
 	eth1Data, err := state.Eth1Data()
 	if err != nil {
@@ -94,6 +95,12 @@ func (state *BeaconStateView) ProcessDeposits(epc *EpochsContext, ops []Deposit)
 	}
 
 	for i := range ops {
+		select {
+		case <-ctx.Done():
+			return TransitionCancelErr
+		default: // Don't block.
+			break
+		}
 		if err := state.ProcessDeposit(epc, &ops[i], false); err != nil {
 			return err
 		}

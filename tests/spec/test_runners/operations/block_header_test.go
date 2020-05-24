@@ -1,6 +1,7 @@
 package operations
 
 import (
+	"context"
 	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"testing"
@@ -21,7 +22,7 @@ func (c *BlockHeaderTestCase) Run() error {
 	if err != nil {
 		return err
 	}
-	return c.Pre.ProcessHeader(epc, &c.Block)
+	return c.Pre.ProcessHeader(context.Background(), epc, &c.Block)
 }
 
 func TestBlockHeader(t *testing.T) {

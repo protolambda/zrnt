@@ -1,6 +1,7 @@
 package beacon
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/protolambda/zssz"
@@ -30,8 +31,14 @@ func (*Attestations) Limit() uint64 {
 	return MAX_ATTESTATIONS
 }
 
-func (state *BeaconStateView) ProcessAttestations(epc *EpochsContext, ops []Attestation) error {
+func (state *BeaconStateView) ProcessAttestations(ctx context.Context, epc *EpochsContext, ops []Attestation) error {
 	for i := range ops {
+		select {
+		case <-ctx.Done():
+			return TransitionCancelErr
+		default: // Don't block.
+			break
+		}
 		if err := state.ProcessAttestation(epc, &ops[i]); err != nil {
 			return err
 		}

@@ -1,14 +1,21 @@
 package beacon
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/protolambda/zssz"
 	. "github.com/protolambda/ztyp/view"
 )
 
-func (state *BeaconStateView) ProcessAttesterSlashings(epc *EpochsContext, ops []AttesterSlashing) error {
+func (state *BeaconStateView) ProcessAttesterSlashings(ctx context.Context, epc *EpochsContext, ops []AttesterSlashing) error {
 	for i := range ops {
+		select {
+		case <-ctx.Done():
+			return TransitionCancelErr
+		default: // Don't block.
+			break
+		}
 		if err := state.ProcessAttesterSlashing(epc, &ops[i]); err != nil {
 			return err
 		}

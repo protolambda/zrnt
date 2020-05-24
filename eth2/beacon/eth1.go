@@ -1,6 +1,7 @@
 package beacon
 
 import (
+	"context"
 	"errors"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
@@ -75,7 +76,13 @@ func (state *BeaconStateView) ResetEth1Votes() error {
 	return votes.SetBacking(Eth1DataVotesType.DefaultNode())
 }
 
-func (state *BeaconStateView) ProcessEth1Vote(epc *EpochsContext, data Eth1Data) error {
+func (state *BeaconStateView) ProcessEth1Vote(ctx context.Context, epc *EpochsContext, data Eth1Data) error {
+	select {
+	case <-ctx.Done():
+		return TransitionCancelErr
+	default: // Don't block.
+		break
+	}
 	votes, err := state.Eth1DataVotes()
 	if err != nil {
 		return err

@@ -1,6 +1,7 @@
 package beacon
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
@@ -120,7 +121,13 @@ func (v *BeaconBlockHeaderView) Raw() (*BeaconBlockHeader, error) {
 	}, nil
 }
 
-func (state *BeaconStateView) ProcessHeader(epc *EpochsContext, header *BeaconBlock) error {
+func (state *BeaconStateView) ProcessHeader(ctx context.Context, epc *EpochsContext, header *BeaconBlock) error {
+	select {
+	case <-ctx.Done():
+		return TransitionCancelErr
+	default: // Don't block.
+		break
+	}
 	currentSlot, err := state.Slot()
 	if err != nil {
 		return err

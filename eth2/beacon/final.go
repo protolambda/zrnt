@@ -1,6 +1,14 @@
 package beacon
 
-func (state *BeaconStateView) ProcessEpochFinalUpdates(epc *EpochsContext, process *EpochProcess) error {
+import "context"
+
+func (state *BeaconStateView) ProcessEpochFinalUpdates(ctx context.Context, epc *EpochsContext, process *EpochProcess) error {
+	select {
+	case <-ctx.Done():
+		return TransitionCancelErr
+	default: // Don't block.
+		break
+	}
 	nextEpoch := epc.NextEpoch.Epoch
 
 	// Reset eth1 data votes if it is the end of the voting period.

@@ -1,6 +1,7 @@
 package sanity
 
 import (
+	"context"
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
@@ -41,7 +42,7 @@ func (c *BlocksTestCase) Run() error {
 	}
 	state := c.Pre
 	for _, b := range c.Blocks {
-		if err := state.StateTransition(epc, b, true); err != nil {
+		if err := state.StateTransition(context.Background(), epc, b, true); err != nil {
 			return err
 		}
 	}

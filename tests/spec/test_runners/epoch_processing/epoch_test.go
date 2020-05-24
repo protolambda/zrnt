@@ -1,6 +1,7 @@
 package epoch_processing
 
 import (
+	"context"
 	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"testing"
@@ -18,7 +19,7 @@ func (c *EpochTest) Run() error {
 	if err != nil {
 		return err
 	}
-	process, err := c.Pre.PrepareEpochProcess(epc)
+	process, err := c.Pre.PrepareEpochProcess(context.Background(), epc)
 	if err != nil {
 		return err
 	}
@@ -36,34 +37,34 @@ func NewEpochTest(fn stateFn) test_util.TransitionCaseMaker {
 func TestFinalUpdates(t *testing.T) {
 	test_util.RunTransitionTest(t, "epoch_processing", "final_updates",
 		NewEpochTest(func(state *beacon.BeaconStateView, epc *beacon.EpochsContext, process *beacon.EpochProcess) error {
-			return state.ProcessEpochFinalUpdates(epc, process)
+			return state.ProcessEpochFinalUpdates(context.Background(), epc, process)
 		}))
 }
 
 func TestJustificationAndFinalization(t *testing.T) {
 	test_util.RunTransitionTest(t, "epoch_processing", "justification_and_finalization",
 		NewEpochTest(func(state *beacon.BeaconStateView, epc *beacon.EpochsContext, process *beacon.EpochProcess) error {
-			return state.ProcessEpochJustification(epc, process)
+			return state.ProcessEpochJustification(context.Background(), epc, process)
 		}))
 }
 
 func TestRewardsPenalties(t *testing.T) {
 	test_util.RunTransitionTest(t, "epoch_processing", "rewards_and_penalties",
 		NewEpochTest(func(state *beacon.BeaconStateView, epc *beacon.EpochsContext, process *beacon.EpochProcess) error {
-			return state.ProcessEpochRewardsAndPenalties(epc, process)
+			return state.ProcessEpochRewardsAndPenalties(context.Background(), epc, process)
 		}))
 }
 
 func TestRegistryUpdates(t *testing.T) {
 	test_util.RunTransitionTest(t, "epoch_processing", "registry_updates",
 		NewEpochTest(func(state *beacon.BeaconStateView, epc *beacon.EpochsContext, process *beacon.EpochProcess) error {
-			return state.ProcessEpochRegistryUpdates(epc, process)
+			return state.ProcessEpochRegistryUpdates(context.Background(), epc, process)
 		}))
 }
 
 func TestSlashings(t *testing.T) {
 	test_util.RunTransitionTest(t, "epoch_processing", "slashings",
 		NewEpochTest(func(state *beacon.BeaconStateView, epc *beacon.EpochsContext, process *beacon.EpochProcess) error {
-			return state.ProcessEpochSlashings(epc, process)
+			return state.ProcessEpochSlashings(context.Background(), epc, process)
 		}))
 }

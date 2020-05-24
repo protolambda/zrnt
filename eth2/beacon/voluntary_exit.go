@@ -1,6 +1,7 @@
 package beacon
 
 import (
+	"context"
 	"errors"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
@@ -16,8 +17,14 @@ func (*VoluntaryExits) Limit() uint64 {
 	return MAX_VOLUNTARY_EXITS
 }
 
-func (state *BeaconStateView) ProcessVoluntaryExits(epc *EpochsContext, ops []SignedVoluntaryExit) error {
+func (state *BeaconStateView) ProcessVoluntaryExits(ctx context.Context, epc *EpochsContext, ops []SignedVoluntaryExit) error {
 	for i := range ops {
+		select {
+		case <-ctx.Done():
+			return TransitionCancelErr
+		default: // Don't block.
+			break
+		}
 		if err := state.ProcessVoluntaryExit(epc, &ops[i]); err != nil {
 			return err
 		}

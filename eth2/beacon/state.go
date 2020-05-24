@@ -99,6 +99,9 @@ var BeaconStateType = ContainerType("BeaconState", []FieldDef{
 	{"finalized_checkpoint", CheckpointType},
 })
 
+// To load a state:
+//
+//     state, err := beacon.AsBeaconStateView(beacon.BeaconStateType.Deserialize(reader, size))
 func AsBeaconStateView(v View, err error) (*BeaconStateView, error) {
 	c, err := AsContainer(v, err)
 	return &BeaconStateView{c}, err

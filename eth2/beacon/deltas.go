@@ -1,6 +1,7 @@
 package beacon
 
 import (
+	"context"
 	"errors"
 	"github.com/protolambda/zrnt/eth2/util/math"
 	"github.com/protolambda/zssz"
@@ -54,7 +55,9 @@ func NewRewardsAndPenalties(validatorCount uint64) *RewardsAndPenalties {
 	}
 }
 
-func (state *BeaconStateView) AttestationRewardsAndPenalties(epc *EpochsContext, process *EpochProcess) (*RewardsAndPenalties, error) {
+func (state *BeaconStateView) AttestationRewardsAndPenalties(
+	ctx context.Context, epc *EpochsContext, process *EpochProcess) (*RewardsAndPenalties, error) {
+
 	validatorCount := ValidatorIndex(uint64(len(process.Statuses)))
 	res := NewRewardsAndPenalties(uint64(validatorCount))
 
@@ -89,6 +92,15 @@ func (state *BeaconStateView) AttestationRewardsAndPenalties(epc *EpochsContext,
 	isInactivityLeak := finalityDelay > MIN_EPOCHS_TO_INACTIVITY_PENALTY
 
 	for i := ValidatorIndex(0); i < validatorCount; i++ {
+		// every 1024 validators, check if the context is done.
+		if i&((1<<10)-1) == 0 {
+			select {
+			case <-ctx.Done():
+				return nil, TransitionCancelErr
+			default: // Don't block.
+				break
+			}
+		}
 		status := attesterStatuses[i]
 
 		effBalance := status.Validator.EffectiveBalance
@@ -162,14 +174,20 @@ func (state *BeaconStateView) AttestationRewardsAndPenalties(epc *EpochsContext,
 	return res, nil
 }
 
-func (state *BeaconStateView) ProcessEpochRewardsAndPenalties(epc *EpochsContext, process *EpochProcess) error {
+func (state *BeaconStateView) ProcessEpochRewardsAndPenalties(ctx context.Context, epc *EpochsContext, process *EpochProcess) error {
+	select {
+	case <-ctx.Done():
+		return TransitionCancelErr
+	default: // Don't block.
+		break
+	}
 	currentEpoch := epc.CurrentEpoch.Epoch
 	if currentEpoch == GENESIS_EPOCH {
 		return nil
 	}
 	valCount := uint64(len(process.Statuses))
 	sum := NewDeltas(valCount)
-	rewAndPenalties, err := state.AttestationRewardsAndPenalties(epc, process)
+	rewAndPenalties, err := state.AttestationRewardsAndPenalties(ctx, epc, process)
 	if err != nil {
 		return err
 	}

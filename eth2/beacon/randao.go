@@ -1,6 +1,7 @@
 package beacon
 
 import (
+	"context"
 	"encoding/binary"
 	"errors"
 	"github.com/protolambda/zrnt/eth2/util/bls"
@@ -81,7 +82,13 @@ func SeedRandao(seed Root) (*RandaoMixesView, error) {
 
 var RandaoEpochSSZ = zssz.GetSSZ((*Epoch)(nil))
 
-func (state *BeaconStateView) ProcessRandaoReveal(epc *EpochsContext, reveal BLSSignature) error {
+func (state *BeaconStateView) ProcessRandaoReveal(ctx context.Context, epc *EpochsContext, reveal BLSSignature) error {
+	select {
+	case <-ctx.Done():
+		return TransitionCancelErr
+	default: // Don't block.
+		break
+	}
 	slot, err := state.Slot()
 	if err != nil {
 		return err

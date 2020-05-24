@@ -1,6 +1,7 @@
 package beacon
 
 import (
+	"context"
 	"github.com/protolambda/zrnt/eth2/util/math"
 	"sort"
 )
@@ -43,7 +44,7 @@ func GetChurnLimit(activeValidatorCount uint64) uint64 {
 	return math.MaxU64(MIN_PER_EPOCH_CHURN_LIMIT, activeValidatorCount/CHURN_LIMIT_QUOTIENT)
 }
 
-func (state *BeaconStateView) PrepareEpochProcess(epc *EpochsContext) (out *EpochProcess, err error) {
+func (state *BeaconStateView) PrepareEpochProcess(ctx context.Context, epc *EpochsContext) (out *EpochProcess, err error) {
 	validators, err := state.Validators()
 	if err != nil {
 		return nil, err
@@ -68,6 +69,15 @@ func (state *BeaconStateView) PrepareEpochProcess(epc *EpochsContext) (out *Epoc
 	activeCount := uint64(0)
 	valIter := validators.ReadonlyIter()
 	for i := ValidatorIndex(0); true; i++ {
+		// every 1024 validators, check if the context is done.
+		if i&((1<<10)-1) == 0 {
+			select {
+			case <-ctx.Done():
+				return nil, TransitionCancelErr
+			default: // Don't block.
+				break
+			}
+		}
 		valContainer, ok, err := valIter.Next()
 		if err != nil {
 			return nil, err
@@ -158,7 +168,17 @@ func (state *BeaconStateView) PrepareEpochProcess(epc *EpochsContext) (out *Epoc
 		}
 		participants := make([]ValidatorIndex, 0, MAX_VALIDATORS_PER_COMMITTEE)
 		attIter := attestations.ReadonlyIter()
+		i := 0
 		for {
+			// every 32 attestations, check if the context is done.
+			if i&((1<<5)-1) == 0 {
+				select {
+				case <-ctx.Done():
+					return TransitionCancelErr
+				default: // Don't block.
+					break
+				}
+			}
 			el, ok, err := attIter.Next()
 			if err != nil {
 				return err
@@ -218,6 +238,7 @@ func (state *BeaconStateView) PrepareEpochProcess(epc *EpochsContext) (out *Epoc
 					}
 				}
 			}
+			i += 1
 		}
 		return nil
 	}

@@ -1,6 +1,7 @@
 package beacon
 
 import (
+	"context"
 	. "github.com/protolambda/ztyp/view"
 )
 
@@ -123,7 +124,13 @@ func (state *BeaconStateView) SlashValidator(epc *EpochsContext, slashedIndex Va
 	return nil
 }
 
-func (state *BeaconStateView) ProcessEpochSlashings(epc *EpochsContext, process *EpochProcess) error {
+func (state *BeaconStateView) ProcessEpochSlashings(ctx context.Context, epc *EpochsContext, process *EpochProcess) error {
+	select {
+	case <-ctx.Done():
+		return TransitionCancelErr
+	default: // Don't block.
+		break
+	}
 	totalBalance := process.TotalActiveStake
 
 	slashings, err := state.Slashings()

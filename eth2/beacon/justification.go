@@ -1,11 +1,18 @@
 package beacon
 
 import (
+	"context"
 	"fmt"
 	. "github.com/protolambda/ztyp/view"
 )
 
-func (state *BeaconStateView) ProcessEpochJustification(epc *EpochsContext, process *EpochProcess) error {
+func (state *BeaconStateView) ProcessEpochJustification(ctx context.Context, epc *EpochsContext, process *EpochProcess) error {
+	select {
+	case <-ctx.Done():
+		return TransitionCancelErr
+	default: // Don't block.
+		break
+	}
 	previousEpoch := process.PrevEpoch
 	currentEpoch := process.CurrEpoch
 

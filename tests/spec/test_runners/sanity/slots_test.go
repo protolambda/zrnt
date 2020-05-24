@@ -1,6 +1,7 @@
 package sanity
 
 import (
+	"context"
 	. "github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"gopkg.in/yaml.v2"
@@ -29,7 +30,7 @@ func (c *SlotsTestCase) Run() error {
 	if err != nil {
 		return err
 	}
-	return c.Pre.ProcessSlots(epc, slot+c.Slots)
+	return c.Pre.ProcessSlots(context.Background(), epc, slot+c.Slots)
 }
 
 func TestSlots(t *testing.T) {

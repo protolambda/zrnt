@@ -1,12 +1,23 @@
 package beacon
 
 import (
+	"context"
 	"errors"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/ztyp/tree"
 )
 
-func (state *BeaconStateView) ProcessSlot() error {
+var TransitionCancelErr = errors.New("state transition was cancelled")
+
+func (state *BeaconStateView) ProcessSlot(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return TransitionCancelErr
+	default:
+		break // Continue slot processing, don't block.
+	}
+	// The state root could take long, but absolute worst case is around a 1.5 seconds.
+	// With any caching, this is more like < 50 ms. So no context use.
 	// Cache state root
 	previousStateRoot := state.HashTreeRoot(tree.GetHashFn())
 
@@ -49,24 +60,24 @@ func (state *BeaconStateView) ProcessSlot() error {
 	return nil
 }
 
-func (state *BeaconStateView) ProcessEpoch(epc *EpochsContext) error {
-	process, err := state.PrepareEpochProcess(epc)
+func (state *BeaconStateView) ProcessEpoch(ctx context.Context, epc *EpochsContext) error {
+	process, err := state.PrepareEpochProcess(ctx, epc)
 	if err != nil {
 		return err
 	}
-	if err := state.ProcessEpochJustification(epc, process); err != nil {
+	if err := state.ProcessEpochJustification(ctx, epc, process); err != nil {
 		return err
 	}
-	if err := state.ProcessEpochRewardsAndPenalties(epc, process); err != nil {
+	if err := state.ProcessEpochRewardsAndPenalties(ctx, epc, process); err != nil {
 		return err
 	}
-	if err := state.ProcessEpochRegistryUpdates(epc, process); err != nil {
+	if err := state.ProcessEpochRegistryUpdates(ctx, epc, process); err != nil {
 		return err
 	}
-	if err := state.ProcessEpochSlashings(epc, process); err != nil {
+	if err := state.ProcessEpochSlashings(ctx, epc, process); err != nil {
 		return err
 	}
-	if err := state.ProcessEpochFinalUpdates(epc, process); err != nil {
+	if err := state.ProcessEpochFinalUpdates(ctx, epc, process); err != nil {
 		return err
 	}
 	return nil
@@ -75,7 +86,7 @@ func (state *BeaconStateView) ProcessEpoch(epc *EpochsContext) error {
 // Process the state to the given slot.
 // Returns an error if the slot is older than the state is already at.
 // Mutates the state, does not copy.
-func (state *BeaconStateView) ProcessSlots(epc *EpochsContext, slot Slot) error {
+func (state *BeaconStateView) ProcessSlots(ctx context.Context, epc *EpochsContext, slot Slot) error {
 	// happens at the start of every CurrentSlot
 	currentSlot, err := state.Slot()
 	if err != nil {
@@ -85,14 +96,20 @@ func (state *BeaconStateView) ProcessSlots(epc *EpochsContext, slot Slot) error 
 		return errors.New("cannot transition from pre-state with higher or equal slot than transition target")
 	}
 	for currentSlot < slot {
-		if err := state.ProcessSlot(); err != nil {
+		select {
+		case <-ctx.Done():
+			return TransitionCancelErr
+		default:
+			break // Continue slot processing, don't block.
+		}
+		if err := state.ProcessSlot(ctx); err != nil {
 			return err
 		}
 		// Per-epoch transition happens at the start of the first slot of every epoch.
 		// (with the slot still at the end of the last epoch)
 		isEpochEnd := (currentSlot + 1).ToEpoch() != currentSlot.ToEpoch()
 		if isEpochEnd {
-			if err := state.ProcessEpoch(epc); err != nil {
+			if err := state.ProcessEpoch(ctx, epc); err != nil {
 				return err
 			}
 		}
@@ -109,30 +126,30 @@ func (state *BeaconStateView) ProcessSlots(epc *EpochsContext, slot Slot) error 
 	return nil
 }
 
-func (state *BeaconStateView) ProcessBlock(epc *EpochsContext, block *BeaconBlock) error {
-	if err := state.ProcessHeader(epc, block); err != nil {
+func (state *BeaconStateView) ProcessBlock(ctx context.Context, epc *EpochsContext, block *BeaconBlock) error {
+	if err := state.ProcessHeader(ctx, epc, block); err != nil {
 		return err
 	}
 	body := &block.Body
-	if err := state.ProcessRandaoReveal(epc, body.RandaoReveal); err != nil {
+	if err := state.ProcessRandaoReveal(ctx, epc, body.RandaoReveal); err != nil {
 		return err
 	}
-	if err := state.ProcessEth1Vote(epc, body.Eth1Data); err != nil {
+	if err := state.ProcessEth1Vote(ctx, epc, body.Eth1Data); err != nil {
 		return err
 	}
-	if err := state.ProcessProposerSlashings(epc, body.ProposerSlashings); err != nil {
+	if err := state.ProcessProposerSlashings(ctx, epc, body.ProposerSlashings); err != nil {
 		return err
 	}
-	if err := state.ProcessAttesterSlashings(epc, body.AttesterSlashings); err != nil {
+	if err := state.ProcessAttesterSlashings(ctx, epc, body.AttesterSlashings); err != nil {
 		return err
 	}
-	if err := state.ProcessAttestations(epc, body.Attestations); err != nil {
+	if err := state.ProcessAttestations(ctx, epc, body.Attestations); err != nil {
 		return err
 	}
-	if err := state.ProcessDeposits(epc, body.Deposits); err != nil {
+	if err := state.ProcessDeposits(ctx, epc, body.Deposits); err != nil {
 		return err
 	}
-	if err := state.ProcessVoluntaryExits(epc, body.VoluntaryExits); err != nil {
+	if err := state.ProcessVoluntaryExits(ctx, epc, body.VoluntaryExits); err != nil {
 		return err
 	}
 	return nil
@@ -142,8 +159,8 @@ func (state *BeaconStateView) ProcessBlock(epc *EpochsContext, block *BeaconBloc
 // Returns an error if the slot is older than the state is already at.
 // Mutates the state, does not copy.
 //
-func (state *BeaconStateView) StateTransition(epc *EpochsContext, block *SignedBeaconBlock, validateResult bool) error {
-	if err := state.ProcessSlots(epc, block.Message.Slot); err != nil {
+func (state *BeaconStateView) StateTransition(ctx context.Context, epc *EpochsContext, block *SignedBeaconBlock, validateResult bool) error {
+	if err := state.ProcessSlots(ctx, epc, block.Message.Slot); err != nil {
 		return err
 	}
 	if validateResult {
@@ -153,7 +170,7 @@ func (state *BeaconStateView) StateTransition(epc *EpochsContext, block *SignedB
 		}
 	}
 
-	if err := state.ProcessBlock(epc, &block.Message); err != nil {
+	if err := state.ProcessBlock(ctx, epc, &block.Message); err != nil {
 		return err
 	}
 

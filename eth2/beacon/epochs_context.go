@@ -371,14 +371,14 @@ func (epc *EpochsContext) getSlotComms(slot Slot) ([][]ValidatorIndex, error) {
 	} else if epoch == epc.NextEpoch.Epoch {
 		return epc.NextEpoch.Committees[epochSlot], nil
 	} else {
-		return nil, fmt.Errorf("crosslink committee retrieval: out of range epoch: %d", epoch)
+		return nil, fmt.Errorf("beacon committee retrieval: out of range epoch: %d", epoch)
 	}
 }
 
 // Return the beacon committee at slot for index.
 func (epc *EpochsContext) GetBeaconCommittee(slot Slot, index CommitteeIndex) ([]ValidatorIndex, error) {
 	if index >= MAX_COMMITTEES_PER_SLOT {
-		return nil, fmt.Errorf("crosslink committee retrieval: out of range committee index: %d", index)
+		return nil, fmt.Errorf("beacon committee retrieval: out of range committee index: %d", index)
 	}
 
 	slotComms, err := epc.getSlotComms(slot)
@@ -387,7 +387,7 @@ func (epc *EpochsContext) GetBeaconCommittee(slot Slot, index CommitteeIndex) ([
 	}
 
 	if index >= CommitteeIndex(len(slotComms)) {
-		return nil, fmt.Errorf("crosslink committee retrieval: out of range committee index: %d", index)
+		return nil, fmt.Errorf("beacon committee retrieval: out of range committee index: %d", index)
 	}
 	return slotComms[index], nil
 }

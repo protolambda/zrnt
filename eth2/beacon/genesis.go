@@ -24,7 +24,7 @@ func NewDepositRootsView() *DepositRootsView {
 
 func GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit, ignoreSignaturesAndProofs bool) (*BeaconStateView, *EpochsContext, error) {
 	state := NewBeaconStateView()
-	if err := state.SetGenesisTime(time - (time % MIN_GENESIS_DELAY) + (2 * MIN_GENESIS_DELAY)); err != nil {
+	if err := state.SetGenesisTime(time + GENESIS_DELAY); err != nil {
 		return nil, nil, err
 	}
 	if err := state.SetFork(Fork{

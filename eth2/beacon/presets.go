@@ -41,7 +41,7 @@ var GENESIS_FORK_VERSION = parseVersion(generated.GENESIS_FORK_VERSION)
 const BLS_WITHDRAWAL_PREFIX byte = generated.BLS_WITHDRAWAL_PREFIX
 
 // Time parameters
-const MIN_GENESIS_DELAY Timestamp = generated.MIN_GENESIS_DELAY
+const GENESIS_DELAY Timestamp = generated.GENESIS_DELAY
 const SECONDS_PER_SLOT Timestamp = generated.SECONDS_PER_SLOT
 const MIN_ATTESTATION_INCLUSION_DELAY Slot = generated.MIN_ATTESTATION_INCLUSION_DELAY
 const SLOTS_PER_EPOCH Slot = generated.SLOTS_PER_EPOCH

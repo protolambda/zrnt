@@ -9,6 +9,9 @@ import (
 )
 
 func (state *BeaconStateView) computeProposerIndex(indices []ValidatorIndex, seed Root) (ValidatorIndex, error) {
+	if len(indices) == 0 {
+		return 0, errors.New("no validators available to compute proposer")
+	}
 	buf := make([]byte, 32+8, 32+8)
 	copy(buf[0:32], seed[:])
 

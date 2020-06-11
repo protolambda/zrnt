@@ -15,14 +15,13 @@ import (
 //  value := MyStruct{A: 123, B: false, C: []byte{42,13,37}}
 //  root := HashTreeRoot(&value, sszTyp)
 func HashTreeRoot(value interface{}, sszTyp types.SSZ) [32]byte {
-	hFn := hashing.GetHashFn()
-	return zssz.HashTreeRoot(htr.HashFn(hFn), value, sszTyp)
+	return zssz.HashTreeRoot(hashing.GetMerkleFn(), value, sszTyp)
 }
 
 // When the hash function changed, also re-initialize the precomputed zero-hashes with this hash-function.
 // These precomputed hashes are used to complete merkle-trees efficiently to a power of 2,
 // without unnecessary duplicate hashing of zeroes, or hashes of, or higher order, up to 32.
 func InitZeroHashes(hashFn hashing.HashFn) {
-	htr.InitZeroHashes(htr.HashFn(hashFn))
+	htr.InitZeroHashes(hashFn)
 	// TODO: init zero-hashes of ztyp
 }

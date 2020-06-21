@@ -13,9 +13,14 @@ import (
 	"text/template"
 )
 
-type ContstantsPreset struct {
+type ContstantsPresetData struct {
 	Name    string
 	Entries []string
+}
+
+type ConstantsPreset struct {
+	BuildConstraint string
+	Data *ContstantsPresetData
 }
 
 // hex input should not be prefixed with 0x
@@ -32,7 +37,7 @@ func hexStrToLiteralStr(hex string) string {
 	return formattedValue
 }
 
-func buildPreset(path string) (*ContstantsPreset, error) {
+func buildPreset(path string) (*ContstantsPresetData, error) {
 	presetName := filepath.Base(path)
 	presetName = presetName[:len(presetName)-len(".yaml")]
 
@@ -47,7 +52,7 @@ func buildPreset(path string) (*ContstantsPreset, error) {
 		return nil, err
 	}
 
-	preset := ContstantsPreset{
+	preset := ContstantsPresetData{
 		Name:    presetName,
 		Entries: make([]string, 0, len(rawPreset)),
 	}
@@ -91,12 +96,36 @@ func buildPreset(path string) (*ContstantsPreset, error) {
 }
 
 func main() {
-	var presetsDirPath, outputDirPath string
+	var presetsDirPath, outputDirPath, defaultPreset string
 	flag.StringVar(&presetsDirPath, "presets-dir", "", "The file path to the directory containing yaml constant presets")
 	flag.StringVar(&outputDirPath, "output-dir", "", "The file path to the directory to output generated Go code to")
+	flag.StringVar(&defaultPreset, "default-preset", "mainnet", "The name of the preset to duplicate, with build constraints to use it if no other preset is used")
 	flag.Parse()
 
 	templ := template.Must(template.New("constants_file").Parse(constantsFileTemplate))
+
+	var presetNames []string
+	if err := filepath.Walk(presetsDirPath,
+		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+
+			fmt.Println("found preset file", path)
+
+			extension := filepath.Ext(path)
+			if extension != ".yaml" {
+				return nil
+			}
+
+			presetName := filepath.Base(path)
+			presetName = presetName[:len(presetName)-len(".yaml")]
+
+			presetNames = append(presetNames, presetName)
+			return nil
+		}); err != nil {
+		panic(err)
+	}
 
 	if err := filepath.Walk(presetsDirPath,
 		func(path string, info os.FileInfo, err error) error {
@@ -111,21 +140,41 @@ func main() {
 				return nil
 			}
 
-			preset, err := buildPreset(path)
+			presetData, err := buildPreset(path)
 			if err != nil {
 				return err
 			}
 
-			outPath := filepath.Join(outputDirPath, preset.Name+".go")
-			fmt.Printf("writing constants preset %s to %s\n", preset.Name, outPath)
+			outPath := filepath.Join(outputDirPath, presetData.Name+".go")
+			fmt.Printf("writing constants preset %s to %s\n", presetData.Name, outPath)
 			f, err := os.Create(outPath)
 			if err != nil {
 				return err
+			}
+			preset := ConstantsPreset{
+				BuildConstraint: "preset_"+presetData.Name,
+				Data: presetData,
 			}
 			if err := templ.Execute(f, preset); err != nil {
 				return err
 			}
 
+			if presetData.Name == defaultPreset {
+				outPath := filepath.Join(outputDirPath, "defaults.go")
+				fmt.Printf("writing default preset, alias %s to %s\n", presetData.Name, outPath)
+				f, err := os.Create(outPath)
+				if err != nil {
+					return err
+				}
+				preset := ConstantsPreset{
+					// when all other presets are not active, then use the default
+					BuildConstraint: "!preset_"+strings.Join(presetNames, " !preset_"),
+					Data: presetData,
+				}
+				if err := templ.Execute(f, preset); err != nil {
+					return err
+				}
+			}
 			return nil
 		}); err != nil {
 		panic(err)
@@ -133,11 +182,11 @@ func main() {
 
 }
 
-var constantsFileTemplate = `// +build preset_{{.Name}}
+var constantsFileTemplate = `// +build {{.BuildConstraint}}
 
 package generated
 
-const PRESET_NAME string = "{{.Name}}"
-{{ range .Entries }}
+const PRESET_NAME string = "{{.Data.Name}}"
+{{ range .Data.Entries }}
 {{.}}
 {{ end }}`

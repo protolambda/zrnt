@@ -63,7 +63,7 @@ SSZ is provided by two components:
 Re-generate dynamic parts by running `go generate ./...` (make sure the needed configuration files are in `./presets/configs/`).
 
 By default, the `defaults.go` preset is used, which is selected if no other presets are,
-i.e. `!preset_mainnet !preset_minimal` if `mainnet` and `minimal` are the others.
+i.e. `!preset_mainnet,!preset_minimal` if `mainnet` and `minimal` are the others.
 
 For custom configuration, add a build-constraint (also known as "build tag") when building ZRNT or using it as a dependency:
 

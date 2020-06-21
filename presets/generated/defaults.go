@@ -1,4 +1,4 @@
-// +build !preset_mainnet !preset_minimal
+// +build !preset_mainnet,!preset_minimal
 
 package generated
 

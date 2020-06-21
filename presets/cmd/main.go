@@ -168,7 +168,7 @@ func main() {
 				}
 				preset := ConstantsPreset{
 					// when all other presets are not active, then use the default
-					BuildConstraint: "!preset_"+strings.Join(presetNames, " !preset_"),
+					BuildConstraint: "!preset_"+strings.Join(presetNames, ",!preset_"),
 					Data: presetData,
 				}
 				if err := templ.Execute(f, preset); err != nil {

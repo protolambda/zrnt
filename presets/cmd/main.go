@@ -20,7 +20,7 @@ type ContstantsPresetData struct {
 
 type ConstantsPreset struct {
 	BuildConstraint string
-	Data *ContstantsPresetData
+	Data            *ContstantsPresetData
 }
 
 // hex input should not be prefixed with 0x
@@ -152,8 +152,8 @@ func main() {
 				return err
 			}
 			preset := ConstantsPreset{
-				BuildConstraint: "preset_"+presetData.Name,
-				Data: presetData,
+				BuildConstraint: "preset_" + presetData.Name,
+				Data:            presetData,
 			}
 			if err := templ.Execute(f, preset); err != nil {
 				return err
@@ -168,8 +168,8 @@ func main() {
 				}
 				preset := ConstantsPreset{
 					// when all other presets are not active, then use the default
-					BuildConstraint: "!preset_"+strings.Join(presetNames, ",!preset_"),
-					Data: presetData,
+					BuildConstraint: "!preset_" + strings.Join(presetNames, ",!preset_"),
+					Data:            presetData,
 				}
 				if err := templ.Execute(f, preset); err != nil {
 					return err

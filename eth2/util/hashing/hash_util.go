@@ -44,7 +44,7 @@ type MerkleFn = htr.MerkleFn
 type NewMerkleFn func() MerkleFn
 
 type sha256Scratch struct {
-	inst hash.Hash
+	inst    hash.Hash
 	scratch [64]byte
 }
 

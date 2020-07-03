@@ -1,6 +1,7 @@
 package beacon
 
 import (
+	"encoding/hex"
 	"github.com/protolambda/zrnt/eth2/util/hashing"
 	"github.com/protolambda/zssz"
 	"github.com/protolambda/zssz/htr"
@@ -12,6 +13,10 @@ const VersionType = Bytes4Type
 // 32 bits, not strictly an integer, hence represented as 4 bytes
 // (bytes not necessarily corresponding to versions)
 type Version [4]byte
+
+func (v *Version) MarshalText() ([]byte, error) {
+	return []byte("0x"+hex.EncodeToString(v[:])), nil
+}
 
 func (v Version) ToUint32() uint32 {
 	return uint32(v[0])<<24 | uint32(v[1])<<16 | uint32(v[2])<<8 | uint32(v[3])
@@ -27,6 +32,10 @@ func AsVersion(v View, err error) (Version, error) {
 
 // A digest of the current fork data
 type ForkDigest [4]byte
+
+func (d *ForkDigest) MarshalText() ([]byte, error) {
+	return []byte("0x"+hex.EncodeToString(d[:])), nil
+}
 
 type ForkData struct {
 	CurrentVersion        Version

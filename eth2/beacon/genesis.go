@@ -148,7 +148,7 @@ func IsValidGenesisState(state *BeaconStateView) (bool, error) {
 	}
 
 	// outside of genesis we have this precomputed at all times. Just compute it manually this time.
-	activeCount := 0
+	activeCount := uint64(0)
 	{
 		validators, err := state.Validators()
 		if err != nil {

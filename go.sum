@@ -6,8 +6,8 @@ github.com/protolambda/messagediff v1.3.0 h1:wrtV08SSLxVWwuEDgLkqU1hquYcPhWT71lI
 github.com/protolambda/messagediff v1.3.0/go.mod h1:LboJp0EwIbJsePYpzh5Op/9G1/4mIztMRYzzwR0dR2M=
 github.com/protolambda/zssz v0.1.5 h1:7fjJjissZIIaa2QcvmhS/pZISMX21zVITt49sW1ouek=
 github.com/protolambda/zssz v0.1.5/go.mod h1:a4iwOX5FE7/JkKA+J/PH0Mjo9oXftN6P8NZyL28gpag=
-github.com/protolambda/ztyp v0.0.1 h1:rW8+XYVWp0rOlH/ot7H61crZKXbsj6T3ZT7MWX1tOAk=
-github.com/protolambda/ztyp v0.0.1/go.mod h1:u9yT4ioIokwlHrOfiZ52ezHfKdza3phxhTJix01vGgU=
+github.com/protolambda/ztyp v0.0.2 h1:swdBQqW5KV28qW6mt27jBXmwTF0qybw9v3mMyzZo6I0=
+github.com/protolambda/ztyp v0.0.2/go.mod h1:u9yT4ioIokwlHrOfiZ52ezHfKdza3phxhTJix01vGgU=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/yaml.v2 v2.2.2 h1:ZCJp+EgiOT7lHqUV2J862kp8Qj64Jo6az82+3Td9dZw=

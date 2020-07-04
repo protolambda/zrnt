@@ -1,4 +1,4 @@
-# ZRNT [![Go Report Card](https://goreportcard.com/badge/github.com/protolambda/zrnt?no-cache)](https://goreportcard.com/report/github.com/protolambda/zrnt) [![CircleCI Build Status](https://circleci.com/gh/protolambda/zrnt.svg?style=shield)](https://circleci.com/gh/protolambda/zrnt) [![codecov](https://codecov.io/gh/protolambda/zrnt/branch/master/graph/badge.svg?no-cache)](https://codecov.io/gh/protolambda/zrnt) [![MIT Licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+# ZRNT [![Go Report Card](https://goreportcard.com/badge/github.com/protolambda/zrnt?no-cache)](https://goreportcard.com/report/github.com/protolambda/zrnt) [![CircleCI Build Status](https://circleci.com/gh/protolambda/zrnt.svg?style=shield)](https://circleci.com/gh/protolambda/zrnt) [![MIT Licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 A minimal Go implementation of the ETH 2.0 spec, by @protolambda.
 
@@ -89,6 +89,9 @@ Instructions on the usage of these test-vectors with ZRNT can be found in the [t
 #### Coverage reports
 
 After running `make test`, run `make open-coverage` to open a Go-test coverage report in your browser.
+
+Note: half of the project consists of `if err != nil` due to tree-structure accesses that do not fit Go error handling well, thus low coverage.
+[![codecov](https://codecov.io/gh/protolambda/zrnt/branch/master/graph/badge.svg?no-cache)](https://codecov.io/gh/protolambda/zrnt) 
 
 ## Contributing
 

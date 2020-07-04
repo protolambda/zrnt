@@ -2,6 +2,8 @@ package beacon
 
 import (
 	"encoding/hex"
+	"errors"
+	"fmt"
 	"github.com/protolambda/zrnt/eth2/util/hashing"
 	"github.com/protolambda/zssz"
 	"github.com/protolambda/zssz/htr"
@@ -14,8 +16,26 @@ const VersionType = Bytes4Type
 // (bytes not necessarily corresponding to versions)
 type Version [4]byte
 
-func (v *Version) MarshalText() ([]byte, error) {
-	return []byte("0x"+hex.EncodeToString(v[:])), nil
+func (p Version) MarshalText() ([]byte, error) {
+	return []byte("0x" + hex.EncodeToString(p[:])), nil
+}
+
+func (p Version) String() string {
+	return "0x" + hex.EncodeToString(p[:])
+}
+
+func (p *Version) UnmarshalText(text []byte) error {
+	if p == nil {
+		return errors.New("cannot decode into nil Version")
+	}
+	if len(text) >= 2 && text[0] == '0' && (text[1] == 'x' || text[1] == 'X') {
+		text = text[2:]
+	}
+	if len(text) != 8 {
+		return fmt.Errorf("unexpected length string '%s'", string(text))
+	}
+	_, err := hex.Decode(p[:], text)
+	return err
 }
 
 func (v Version) ToUint32() uint32 {
@@ -33,8 +53,26 @@ func AsVersion(v View, err error) (Version, error) {
 // A digest of the current fork data
 type ForkDigest [4]byte
 
-func (d *ForkDigest) MarshalText() ([]byte, error) {
-	return []byte("0x"+hex.EncodeToString(d[:])), nil
+func (p ForkDigest) MarshalText() ([]byte, error) {
+	return []byte("0x" + hex.EncodeToString(p[:])), nil
+}
+
+func (p ForkDigest) String() string {
+	return "0x" + hex.EncodeToString(p[:])
+}
+
+func (p *ForkDigest) UnmarshalText(text []byte) error {
+	if p == nil {
+		return errors.New("cannot decode into nil Version")
+	}
+	if len(text) >= 2 && text[0] == '0' && (text[1] == 'x' || text[1] == 'X') {
+		text = text[2:]
+	}
+	if len(text) != 8 {
+		return fmt.Errorf("unexpected length string '%s'", string(text))
+	}
+	_, err := hex.Decode(p[:], text)
+	return err
 }
 
 type ForkData struct {

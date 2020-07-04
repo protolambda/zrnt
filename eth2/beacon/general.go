@@ -9,8 +9,6 @@ type Root = tree.Root
 
 const Bytes32Type = RootType
 
-type Bytes []byte
-
 type Shard Uint64View
 
 const ShardType = Uint64Type

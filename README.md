@@ -60,20 +60,26 @@ SSZ is provided by two components:
 
 ### Building
 
-Re-generate dynamic parts by running `go generate ./...` (make sure the needed configuration files are in `./presets/configs/`).
+ZRNT is a library, to use it in action, try [ZCLI](github.com/protolambda/zcli) or [Rumor](github.com/protolambda/rumor).
+
+#### Customizing configuration
+
+The common configurations are already included by default, no need to add or run anything if you just need `mainnet` or `minimal` spec.
+
+For custom configurations, add one or more configuration files to `./presets/configs/`.
+Then, re-generate the dynamic parts by running `go generate ./...`.
+
+#### Choosing a config
 
 By default, the `defaults.go` preset is used, which is selected if no other presets are,
 i.e. `!preset_mainnet,!preset_minimal` if `mainnet` and `minimal` are the others.
 
-For custom configuration, add a build-constraint (also known as "build tag") when building ZRNT or using it as a dependency:
+To make a specific configuration effective, add a build-constraint (also known as "build tag") when building ZRNT or using it as a dependency:
 
-```
-go build -tags preset_mainnet
-
-or
-
-go build -tags preset_minimal
-
+```shell script
+# Examples, Go commands are all consistent, something like:
+go test -tags preset_minimal ./...
+go build -tags preset_minimal ./...
 ```
 
 BLS can be turned off by adding the `bls_off` build tag (security warning: for testing use only!).

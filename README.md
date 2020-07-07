@@ -90,7 +90,8 @@ To run all tests and generate test and coverage reports: `make test`
 
 The specs are tested using test-vectors shared between Eth 2.0 clients,
  found here: [`ethereum/eth2.0-spec-tests`](https://github.com/ethereum/eth2.0-spec-tests).
-Instructions on the usage of these test-vectors with ZRNT can be found in the [testing readme](./tests/spec/README.md).
+Instructions on the usage of these test-vectors with ZRNT can be found in the [testing readme](./tests/spec/README.md)
+ (TLDR: run `make download-tests` first).
 
 #### Coverage reports
 

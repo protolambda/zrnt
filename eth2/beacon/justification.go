@@ -59,7 +59,7 @@ func (state *BeaconStateView) ProcessEpochJustification(ctx context.Context, epc
 
 	var newJustifiedCheckpoint *Checkpoint
 	// > Justification
-	if process.PrevEpochTargetStake*3 >= totalStake*2 {
+	if process.PrevEpochUnslashedStake.TargetStake*3 >= totalStake*2 {
 		root, err := state.GetBlockRoot(previousEpoch)
 		if err != nil {
 			return err
@@ -70,7 +70,7 @@ func (state *BeaconStateView) ProcessEpochJustification(ctx context.Context, epc
 		}
 		bits[0] |= 1 << 1
 	}
-	if process.CurrEpochTargetStake*3 >= totalStake*2 {
+	if process.CurrEpochUnslashedTargetStake*3 >= totalStake*2 {
 		root, err := state.GetBlockRoot(currentEpoch)
 		if err != nil {
 			return err

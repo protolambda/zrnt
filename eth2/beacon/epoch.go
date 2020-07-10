@@ -20,9 +20,8 @@ type EpochProcess struct {
 
 	TotalActiveStake Gwei
 
-	PrevEpochUnslashedStake EpochStakeSummary
-	PrevEpochTargetStake    Gwei
-	CurrEpochTargetStake    Gwei
+	PrevEpochUnslashedStake       EpochStakeSummary
+	CurrEpochUnslashedTargetStake Gwei
 
 	// Thanks to exit delay, this does not change within the epoch processing.
 	ActiveValidators uint64
@@ -272,11 +271,8 @@ func (state *BeaconStateView) PrepareEpochProcess(ctx context.Context, epc *Epoc
 				}
 			}
 		}
-		if status.Flags.HasMarkers(PrevTargetAttester) {
-			out.PrevEpochTargetStake += status.Validator.EffectiveBalance
-		}
-		if status.Flags.HasMarkers(CurrTargetAttester) {
-			out.CurrEpochTargetStake += status.Validator.EffectiveBalance
+		if status.Flags.HasMarkers(CurrTargetAttester | UnslashedAttester) {
+			out.CurrEpochUnslashedTargetStake += status.Validator.EffectiveBalance
 		}
 	}
 	if out.TotalActiveStake < EFFECTIVE_BALANCE_INCREMENT {
@@ -291,11 +287,8 @@ func (state *BeaconStateView) PrepareEpochProcess(ctx context.Context, epc *Epoc
 	if out.PrevEpochUnslashedStake.HeadStake < EFFECTIVE_BALANCE_INCREMENT {
 		out.PrevEpochUnslashedStake.HeadStake = EFFECTIVE_BALANCE_INCREMENT
 	}
-	if out.PrevEpochTargetStake < EFFECTIVE_BALANCE_INCREMENT {
-		out.PrevEpochTargetStake = EFFECTIVE_BALANCE_INCREMENT
-	}
-	if out.CurrEpochTargetStake < EFFECTIVE_BALANCE_INCREMENT {
-		out.CurrEpochTargetStake = EFFECTIVE_BALANCE_INCREMENT
+	if out.CurrEpochUnslashedTargetStake < EFFECTIVE_BALANCE_INCREMENT {
+		out.CurrEpochUnslashedTargetStake = EFFECTIVE_BALANCE_INCREMENT
 	}
 
 	return

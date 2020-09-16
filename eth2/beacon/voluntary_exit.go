@@ -9,7 +9,9 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
-var VoluntaryExitsType = ListType(SignedVoluntaryExitType, MAX_VOLUNTARY_EXITS)
+func (c *Phase0Config) BlockVoluntaryExits() ListTypeDef {
+	return ListType(c.SignedVoluntaryExit(), c.MAX_VOLUNTARY_EXITS)
+}
 
 type VoluntaryExits []SignedVoluntaryExit
 
@@ -50,15 +52,19 @@ type SignedVoluntaryExit struct {
 	Signature BLSSignature
 }
 
-var VoluntaryExitType = ContainerType("VoluntaryExit", []FieldDef{
-	{"epoch", EpochType}, // Earliest epoch when voluntary exit can be processed
-	{"validator_index", ValidatorIndexType},
-})
+func (c *Phase0Config) VoluntaryExit() *ContainerTypeDef {
+	return ContainerType("VoluntaryExit", []FieldDef{
+		{"epoch", EpochType}, // Earliest epoch when voluntary exit can be processed
+		{"validator_index", ValidatorIndexType},
+	})
+}
 
-var SignedVoluntaryExitType = ContainerType("SignedVoluntaryExit", []FieldDef{
-	{"message", VoluntaryExitType},
-	{"signature", BLSSignatureType},
-})
+func (c *Phase0Config) SignedVoluntaryExit() *ContainerTypeDef {
+	return ContainerType("SignedVoluntaryExit", []FieldDef{
+		{"message", c.VoluntaryExit()},
+		{"signature", BLSSignatureType},
+	})
+}
 
 func (state *BeaconStateView) ProcessVoluntaryExit(epc *EpochsContext, signedExit *SignedVoluntaryExit) error {
 	exit := &signedExit.Message

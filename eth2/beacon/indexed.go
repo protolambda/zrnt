@@ -11,7 +11,9 @@ import (
 
 type CommitteeIndices []ValidatorIndex
 
-var CommitteeIndicesType = ListType(ValidatorIndexType, MAX_VALIDATORS_PER_COMMITTEE)
+func (c *Phase0Config) CommitteeIndices() ListTypeDef {
+	return ListType(ValidatorIndexType, c.MAX_VALIDATORS_PER_COMMITTEE)
+}
 
 func (ci *CommitteeIndices) Limit() uint64 {
 	return MAX_VALIDATORS_PER_COMMITTEE
@@ -23,11 +25,13 @@ type IndexedAttestation struct {
 	Signature        BLSSignature
 }
 
-var IndexedAttestationType = ContainerType("IndexedAttestation", []FieldDef{
-	{"attesting_indices", CommitteeIndicesType},
-	{"data", AttestationDataType},
-	{"signature", BLSSignatureType},
-})
+func (c *Phase0Config) IndexedAttestation() *ContainerTypeDef {
+	return ContainerType("IndexedAttestation", []FieldDef{
+		{"attesting_indices", c.CommitteeIndices()},
+		{"data", AttestationDataType},
+		{"signature", BLSSignatureType},
+	})
+}
 
 // Verify validity of slashable_attestation fields.
 func (state *BeaconStateView) ValidateIndexedAttestation(epc *EpochsContext, indexedAttestation *IndexedAttestation) error {

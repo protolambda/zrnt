@@ -48,15 +48,17 @@ func (data *AttestationData) View() *AttestationDataView {
 	return &AttestationDataView{c}
 }
 
-var AttestationDataType = ContainerType("AttestationData", []FieldDef{
-	{"slot", SlotType},
-	{"index", CommitteeIndexType},
-	// LMD GHOST vote
-	{"beacon_block_root", RootType},
-	// FFG vote
-	{"source", CheckpointType},
-	{"target", CheckpointType},
-})
+func (c *Phase0Config) AttestationData() *ContainerTypeDef {
+	return ContainerType("AttestationData", []FieldDef{
+		{"slot", SlotType},
+		{"index", CommitteeIndexType},
+		// LMD GHOST vote
+		{"beacon_block_root", RootType},
+		// FFG vote
+		{"source", CheckpointType},
+		{"target", CheckpointType},
+	})
+}
 
 type AttestationDataView struct{ *ContainerView }
 
@@ -92,12 +94,14 @@ func AsAttestationData(v View, err error) (*AttestationDataView, error) {
 	return &AttestationDataView{c}, err
 }
 
-var PendingAttestationType = ContainerType("PendingAttestation", []FieldDef{
-	{"aggregation_bits", CommitteeBitsType},
-	{"data", AttestationDataType},
-	{"inclusion_delay", SlotType},
-	{"proposer_index", ValidatorIndexType},
-})
+func (c *Phase0Config) PendingAttestation() *ContainerTypeDef {
+	return ContainerType("PendingAttestation", []FieldDef{
+		{"aggregation_bits", c.CommitteeBits()},
+		{"data", c.AttestationData()},
+		{"inclusion_delay", SlotType},
+		{"proposer_index", ValidatorIndexType},
+	})
+}
 
 type PendingAttestationView struct{ *ContainerView }
 
@@ -138,7 +142,9 @@ func (*PendingAttestations) Limit() uint64 {
 	return MAX_ATTESTATIONS * uint64(SLOTS_PER_EPOCH)
 }
 
-var PendingAttestationsType = ComplexListType(PendingAttestationType, uint64(MAX_ATTESTATIONS*SLOTS_PER_EPOCH))
+func (c *Phase0Config) PendingAttestations() ListTypeDef {
+	return ComplexListType(c.PendingAttestation(), c.MAX_ATTESTATIONS*c.SLOTS_PER_EPOCH)
+}
 
 type PendingAttestationsView struct{ *ComplexListView }
 

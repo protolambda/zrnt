@@ -34,18 +34,22 @@ func (b *BeaconBlock) HashTreeRoot() Root {
 	return ssz.HashTreeRoot(b, BeaconBlockSSZ)
 }
 
-var BeaconBlockType = ContainerType("BeaconBlock", []FieldDef{
-	{"slot", SlotType},
-	{"proposer_index", ValidatorIndexType},
-	{"parent_root", RootType},
-	{"state_root", RootType},
-	{"body", BeaconBlockBodyType},
-})
+func (c *Phase0Config) BeaconBlock() *ContainerTypeDef {
+	return ContainerType("BeaconBlock", []FieldDef{
+		{"slot", SlotType},
+		{"proposer_index", ValidatorIndexType},
+		{"parent_root", RootType},
+		{"state_root", RootType},
+		{"body", c.BeaconBlockBody()},
+	})
+}
 
-var SignedBeaconBlockType = ContainerType("SignedBeaconBlock", []FieldDef{
-	{"message", BeaconBlockType},
-	{"signature", BLSSignatureType},
-})
+func (c *Phase0Config) SignedBeaconBlock() *ContainerTypeDef {
+	return ContainerType("SignedBeaconBlock", []FieldDef{
+		{"message", c.BeaconBlock()},
+		{"signature", BLSSignatureType},
+	})
+}
 
 func (block *BeaconBlock) Header() *BeaconBlockHeader {
 	return &BeaconBlockHeader{
@@ -75,14 +79,16 @@ func (b *BeaconBlockBody) HashTreeRoot() Root {
 	return ssz.HashTreeRoot(b, BeaconBlockBodySSZ)
 }
 
-var BeaconBlockBodyType = ContainerType("BeaconBlockBody", []FieldDef{
-	{"randao_reveal", BLSSignatureType},
-	{"eth1_data", Eth1DataType}, // Eth1 data vote
-	{"graffiti", Bytes32Type},   // Arbitrary data
-	// Operations
-	{"proposer_slashings", ProposerSlashingsType},
-	{"attester_slashings", AttesterSlashingsType},
-	{"attestations", AttestationsType},
-	{"deposits", DepositsType},
-	{"voluntary_exits", VoluntaryExitsType},
-})
+func (c *Phase0Config) BeaconBlockBody() *ContainerTypeDef {
+	return ContainerType("BeaconBlockBody", []FieldDef{
+		{"randao_reveal", BLSSignatureType},
+		{"eth1_data", c.Eth1Data()}, // Eth1 data vote
+		{"graffiti", Bytes32Type},   // Arbitrary data
+		// Operations
+		{"proposer_slashings", c.BlockProposerSlashings()},
+		{"attester_slashings", c.BlockAttesterSlashings()},
+		{"attestations", c.BlockAttestations()},
+		{"deposits", c.BlockDeposits()},
+		{"voluntary_exits", c.BlockVoluntaryExits()},
+	})
+}

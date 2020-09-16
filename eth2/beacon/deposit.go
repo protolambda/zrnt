@@ -12,12 +12,14 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
-var DepositDataType = ContainerType("DepositData", []FieldDef{
-	{"pubkey", BLSPubkeyType},
-	{"withdrawal_credentials", Bytes32Type},
-	{"amount", GweiType},
-	{"signature", BLSSignatureType},
-})
+func (c *Phase0Config) DepositData() *ContainerTypeDef {
+	return ContainerType("DepositData", []FieldDef{
+		{"pubkey", BLSPubkeyType},
+		{"withdrawal_credentials", Bytes32Type},
+		{"amount", GweiType},
+		{"signature", BLSSignatureType},
+	})
+}
 
 var DepositDataSSZ = zssz.GetSSZ((*DepositData)(nil))
 
@@ -58,12 +60,16 @@ type Deposit struct {
 	Data  DepositData
 }
 
-var DepositType = ContainerType("Deposit", []FieldDef{
-	{"proof", DepositProofType}, // Merkle path to deposit data list root
-	{"data", DepositDataType},
-})
+func (c *Phase0Config) Deposit() *ContainerTypeDef {
+	return ContainerType("Deposit", []FieldDef{
+		{"proof", DepositProofType}, // Merkle path to deposit data list root
+		{"data", c.DepositData()},
+	})
+}
 
-var DepositsType = ListType(DepositType, MAX_DEPOSITS)
+func (c *Phase0Config) BlockDeposits() ListTypeDef {
+	return ListType(c.Deposit(), c.MAX_DEPOSITS)
+}
 
 type Deposits []Deposit
 

@@ -47,6 +47,13 @@ var CheckpointType = ContainerType("Checkpoint", []FieldDef{
 	{"root", RootType},
 })
 
+func (c *Phase0Config) CheckPoint() *ContainerTypeDef {
+	return ContainerType("Checkpoint", []FieldDef{
+		{"epoch", EpochType},
+		{"root", RootType},
+	})
+}
+
 type CheckpointView struct {
 	*ContainerView
 }

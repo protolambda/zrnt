@@ -11,7 +11,9 @@ func (_ *ValidatorRegistry) Limit() uint64 {
 	return VALIDATOR_REGISTRY_LIMIT
 }
 
-var ValidatorsRegistryType = ComplexListType(ValidatorType, VALIDATOR_REGISTRY_LIMIT)
+func (c *Phase0Config) ValidatorsRegistry() ListTypeDef {
+	return ComplexListType(ValidatorType, c.VALIDATOR_REGISTRY_LIMIT)
+}
 
 type ValidatorsRegistryView struct{ *ComplexListView }
 

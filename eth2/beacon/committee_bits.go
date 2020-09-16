@@ -69,7 +69,9 @@ func (cb CommitteeBits) FilterNonParticipants(committee []ValidatorIndex) []Vali
 	return out
 }
 
-var CommitteeBitsType = BitListType(MAX_VALIDATORS_PER_COMMITTEE)
+func (c *Phase0Config) CommitteeBits() *BitListTypeDef {
+	return BitListType(c.MAX_VALIDATORS_PER_COMMITTEE)
+}
 
 type CommitteeBitsView struct {
 	*BitListView

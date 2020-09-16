@@ -12,7 +12,9 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
-var RandaoMixesType = VectorType(Bytes32Type, uint64(EPOCHS_PER_HISTORICAL_VECTOR))
+func (c *Phase0Config) RandaoMixes() VectorTypeDef {
+	return VectorType(Bytes32Type, c.EPOCHS_PER_HISTORICAL_VECTOR)
+}
 
 // Randomness and committees
 type RandaoMixesView struct{ *ComplexVectorView }

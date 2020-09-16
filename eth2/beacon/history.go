@@ -10,7 +10,9 @@ type HistoricalBatch struct {
 	StateRoots [SLOTS_PER_HISTORICAL_ROOT]Root
 }
 
-var BatchRootsType = VectorType(RootType, uint64(SLOTS_PER_HISTORICAL_ROOT))
+func (c *Phase0Config) BatchRoots() VectorTypeDef {
+	return VectorType(RootType, c.SLOTS_PER_HISTORICAL_ROOT)
+}
 
 type BatchRootsView struct{ *ComplexVectorView }
 
@@ -49,10 +51,12 @@ func (state *BeaconStateView) GetBlockRoot(epoch Epoch) (Root, error) {
 	return blockRoots.GetRoot(epoch.GetStartSlot())
 }
 
-var HistoricalBatchType = ContainerType("HistoricalBatch", []FieldDef{
-	{"block_roots", BatchRootsType},
-	{"state_roots", BatchRootsType},
-})
+func (c *Phase0Config) HistoricalBatch() *ContainerTypeDef {
+	return ContainerType("HistoricalBatch", []FieldDef{
+		{"block_roots", c.BatchRoots()},
+		{"state_roots", c.BatchRoots()},
+	})
+}
 
 type HistoricalBatchView struct{ *ContainerView }
 

@@ -9,13 +9,17 @@ import (
 	"sort"
 )
 
-var AttestationsType = ListType(AttestationType, MAX_ATTESTATIONS)
+func (c *Phase0Config) BlockAttestations() ListTypeDef {
+	return ListType(c.Attestation(), c.MAX_ATTESTATIONS)
+}
 
-var AttestationType = ContainerType("Attestation", []FieldDef{
-	{"aggregation_bits", CommitteeBitsType},
-	{"data", AttestationDataType},
-	{"signature", BLSSignatureType},
-})
+func (c *Phase0Config) Attestation() *ContainerTypeDef {
+	return ContainerType("Attestation", []FieldDef{
+		{"aggregation_bits", c.CommitteeBits()},
+		{"data", c.AttestationData()},
+		{"signature", BLSSignatureType},
+	})
+}
 
 var AttestationSSZ = zssz.GetSSZ((*Attestation)(nil))
 

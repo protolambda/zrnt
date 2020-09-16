@@ -30,12 +30,16 @@ type AttesterSlashing struct {
 	Attestation2 IndexedAttestation
 }
 
-var AttesterSlashingType = ContainerType("AttesterSlashing", []FieldDef{
-	{"attestation_1", IndexedAttestationType},
-	{"attestation_2", IndexedAttestationType},
-})
+func (c *Phase0Config) BlockAttesterSlashings() ListTypeDef {
+	return ListType(c.AttesterSlashing(), c.MAX_ATTESTER_SLASHINGS)
+}
 
-var AttesterSlashingsType = ListType(AttesterSlashingType, MAX_ATTESTER_SLASHINGS)
+func (c *Phase0Config) AttesterSlashing() *ContainerTypeDef {
+	return ContainerType("AttesterSlashing", []FieldDef{
+		{"attestation_1", c.IndexedAttestation()},
+		{"attestation_2", c.IndexedAttestation()},
+	})
+}
 
 type AttesterSlashings []AttesterSlashing
 

@@ -13,7 +13,9 @@ func (_ *Balances) Limit() uint64 {
 
 var RegistryBalancesSSZ = zssz.GetSSZ((*Balances)(nil))
 
-var RegistryBalancesType = BasicListType(GweiType, VALIDATOR_REGISTRY_LIMIT)
+func (c *Phase0Config) RegistryBalances() ListTypeDef {
+	return BasicListType(GweiType, c.VALIDATOR_REGISTRY_LIMIT)
+}
 
 type RegistryBalancesView struct {
 	*BasicListView

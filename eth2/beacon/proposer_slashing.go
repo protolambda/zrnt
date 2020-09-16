@@ -16,13 +16,16 @@ type ProposerSlashing struct {
 	SignedHeader2 SignedBeaconBlockHeader
 }
 
-// Beacon operations
-var ProposerSlashingType = ContainerType("ProposerSlashing", []FieldDef{
-	{"header_1", SignedBeaconBlockHeaderType},
-	{"header_2", SignedBeaconBlockHeaderType},
-})
+func (c *Phase0Config) ProposerSlashing() *ContainerTypeDef {
+	return ContainerType("ProposerSlashing", []FieldDef{
+		{"header_1", SignedBeaconBlockHeaderType},
+		{"header_2", SignedBeaconBlockHeaderType},
+	})
+}
 
-var ProposerSlashingsType = ListType(ProposerSlashingType, MAX_PROPOSER_SLASHINGS)
+func (c *Phase0Config) BlockProposerSlashings() ListTypeDef {
+	return ListType(c.ProposerSlashing(), c.MAX_PROPOSER_SLASHINGS)
+}
 
 type ProposerSlashings []ProposerSlashing
 

@@ -6,7 +6,9 @@ import (
 )
 
 // Balances slashed at every withdrawal period
-var SlashingsType = VectorType(GweiType, uint64(EPOCHS_PER_SLASHINGS_VECTOR))
+func (c *Phase0Config) Slashings() VectorTypeDef {
+	return VectorType(GweiType, c.EPOCHS_PER_SLASHINGS_VECTOR)
+}
 
 type SlashingsView struct{ *BasicVectorView }
 

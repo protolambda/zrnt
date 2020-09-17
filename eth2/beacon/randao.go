@@ -7,13 +7,12 @@ import (
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	. "github.com/protolambda/zrnt/eth2/util/hashing"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
-	"github.com/protolambda/zssz"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
 
 func (c *Phase0Config) RandaoMixes() VectorTypeDef {
-	return VectorType(Bytes32Type, c.EPOCHS_PER_HISTORICAL_VECTOR)
+	return VectorType(Bytes32Type, uint64(c.EPOCHS_PER_HISTORICAL_VECTOR))
 }
 
 // Randomness and committees
@@ -26,12 +25,12 @@ func AsRandaoMixes(v View, err error) (*RandaoMixesView, error) {
 
 // Provides a source of randomness for the state, for e.g. shuffling
 func (mixes *RandaoMixesView) GetRandomMix(epoch Epoch) (Root, error) {
-	i := uint64(epoch % EPOCHS_PER_HISTORICAL_VECTOR)
+	i := uint64(epoch) % mixes.VectorLength
 	return AsRoot(mixes.Get(i))
 }
 
 func (mixes *RandaoMixesView) SetRandomMix(epoch Epoch, mix Root) error {
-	i := uint64(epoch % EPOCHS_PER_HISTORICAL_VECTOR)
+	i := uint64(epoch) % mixes.VectorLength
 	r := RootView(mix)
 	return mixes.Set(i, &r)
 }
@@ -45,7 +44,7 @@ func (mixes *RandaoMixesView) PrepareRandao(epoch Epoch) error {
 	return mixes.SetRandomMix(epoch, prev)
 }
 
-func (mixes *RandaoMixesView) GetSeed(epoch Epoch, domainType BLSDomainType) (Root, error) {
+func (spec *Spec) GetSeed(mixes *RandaoMixesView, epoch Epoch, domainType BLSDomainType) (Root, error) {
 	buf := make([]byte, 4+8+32)
 
 	// domain type
@@ -55,7 +54,7 @@ func (mixes *RandaoMixesView) GetSeed(epoch Epoch, domainType BLSDomainType) (Ro
 	binary.LittleEndian.PutUint64(buf[4:4+8], uint64(epoch))
 
 	// Avoid underflow
-	mix, err := mixes.GetRandomMix(epoch + EPOCHS_PER_HISTORICAL_VECTOR - MIN_SEED_LOOKAHEAD - 1)
+	mix, err := mixes.GetRandomMix(epoch + spec.EPOCHS_PER_HISTORICAL_VECTOR - spec.MIN_SEED_LOOKAHEAD - 1)
 	if err != nil {
 		return Root{}, err
 	}
@@ -64,14 +63,14 @@ func (mixes *RandaoMixesView) GetSeed(epoch Epoch, domainType BLSDomainType) (Ro
 	return Hash(buf), nil
 }
 
-func SeedRandao(seed Root) (*RandaoMixesView, error) {
+func (spec *Spec) SeedRandao(seed Root) (*RandaoMixesView, error) {
 	filler := seed
-	length := uint64(EPOCHS_PER_HISTORICAL_VECTOR)
+	length := uint64(spec.EPOCHS_PER_HISTORICAL_VECTOR)
 	c, err := tree.SubtreeFillToLength(&filler, tree.CoverDepth(length), length)
 	if err != nil {
 		return nil, err
 	}
-	v, err := RandaoMixesType.ViewFromBacking(c, nil)
+	v, err := spec.RandaoMixes().ViewFromBacking(c, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -82,9 +81,7 @@ func SeedRandao(seed Root) (*RandaoMixesView, error) {
 	return &RandaoMixesView{ComplexVectorView: vecView}, nil
 }
 
-var RandaoEpochSSZ = zssz.GetSSZ((*Epoch)(nil))
-
-func (state *BeaconStateView) ProcessRandaoReveal(ctx context.Context, epc *EpochsContext, reveal BLSSignature) error {
+func (spec *Spec) ProcessRandaoReveal(ctx context.Context, epc *EpochsContext, state *BeaconStateView, reveal BLSSignature) error {
 	select {
 	case <-ctx.Done():
 		return TransitionCancelErr
@@ -103,8 +100,8 @@ func (state *BeaconStateView) ProcessRandaoReveal(ctx context.Context, epc *Epoc
 	if !ok {
 		return errors.New("could not find pubkey of proposer")
 	}
-	epoch := slot.ToEpoch()
-	domain, err := state.GetDomain(DOMAIN_RANDAO, epoch)
+	epoch := spec.SlotToEpoch(slot)
+	domain, err := state.GetDomain(spec.DOMAIN_RANDAO, epoch)
 	if err != nil {
 		return err
 	}
@@ -128,5 +125,5 @@ func (state *BeaconStateView) ProcessRandaoReveal(ctx context.Context, epc *Epoc
 		return err
 	}
 	mix := XorBytes32(randMix, Hash(reveal[:]))
-	return mixes.SetRandomMix(epoch%EPOCHS_PER_HISTORICAL_VECTOR, mix)
+	return mixes.SetRandomMix(epoch, mix)
 }

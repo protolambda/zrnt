@@ -8,7 +8,7 @@ import (
 	"sync"
 )
 
-func (state *BeaconStateView) computeProposerIndex(indices []ValidatorIndex, seed Root) (ValidatorIndex, error) {
+func (spec *Spec) computeProposerIndex(state *BeaconStateView, indices []ValidatorIndex, seed Root) (ValidatorIndex, error) {
 	if len(indices) == 0 {
 		return 0, errors.New("no validators available to compute proposer")
 	}
@@ -26,7 +26,7 @@ func (state *BeaconStateView) computeProposerIndex(indices []ValidatorIndex, see
 		for j := uint64(0); j < 32; j++ {
 			randomByte := h[j]
 			absI := ValidatorIndex(((i << 5) | j) % uint64(len(indices)))
-			shuffledI := PermuteIndex(absI, uint64(len(indices)), seed)
+			shuffledI := PermuteIndex(spec.SHUFFLE_ROUND_COUNT, absI, uint64(len(indices)), seed)
 			candidateIndex := indices[int(shuffledI)]
 			validator, err := registry.Validator(candidateIndex)
 			if err != nil {
@@ -36,7 +36,7 @@ func (state *BeaconStateView) computeProposerIndex(indices []ValidatorIndex, see
 			if err != nil {
 				return 0, err
 			}
-			if effectiveBalance*0xff >= MAX_EFFECTIVE_BALANCE*Gwei(randomByte) {
+			if effectiveBalance*0xff >= spec.MAX_EFFECTIVE_BALANCE*Gwei(randomByte) {
 				return candidateIndex, nil
 			}
 		}
@@ -248,9 +248,11 @@ func (pc *PubkeyCache) AddValidator(index ValidatorIndex, pub BLSPubkey) (*Pubke
 }
 
 type EpochsContext struct {
+	Spec *Spec
 	// PubkeyCache may be replaced when a new forked-out cache takes over to process an alternative Eth1 deposit chain.
 	PubkeyCache *PubkeyCache
-	Proposers   *[SLOTS_PER_EPOCH]ValidatorIndex
+	// Proposers is a slice of SLOTS_PER_EPOCH proposer indices for the current epoch
+	Proposers   []ValidatorIndex
 
 	PreviousEpoch *ShufflingEpoch
 	CurrentEpoch  *ShufflingEpoch
@@ -258,12 +260,13 @@ type EpochsContext struct {
 }
 
 // NewEpochsContext constructs a new context for the processing of the current epoch.
-func (state *BeaconStateView) NewEpochsContext() (*EpochsContext, error) {
+func (spec *Spec) NewEpochsContext(state *BeaconStateView) (*EpochsContext, error) {
 	pc, err := NewPubkeyCache(state)
 	if err != nil {
 		return nil, err
 	}
 	epc := &EpochsContext{
+		Spec: spec,
 		PubkeyCache: pc,
 	}
 	if err := epc.LoadShuffling(state); err != nil {
@@ -284,8 +287,8 @@ func (epc *EpochsContext) LoadShuffling(state *BeaconStateView) error {
 	if err != nil {
 		return err
 	}
-	currentEpoch := slot.ToEpoch()
-	epc.CurrentEpoch, err = state.ShufflingEpoch(indicesBounded, currentEpoch)
+	currentEpoch := epc.Spec.SlotToEpoch(slot)
+	epc.CurrentEpoch, err = epc.Spec.ShufflingEpoch(state, indicesBounded, currentEpoch)
 	if err != nil {
 		return err
 	}
@@ -293,12 +296,12 @@ func (epc *EpochsContext) LoadShuffling(state *BeaconStateView) error {
 	if prevEpoch == currentEpoch { // in case of genesis
 		epc.PreviousEpoch = epc.CurrentEpoch
 	} else {
-		epc.PreviousEpoch, err = state.ShufflingEpoch(indicesBounded, prevEpoch)
+		epc.PreviousEpoch, err = epc.Spec.ShufflingEpoch(state, indicesBounded, prevEpoch)
 		if err != nil {
 			return err
 		}
 	}
-	epc.NextEpoch, err = state.ShufflingEpoch(indicesBounded, currentEpoch+1)
+	epc.NextEpoch, err = epc.Spec.ShufflingEpoch(state, indicesBounded, currentEpoch+1)
 	if err != nil {
 		return err
 	}
@@ -316,23 +319,23 @@ func (epc *EpochsContext) LoadProposers(state *BeaconStateView) error {
 }
 
 func (epc *EpochsContext) resetProposers(state *BeaconStateView) error {
-	epc.Proposers = &[SLOTS_PER_EPOCH]ValidatorIndex{}
+	epc.Proposers = make([]ValidatorIndex, epc.Spec.SLOTS_PER_EPOCH, epc.Spec.SLOTS_PER_EPOCH)
 	mixes, err := state.RandaoMixes()
 	if err != nil {
 		return err
 	}
-	epochSeed, err := mixes.GetSeed(epc.CurrentEpoch.Epoch, DOMAIN_BEACON_PROPOSER)
+	epochSeed, err := epc.Spec.GetSeed(mixes, epc.CurrentEpoch.Epoch, epc.Spec.DOMAIN_BEACON_PROPOSER)
 	if err != nil {
 		return err
 	}
-	slot := epc.CurrentEpoch.Epoch.GetStartSlot()
+	slot := epc.Spec.EpochStartSlot(epc.CurrentEpoch.Epoch)
 	hFn := hashing.GetHashFn()
 	var buf [32 + 8]byte
 	copy(buf[0:32], epochSeed[:])
-	for i := Slot(0); i < SLOTS_PER_EPOCH; i++ {
+	for i := Slot(0); i < epc.Spec.SLOTS_PER_EPOCH; i++ {
 		binary.LittleEndian.PutUint64(buf[32:], uint64(slot))
 		seed := hFn(buf[:])
-		proposer, err := state.computeProposerIndex(epc.CurrentEpoch.ActiveIndices, seed)
+		proposer, err := epc.Spec.computeProposerIndex(state, epc.CurrentEpoch.ActiveIndices, seed)
 		if err != nil {
 			return err
 		}
@@ -357,7 +360,7 @@ func (epc *EpochsContext) RotateEpochs(state *BeaconStateView) error {
 	if err != nil {
 		return err
 	}
-	epc.NextEpoch, err = state.ShufflingEpoch(indicesBounded, nextEpoch)
+	epc.NextEpoch, err = epc.Spec.ShufflingEpoch(state, indicesBounded, nextEpoch)
 	if err != nil {
 		return err
 	}
@@ -365,8 +368,8 @@ func (epc *EpochsContext) RotateEpochs(state *BeaconStateView) error {
 }
 
 func (epc *EpochsContext) getSlotComms(slot Slot) ([][]ValidatorIndex, error) {
-	epoch := slot.ToEpoch()
-	epochSlot := slot % SLOTS_PER_EPOCH
+	epoch := epc.Spec.SlotToEpoch(slot)
+	epochSlot := slot % epc.Spec.SLOTS_PER_EPOCH
 	if epoch == epc.PreviousEpoch.Epoch {
 		return epc.PreviousEpoch.Committees[epochSlot], nil
 	} else if epoch == epc.CurrentEpoch.Epoch {
@@ -380,7 +383,7 @@ func (epc *EpochsContext) getSlotComms(slot Slot) ([][]ValidatorIndex, error) {
 
 // Return the beacon committee at slot for index.
 func (epc *EpochsContext) GetBeaconCommittee(slot Slot, index CommitteeIndex) ([]ValidatorIndex, error) {
-	if index >= MAX_COMMITTEES_PER_SLOT {
+	if index >= CommitteeIndex(epc.Spec.MAX_COMMITTEES_PER_SLOT) {
 		return nil, fmt.Errorf("beacon committee retrieval: out of range committee index: %d", index)
 	}
 
@@ -401,9 +404,9 @@ func (epc *EpochsContext) GetCommitteeCountAtSlot(slot Slot) (uint64, error) {
 }
 
 func (epc *EpochsContext) GetBeaconProposer(slot Slot) (ValidatorIndex, error) {
-	epoch := slot.ToEpoch()
+	epoch := epc.Spec.SlotToEpoch(slot)
 	if epoch != epc.CurrentEpoch.Epoch {
 		return 0, fmt.Errorf("expected epoch %d for proposer lookup, but lookup was at slot %d (epoch %d)", epc.CurrentEpoch.Epoch, slot, epoch)
 	}
-	return epc.Proposers[slot%SLOTS_PER_EPOCH], nil
+	return epc.Proposers[slot%epc.Spec.SLOTS_PER_EPOCH], nil
 }

@@ -4,11 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/protolambda/zssz"
 	. "github.com/protolambda/ztyp/view"
 )
 
-func (state *BeaconStateView) ProcessAttesterSlashings(ctx context.Context, epc *EpochsContext, ops []AttesterSlashing) error {
+func (spec *Spec) ProcessAttesterSlashings(ctx context.Context, epc *EpochsContext, state *BeaconStateView, ops []AttesterSlashing) error {
 	for i := range ops {
 		select {
 		case <-ctx.Done():
@@ -16,14 +15,12 @@ func (state *BeaconStateView) ProcessAttesterSlashings(ctx context.Context, epc 
 		default: // Don't block.
 			break
 		}
-		if err := state.ProcessAttesterSlashing(epc, &ops[i]); err != nil {
+		if err := spec.ProcessAttesterSlashing(state, epc, &ops[i]); err != nil {
 			return err
 		}
 	}
 	return nil
 }
-
-var AttesterSlashingSSZ = zssz.GetSSZ((*AttesterSlashing)(nil))
 
 type AttesterSlashing struct {
 	Attestation1 IndexedAttestation
@@ -43,11 +40,7 @@ func (c *Phase0Config) AttesterSlashing() *ContainerTypeDef {
 
 type AttesterSlashings []AttesterSlashing
 
-func (*AttesterSlashings) Limit() uint64 {
-	return MAX_ATTESTER_SLASHINGS
-}
-
-func (state *BeaconStateView) ProcessAttesterSlashing(epc *EpochsContext, attesterSlashing *AttesterSlashing) error {
+func (spec *Spec) ProcessAttesterSlashing(state *BeaconStateView, epc *EpochsContext, attesterSlashing *AttesterSlashing) error {
 	sa1 := &attesterSlashing.Attestation1
 	sa2 := &attesterSlashing.Attestation2
 
@@ -55,10 +48,10 @@ func (state *BeaconStateView) ProcessAttesterSlashing(epc *EpochsContext, attest
 		return errors.New("attester slashing has no valid reasoning")
 	}
 
-	if err := state.ValidateIndexedAttestation(epc, sa1); err != nil {
+	if err := spec.ValidateIndexedAttestation(epc, state, sa1); err != nil {
 		return errors.New("attestation 1 of attester slashing cannot be verified")
 	}
-	if err := state.ValidateIndexedAttestation(epc, sa2); err != nil {
+	if err := spec.ValidateIndexedAttestation(epc, state, sa2); err != nil {
 		return errors.New("attestation 2 of attester slashing cannot be verified")
 	}
 
@@ -83,10 +76,10 @@ func (state *BeaconStateView) ProcessAttesterSlashing(epc *EpochsContext, attest
 			errorAny = err
 			return
 		}
-		if slashable, err := validator.IsSlashable(currentEpoch); err != nil {
+		if slashable, err := spec.IsSlashable(validator, currentEpoch); err != nil {
 			errorAny = err
 		} else if slashable {
-			if err := state.SlashValidator(epc, i, nil); err != nil {
+			if err := spec.SlashValidator(epc, state, i, nil); err != nil {
 				errorAny = err
 			} else {
 				slashedAny = true

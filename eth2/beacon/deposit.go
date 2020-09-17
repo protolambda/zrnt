@@ -21,8 +21,6 @@ func (c *Phase0Config) DepositData() *ContainerTypeDef {
 	})
 }
 
-var DepositDataSSZ = zssz.GetSSZ((*DepositData)(nil))
-
 type DepositData struct {
 	Pubkey                BLSPubkey
 	WithdrawalCredentials Root
@@ -53,8 +51,6 @@ type DepositMessage struct {
 
 var DepositProofType = VectorType(Bytes32Type, DEPOSIT_CONTRACT_TREE_DEPTH+1)
 
-var DepositSSZ = zssz.GetSSZ((*Deposit)(nil))
-
 type Deposit struct {
 	Proof [DEPOSIT_CONTRACT_TREE_DEPTH + 1]Root // Merkle-path to deposit root
 	Data  DepositData
@@ -73,13 +69,9 @@ func (c *Phase0Config) BlockDeposits() ListTypeDef {
 
 type Deposits []Deposit
 
-func (*Deposits) Limit() uint64 {
-	return MAX_DEPOSITS
-}
-
 // Verify that outstanding deposits are processed up to the maximum number of deposits, then process all in order.
-func (state *BeaconStateView) ProcessDeposits(ctx context.Context, epc *EpochsContext, ops []Deposit) error {
-	inputCount := DepositIndex(len(ops))
+func (spec *Spec) ProcessDeposits(ctx context.Context, epc *EpochsContext, state *BeaconStateView, ops []Deposit) error {
+	inputCount := uint64(len(ops))
 	eth1Data, err := state.Eth1Data()
 	if err != nil {
 		return err
@@ -92,9 +84,10 @@ func (state *BeaconStateView) ProcessDeposits(ctx context.Context, epc *EpochsCo
 	if err != nil {
 		return err
 	}
-	expectedInputCount := depCount - depIndex
-	if expectedInputCount > MAX_DEPOSITS {
-		expectedInputCount = MAX_DEPOSITS
+	// state deposit count and deposit index are trusted not to underflow
+	expectedInputCount := uint64(depCount - depIndex)
+	if expectedInputCount > spec.MAX_DEPOSITS {
+		expectedInputCount = spec.MAX_DEPOSITS
 	}
 	if inputCount != expectedInputCount {
 		return errors.New("block does not contain expected deposits amount")
@@ -107,7 +100,7 @@ func (state *BeaconStateView) ProcessDeposits(ctx context.Context, epc *EpochsCo
 		default: // Don't block.
 			break
 		}
-		if err := state.ProcessDeposit(epc, &ops[i], false); err != nil {
+		if err := spec.ProcessDeposit(epc, state, &ops[i], false); err != nil {
 			return err
 		}
 	}
@@ -115,7 +108,7 @@ func (state *BeaconStateView) ProcessDeposits(ctx context.Context, epc *EpochsCo
 }
 
 // Process an Eth1 deposit, registering a validator or increasing its balance.
-func (state *BeaconStateView) ProcessDeposit(epc *EpochsContext, dep *Deposit, ignoreSignatureAndProof bool) error {
+func (spec *Spec) ProcessDeposit(epc *EpochsContext, state *BeaconStateView, dep *Deposit, ignoreSignatureAndProof bool) error {
 	depositIndex, err := state.DepositIndex()
 	if err != nil {
 		return err
@@ -173,7 +166,7 @@ func (state *BeaconStateView) ProcessDeposit(epc *EpochsContext, dep *Deposit, i
 			ComputeSigningRoot(
 				dep.Data.MessageRoot(),
 				// Fork-agnostic domain since deposits are valid across forks
-				ComputeDomain(DOMAIN_DEPOSIT, GENESIS_FORK_VERSION, Root{})),
+				ComputeDomain(spec.DOMAIN_DEPOSIT, spec.GENESIS_FORK_VERSION, Root{})),
 			dep.Data.Signature) {
 			// invalid signatures are OK,
 			// the depositor will not receive anything because of their mistake,
@@ -185,9 +178,9 @@ func (state *BeaconStateView) ProcessDeposit(epc *EpochsContext, dep *Deposit, i
 		balance := dep.Data.Amount
 		withdrawalCreds := dep.Data.WithdrawalCredentials
 		pubkey := dep.Data.Pubkey
-		effBalance := balance - (balance % EFFECTIVE_BALANCE_INCREMENT)
-		if effBalance > MAX_EFFECTIVE_BALANCE {
-			effBalance = MAX_EFFECTIVE_BALANCE
+		effBalance := balance - (balance % spec.EFFECTIVE_BALANCE_INCREMENT)
+		if effBalance > spec.MAX_EFFECTIVE_BALANCE {
+			effBalance = spec.MAX_EFFECTIVE_BALANCE
 		}
 		validatorRaw := Validator{
 			Pubkey:                     pubkey,

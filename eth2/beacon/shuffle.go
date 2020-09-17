@@ -30,24 +30,27 @@ Eth 2.0 spec implementation here:
 
 // PermuteIndex shuffles an individual list item without allocating a complete list.
 // Returns the index in the would-be shuffled list.
-func PermuteIndex(index ValidatorIndex, listSize uint64, seed Root) ValidatorIndex {
-	return innerPermuteIndex(Hash, index, listSize, seed, true)
+func PermuteIndex(rounds uint8, index ValidatorIndex, listSize uint64, seed Root) ValidatorIndex {
+	return innerPermuteIndex(Hash, rounds, index, listSize, seed, true)
 }
 
 // UnpermuteIndex does the inverse of PermuteIndex,
 // it returns the original index when given the same shuffling context parameters and permuted index.
-func UnpermuteIndex(index ValidatorIndex, listSize uint64, seed Root) ValidatorIndex {
-	return innerPermuteIndex(Hash, index, listSize, seed, false)
+func UnpermuteIndex(rounds uint8, index ValidatorIndex, listSize uint64, seed Root) ValidatorIndex {
+	return innerPermuteIndex(Hash, rounds, index, listSize, seed, false)
 }
 
-func innerPermuteIndex(hashFn HashFn, input ValidatorIndex, listSize uint64, seed Root, dir bool) ValidatorIndex {
+func innerPermuteIndex(hashFn HashFn, rounds uint8, input ValidatorIndex, listSize uint64, seed Root, dir bool) ValidatorIndex {
+	if rounds == 0 {
+		return input
+	}
 	index := uint64(input)
 	buf := make([]byte, hTotalSize, hTotalSize)
 	r := uint8(0)
 	if !dir {
 		// Start at last round.
 		// Iterating through the rounds in reverse, un-swaps everything, effectively un-shuffling the list.
-		r = SHUFFLE_ROUND_COUNT - 1
+		r = rounds - 1
 	}
 	// Seed is always the first 32 bytes of the hash input, we never have to change this part of the buffer.
 	copy(buf[:hSeedSize], seed[:])
@@ -94,7 +97,7 @@ func innerPermuteIndex(hashFn HashFn, input ValidatorIndex, listSize uint64, see
 		if dir {
 			// -> shuffle
 			r++
-			if r == SHUFFLE_ROUND_COUNT {
+			if r == rounds {
 				break
 			}
 		} else {
@@ -147,20 +150,20 @@ Main differences, implemented by @protolambda:
 */
 
 // ShuffleList shuffles a list, using the given seed for randomness.
-func ShuffleList(input []ValidatorIndex, seed Root) {
+func ShuffleList(rounds uint8, input []ValidatorIndex, seed Root) {
 	hashFn := GetHashFn()
-	innerShuffleList(hashFn, input, seed, true)
+	innerShuffleList(hashFn, rounds, input, seed, true)
 }
 
 // UnshuffleList undoes a list shuffling using the seed of the shuffling.
-func UnshuffleList(input []ValidatorIndex, seed Root) {
+func UnshuffleList(rounds uint8, input []ValidatorIndex, seed Root) {
 	hashFn := GetHashFn()
-	innerShuffleList(hashFn, input, seed, false)
+	innerShuffleList(hashFn, rounds, input, seed, false)
 }
 
 // Shuffles or unshuffles, depending on the `dir` (true for shuffling, false for unshuffling
-func innerShuffleList(hashFn HashFn, input []ValidatorIndex, seed Root, dir bool) {
-	if len(input) <= 1 {
+func innerShuffleList(hashFn HashFn, rounds uint8, input []ValidatorIndex, seed Root, dir bool) {
+	if len(input) <= 1 || rounds == 0 {
 		// nothing to (un)shuffle
 		return
 	}
@@ -170,7 +173,7 @@ func innerShuffleList(hashFn HashFn, input []ValidatorIndex, seed Root, dir bool
 	if !dir {
 		// Start at last round.
 		// Iterating through the rounds in reverse, un-swaps everything, effectively un-shuffling the list.
-		r = SHUFFLE_ROUND_COUNT - 1
+		r = rounds - 1
 	}
 	// Seed is always the first 32 bytes of the hash input, we never have to change this part of the buffer.
 	copy(buf[:hSeedSize], seed[:])
@@ -259,7 +262,7 @@ func innerShuffleList(hashFn HashFn, input []ValidatorIndex, seed Root, dir bool
 		if dir {
 			// -> shuffle
 			r++
-			if r == SHUFFLE_ROUND_COUNT {
+			if r == rounds {
 				break
 			}
 		} else {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/protolambda/zssz"
 	. "github.com/protolambda/ztyp/view"
 	"sort"
 )
@@ -21,8 +20,6 @@ func (c *Phase0Config) Attestation() *ContainerTypeDef {
 	})
 }
 
-var AttestationSSZ = zssz.GetSSZ((*Attestation)(nil))
-
 type Attestation struct {
 	AggregationBits CommitteeBits
 	Data            AttestationData
@@ -31,11 +28,8 @@ type Attestation struct {
 
 type Attestations []Attestation
 
-func (*Attestations) Limit() uint64 {
-	return MAX_ATTESTATIONS
-}
 
-func (state *BeaconStateView) ProcessAttestations(ctx context.Context, epc *EpochsContext, ops []Attestation) error {
+func (spec *Spec) ProcessAttestations(ctx context.Context, epc *EpochsContext, state *BeaconStateView, ops []Attestation) error {
 	for i := range ops {
 		select {
 		case <-ctx.Done():
@@ -43,14 +37,14 @@ func (state *BeaconStateView) ProcessAttestations(ctx context.Context, epc *Epoc
 		default: // Don't block.
 			break
 		}
-		if err := state.ProcessAttestation(epc, &ops[i]); err != nil {
+		if err := spec.ProcessAttestation(state, epc, &ops[i]); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (state *BeaconStateView) ProcessAttestation(epc *EpochsContext, attestation *Attestation) error {
+func (spec *Spec) ProcessAttestation(state *BeaconStateView, epc *EpochsContext, attestation *Attestation) error {
 	data := &attestation.Data
 
 	// Check slot
@@ -58,14 +52,14 @@ func (state *BeaconStateView) ProcessAttestation(epc *EpochsContext, attestation
 	if err != nil {
 		return err
 	}
-	if !(currentSlot <= data.Slot+SLOTS_PER_EPOCH) {
+	if !(currentSlot <= data.Slot+spec.SLOTS_PER_EPOCH) {
 		return errors.New("attestation slot is too old")
 	}
-	if !(data.Slot+MIN_ATTESTATION_INCLUSION_DELAY <= currentSlot) {
+	if !(data.Slot+spec.MIN_ATTESTATION_INCLUSION_DELAY <= currentSlot) {
 		return errors.New("attestation is too new")
 	}
 
-	currentEpoch := currentSlot.ToEpoch()
+	currentEpoch := spec.SlotToEpoch(currentSlot)
 	previousEpoch := currentEpoch.Previous()
 
 	// Check target
@@ -75,7 +69,7 @@ func (state *BeaconStateView) ProcessAttestation(epc *EpochsContext, attestation
 		return errors.New("attestation data is invalid, target is in future")
 	}
 	// And if it matches the slot
-	if data.Target.Epoch != data.Slot.ToEpoch() {
+	if data.Target.Epoch != spec.SlotToEpoch(data.Slot) {
 		return errors.New("attestation data is invalid, slot epoch does not match target epoch")
 	}
 
@@ -120,7 +114,7 @@ func (state *BeaconStateView) ProcessAttestation(epc *EpochsContext, attestation
 	}
 	if indexedAtt, err := attestation.ConvertToIndexed(committee); err != nil {
 		return fmt.Errorf("attestation could not be converted to an indexed attestation: %v", err)
-	} else if err := state.ValidateIndexedAttestation(epc, indexedAtt); err != nil {
+	} else if err := spec.ValidateIndexedAttestation(epc, state, indexedAtt); err != nil {
 		return fmt.Errorf("attestation could not be verified in its indexed form: %v", err)
 	}
 

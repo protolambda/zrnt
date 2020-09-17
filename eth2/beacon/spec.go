@@ -50,21 +50,21 @@ type Phase0Config struct {
 	BLS_WITHDRAWAL_PREFIX [1]byte
 
 	// Time parameters
-	GENESIS_DELAY                       uint64
-	SECONDS_PER_SLOT                    uint64
-	MIN_ATTESTATION_INCLUSION_DELAY     uint64
-	SLOTS_PER_EPOCH                     uint64
-	MIN_SEED_LOOKAHEAD                  uint64
-	MAX_SEED_LOOKAHEAD                  uint64
-	EPOCHS_PER_ETH1_VOTING_PERIOD       uint64
-	SLOTS_PER_HISTORICAL_ROOT           uint64
-	MIN_VALIDATOR_WITHDRAWABILITY_DELAY uint64
-	SHARD_COMMITTEE_PERIOD              uint64
-	MIN_EPOCHS_TO_INACTIVITY_PENALTY    uint64
+	GENESIS_DELAY                       Timestamp
+	SECONDS_PER_SLOT                    Timestamp
+	MIN_ATTESTATION_INCLUSION_DELAY     Slot
+	SLOTS_PER_EPOCH                     Slot
+	MIN_SEED_LOOKAHEAD                  Epoch
+	MAX_SEED_LOOKAHEAD                  Epoch
+	EPOCHS_PER_ETH1_VOTING_PERIOD       Epoch
+	SLOTS_PER_HISTORICAL_ROOT           Slot
+	MIN_VALIDATOR_WITHDRAWABILITY_DELAY Epoch
+	SHARD_COMMITTEE_PERIOD              Epoch
+	MIN_EPOCHS_TO_INACTIVITY_PENALTY    Epoch
 
 	// State vector lengths
-	EPOCHS_PER_HISTORICAL_VECTOR uint64
-	EPOCHS_PER_SLASHINGS_VECTOR  uint64
+	EPOCHS_PER_HISTORICAL_VECTOR Epoch
+	EPOCHS_PER_SLASHINGS_VECTOR  Epoch
 	HISTORICAL_ROOTS_LIMIT       uint64
 	VALIDATOR_REGISTRY_LIMIT     uint64
 
@@ -83,13 +83,13 @@ type Phase0Config struct {
 	MAX_VOLUNTARY_EXITS    uint64
 
 	// Signature domains
-	DOMAIN_BEACON_PROPOSER     BLSDomain
-	DOMAIN_BEACON_ATTESTER     BLSDomain
-	DOMAIN_RANDAO              BLSDomain
-	DOMAIN_DEPOSIT             BLSDomain
-	DOMAIN_VOLUNTARY_EXIT      BLSDomain
-	DOMAIN_SELECTION_PROOF     BLSDomain
-	DOMAIN_AGGREGATE_AND_PROOF BLSDomain
+	DOMAIN_BEACON_PROPOSER     BLSDomainType
+	DOMAIN_BEACON_ATTESTER     BLSDomainType
+	DOMAIN_RANDAO              BLSDomainType
+	DOMAIN_DEPOSIT             BLSDomainType
+	DOMAIN_VOLUNTARY_EXIT      BLSDomainType
+	DOMAIN_SELECTION_PROOF     BLSDomainType
+	DOMAIN_AGGREGATE_AND_PROOF BLSDomainType
 }
 
 type Phase1Config struct {
@@ -123,14 +123,14 @@ type Phase1Config struct {
 	MAX_CUSTODY_CHUNK_CHALLENGE_RECORDS uint64
 
 	// Domain types
-	DOMAIN_SHARD_PROPOSAL  BLSDomain
-	DOMAIN_SHARD_COMMITTEE BLSDomain
-	DOMAIN_LIGHT_CLIENT    BLSDomain
+	DOMAIN_SHARD_PROPOSAL  BLSDomainType
+	DOMAIN_SHARD_COMMITTEE BLSDomainType
+	DOMAIN_LIGHT_CLIENT    BLSDomainType
 
 	// custody-game domains
-	DOMAIN_CUSTODY_BIT_SLASHING      BLSDomain
-	DOMAIN_LIGHT_SELECTION_PROOF     BLSDomain
-	DOMAIN_LIGHT_AGGREGATE_AND_PROOF BLSDomain
+	DOMAIN_CUSTODY_BIT_SLASHING      BLSDomainType
+	DOMAIN_LIGHT_SELECTION_PROOF     BLSDomainType
+	DOMAIN_LIGHT_AGGREGATE_AND_PROOF BLSDomainType
 
 	// Custody game
 	RANDAO_PENALTY_EPOCHS                          uint64
@@ -157,6 +157,7 @@ type Phase1Config struct {
 }
 
 type Spec struct {
+	PRESET_NAME string
 	Phase0Config
 	Phase1Config
 }

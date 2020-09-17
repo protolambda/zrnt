@@ -15,11 +15,7 @@ func (c *Phase0Config) BlockVoluntaryExits() ListTypeDef {
 
 type VoluntaryExits []SignedVoluntaryExit
 
-func (*VoluntaryExits) Limit() uint64 {
-	return MAX_VOLUNTARY_EXITS
-}
-
-func (state *BeaconStateView) ProcessVoluntaryExits(ctx context.Context, epc *EpochsContext, ops []SignedVoluntaryExit) error {
+func (spec *Spec) ProcessVoluntaryExits(ctx context.Context, epc *EpochsContext, state *BeaconStateView, ops []SignedVoluntaryExit) error {
 	for i := range ops {
 		select {
 		case <-ctx.Done():
@@ -27,7 +23,7 @@ func (state *BeaconStateView) ProcessVoluntaryExits(ctx context.Context, epc *Ep
 		default: // Don't block.
 			break
 		}
-		if err := state.ProcessVoluntaryExit(epc, &ops[i]); err != nil {
+		if err := spec.ProcessVoluntaryExit(state, epc, &ops[i]); err != nil {
 			return err
 		}
 	}
@@ -66,7 +62,7 @@ func (c *Phase0Config) SignedVoluntaryExit() *ContainerTypeDef {
 	})
 }
 
-func (state *BeaconStateView) ProcessVoluntaryExit(epc *EpochsContext, signedExit *SignedVoluntaryExit) error {
+func (spec *Spec) ProcessVoluntaryExit(state *BeaconStateView, epc *EpochsContext, signedExit *SignedVoluntaryExit) error {
 	exit := &signedExit.Message
 	currentEpoch := epc.CurrentEpoch.Epoch
 	if valid, err := state.IsValidIndex(exit.ValidatorIndex); err != nil {
@@ -83,7 +79,7 @@ func (state *BeaconStateView) ProcessVoluntaryExit(epc *EpochsContext, signedExi
 		return err
 	}
 	// Verify that the validator is active
-	if isActive, err := validator.IsActive(currentEpoch); err != nil {
+	if isActive, err := spec.IsActive(validator, currentEpoch); err != nil {
 		return err
 	} else if !isActive {
 		return errors.New("validator must be active to be able to voluntarily exit")
@@ -105,14 +101,14 @@ func (state *BeaconStateView) ProcessVoluntaryExit(epc *EpochsContext, signedExi
 		return err
 	}
 	// Verify the validator has been active long enough
-	if currentEpoch < registeredActivationEpoch+SHARD_COMMITTEE_PERIOD {
+	if currentEpoch < registeredActivationEpoch+spec.SHARD_COMMITTEE_PERIOD {
 		return errors.New("exit is too soon")
 	}
 	pubkey, ok := epc.PubkeyCache.Pubkey(exit.ValidatorIndex)
 	if !ok {
 		return errors.New("could not find index of exiting validator")
 	}
-	domain, err := state.GetDomain(DOMAIN_VOLUNTARY_EXIT, exit.Epoch)
+	domain, err := state.GetDomain(spec.DOMAIN_VOLUNTARY_EXIT, exit.Epoch)
 	if err != nil {
 		return err
 	}
@@ -124,11 +120,11 @@ func (state *BeaconStateView) ProcessVoluntaryExit(epc *EpochsContext, signedExi
 		return errors.New("voluntary exit signature could not be verified")
 	}
 	// Initiate exit
-	return state.InitiateValidatorExit(epc, exit.ValidatorIndex)
+	return spec.InitiateValidatorExit(epc, state, exit.ValidatorIndex)
 }
 
 // Initiate the exit of the validator of the given index
-func (state *BeaconStateView) InitiateValidatorExit(epc *EpochsContext, index ValidatorIndex) error {
+func (spec *Spec) InitiateValidatorExit(epc *EpochsContext, state *BeaconStateView, index ValidatorIndex) error {
 	validators, err := state.Validators()
 	if err != nil {
 		return err
@@ -150,7 +146,7 @@ func (state *BeaconStateView) InitiateValidatorExit(epc *EpochsContext, index Va
 	// Set validator exit epoch and withdrawable epoch
 	valIter := validators.ReadonlyIter()
 
-	exitQueueEnd := currentEpoch.ComputeActivationExitEpoch()
+	exitQueueEnd := spec.ComputeActivationExitEpoch(currentEpoch)
 	exitQueueEndChurn := uint64(0)
 	for {
 		valContainer, ok, err := valIter.Next()
@@ -178,7 +174,7 @@ func (state *BeaconStateView) InitiateValidatorExit(epc *EpochsContext, index Va
 			exitQueueEndChurn = 1
 		}
 	}
-	churnLimit := GetChurnLimit(uint64(len(epc.CurrentEpoch.ActiveIndices)))
+	churnLimit := spec.GetChurnLimit(uint64(len(epc.CurrentEpoch.ActiveIndices)))
 	if exitQueueEndChurn >= churnLimit {
 		exitQueueEnd++
 	}
@@ -187,7 +183,7 @@ func (state *BeaconStateView) InitiateValidatorExit(epc *EpochsContext, index Va
 	if err := v.SetExitEpoch(exitEp); err != nil {
 		return err
 	}
-	if err := v.SetWithdrawableEpoch(exitEp + MIN_VALIDATOR_WITHDRAWABILITY_DELAY); err != nil {
+	if err := v.SetWithdrawableEpoch(exitEp + spec.MIN_VALIDATOR_WITHDRAWABILITY_DELAY); err != nil {
 		return err
 	}
 	return nil

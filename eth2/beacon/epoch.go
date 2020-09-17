@@ -39,11 +39,11 @@ type EpochProcess struct {
 	ChurnLimit        uint64
 }
 
-func GetChurnLimit(activeValidatorCount uint64) uint64 {
-	return math.MaxU64(MIN_PER_EPOCH_CHURN_LIMIT, activeValidatorCount/CHURN_LIMIT_QUOTIENT)
+func (spec *Spec) GetChurnLimit(activeValidatorCount uint64) uint64 {
+	return math.MaxU64(spec.MIN_PER_EPOCH_CHURN_LIMIT, activeValidatorCount/spec.CHURN_LIMIT_QUOTIENT)
 }
 
-func (state *BeaconStateView) PrepareEpochProcess(ctx context.Context, epc *EpochsContext) (out *EpochProcess, err error) {
+func (spec *Spec) PrepareEpochProcess(ctx context.Context, epc *EpochsContext, state *BeaconStateView) (out *EpochProcess, err error) {
 	validators, err := state.Validators()
 	if err != nil {
 		return nil, err
@@ -62,8 +62,8 @@ func (state *BeaconStateView) PrepareEpochProcess(ctx context.Context, epc *Epoc
 		CurrEpoch: currentEpoch,
 	}
 
-	slashingsEpoch := currentEpoch + (EPOCHS_PER_SLASHINGS_VECTOR / 2)
-	exitQueueEnd := currentEpoch.ComputeActivationExitEpoch()
+	slashingsEpoch := currentEpoch + (spec.EPOCHS_PER_SLASHINGS_VECTOR / 2)
+	exitQueueEnd := spec.ComputeActivationExitEpoch(currentEpoch)
 
 	activeCount := uint64(0)
 	valIter := validators.ReadonlyIter()
@@ -115,7 +115,7 @@ func (state *BeaconStateView) PrepareEpochProcess(ctx context.Context, epc *Epoc
 			out.TotalActiveStake += flat.EffectiveBalance
 		}
 
-		if flat.ActivationEligibilityEpoch == FAR_FUTURE_EPOCH && flat.EffectiveBalance == MAX_EFFECTIVE_BALANCE {
+		if flat.ActivationEligibilityEpoch == FAR_FUTURE_EPOCH && flat.EffectiveBalance == spec.MAX_EFFECTIVE_BALANCE {
 			out.IndicesToSetActivationEligibility = append(out.IndicesToSetActivationEligibility, i)
 		}
 
@@ -123,7 +123,7 @@ func (state *BeaconStateView) PrepareEpochProcess(ctx context.Context, epc *Epoc
 			out.IndicesToMaybeActivate = append(out.IndicesToMaybeActivate, i)
 		}
 
-		if status.Active && flat.EffectiveBalance <= EJECTION_BALANCE && flat.ExitEpoch == FAR_FUTURE_EPOCH {
+		if status.Active && flat.EffectiveBalance <= spec.EJECTION_BALANCE && flat.ExitEpoch == FAR_FUTURE_EPOCH {
 			out.IndicesToEject = append(out.IndicesToEject, i)
 		}
 	}
@@ -147,7 +147,7 @@ func (state *BeaconStateView) PrepareEpochProcess(ctx context.Context, epc *Epoc
 			exitQueueEndChurn++
 		}
 	}
-	churnLimit := GetChurnLimit(activeCount)
+	churnLimit := spec.GetChurnLimit(activeCount)
 	if exitQueueEndChurn >= churnLimit {
 		exitQueueEnd++
 		exitQueueEndChurn = 0
@@ -161,11 +161,11 @@ func (state *BeaconStateView) PrepareEpochProcess(ctx context.Context, epc *Epoc
 		epoch Epoch,
 		sourceFlag, targetFlag, headFlag AttesterFlag) error {
 
-		actualTargetBlockRoot, err := state.GetBlockRootAtSlot(epoch.GetStartSlot())
+		actualTargetBlockRoot, err := spec.GetBlockRootAtSlot(state, spec.EpochStartSlot(epoch))
 		if err != nil {
 			return err
 		}
-		participants := make([]ValidatorIndex, 0, MAX_VALIDATORS_PER_COMMITTEE)
+		participants := make([]ValidatorIndex, 0, spec.MAX_VALIDATORS_PER_COMMITTEE)
 		attIter := attestations.ReadonlyIter()
 		i := 0
 		for {
@@ -194,7 +194,7 @@ func (state *BeaconStateView) PrepareEpochProcess(ctx context.Context, epc *Epoc
 				return err
 			}
 
-			attBlockRoot, err := state.GetBlockRootAtSlot(att.Data.Slot)
+			attBlockRoot, err := spec.GetBlockRootAtSlot(state, att.Data.Slot)
 			if err != nil {
 				return err
 			}
@@ -275,20 +275,20 @@ func (state *BeaconStateView) PrepareEpochProcess(ctx context.Context, epc *Epoc
 			out.CurrEpochUnslashedTargetStake += status.Validator.EffectiveBalance
 		}
 	}
-	if out.TotalActiveStake < EFFECTIVE_BALANCE_INCREMENT {
-		out.TotalActiveStake = EFFECTIVE_BALANCE_INCREMENT
+	if out.TotalActiveStake < spec.EFFECTIVE_BALANCE_INCREMENT {
+		out.TotalActiveStake = spec.EFFECTIVE_BALANCE_INCREMENT
 	}
-	if out.PrevEpochUnslashedStake.SourceStake < EFFECTIVE_BALANCE_INCREMENT {
-		out.PrevEpochUnslashedStake.SourceStake = EFFECTIVE_BALANCE_INCREMENT
+	if out.PrevEpochUnslashedStake.SourceStake < spec.EFFECTIVE_BALANCE_INCREMENT {
+		out.PrevEpochUnslashedStake.SourceStake = spec.EFFECTIVE_BALANCE_INCREMENT
 	}
-	if out.PrevEpochUnslashedStake.TargetStake < EFFECTIVE_BALANCE_INCREMENT {
-		out.PrevEpochUnslashedStake.TargetStake = EFFECTIVE_BALANCE_INCREMENT
+	if out.PrevEpochUnslashedStake.TargetStake < spec.EFFECTIVE_BALANCE_INCREMENT {
+		out.PrevEpochUnslashedStake.TargetStake = spec.EFFECTIVE_BALANCE_INCREMENT
 	}
-	if out.PrevEpochUnslashedStake.HeadStake < EFFECTIVE_BALANCE_INCREMENT {
-		out.PrevEpochUnslashedStake.HeadStake = EFFECTIVE_BALANCE_INCREMENT
+	if out.PrevEpochUnslashedStake.HeadStake < spec.EFFECTIVE_BALANCE_INCREMENT {
+		out.PrevEpochUnslashedStake.HeadStake = spec.EFFECTIVE_BALANCE_INCREMENT
 	}
-	if out.CurrEpochUnslashedTargetStake < EFFECTIVE_BALANCE_INCREMENT {
-		out.CurrEpochUnslashedTargetStake = EFFECTIVE_BALANCE_INCREMENT
+	if out.CurrEpochUnslashedTargetStake < spec.EFFECTIVE_BALANCE_INCREMENT {
+		out.CurrEpochUnslashedTargetStake = spec.EFFECTIVE_BALANCE_INCREMENT
 	}
 
 	return

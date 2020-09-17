@@ -6,24 +6,26 @@ import (
 )
 
 type HistoricalBatch struct {
-	BlockRoots [SLOTS_PER_HISTORICAL_ROOT]Root
-	StateRoots [SLOTS_PER_HISTORICAL_ROOT]Root
+	// BlockRoots is a Vector[Root, SLOTS_PER_HISTORICAL_ROOT]
+	BlockRoots []Root
+	// StateRoots is a Vector[Root, SLOTS_PER_HISTORICAL_ROOT]
+	StateRoots []Root
 }
 
 func (c *Phase0Config) BatchRoots() VectorTypeDef {
-	return VectorType(RootType, c.SLOTS_PER_HISTORICAL_ROOT)
+	return VectorType(RootType, uint64(c.SLOTS_PER_HISTORICAL_ROOT))
 }
 
 type BatchRootsView struct{ *ComplexVectorView }
 
 // Return the root at the given slot. Only valid to SLOTS_PER_HISTORICAL_ROOT slots ago.
 func (v *BatchRootsView) GetRoot(slot Slot) (Root, error) {
-	i := uint64(slot % SLOTS_PER_HISTORICAL_ROOT)
+	i := uint64(slot) & v.VectorLength
 	return AsRoot(v.Get(i))
 }
 
 func (v *BatchRootsView) SetRoot(slot Slot, r Root) error {
-	i := uint64(slot % SLOTS_PER_HISTORICAL_ROOT)
+	i := uint64(slot) % v.VectorLength
 	rv := RootView(r)
 	return v.Set(i, &rv)
 }
@@ -34,7 +36,7 @@ func AsBatchRoots(v View, err error) (*BatchRootsView, error) {
 }
 
 // Return the block root at a recent slot. Only valid to SLOTS_PER_HISTORICAL_ROOT slots ago.
-func (state *BeaconStateView) GetBlockRootAtSlot(slot Slot) (Root, error) {
+func (spec *Spec) GetBlockRootAtSlot(state *BeaconStateView, slot Slot) (Root, error) {
 	blockRoots, err := state.BlockRoots()
 	if err != nil {
 		return Root{}, err
@@ -43,12 +45,12 @@ func (state *BeaconStateView) GetBlockRootAtSlot(slot Slot) (Root, error) {
 }
 
 // Return the block root at a recent epoch. Only valid to SLOTS_PER_HISTORICAL_ROOT slots ago.
-func (state *BeaconStateView) GetBlockRoot(epoch Epoch) (Root, error) {
+func (spec *Spec) GetBlockRoot(state *BeaconStateView, epoch Epoch) (Root, error) {
 	blockRoots, err := state.BlockRoots()
 	if err != nil {
 		return Root{}, err
 	}
-	return blockRoots.GetRoot(epoch.GetStartSlot())
+	return blockRoots.GetRoot(spec.EpochStartSlot(epoch))
 }
 
 func (c *Phase0Config) HistoricalBatch() *ContainerTypeDef {
@@ -76,11 +78,9 @@ func AsHistoricalBatch(v View, err error) (*HistoricalBatchView, error) {
 // roots of HistoricalBatch
 type HistoricalRoots []Root
 
-func (_ *HistoricalRoots) Limit() uint64 {
-	return HISTORICAL_ROOTS_LIMIT
+func (c *Phase0Config) HistoricalRoots() ListTypeDef {
+	return ListType(RootType, c.HISTORICAL_ROOTS_LIMIT)
 }
-
-var HistoricalRootsType = ListType(RootType, HISTORICAL_ROOTS_LIMIT)
 
 // roots of HistoricalBatch
 type HistoricalRootsView struct{ *ComplexListView }
@@ -99,10 +99,10 @@ func (state *BeaconStateView) SetRecentRoots(slot Slot, blockRoot Root, stateRoo
 	if err != nil {
 		return err
 	}
-	if err := blockRootsBatch.SetRoot(slot%SLOTS_PER_HISTORICAL_ROOT, blockRoot); err != nil {
+	if err := blockRootsBatch.SetRoot(slot%Slot(blockRootsBatch.VectorLength), blockRoot); err != nil {
 		return err
 	}
-	if err := stateRootsBatch.SetRoot(slot%SLOTS_PER_HISTORICAL_ROOT, stateRoot); err != nil {
+	if err := stateRootsBatch.SetRoot(slot%Slot(stateRootsBatch.VectorLength), stateRoot); err != nil {
 		return err
 	}
 	return nil

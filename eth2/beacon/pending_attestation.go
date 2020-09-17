@@ -1,7 +1,6 @@
 package beacon
 
 import (
-	"github.com/protolambda/zssz"
 	. "github.com/protolambda/ztyp/view"
 )
 
@@ -21,8 +20,6 @@ func (att *PendingAttestation) View() *PendingAttestationView {
 	)
 	return &PendingAttestationView{c}
 }
-
-var AttestationDataSSZ = zssz.GetSSZ((*AttestationData)(nil))
 
 type AttestationData struct {
 	Slot  Slot
@@ -138,12 +135,8 @@ func AsPendingAttestation(v View, err error) (*PendingAttestationView, error) {
 
 type PendingAttestations []*PendingAttestation
 
-func (*PendingAttestations) Limit() uint64 {
-	return MAX_ATTESTATIONS * uint64(SLOTS_PER_EPOCH)
-}
-
 func (c *Phase0Config) PendingAttestations() ListTypeDef {
-	return ComplexListType(c.PendingAttestation(), c.MAX_ATTESTATIONS*c.SLOTS_PER_EPOCH)
+	return ComplexListType(c.PendingAttestation(), c.MAX_ATTESTATIONS*uint64(c.SLOTS_PER_EPOCH))
 }
 
 type PendingAttestationsView struct{ *ComplexListView }

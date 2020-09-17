@@ -9,7 +9,7 @@ import (
 
 var TransitionCancelErr = errors.New("state transition was cancelled")
 
-func (state *BeaconStateView) ProcessSlot(ctx context.Context) error {
+func (spec *Spec) ProcessSlot(ctx context.Context, state *BeaconStateView) error {
 	select {
 	case <-ctx.Done():
 		return TransitionCancelErr
@@ -60,24 +60,24 @@ func (state *BeaconStateView) ProcessSlot(ctx context.Context) error {
 	return nil
 }
 
-func (state *BeaconStateView) ProcessEpoch(ctx context.Context, epc *EpochsContext) error {
-	process, err := state.PrepareEpochProcess(ctx, epc)
+func (spec *Spec) ProcessEpoch(ctx context.Context, epc *EpochsContext, state *BeaconStateView) error {
+	process, err := spec.PrepareEpochProcess(ctx, epc, state)
 	if err != nil {
 		return err
 	}
-	if err := state.ProcessEpochJustification(ctx, epc, process); err != nil {
+	if err := spec.ProcessEpochJustification(ctx, epc, process, state); err != nil {
 		return err
 	}
-	if err := state.ProcessEpochRewardsAndPenalties(ctx, epc, process); err != nil {
+	if err := spec.ProcessEpochRewardsAndPenalties(ctx, epc, process, state); err != nil {
 		return err
 	}
-	if err := state.ProcessEpochRegistryUpdates(ctx, epc, process); err != nil {
+	if err := spec.ProcessEpochRegistryUpdates(ctx, epc, process, state); err != nil {
 		return err
 	}
-	if err := state.ProcessEpochSlashings(ctx, epc, process); err != nil {
+	if err := spec.ProcessEpochSlashings(ctx, epc, process, state); err != nil {
 		return err
 	}
-	if err := state.ProcessEpochFinalUpdates(ctx, epc, process); err != nil {
+	if err := spec.ProcessEpochFinalUpdates(ctx, epc, process, state); err != nil {
 		return err
 	}
 	return nil
@@ -86,7 +86,7 @@ func (state *BeaconStateView) ProcessEpoch(ctx context.Context, epc *EpochsConte
 // Process the state to the given slot.
 // Returns an error if the slot is older than the state is already at.
 // Mutates the state, does not copy.
-func (state *BeaconStateView) ProcessSlots(ctx context.Context, epc *EpochsContext, slot Slot) error {
+func (spec *Spec) ProcessSlots(ctx context.Context, epc *EpochsContext, state *BeaconStateView, slot Slot) error {
 	// happens at the start of every CurrentSlot
 	currentSlot, err := state.Slot()
 	if err != nil {
@@ -102,14 +102,14 @@ func (state *BeaconStateView) ProcessSlots(ctx context.Context, epc *EpochsConte
 		default:
 			break // Continue slot processing, don't block.
 		}
-		if err := state.ProcessSlot(ctx); err != nil {
+		if err := spec.ProcessSlot(ctx, state); err != nil {
 			return err
 		}
 		// Per-epoch transition happens at the start of the first slot of every epoch.
 		// (with the slot still at the end of the last epoch)
-		isEpochEnd := (currentSlot + 1).ToEpoch() != currentSlot.ToEpoch()
+		isEpochEnd := spec.SlotToEpoch(currentSlot + 1) != spec.SlotToEpoch(currentSlot)
 		if isEpochEnd {
-			if err := state.ProcessEpoch(ctx, epc); err != nil {
+			if err := spec.ProcessEpoch(ctx, epc, state); err != nil {
 				return err
 			}
 		}
@@ -126,30 +126,30 @@ func (state *BeaconStateView) ProcessSlots(ctx context.Context, epc *EpochsConte
 	return nil
 }
 
-func (state *BeaconStateView) ProcessBlock(ctx context.Context, epc *EpochsContext, block *BeaconBlock) error {
-	if err := state.ProcessHeader(ctx, epc, block); err != nil {
+func (spec *Spec) ProcessBlock(ctx context.Context, epc *EpochsContext, state *BeaconStateView, block *BeaconBlock) error {
+	if err := spec.ProcessHeader(ctx, epc, state, block); err != nil {
 		return err
 	}
 	body := &block.Body
-	if err := state.ProcessRandaoReveal(ctx, epc, body.RandaoReveal); err != nil {
+	if err := spec.ProcessRandaoReveal(ctx, epc, state, body.RandaoReveal); err != nil {
 		return err
 	}
-	if err := state.ProcessEth1Vote(ctx, epc, body.Eth1Data); err != nil {
+	if err := spec.ProcessEth1Vote(ctx, epc, state, body.Eth1Data); err != nil {
 		return err
 	}
-	if err := state.ProcessProposerSlashings(ctx, epc, body.ProposerSlashings); err != nil {
+	if err := spec.ProcessProposerSlashings(ctx, epc, state, body.ProposerSlashings); err != nil {
 		return err
 	}
-	if err := state.ProcessAttesterSlashings(ctx, epc, body.AttesterSlashings); err != nil {
+	if err := spec.ProcessAttesterSlashings(ctx, epc, state, body.AttesterSlashings); err != nil {
 		return err
 	}
-	if err := state.ProcessAttestations(ctx, epc, body.Attestations); err != nil {
+	if err := spec.ProcessAttestations(ctx, epc, state, body.Attestations); err != nil {
 		return err
 	}
-	if err := state.ProcessDeposits(ctx, epc, body.Deposits); err != nil {
+	if err := spec.ProcessDeposits(ctx, epc, state, body.Deposits); err != nil {
 		return err
 	}
-	if err := state.ProcessVoluntaryExits(ctx, epc, body.VoluntaryExits); err != nil {
+	if err := spec.ProcessVoluntaryExits(ctx, epc, state, body.VoluntaryExits); err != nil {
 		return err
 	}
 	return nil
@@ -159,18 +159,18 @@ func (state *BeaconStateView) ProcessBlock(ctx context.Context, epc *EpochsConte
 // Returns an error if the slot is older than the state is already at.
 // Mutates the state, does not copy.
 //
-func (state *BeaconStateView) StateTransition(ctx context.Context, epc *EpochsContext, block *SignedBeaconBlock, validateResult bool) error {
-	if err := state.ProcessSlots(ctx, epc, block.Message.Slot); err != nil {
+func (spec *Spec) StateTransition(ctx context.Context, epc *EpochsContext, state *BeaconStateView, block *SignedBeaconBlock, validateResult bool) error {
+	if err := spec.ProcessSlots(ctx, epc, state, block.Message.Slot); err != nil {
 		return err
 	}
 	if validateResult {
 		// Safe to ignore proposer index, it will be checked as part of the ProcessHeader call.
-		if !state.VerifySignature(epc, block, false) {
+		if !spec.VerifyBlockSignature(epc, state, block, false) {
 			return errors.New("block has invalid signature")
 		}
 	}
 
-	if err := state.ProcessBlock(ctx, epc, &block.Message); err != nil {
+	if err := spec.ProcessBlock(ctx, epc, state, &block.Message); err != nil {
 		return err
 	}
 
@@ -182,7 +182,7 @@ func (state *BeaconStateView) StateTransition(ctx context.Context, epc *EpochsCo
 }
 
 // Assuming the slot is valid, and optionally assume the proposer index is valid, check if the signature is valid
-func (state *BeaconStateView) VerifySignature(epc *EpochsContext, block *SignedBeaconBlock, validateProposerIndex bool) bool {
+func (spec *Spec) VerifyBlockSignature(epc *EpochsContext, state *BeaconStateView, block *SignedBeaconBlock, validateProposerIndex bool) bool {
 	if validateProposerIndex {
 		proposerIndex, err := epc.GetBeaconProposer(block.Message.Slot)
 		if err != nil {
@@ -196,7 +196,7 @@ func (state *BeaconStateView) VerifySignature(epc *EpochsContext, block *SignedB
 	if !ok {
 		return false
 	}
-	domain, err := state.GetDomain(DOMAIN_BEACON_PROPOSER, block.Message.Slot.ToEpoch())
+	domain, err := state.GetDomain(spec.DOMAIN_BEACON_PROPOSER, spec.SlotToEpoch(block.Message.Slot))
 	if err != nil {
 		return false
 	}

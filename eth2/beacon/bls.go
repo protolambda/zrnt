@@ -47,8 +47,6 @@ type SigningData struct {
 	Domain     BLSDomain
 }
 
-var SigningDataSSZ = zssz.GetSSZ((*SigningData)(nil))
-
 func ComputeSigningRoot(msgRoot Root, dom BLSDomain) Root {
 	withDomain := SigningData{
 		ObjectRoot: msgRoot,

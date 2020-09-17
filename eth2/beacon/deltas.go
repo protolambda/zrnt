@@ -4,22 +4,15 @@ import (
 	"context"
 	"errors"
 	"github.com/protolambda/zrnt/eth2/util/math"
-	"github.com/protolambda/zssz"
 	. "github.com/protolambda/ztyp/view"
 )
 
 type GweiList []Gwei
 
-func (_ *GweiList) Limit() uint64 {
-	return VALIDATOR_REGISTRY_LIMIT
-}
-
 type Deltas struct {
 	Rewards   GweiList
 	Penalties GweiList
 }
-
-var DeltasSSZ = zssz.GetSSZ((*Deltas)(nil))
 
 func NewDeltas(validatorCount uint64) *Deltas {
 	return &Deltas{
@@ -55,7 +48,7 @@ func NewRewardsAndPenalties(validatorCount uint64) *RewardsAndPenalties {
 	}
 }
 
-func (state *BeaconStateView) AttestationRewardsAndPenalties(
+func (spec *Spec) AttestationRewardsAndPenalties(state *BeaconStateView,
 	ctx context.Context, epc *EpochsContext, process *EpochProcess) (*RewardsAndPenalties, error) {
 
 	validatorCount := ValidatorIndex(uint64(len(process.Statuses)))
@@ -84,12 +77,12 @@ func (state *BeaconStateView) AttestationRewardsAndPenalties(
 	finalityDelay := previousEpoch - finalizedEpoch
 
 	// All summed effective balances are normalized to effective-balance increments, to avoid overflows.
-	totalBalance /= EFFECTIVE_BALANCE_INCREMENT
-	prevEpochSourceStake /= EFFECTIVE_BALANCE_INCREMENT
-	prevEpochTargetStake /= EFFECTIVE_BALANCE_INCREMENT
-	prevEpochHeadStake /= EFFECTIVE_BALANCE_INCREMENT
+	totalBalance /= spec.EFFECTIVE_BALANCE_INCREMENT
+	prevEpochSourceStake /= spec.EFFECTIVE_BALANCE_INCREMENT
+	prevEpochTargetStake /= spec.EFFECTIVE_BALANCE_INCREMENT
+	prevEpochHeadStake /= spec.EFFECTIVE_BALANCE_INCREMENT
 
-	isInactivityLeak := finalityDelay > MIN_EPOCHS_TO_INACTIVITY_PENALTY
+	isInactivityLeak := finalityDelay > spec.MIN_EPOCHS_TO_INACTIVITY_PENALTY
 
 	for i := ValidatorIndex(0); i < validatorCount; i++ {
 		// every 1024 validators, check if the context is done.
@@ -104,13 +97,13 @@ func (state *BeaconStateView) AttestationRewardsAndPenalties(
 		status := attesterStatuses[i]
 
 		effBalance := status.Validator.EffectiveBalance
-		baseReward := effBalance * BASE_REWARD_FACTOR /
+		baseReward := effBalance * Gwei(spec.BASE_REWARD_FACTOR) /
 			balanceSqRoot / BASE_REWARDS_PER_EPOCH
 
 		// Inclusion delay
 		if status.Flags.HasMarkers(PrevSourceAttester | UnslashedAttester) {
 			// Inclusion speed bonus
-			proposerReward := baseReward / PROPOSER_REWARD_QUOTIENT
+			proposerReward := baseReward / Gwei(spec.PROPOSER_REWARD_QUOTIENT)
 			res.InclusionDelay.Rewards[status.AttestedProposer] += proposerReward
 			maxAttesterReward := baseReward - proposerReward
 			res.InclusionDelay.Rewards[i] += maxAttesterReward / Gwei(status.InclusionDelay)
@@ -162,10 +155,10 @@ func (state *BeaconStateView) AttestationRewardsAndPenalties(
 			// Take away max rewards if we're not finalizing
 			if isInactivityLeak {
 				// If validator is performing optimally this cancels all rewards for a neutral balance
-				proposerReward := baseReward / PROPOSER_REWARD_QUOTIENT
+				proposerReward := baseReward / Gwei(spec.PROPOSER_REWARD_QUOTIENT)
 				res.Inactivity.Penalties[i] += BASE_REWARDS_PER_EPOCH*baseReward - proposerReward
 				if !status.Flags.HasMarkers(PrevTargetAttester | UnslashedAttester) {
-					res.Inactivity.Penalties[i] += effBalance * Gwei(finalityDelay) / INACTIVITY_PENALTY_QUOTIENT
+					res.Inactivity.Penalties[i] += effBalance * Gwei(finalityDelay) / Gwei(spec.INACTIVITY_PENALTY_QUOTIENT)
 				}
 			}
 		}
@@ -174,7 +167,7 @@ func (state *BeaconStateView) AttestationRewardsAndPenalties(
 	return res, nil
 }
 
-func (state *BeaconStateView) ProcessEpochRewardsAndPenalties(ctx context.Context, epc *EpochsContext, process *EpochProcess) error {
+func (spec *Spec) ProcessEpochRewardsAndPenalties(ctx context.Context, epc *EpochsContext, process *EpochProcess, state *BeaconStateView) error {
 	select {
 	case <-ctx.Done():
 		return TransitionCancelErr
@@ -187,7 +180,7 @@ func (state *BeaconStateView) ProcessEpochRewardsAndPenalties(ctx context.Contex
 	}
 	valCount := uint64(len(process.Statuses))
 	sum := NewDeltas(valCount)
-	rewAndPenalties, err := state.AttestationRewardsAndPenalties(ctx, epc, process)
+	rewAndPenalties, err := spec.AttestationRewardsAndPenalties(state, ctx, epc, process)
 	if err != nil {
 		return err
 	}
@@ -233,7 +226,7 @@ func (state *BeaconStateView) ProcessEpochRewardsAndPenalties(ctx context.Contex
 		i++
 	}
 
-	newBalancesTree, err := RegistryBalancesType.FromElements(balancesElements...)
+	newBalancesTree, err := spec.RegistryBalances().FromElements(balancesElements...)
 	if err != nil {
 		return err
 	}

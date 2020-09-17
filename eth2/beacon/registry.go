@@ -7,12 +7,8 @@ import (
 
 type ValidatorRegistry []*Validator
 
-func (_ *ValidatorRegistry) Limit() uint64 {
-	return VALIDATOR_REGISTRY_LIMIT
-}
-
 func (c *Phase0Config) ValidatorsRegistry() ListTypeDef {
-	return ComplexListType(ValidatorType, c.VALIDATOR_REGISTRY_LIMIT)
+	return ComplexListType(c.Validator(), c.VALIDATOR_REGISTRY_LIMIT)
 }
 
 type ValidatorsRegistryView struct{ *ComplexListView }
@@ -30,7 +26,7 @@ func (registry *ValidatorsRegistryView) Validator(index ValidatorIndex) (*Valida
 	return AsValidator(registry.Get(uint64(index)))
 }
 
-func (state *BeaconStateView) ProcessEpochRegistryUpdates(ctx context.Context, epc *EpochsContext, process *EpochProcess) error {
+func (spec *Spec) ProcessEpochRegistryUpdates(ctx context.Context, epc *EpochsContext, process *EpochProcess, state *BeaconStateView) error {
 	select {
 	case <-ctx.Done():
 		return TransitionCancelErr
@@ -53,7 +49,7 @@ func (state *BeaconStateView) ProcessEpochRegistryUpdates(ctx context.Context, e
 			if err := val.SetExitEpoch(exitEnd); err != nil {
 				return err
 			}
-			if err := val.SetWithdrawableEpoch(exitEnd + MIN_VALIDATOR_WITHDRAWABILITY_DELAY); err != nil {
+			if err := val.SetWithdrawableEpoch(exitEnd + spec.MIN_VALIDATOR_WITHDRAWABILITY_DELAY); err != nil {
 				return err
 			}
 			endChurn += 1
@@ -91,7 +87,7 @@ func (state *BeaconStateView) ProcessEpochRegistryUpdates(ctx context.Context, e
 		if uint64(len(dequeued)) > process.ChurnLimit {
 			dequeued = dequeued[:process.ChurnLimit]
 		}
-		activationEpoch := epc.CurrentEpoch.Epoch.ComputeActivationExitEpoch()
+		activationEpoch := spec.ComputeActivationExitEpoch(epc.CurrentEpoch.Epoch)
 		for _, index := range dequeued {
 			if process.Statuses[index].Validator.ActivationEligibilityEpoch > finalizedEpoch {
 				// remaining validators all have an activation_eligibility_epoch that is higher anyway, break early

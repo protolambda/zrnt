@@ -1,19 +1,12 @@
 package beacon
 
 import (
-	"github.com/protolambda/zssz"
 	. "github.com/protolambda/ztyp/view"
 )
 
 type Balances []Gwei
 
-func (_ *Balances) Limit() uint64 {
-	return VALIDATOR_REGISTRY_LIMIT
-}
-
-var RegistryBalancesSSZ = zssz.GetSSZ((*Balances)(nil))
-
-func (c *Phase0Config) RegistryBalances() ListTypeDef {
+func (c *Phase0Config) RegistryBalances() *BasicListTypeDef {
 	return BasicListType(GweiType, c.VALIDATOR_REGISTRY_LIMIT)
 }
 

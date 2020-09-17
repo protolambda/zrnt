@@ -114,7 +114,7 @@ func (v *ValidatorView) SetWithdrawableEpoch(epoch Epoch) error {
 	return v.Set(_validatorWithdrawableEpoch, Uint64View(epoch))
 }
 
-func (v *ValidatorView) IsActive(epoch Epoch) (bool, error) {
+func (spec *Spec) IsActive(v *ValidatorView, epoch Epoch) (bool, error) {
 	activationEpoch, err := v.ActivationEpoch()
 	if err != nil {
 		return false, err
@@ -130,7 +130,7 @@ func (v *ValidatorView) IsActive(epoch Epoch) (bool, error) {
 	return true, nil
 }
 
-func (v *ValidatorView) IsSlashable(epoch Epoch) (bool, error) {
+func (spec *Spec) IsSlashable(v *ValidatorView, epoch Epoch) (bool, error) {
 	slashed, err := v.Slashed()
 	if err != nil {
 		return false, err
@@ -152,7 +152,7 @@ func (v *ValidatorView) IsSlashable(epoch Epoch) (bool, error) {
 	return true, nil
 }
 
-func (v *ValidatorView) IsEligibleForActivationQueue() (bool, error) {
+func (spec *Spec) IsEligibleForActivationQueue(v *ValidatorView) (bool, error) {
 	actEligEpoch, err := v.ActivationEligibilityEpoch()
 	if err != nil {
 		return false, err
@@ -161,10 +161,10 @@ func (v *ValidatorView) IsEligibleForActivationQueue() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return actEligEpoch == FAR_FUTURE_EPOCH && effBalance == MAX_EFFECTIVE_BALANCE, nil
+	return actEligEpoch == FAR_FUTURE_EPOCH && effBalance == spec.MAX_EFFECTIVE_BALANCE, nil
 }
 
-func (v *ValidatorView) IsEligibleForActivation(finalizedEpoch Epoch) (bool, error) {
+func (spec *Spec) IsEligibleForActivation(v *ValidatorView, finalizedEpoch Epoch) (bool, error) {
 	actEligEpoch, err := v.ActivationEligibilityEpoch()
 	if err != nil {
 		return false, err

@@ -22,14 +22,14 @@ func NewDepositRootsView() *DepositRootsView {
 	return &DepositRootsView{DepositRootsType.New()}
 }
 
-func GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit, ignoreSignaturesAndProofs bool) (*BeaconStateView, *EpochsContext, error) {
+func (spec *Spec) GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit, ignoreSignaturesAndProofs bool) (*BeaconStateView, *EpochsContext, error) {
 	state := NewBeaconStateView()
-	if err := state.SetGenesisTime(time + GENESIS_DELAY); err != nil {
+	if err := state.SetGenesisTime(time + spec.GENESIS_DELAY); err != nil {
 		return nil, nil, err
 	}
 	if err := state.SetFork(Fork{
-		PreviousVersion: GENESIS_FORK_VERSION,
-		CurrentVersion:  GENESIS_FORK_VERSION,
+		PreviousVersion: spec.GENESIS_FORK_VERSION,
+		CurrentVersion:  spec.GENESIS_FORK_VERSION,
 		Epoch:           GENESIS_EPOCH,
 	}); err != nil {
 		return nil, nil, err
@@ -49,7 +49,7 @@ func GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit, ignoreS
 		return nil, nil, err
 	}
 	// Seed RANDAO with Eth1 entropy
-	randaoMixes, err := SeedRandao(eth1BlockHash)
+	randaoMixes, err := spec.SeedRandao(eth1BlockHash)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -87,7 +87,7 @@ func GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit, ignoreS
 			return nil, nil, err
 		}
 		// in the rare case someone tries to create a genesis block using invalid data, error.
-		if err := state.ProcessDeposit(epc, &deps[i], ignoreSignaturesAndProofs); err != nil {
+		if err := spec.ProcessDeposit(epc, state, &deps[i], ignoreSignaturesAndProofs); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -102,7 +102,7 @@ func GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit, ignoreS
 	if err != nil {
 		return nil, nil, err
 	}
-	if Slot(valCount) < SLOTS_PER_EPOCH {
+	if Slot(valCount) < spec.SLOTS_PER_EPOCH {
 		return nil, nil, errors.New("not enough validators to init full featured BeaconState")
 	}
 
@@ -116,7 +116,7 @@ func GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit, ignoreS
 		if err != nil {
 			return nil, nil, err
 		}
-		if vEff == MAX_EFFECTIVE_BALANCE {
+		if vEff == spec.MAX_EFFECTIVE_BALANCE {
 			if err := val.SetActivationEligibilityEpoch(GENESIS_EPOCH); err != nil {
 				return nil, nil, err
 			}
@@ -138,12 +138,12 @@ func GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit, ignoreS
 	return state, epc, nil
 }
 
-func IsValidGenesisState(state *BeaconStateView) (bool, error) {
+func (spec *Spec) IsValidGenesisState(state *BeaconStateView) (bool, error) {
 	genTime, err := state.GenesisTime()
 	if err != nil {
 		return false, err
 	}
-	if genTime < MIN_GENESIS_TIME {
+	if genTime < spec.MIN_GENESIS_TIME {
 		return false, nil
 	}
 
@@ -167,12 +167,12 @@ func IsValidGenesisState(state *BeaconStateView) (bool, error) {
 			if err != nil {
 				return false, err
 			}
-			if active, err := val.IsActive(GENESIS_EPOCH); err != nil {
+			if active, err := spec.IsActive(val, GENESIS_EPOCH); err != nil {
 				return false, err
 			} else if active {
 				activeCount += 1
 			}
 		}
 	}
-	return activeCount >= MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, nil
+	return activeCount >= spec.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, nil
 }

@@ -5,6 +5,8 @@ import (
 	"testing"
 )
 
+const benchShuffleRounds = 90
+
 func BenchmarkPermuteIndex(b *testing.B) {
 	listSizes := []uint64{4000000, 40000, 400}
 
@@ -15,7 +17,7 @@ func BenchmarkPermuteIndex(b *testing.B) {
 		// benchmark!
 		b.Run(fmt.Sprintf("PermuteIndex_%d", listSize), func(ib *testing.B) {
 			for i := uint64(0); i < uint64(ib.N); i++ {
-				PermuteIndex(ValidatorIndex(i%listSize), listSize, seed)
+				PermuteIndex(benchShuffleRounds, ValidatorIndex(i%listSize), listSize, seed)
 			}
 		})
 	}
@@ -34,7 +36,7 @@ func BenchmarkIndexComparison(b *testing.B) {
 			for i := 0; i < ib.N; i++ {
 				// Simulate a list-shuffle by running permute-index listSize times.
 				for j := uint64(0); j < listSize; j++ {
-					PermuteIndex(ValidatorIndex(j), listSize, seed)
+					PermuteIndex(benchShuffleRounds, ValidatorIndex(j), listSize, seed)
 				}
 			}
 		})
@@ -57,7 +59,7 @@ func BenchmarkShuffleList(b *testing.B) {
 		// benchmark!
 		b.Run(fmt.Sprintf("ShuffleList_%d", listSize), func(ib *testing.B) {
 			for i := 0; i < ib.N; i++ {
-				ShuffleList(testIndices, seed)
+				ShuffleList(benchShuffleRounds, testIndices, seed)
 			}
 		})
 	}

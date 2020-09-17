@@ -2,7 +2,7 @@ package beacon
 
 import "context"
 
-func (state *BeaconStateView) ProcessEpochFinalUpdates(ctx context.Context, epc *EpochsContext, process *EpochProcess) error {
+func (spec *Spec) ProcessEpochFinalUpdates(ctx context.Context, epc *EpochsContext, process *EpochProcess, state *BeaconStateView) error {
 	select {
 	case <-ctx.Done():
 		return TransitionCancelErr
@@ -12,17 +12,17 @@ func (state *BeaconStateView) ProcessEpochFinalUpdates(ctx context.Context, epc 
 	nextEpoch := epc.NextEpoch.Epoch
 
 	// Reset eth1 data votes if it is the end of the voting period.
-	if nextEpoch%EPOCHS_PER_ETH1_VOTING_PERIOD == 0 {
-		if err := state.ResetEth1Votes(); err != nil {
+	if nextEpoch%spec.EPOCHS_PER_ETH1_VOTING_PERIOD == 0 {
+		if err := spec.ResetEth1Votes(state); err != nil {
 			return err
 		}
 	}
 
 	// update effective balances
 	{
-		const HYSTERESIS_INCREMENT = EFFECTIVE_BALANCE_INCREMENT / Gwei(HYSTERESIS_QUOTIENT)
-		const DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * Gwei(HYSTERESIS_DOWNWARD_MULTIPLIER)
-		const UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * Gwei(HYSTERESIS_UPWARD_MULTIPLIER)
+		HYSTERESIS_INCREMENT := spec.EFFECTIVE_BALANCE_INCREMENT / Gwei(spec.HYSTERESIS_QUOTIENT)
+		DOWNWARD_THRESHOLD := HYSTERESIS_INCREMENT * Gwei(spec.HYSTERESIS_DOWNWARD_MULTIPLIER)
+		UPWARD_THRESHOLD := HYSTERESIS_INCREMENT * Gwei(spec.HYSTERESIS_UPWARD_MULTIPLIER)
 
 		vals, err := state.Validators()
 		if err != nil {
@@ -47,9 +47,9 @@ func (state *BeaconStateView) ProcessEpochFinalUpdates(ctx context.Context, epc 
 			}
 			effBalance := process.Statuses[i].Validator.EffectiveBalance
 			if balance+DOWNWARD_THRESHOLD < effBalance || effBalance+UPWARD_THRESHOLD < balance {
-				effBalance = balance - (balance % EFFECTIVE_BALANCE_INCREMENT)
-				if MAX_EFFECTIVE_BALANCE < effBalance {
-					effBalance = MAX_EFFECTIVE_BALANCE
+				effBalance = balance - (balance % spec.EFFECTIVE_BALANCE_INCREMENT)
+				if spec.MAX_EFFECTIVE_BALANCE < effBalance {
+					effBalance = spec.MAX_EFFECTIVE_BALANCE
 				}
 				val, err := vals.Validator(i)
 				if err != nil {
@@ -79,7 +79,7 @@ func (state *BeaconStateView) ProcessEpochFinalUpdates(ctx context.Context, epc 
 	}
 
 	// Set historical root accumulator
-	if nextEpoch%SLOTS_PER_HISTORICAL_ROOT.ToEpoch() == 0 {
+	if nextEpoch%spec.SlotToEpoch(spec.SLOTS_PER_HISTORICAL_ROOT) == 0 {
 		if err := state.UpdateHistoricalRoots(); err != nil {
 			return err
 		}
@@ -97,7 +97,7 @@ func (state *BeaconStateView) ProcessEpochFinalUpdates(ctx context.Context, epc 
 	if err := prevAtts.SetBacking(currAtts.Backing()); err != nil {
 		return err
 	}
-	if err := currAtts.SetBacking(PendingAttestationsType.DefaultNode()); err != nil {
+	if err := currAtts.SetBacking(spec.PendingAttestations().DefaultNode()); err != nil {
 		return err
 	}
 

@@ -20,8 +20,6 @@ func (dat *Eth1Data) View() *Eth1DataView {
 	return &Eth1DataView{c}
 }
 
-const SLOTS_PER_ETH1_VOTING_PERIOD = Slot(EPOCHS_PER_ETH1_VOTING_PERIOD) * SLOTS_PER_EPOCH
-
 func (c *Phase0Config) Eth1Data() *ContainerTypeDef {
 	return ContainerType("Eth1Data", []FieldDef{
 		{"deposit_root", RootType},
@@ -56,12 +54,9 @@ func (v *Eth1DataView) DepositIndex() (DepositIndex, error) {
 
 type Eth1DataVotes []Eth1Data
 
-func (_ *Eth1DataVotes) Limit() uint64 {
-	return uint64(SLOTS_PER_ETH1_VOTING_PERIOD)
-}
 
 func (c *Phase0Config) Eth1DataVotes() ListTypeDef {
-	return ListType(c.Eth1Data(), uint64(SLOTS_PER_ETH1_VOTING_PERIOD))
+	return ListType(c.Eth1Data(), uint64(c.EPOCHS_PER_ETH1_VOTING_PERIOD) * uint64(c.SLOTS_PER_EPOCH))
 }
 
 type Eth1DataVotesView struct{ *ComplexListView }
@@ -72,15 +67,15 @@ func AsEth1DataVotes(v View, err error) (*Eth1DataVotesView, error) {
 }
 
 // Done at the end of every voting period
-func (state *BeaconStateView) ResetEth1Votes() error {
+func (c *Phase0Config) ResetEth1Votes(state *BeaconStateView) error {
 	votes, err := state.Eth1DataVotes()
 	if err != nil {
 		return err
 	}
-	return votes.SetBacking(Eth1DataVotesType.DefaultNode())
+	return votes.SetBacking(c.Eth1DataVotes().DefaultNode())
 }
 
-func (state *BeaconStateView) ProcessEth1Vote(ctx context.Context, epc *EpochsContext, data Eth1Data) error {
+func (spec *Spec) ProcessEth1Vote(ctx context.Context, epc *EpochsContext, state *BeaconStateView, data Eth1Data) error {
 	select {
 	case <-ctx.Done():
 		return TransitionCancelErr
@@ -95,7 +90,8 @@ func (state *BeaconStateView) ProcessEth1Vote(ctx context.Context, epc *EpochsCo
 	if err != nil {
 		return err
 	}
-	if Slot(voteCount) >= SLOTS_PER_ETH1_VOTING_PERIOD {
+	period := uint64(spec.EPOCHS_PER_ETH1_VOTING_PERIOD) * uint64(spec.SLOTS_PER_EPOCH)
+	if voteCount >= period {
 		return errors.New("cannot process Eth1 vote, already voted maximum times")
 	}
 	vote := data.View()
@@ -104,8 +100,8 @@ func (state *BeaconStateView) ProcessEth1Vote(ctx context.Context, epc *EpochsCo
 	}
 	voteCount += 1
 	// only do costly counting if we have enough votes yet.
-	if Slot(voteCount<<1) > SLOTS_PER_ETH1_VOTING_PERIOD {
-		count := Slot(0)
+	if voteCount<<1 > period {
+		count := uint64(0)
 		iter := votes.ReadonlyIter()
 		hFn := tree.GetHashFn()
 		voteRoot := vote.HashTreeRoot(hFn)
@@ -121,7 +117,7 @@ func (state *BeaconStateView) ProcessEth1Vote(ctx context.Context, epc *EpochsCo
 				count++
 			}
 		}
-		if (count << 1) > SLOTS_PER_ETH1_VOTING_PERIOD {
+		if (count << 1) > period {
 			return state.SetEth1Data(vote)
 		}
 	}

@@ -7,7 +7,7 @@ import (
 
 // Balances slashed at every withdrawal period
 func (c *Phase0Config) Slashings() VectorTypeDef {
-	return VectorType(GweiType, c.EPOCHS_PER_SLASHINGS_VECTOR)
+	return VectorType(GweiType, uint64(c.EPOCHS_PER_SLASHINGS_VECTOR))
 }
 
 type SlashingsView struct{ *BasicVectorView }
@@ -18,12 +18,12 @@ func AsSlashings(v View, err error) (*SlashingsView, error) {
 }
 
 func (sl *SlashingsView) GetSlashingsValue(epoch Epoch) (Gwei, error) {
-	i := uint64(epoch % EPOCHS_PER_SLASHINGS_VECTOR)
+	i := uint64(epoch )% sl.VectorLength
 	return AsGwei(sl.Get(i))
 }
 
 func (sl *SlashingsView) ResetSlashings(epoch Epoch) error {
-	i := uint64(epoch % EPOCHS_PER_SLASHINGS_VECTOR)
+	i := uint64(epoch )% sl.VectorLength
 	return sl.Set(i, Uint64View(0))
 }
 
@@ -32,7 +32,7 @@ func (sl *SlashingsView) AddSlashing(epoch Epoch, add Gwei) error {
 	if err != nil {
 		return err
 	}
-	i := uint64(epoch % EPOCHS_PER_SLASHINGS_VECTOR)
+	i := uint64(epoch )% sl.VectorLength
 	return sl.Set(i, Uint64View(prev+add))
 }
 
@@ -56,9 +56,9 @@ func (sl *SlashingsView) Total() (sum Gwei, err error) {
 }
 
 // Slash the validator with the given index.
-func (state *BeaconStateView) SlashValidator(epc *EpochsContext, slashedIndex ValidatorIndex, whistleblowerIndex *ValidatorIndex) error {
+func (spec *Spec) SlashValidator(epc *EpochsContext, state *BeaconStateView, slashedIndex ValidatorIndex, whistleblowerIndex *ValidatorIndex) error {
 	currentEpoch := epc.CurrentEpoch.Epoch
-	if err := state.InitiateValidatorExit(epc, slashedIndex); err != nil {
+	if err := spec.InitiateValidatorExit(epc, state, slashedIndex); err != nil {
 		return err
 	}
 	vals, err := state.Validators()
@@ -76,7 +76,7 @@ func (state *BeaconStateView) SlashValidator(epc *EpochsContext, slashedIndex Va
 	if err != nil {
 		return err
 	}
-	withdrawalEpoch := currentEpoch + EPOCHS_PER_SLASHINGS_VECTOR
+	withdrawalEpoch := currentEpoch + spec.EPOCHS_PER_SLASHINGS_VECTOR
 	if withdrawalEpoch > prevWithdrawalEpoch {
 		if err := v.SetWithdrawableEpoch(withdrawalEpoch); err != nil {
 			return err
@@ -100,7 +100,7 @@ func (state *BeaconStateView) SlashValidator(epc *EpochsContext, slashedIndex Va
 	if err != nil {
 		return err
 	}
-	if err := bals.DecreaseBalance(slashedIndex, effectiveBalance/MIN_SLASHING_PENALTY_QUOTIENT); err != nil {
+	if err := bals.DecreaseBalance(slashedIndex, effectiveBalance/Gwei(spec.MIN_SLASHING_PENALTY_QUOTIENT)); err != nil {
 		return err
 	}
 
@@ -115,8 +115,8 @@ func (state *BeaconStateView) SlashValidator(epc *EpochsContext, slashedIndex Va
 	if whistleblowerIndex == nil {
 		whistleblowerIndex = &propIndex
 	}
-	whistleblowerReward := effectiveBalance / WHISTLEBLOWER_REWARD_QUOTIENT
-	proposerReward := whistleblowerReward / PROPOSER_REWARD_QUOTIENT
+	whistleblowerReward := effectiveBalance / Gwei(spec.WHISTLEBLOWER_REWARD_QUOTIENT)
+	proposerReward := whistleblowerReward / Gwei(spec.PROPOSER_REWARD_QUOTIENT)
 	if err := bals.IncreaseBalance(propIndex, proposerReward); err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func (state *BeaconStateView) SlashValidator(epc *EpochsContext, slashedIndex Va
 	return nil
 }
 
-func (state *BeaconStateView) ProcessEpochSlashings(ctx context.Context, epc *EpochsContext, process *EpochProcess) error {
+func (spec *Spec) ProcessEpochSlashings(ctx context.Context, epc *EpochsContext, process *EpochProcess, state *BeaconStateView) error {
 	select {
 	case <-ctx.Done():
 		return TransitionCancelErr
@@ -152,13 +152,13 @@ func (state *BeaconStateView) ProcessEpochSlashings(ctx context.Context, epc *Ep
 	for _, index := range process.IndicesToSlash {
 		// Factored out from penalty numerator to avoid uint64 overflow
 		slashedEffectiveBal := process.Statuses[index].Validator.EffectiveBalance
-		penaltyNumerator := slashedEffectiveBal / EFFECTIVE_BALANCE_INCREMENT
+		penaltyNumerator := slashedEffectiveBal / spec.EFFECTIVE_BALANCE_INCREMENT
 		if slashingsWeight := slashingsSum * 3; totalBalance < slashingsWeight {
 			penaltyNumerator *= totalBalance
 		} else {
 			penaltyNumerator *= slashingsWeight
 		}
-		penalty := penaltyNumerator / totalBalance * EFFECTIVE_BALANCE_INCREMENT
+		penalty := penaltyNumerator / totalBalance * spec.EFFECTIVE_BALANCE_INCREMENT
 
 		if err := bals.DecreaseBalance(index, penalty); err != nil {
 			return err

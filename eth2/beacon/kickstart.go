@@ -13,7 +13,7 @@ type KickstartValidatorData struct {
 }
 
 // To build a genesis state without Eth 1.0 deposits, i.e. directly from a sequence of minimal validator data.
-func KickStartState(eth1BlockHash Root, time Timestamp, validators []KickstartValidatorData) (*BeaconStateView, *EpochsContext, error) {
+func (spec *Spec) KickStartState(eth1BlockHash Root, time Timestamp, validators []KickstartValidatorData) (*BeaconStateView, *EpochsContext, error) {
 	deps := make([]Deposit, len(validators), len(validators))
 
 	for i := range validators {
@@ -27,7 +27,7 @@ func KickStartState(eth1BlockHash Root, time Timestamp, validators []KickstartVa
 		}
 	}
 
-	state, epc, err := GenesisFromEth1(eth1BlockHash, 0, deps, true)
+	state, epc, err := spec.GenesisFromEth1(eth1BlockHash, 0, deps, true)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -38,7 +38,7 @@ func KickStartState(eth1BlockHash Root, time Timestamp, validators []KickstartVa
 }
 
 // To build a genesis state without Eth 1.0 deposits, i.e. directly from a sequence of minimal validator data.
-func KickStartStateWithSignatures(eth1BlockHash Root, time Timestamp, validators []KickstartValidatorData, keys [][32]byte) (*BeaconStateView, *EpochsContext, error) {
+func (spec *Spec) KickStartStateWithSignatures(eth1BlockHash Root, time Timestamp, validators []KickstartValidatorData, keys [][32]byte) (*BeaconStateView, *EpochsContext, error) {
 	deps := make([]Deposit, len(validators), len(validators))
 
 	for i := range validators {
@@ -55,7 +55,7 @@ func KickStartStateWithSignatures(eth1BlockHash Root, time Timestamp, validators
 		if err := secKey.Deserialize(keys[i][:]); err != nil {
 			return nil, nil, err
 		}
-		dom := ComputeDomain(DOMAIN_DEPOSIT, GENESIS_FORK_VERSION, Root{})
+		dom := ComputeDomain(spec.DOMAIN_DEPOSIT, spec.GENESIS_FORK_VERSION, Root{})
 		msg := ComputeSigningRoot(root, dom)
 		sig := secKey.SignHash(msg[:])
 		var p BLSPubkey
@@ -66,7 +66,7 @@ func KickStartStateWithSignatures(eth1BlockHash Root, time Timestamp, validators
 		copy(d.Data.Signature[:], sig.Serialize())
 	}
 
-	state, epc, err := GenesisFromEth1(eth1BlockHash, 0, deps, true)
+	state, epc, err := spec.GenesisFromEth1(eth1BlockHash, 0, deps, true)
 	if err != nil {
 		return nil, nil, err
 	}

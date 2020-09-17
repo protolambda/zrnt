@@ -10,8 +10,6 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
-var BeaconBlockHeaderSSZ = zssz.GetSSZ((*BeaconBlockHeader)(nil))
-
 type BeaconBlockHeader struct {
 	Slot          Slot
 	ProposerIndex ValidatorIndex
@@ -125,7 +123,7 @@ func (v *BeaconBlockHeaderView) Raw() (*BeaconBlockHeader, error) {
 	}, nil
 }
 
-func (state *BeaconStateView) ProcessHeader(ctx context.Context, epc *EpochsContext, header *BeaconBlock) error {
+func (spec *Spec) ProcessHeader(ctx context.Context, epc *EpochsContext, state *BeaconStateView, header *BeaconBlock) error {
 	select {
 	case <-ctx.Done():
 		return TransitionCancelErr

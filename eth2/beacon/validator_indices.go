@@ -2,7 +2,6 @@ package beacon
 
 import (
 	"github.com/protolambda/zrnt/eth2/util/ssz"
-	"github.com/protolambda/zssz"
 	. "github.com/protolambda/ztyp/view"
 	"sort"
 )
@@ -22,12 +21,6 @@ func AsValidatorIndex(v View, err error) (ValidatorIndex, error) {
 const ValidatorIndexMarker = ValidatorIndex(^uint64(0))
 
 type RegistryIndices []ValidatorIndex
-
-func (*RegistryIndices) Limit() uint64 {
-	return VALIDATOR_REGISTRY_LIMIT
-}
-
-var registryIndicesSSZ = zssz.GetSSZ((*RegistryIndices)(nil))
 
 func (v *RegistryIndices) HashTreeRoot() Root {
 	return ssz.HashTreeRoot(v, registryIndicesSSZ)

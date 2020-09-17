@@ -15,10 +15,6 @@ func (c *Phase0Config) CommitteeIndices() ListTypeDef {
 	return ListType(ValidatorIndexType, c.MAX_VALIDATORS_PER_COMMITTEE)
 }
 
-func (ci *CommitteeIndices) Limit() uint64 {
-	return MAX_VALIDATORS_PER_COMMITTEE
-}
-
 type IndexedAttestation struct {
 	AttestingIndices CommitteeIndices
 	Data             AttestationData
@@ -28,18 +24,18 @@ type IndexedAttestation struct {
 func (c *Phase0Config) IndexedAttestation() *ContainerTypeDef {
 	return ContainerType("IndexedAttestation", []FieldDef{
 		{"attesting_indices", c.CommitteeIndices()},
-		{"data", AttestationDataType},
+		{"data", c.AttestationData()},
 		{"signature", BLSSignatureType},
 	})
 }
 
 // Verify validity of slashable_attestation fields.
-func (state *BeaconStateView) ValidateIndexedAttestation(epc *EpochsContext, indexedAttestation *IndexedAttestation) error {
+func (spec *Spec) ValidateIndexedAttestation(epc *EpochsContext, state *BeaconStateView, indexedAttestation *IndexedAttestation) error {
 	// wrap it in validator-sets. Does not sort it, but does make checking if it is a lot easier.
 	indices := ValidatorSet(indexedAttestation.AttestingIndices)
 
 	// Verify max number of indices
-	if count := len(indices); count > MAX_VALIDATORS_PER_COMMITTEE {
+	if count := uint64(len(indices)); count > spec.MAX_VALIDATORS_PER_COMMITTEE {
 		return fmt.Errorf("invalid indices count in indexed attestation: %d", count)
 	}
 
@@ -81,7 +77,7 @@ func (state *BeaconStateView) ValidateIndexedAttestation(epc *EpochsContext, ind
 		return errors.New("in phase 0 no empty attestation signatures are allowed")
 	}
 
-	dom, err := state.GetDomain(DOMAIN_BEACON_ATTESTER, indexedAttestation.Data.Target.Epoch)
+	dom, err := state.GetDomain(spec.DOMAIN_BEACON_ATTESTER, indexedAttestation.Data.Target.Epoch)
 	if err != nil {
 		return err
 	}

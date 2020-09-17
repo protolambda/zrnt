@@ -6,8 +6,6 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
-var SignedBeaconBlockSSZ = zssz.GetSSZ((*SignedBeaconBlock)(nil))
-
 type SignedBeaconBlock struct {
 	Message   BeaconBlock
 	Signature BLSSignature
@@ -60,8 +58,6 @@ func (block *BeaconBlock) Header() *BeaconBlockHeader {
 		BodyRoot:      block.Body.HashTreeRoot(),
 	}
 }
-
-var BeaconBlockBodySSZ = zssz.GetSSZ((*BeaconBlockBody)(nil))
 
 type BeaconBlockBody struct {
 	RandaoReveal BLSSignature

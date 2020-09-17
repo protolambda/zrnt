@@ -7,8 +7,11 @@ import (
 // Unix timestamp
 type Timestamp Uint64View
 
-func (t Timestamp) ToSlot(genesisTime Timestamp) Slot {
-	return Slot((t - genesisTime) / SECONDS_PER_SLOT)
+func (spec *Spec) TimeToSlot(t Timestamp, genesisTime Timestamp) Slot {
+	if t < genesisTime {
+		return 0
+	}
+	return Slot((t - genesisTime) / spec.SECONDS_PER_SLOT)
 }
 
 func AsTimestamp(v View, err error) (Timestamp, error) {
@@ -28,8 +31,8 @@ const SlotType = Uint64Type
 
 type Slot Uint64View
 
-func (s Slot) ToEpoch() Epoch {
-	return Epoch(s / SLOTS_PER_EPOCH)
+func (spec *Spec) SlotToEpoch(s Slot) Epoch {
+	return Epoch(s / spec.SLOTS_PER_EPOCH)
 }
 
 func AsSlot(v View, err error) (Slot, error) {
@@ -41,13 +44,19 @@ const EpochType = Uint64Type
 
 type Epoch Uint64View
 
-func (e Epoch) GetStartSlot() Slot {
-	return Slot(e) * SLOTS_PER_EPOCH
+func (spec *Spec) EpochStartSlot(e Epoch) Slot {
+	out := Slot(e) * spec.SLOTS_PER_EPOCH
+	// check if it overflowed, saturate on max value if so.
+	if e != spec.SlotToEpoch(out) {
+		return ^Slot(0)
+	} else {
+		return out
+	}
 }
 
 // Return the epoch at which an activation or exit triggered in epoch takes effect.
-func (e Epoch) ComputeActivationExitEpoch() Epoch {
-	return e + 1 + MAX_SEED_LOOKAHEAD
+func (spec *Spec) ComputeActivationExitEpoch(e Epoch) Epoch {
+	return e + 1 + spec.MAX_SEED_LOOKAHEAD
 }
 
 func (e Epoch) Previous() Epoch {

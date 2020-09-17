@@ -9,9 +9,9 @@ import (
 
 type CommitteeBits []byte
 
-func (cb CommitteeBits) View() *CommitteeBitsView {
-	c, _ := CommitteeBitsType.Deserialize(bytes.NewReader(cb), uint64(len(cb)))
-	return &CommitteeBitsView{c.(*BitListView)}
+func (c *Phase0Config) View(cb CommitteeBits) *CommitteeBitsView {
+	v, _ := c.CommitteeBits().Deserialize(bytes.NewReader(cb), uint64(len(cb)))
+	return &CommitteeBitsView{v.(*BitListView)}
 }
 
 func (cb CommitteeBits) BitLen() uint64 {
@@ -24,10 +24,6 @@ func (cb CommitteeBits) GetBit(i uint64) bool {
 
 func (cb CommitteeBits) SetBit(i uint64, v bool) {
 	bitfields.SetBit(cb, i, v)
-}
-
-func (cb *CommitteeBits) Limit() uint64 {
-	return MAX_VALIDATORS_PER_COMMITTEE
 }
 
 // Sets the bits to true that are true in other. (in place)

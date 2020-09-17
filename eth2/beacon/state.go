@@ -16,8 +16,10 @@ type BeaconState struct {
 	Fork                  Fork
 	// History
 	LatestBlockHeader BeaconBlockHeader
-	BlockRoots        [SLOTS_PER_HISTORICAL_ROOT]Root
-	StateRoots        [SLOTS_PER_HISTORICAL_ROOT]Root
+	// BlockRoots is a SLOTS_PER_HISTORICAL_ROOT vector
+	BlockRoots        []Root
+	// StateRoots is a SLOTS_PER_HISTORICAL_ROOT vector
+	StateRoots        []Root
 	HistoricalRoots   HistoricalRoots
 	// Eth1
 	Eth1Data      Eth1Data
@@ -26,10 +28,10 @@ type BeaconState struct {
 	// Registry
 	Validators ValidatorRegistry
 	Balances   Balances
-	// Randomness
-	RandaoMixes [EPOCHS_PER_HISTORICAL_VECTOR]Root
-	// Slashings
-	Slashings [EPOCHS_PER_SLASHINGS_VECTOR]Gwei
+	// RandaoMixes is a EPOCHS_PER_HISTORICAL_VECTOR vector
+	RandaoMixes []Root
+	// Slashings is a EPOCHS_PER_SLASHINGS_VECTOR vector
+	Slashings []Gwei
 	// Attestations
 	PreviousEpochAttestations PendingAttestations
 	CurrentEpochAttestations  PendingAttestations
@@ -66,38 +68,39 @@ const (
 	_stateFinalizedCheckpoint
 )
 
-// Beacon state
-var BeaconStateType = ContainerType("BeaconState", []FieldDef{
-	// Versioning
-	{"genesis_time", Uint64Type},
-	{"genesis_validators_root", RootType},
-	{"slot", SlotType},
-	{"fork", ForkType},
-	// History
-	{"latest_block_header", BeaconBlockHeaderType},
-	{"block_roots", BatchRootsType},
-	{"state_roots", BatchRootsType},
-	{"historical_roots", HistoricalRootsType},
-	// Eth1
-	{"eth1_data", Eth1DataType},
-	{"eth1_data_votes", Eth1DataVotesType},
-	{"eth1_deposit_index", Uint64Type},
-	// Registry
-	{"validators", ValidatorsRegistryType},
-	{"balances", RegistryBalancesType},
-	// Randomness
-	{"randao_mixes", RandaoMixesType},
-	// Slashings
-	{"slashings", SlashingsType}, // Per-epoch sums of slashed effective balances
-	// Attestations
-	{"previous_epoch_attestations", PendingAttestationsType},
-	{"current_epoch_attestations", PendingAttestationsType},
-	// Finality
-	{"justification_bits", JustificationBitsType},     // Bit set for every recent justified epoch
-	{"previous_justified_checkpoint", CheckpointType}, // Previous epoch snapshot
-	{"current_justified_checkpoint", CheckpointType},
-	{"finalized_checkpoint", CheckpointType},
-})
+func (c *Phase0Config) BeaconState() *ContainerTypeDef {
+	return ContainerType("BeaconState", []FieldDef{
+		// Versioning
+		{"genesis_time", Uint64Type},
+		{"genesis_validators_root", RootType},
+		{"slot", SlotType},
+		{"fork", ForkType},
+		// History
+		{"latest_block_header", c.BeaconBlockHeader()},
+		{"block_roots", c.BatchRoots()},
+		{"state_roots", c.BatchRoots()},
+		{"historical_roots", c.HistoricalRoots()},
+		// Eth1
+		{"eth1_data", c.Eth1Data()},
+		{"eth1_data_votes", c.Eth1DataVotes()},
+		{"eth1_deposit_index", Uint64Type},
+		// Registry
+		{"validators", c.ValidatorsRegistry()},
+		{"balances", c.RegistryBalances()},
+		// Randomness
+		{"randao_mixes", c.RandaoMixes()},
+		// Slashings
+		{"slashings", c.Slashings()}, // Per-epoch sums of slashed effective balances
+		// Attestations
+		{"previous_epoch_attestations", c.PendingAttestations()},
+		{"current_epoch_attestations", c.PendingAttestations()},
+		// Finality
+		{"justification_bits", JustificationBitsType},     // Bit set for every recent justified epoch
+		{"previous_justified_checkpoint", CheckpointType}, // Previous epoch snapshot
+		{"current_justified_checkpoint", CheckpointType},
+		{"finalized_checkpoint", CheckpointType},
+	})
+}
 
 // To load a state:
 //

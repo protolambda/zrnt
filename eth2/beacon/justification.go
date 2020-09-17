@@ -6,7 +6,7 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
-func (state *BeaconStateView) ProcessEpochJustification(ctx context.Context, epc *EpochsContext, process *EpochProcess) error {
+func (spec *Spec) ProcessEpochJustification(ctx context.Context, epc *EpochsContext, process *EpochProcess, state *BeaconStateView) error {
 	select {
 	case <-ctx.Done():
 		return TransitionCancelErr
@@ -60,7 +60,7 @@ func (state *BeaconStateView) ProcessEpochJustification(ctx context.Context, epc
 	var newJustifiedCheckpoint *Checkpoint
 	// > Justification
 	if process.PrevEpochUnslashedStake.TargetStake*3 >= totalStake*2 {
-		root, err := state.GetBlockRoot(previousEpoch)
+		root, err := spec.GetBlockRoot(state, previousEpoch)
 		if err != nil {
 			return err
 		}
@@ -71,7 +71,7 @@ func (state *BeaconStateView) ProcessEpochJustification(ctx context.Context, epc
 		bits[0] |= 1 << 1
 	}
 	if process.CurrEpochUnslashedTargetStake*3 >= totalStake*2 {
-		root, err := state.GetBlockRoot(currentEpoch)
+		root, err := spec.GetBlockRoot(state, currentEpoch)
 		if err != nil {
 			return err
 		}

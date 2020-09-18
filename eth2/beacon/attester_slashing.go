@@ -50,12 +50,12 @@ type AttesterSlashings struct {
 
 func (li *AttesterSlashings) HashTreeRoot(hFn tree.HashFn) Root {
 	length := uint64(len(li.Items))
-	return hFn.Mixin(hFn.SeriesHTR(func(i uint64) tree.HTR {
+	return hFn.ComplexListHTR(func(i uint64) tree.HTR {
 		if i < length {
 			return &li.Items[i]
 		}
 		return nil
-	}, length, li.Limit), length)
+	}, length, li.Limit)
 }
 
 func (spec *Spec) ProcessAttesterSlashing(state *BeaconStateView, epc *EpochsContext, attesterSlashing *AttesterSlashing) error {
@@ -85,7 +85,7 @@ func (spec *Spec) ProcessAttesterSlashing(state *BeaconStateView, epc *EpochsCon
 	}
 	// run slashings where applicable
 	// use ZigZagJoin for efficient intersection: the indicies are already sorted (as validated above)
-	ValidatorSet(sa1.AttestingIndices).ZigZagJoin(ValidatorSet(sa2.AttestingIndices), func(i ValidatorIndex) {
+	ValidatorSet(sa1.AttestingIndices.Indices).ZigZagJoin(ValidatorSet(sa2.AttestingIndices.Indices), func(i ValidatorIndex) {
 		if errorAny != nil {
 			return
 		}

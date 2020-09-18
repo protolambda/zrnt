@@ -36,12 +36,12 @@ type ProposerSlashings struct {
 
 func (li *ProposerSlashings) HashTreeRoot(hFn tree.HashFn) Root {
 	length := uint64(len(li.Items))
-	return hFn.Mixin(hFn.SeriesHTR(func(i uint64) tree.HTR {
+	return hFn.ComplexListHTR(func(i uint64) tree.HTR {
 		if i < length {
 			return &li.Items[i]
 		}
 		return nil
-	}, length, li.Limit), length)
+	}, length, li.Limit)
 }
 
 func (spec *Spec) ProcessProposerSlashings(ctx context.Context, epc *EpochsContext, state *BeaconStateView, ops []ProposerSlashing) error {

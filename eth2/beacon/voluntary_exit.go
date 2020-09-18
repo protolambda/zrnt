@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"github.com/protolambda/zrnt/eth2/util/bls"
-	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
@@ -20,12 +19,12 @@ type VoluntaryExits struct {
 
 func (li *VoluntaryExits) HashTreeRoot(hFn tree.HashFn) Root {
 	length := uint64(len(li.Items))
-	return hFn.Mixin(hFn.SeriesHTR(func(i uint64) tree.HTR {
+	return hFn.ComplexListHTR(func(i uint64) tree.HTR {
 		if i < length {
 			return &li.Items[i]
 		}
 		return nil
-	}, length, li.Limit), length)
+	}, length, li.Limit)
 }
 
 func (spec *Spec) ProcessVoluntaryExits(ctx context.Context, epc *EpochsContext, state *BeaconStateView, ops []SignedVoluntaryExit) error {
@@ -48,13 +47,17 @@ type VoluntaryExit struct {
 	ValidatorIndex ValidatorIndex
 }
 
-func (v *VoluntaryExit) HashTreeRoot() Root {
-	return ssz.HashTreeRoot(v, VoluntaryExitSSZ)
+func (v *VoluntaryExit) HashTreeRoot(hFn tree.HashFn) Root {
+	return hFn.HashTreeRoot(v.Epoch, v.ValidatorIndex)
 }
 
 type SignedVoluntaryExit struct {
 	Message   VoluntaryExit
 	Signature BLSSignature
+}
+
+func (v *SignedVoluntaryExit) HashTreeRoot(hFn tree.HashFn) Root {
+	return hFn.HashTreeRoot(&v.Message, v.Signature)
 }
 
 func (c *Phase0Config) VoluntaryExit() *ContainerTypeDef {
@@ -124,7 +127,7 @@ func (spec *Spec) ProcessVoluntaryExit(state *BeaconStateView, epc *EpochsContex
 	// Verify signature
 	if !bls.Verify(
 		pubkey,
-		ComputeSigningRoot(signedExit.Message.HashTreeRoot(), domain),
+		ComputeSigningRoot(signedExit.Message.HashTreeRoot(tree.GetHashFn()), domain),
 		signedExit.Signature) {
 		return errors.New("voluntary exit signature could not be verified")
 	}

@@ -32,6 +32,10 @@ func AsCommitteeIndex(v View, err error) (CommitteeIndex, error) {
 
 type Gwei Uint64View
 
+func (e Gwei) HashTreeRoot(hFn tree.HashFn) Root {
+	return Uint64View(e).HashTreeRoot(hFn)
+}
+
 const GweiType = Uint64Type
 
 func AsGwei(v View, err error) (Gwei, error) {

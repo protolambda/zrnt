@@ -137,19 +137,24 @@ func (spec *Spec) ProcessBlock(ctx context.Context, epc *EpochsContext, state *B
 	if err := spec.ProcessEth1Vote(ctx, epc, state, body.Eth1Data); err != nil {
 		return err
 	}
-	if err := spec.ProcessProposerSlashings(ctx, epc, state, &body.ProposerSlashings); err != nil {
+	// Safety checks, in case the user of the function provided too many operations
+	if err := body.CheckLimits(); err != nil {
 		return err
 	}
-	if err := spec.ProcessAttesterSlashings(ctx, epc, state, &body.AttesterSlashings); err != nil {
+
+	if err := spec.ProcessProposerSlashings(ctx, epc, state, body.ProposerSlashings.Items); err != nil {
 		return err
 	}
-	if err := spec.ProcessAttestations(ctx, epc, state, &body.Attestations); err != nil {
+	if err := spec.ProcessAttesterSlashings(ctx, epc, state, body.AttesterSlashings.Items); err != nil {
 		return err
 	}
-	if err := spec.ProcessDeposits(ctx, epc, state, &body.Deposits); err != nil {
+	if err := spec.ProcessAttestations(ctx, epc, state, body.Attestations.Items); err != nil {
 		return err
 	}
-	if err := spec.ProcessVoluntaryExits(ctx, epc, state, &body.VoluntaryExits); err != nil {
+	if err := spec.ProcessDeposits(ctx, epc, state, body.Deposits.Items); err != nil {
+		return err
+	}
+	if err := spec.ProcessVoluntaryExits(ctx, epc, state, body.VoluntaryExits.Items); err != nil {
 		return err
 	}
 	return nil
@@ -200,5 +205,5 @@ func (spec *Spec) VerifyBlockSignature(epc *EpochsContext, state *BeaconStateVie
 	if err != nil {
 		return false
 	}
-	return bls.Verify(pub, ComputeSigningRoot(block.Message.HashTreeRoot(), domain), block.Signature)
+	return bls.Verify(pub, ComputeSigningRoot(block.Message.HashTreeRoot(tree.GetHashFn()), domain), block.Signature)
 }

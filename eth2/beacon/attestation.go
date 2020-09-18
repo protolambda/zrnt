@@ -22,9 +22,13 @@ func (c *Phase0Config) Attestation() *ContainerTypeDef {
 }
 
 type Attestation struct {
-	AggregationBits CommitteeBits
+	AggregationBits CommitteeBitList
 	Data            AttestationData
 	Signature       BLSSignature
+}
+
+func (a *Attestation) HashTreeRoot(hFn tree.HashFn) Root {
+	return hFn.HashTreeRoot(&a.AggregationBits, &a.Data, a.Signature)
 }
 
 type Attestations struct {
@@ -34,12 +38,12 @@ type Attestations struct {
 
 func (li *Attestations) HashTreeRoot(hFn tree.HashFn) Root {
 	length := uint64(len(li.Items))
-	return hFn.Mixin(hFn.SeriesHTR(func(i uint64) tree.HTR {
+	return hFn.ComplexListHTR(func(i uint64) tree.HTR {
 		if i < length {
 			return &li.Items[i]
 		}
 		return nil
-	}, length, li.Limit), length)
+	}, length, li.Limit)
 }
 
 func (spec *Spec) ProcessAttestations(ctx context.Context, epc *EpochsContext, state *BeaconStateView, ops []Attestation) error {
@@ -167,14 +171,14 @@ func (spec *Spec) ProcessAttestation(state *BeaconStateView, epc *EpochsContext,
 
 // Convert attestation to (almost) indexed-verifiable form
 func (attestation *Attestation) ConvertToIndexed(committee []ValidatorIndex) (*IndexedAttestation, error) {
-	bitLen := attestation.AggregationBits.BitLen()
+	bitLen := attestation.AggregationBits.Bits.BitLen()
 	if uint64(len(committee)) != bitLen {
 		return nil, fmt.Errorf("committee size does not match bits size: %d <> %d", len(committee), bitLen)
 	}
 
 	participants := make([]ValidatorIndex, 0, len(committee))
 	for i := uint64(0); i < bitLen; i++ {
-		if attestation.AggregationBits.GetBit(i) {
+		if attestation.AggregationBits.Bits.GetBit(i) {
 			participants = append(participants, committee[i])
 		}
 	}
@@ -183,7 +187,10 @@ func (attestation *Attestation) ConvertToIndexed(committee []ValidatorIndex) (*I
 	})
 
 	return &IndexedAttestation{
-		AttestingIndices: participants,
+		AttestingIndices: CommitteeIndicesList{
+			Indices: participants,
+			Limit:   attestation.AggregationBits.BitLimit,
+		},
 		Data:             attestation.Data,
 		Signature:        attestation.Signature,
 	}, nil

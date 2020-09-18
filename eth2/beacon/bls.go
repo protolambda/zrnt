@@ -50,7 +50,7 @@ type SigningData struct {
 }
 
 func (d *SigningData) HashTreeRoot(hFn tree.HashFn) Root {
-	return hFn(d.ObjectRoot, d.Domain.HashTreeRoot(hFn))
+	return hFn.HashTreeRoot(d.ObjectRoot, d.Domain)
 }
 
 func ComputeSigningRoot(msgRoot Root, dom BLSDomain) Root {

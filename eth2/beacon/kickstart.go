@@ -3,7 +3,6 @@ package beacon
 import (
 	"errors"
 	hbls "github.com/herumi/bls-eth-go-binary/bls"
-	"github.com/protolambda/zrnt/eth2/util/ssz"
 )
 
 type KickstartValidatorData struct {
@@ -50,13 +49,12 @@ func (spec *Spec) KickStartStateWithSignatures(eth1BlockHash Root, time Timestam
 			Amount:                v.Balance,
 			Signature:             BLSSignature{},
 		}
-		root := ssz.HashTreeRoot(d.Data.ToMessage(), DepositMessageSSZ)
 		var secKey hbls.SecretKey
 		if err := secKey.Deserialize(keys[i][:]); err != nil {
 			return nil, nil, err
 		}
 		dom := ComputeDomain(spec.DOMAIN_DEPOSIT, spec.GENESIS_FORK_VERSION, Root{})
-		msg := ComputeSigningRoot(root, dom)
+		msg := ComputeSigningRoot(d.Data.MessageRoot(), dom)
 		sig := secKey.SignHash(msg[:])
 		var p BLSPubkey
 		copy(p[:], secKey.GetPublicKey().Serialize())

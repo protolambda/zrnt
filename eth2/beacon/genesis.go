@@ -2,7 +2,6 @@ package beacon
 
 import (
 	"errors"
-	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
@@ -42,8 +41,9 @@ func (spec *Spec) GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Dep
 	if err := state.SetEth1Data(eth1Dat.View()); err != nil {
 		return nil, nil, err
 	}
+	emptyBody := BeaconBlockBody{}
 	latestHeader := BeaconBlockHeader{
-		BodyRoot: ssz.HashTreeRoot(BeaconBlockBody{}, BeaconBlockBodySSZ),
+		BodyRoot: emptyBody.HashTreeRoot(tree.GetHashFn()),
 	}
 	if err := state.SetLatestBlockHeader(latestHeader.View()); err != nil {
 		return nil, nil, err
@@ -79,7 +79,7 @@ func (spec *Spec) GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Dep
 	}
 	// Process deposits
 	for i := range deps {
-		depRoot := RootView(ssz.HashTreeRoot(&deps[i].Data, DepositDataSSZ))
+		depRoot := RootView(deps[i].Data.HashTreeRoot(tree.GetHashFn()))
 		if err := depRootsView.Append(&depRoot); err != nil {
 			return nil, nil, err
 		}

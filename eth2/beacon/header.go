@@ -185,7 +185,7 @@ func (spec *Spec) ProcessHeader(ctx context.Context, epc *EpochsContext, state *
 		// state_root is zeroed and overwritten in the next `process_slot` call.
 		// with BlockHeaderState.UpdateStateRoot(), once the post state is available.
 		StateRoot: Root{},
-		BodyRoot:  header.Body.HashTreeRoot(),
+		BodyRoot:  header.Body.HashTreeRoot(tree.GetHashFn()),
 	}
 	return state.SetLatestBlockHeader(headerRaw.View())
 }

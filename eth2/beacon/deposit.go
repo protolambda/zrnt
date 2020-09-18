@@ -8,7 +8,6 @@ import (
 
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/merkle"
-	"github.com/protolambda/zrnt/eth2/util/ssz"
 	. "github.com/protolambda/ztyp/view"
 )
 
@@ -39,12 +38,12 @@ func (d *DepositData) ToMessage() *DepositMessage {
 
 // hash-tree-root including the signature
 func (d *DepositData) HashTreeRoot(hFn tree.HashFn) Root {
-	hFn.HashTreeRoot(d.Pubkey, d.WithdrawalCredentials, d.Amount, d.Signature)
+	return hFn.HashTreeRoot(d.Pubkey, d.WithdrawalCredentials, d.Amount, d.Signature)
 }
 
 // hash-tree-root excluding the signature
 func (d *DepositData) MessageRoot() Root {
-	return ssz.HashTreeRoot(d.ToMessage(), DepositMessageSSZ)
+	return d.ToMessage().HashTreeRoot(tree.GetHashFn())
 }
 
 type DepositMessage struct {
@@ -53,11 +52,28 @@ type DepositMessage struct {
 	Amount                Gwei
 }
 
+func (b *DepositMessage) HashTreeRoot(hFn tree.HashFn) Root {
+	return hFn.HashTreeRoot(b.Pubkey, b.WithdrawalCredentials, b.Amount)
+}
+
 var DepositProofType = VectorType(Bytes32Type, DEPOSIT_CONTRACT_TREE_DEPTH+1)
 
+// DepositProof contains the proof for the merkle-path to deposit root, including list mix-in.
+type DepositProof [DEPOSIT_CONTRACT_TREE_DEPTH + 1]Root
+
+func (b *DepositProof) HashTreeRoot(hFn tree.HashFn) Root {
+	return hFn.ChunksHTR(func(i uint64) tree.Root {
+		return b[i]
+	}, uint64(len(b)), uint64(len(b)))
+}
+
 type Deposit struct {
-	Proof [DEPOSIT_CONTRACT_TREE_DEPTH + 1]Root // Merkle-path to deposit root
+	Proof  DepositProof
 	Data  DepositData
+}
+
+func (b *Deposit) HashTreeRoot(hFn tree.HashFn) Root {
+	return hFn.HashTreeRoot(&b.Proof, &b.Data)
 }
 
 func (c *Phase0Config) Deposit() *ContainerTypeDef {
@@ -141,7 +157,7 @@ func (spec *Spec) ProcessDeposit(epc *EpochsContext, state *BeaconStateView, dep
 
 	// Verify the Merkle branch
 	if !ignoreSignatureAndProof && !merkle.VerifyMerkleBranch(
-		dep.Data.HashTreeRoot(),
+		dep.Data.HashTreeRoot(tree.GetHashFn()),
 		dep.Proof[:],
 		DEPOSIT_CONTRACT_TREE_DEPTH+1, // Add 1 for the `List` length mix-in
 		uint64(depositIndex),

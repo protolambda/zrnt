@@ -1,6 +1,7 @@
 package beacon
 
 import (
+	"fmt"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
@@ -26,7 +27,7 @@ type BeaconBlock struct {
 }
 
 func (b *BeaconBlock) HashTreeRoot(hFn tree.HashFn) Root {
-	return hFn.HashTreeRoot(b.Slot, b.ProposerIndex, b.ParentRoot, b.StateRoot, b.Body)
+	return hFn.HashTreeRoot(b.Slot, b.ProposerIndex, b.ParentRoot, b.StateRoot, &b.Body)
 }
 
 func (c *Phase0Config) BeaconBlock() *ContainerTypeDef {
@@ -52,7 +53,7 @@ func (block *BeaconBlock) Header() *BeaconBlockHeader {
 		ProposerIndex: block.ProposerIndex,
 		ParentRoot:    block.ParentRoot,
 		StateRoot:     block.StateRoot,
-		BodyRoot:      block.Body.HashTreeRoot(),
+		BodyRoot:      block.Body.HashTreeRoot(tree.GetHashFn()),
 	}
 }
 
@@ -75,6 +76,25 @@ func (b *BeaconBlockBody) HashTreeRoot(hFn tree.HashFn) Root {
 		&b.AttesterSlashings, &b.Attestations,
 		&b.Deposits, &b.VoluntaryExits,
 	)
+}
+
+func (b BeaconBlockBody) CheckLimits() error {
+	if x := uint64(len(b.ProposerSlashings.Items)); x > b.ProposerSlashings.Limit {
+		return fmt.Errorf("too many proposer slashings: %d", x)
+	}
+	if x := uint64(len(b.AttesterSlashings.Items)); x > b.AttesterSlashings.Limit {
+		return fmt.Errorf("too many attester slashings: %d", x)
+	}
+	if x := uint64(len(b.Attestations.Items)); x > b.Attestations.Limit {
+		return fmt.Errorf("too many attestations: %d", x)
+	}
+	if x := uint64(len(b.Deposits.Items)); x > b.Deposits.Limit {
+		return fmt.Errorf("too many deposits: %d", x)
+	}
+	if x := uint64(len(b.VoluntaryExits.Items)); x > b.VoluntaryExits.Limit {
+		return fmt.Errorf("too many voluntary exits: %d", x)
+	}
+	return nil
 }
 
 func (c *Phase0Config) BeaconBlockBody() *ContainerTypeDef {

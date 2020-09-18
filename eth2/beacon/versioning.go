@@ -4,9 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/util/hashing"
-	"github.com/protolambda/zssz"
-	"github.com/protolambda/zssz/htr"
+	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
 
@@ -15,6 +13,11 @@ const VersionType = Bytes4Type
 // 32 bits, not strictly an integer, hence represented as 4 bytes
 // (bytes not necessarily corresponding to versions)
 type Version [4]byte
+
+func (p Version) HashTreeRoot(_ tree.HashFn) (out Root) {
+	copy(out[:], p[:])
+	return
+}
 
 func (p Version) MarshalText() ([]byte, error) {
 	return []byte("0x" + hex.EncodeToString(p[:])), nil
@@ -80,13 +83,16 @@ type ForkData struct {
 	GenesisValidatorsRoot Root
 }
 
+func (d *ForkData) HashTreeRoot(hFn tree.HashFn) Root {
+	return hFn.HashTreeRoot(d.CurrentVersion, d.GenesisValidatorsRoot)
+}
+
 func ComputeForkDataRoot(currentVersion Version, genesisValidatorsRoot Root) Root {
 	data := ForkData{
 		CurrentVersion:        currentVersion,
 		GenesisValidatorsRoot: genesisValidatorsRoot,
 	}
-	hFn := hashing.GetHashFn()
-	return zssz.HashTreeRoot(htr.HashFn(hFn), &data, ForkDataSSZ)
+	return data.HashTreeRoot(tree.GetHashFn())
 }
 
 func ComputeForkDigest(currentVersion Version, genesisValidatorsRoot Root) ForkDigest {

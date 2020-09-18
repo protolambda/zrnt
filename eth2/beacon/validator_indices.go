@@ -1,7 +1,6 @@
 package beacon
 
 import (
-	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 	"sort"
@@ -27,8 +26,15 @@ const ValidatorIndexMarker = ValidatorIndex(^uint64(0))
 
 type RegistryIndices []ValidatorIndex
 
-func (v *RegistryIndices) HashTreeRoot() Root {
-	return ssz.HashTreeRoot(v, registryIndicesSSZ)
+type RegistryIndicesList struct {
+	Indices RegistryIndices
+	Limit uint64
+}
+
+func (p *RegistryIndicesList) HashTreeRoot(hFn tree.HashFn) Root {
+	return hFn.Uint64ListHTR(func(i uint64) uint64 {
+		return uint64(p.Indices[i])
+	}, uint64(len(p.Indices)), p.Limit)
 }
 
 // Collection of validators, should always be sorted.

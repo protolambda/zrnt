@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/util/bls"
-	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 	"sort"
@@ -12,12 +11,23 @@ import (
 
 type CommitteeIndices []ValidatorIndex
 
+type CommitteeIndicesList struct {
+	Indices CommitteeIndices
+	Limit uint64
+}
+
+func (p *CommitteeIndicesList) HashTreeRoot(hFn tree.HashFn) Root {
+	return hFn.Uint64ListHTR(func(i uint64) uint64 {
+		return uint64(p.Indices[i])
+	}, uint64(len(p.Indices)), p.Limit)
+}
+
 func (c *Phase0Config) CommitteeIndices() ListTypeDef {
 	return ListType(ValidatorIndexType, c.MAX_VALIDATORS_PER_COMMITTEE)
 }
 
 type IndexedAttestation struct {
-	AttestingIndices CommitteeIndices
+	AttestingIndices CommitteeIndicesList
 	Data             AttestationData
 	Signature        BLSSignature
 }
@@ -37,7 +47,7 @@ func (c *Phase0Config) IndexedAttestation() *ContainerTypeDef {
 // Verify validity of slashable_attestation fields.
 func (spec *Spec) ValidateIndexedAttestation(epc *EpochsContext, state *BeaconStateView, indexedAttestation *IndexedAttestation) error {
 	// wrap it in validator-sets. Does not sort it, but does make checking if it is a lot easier.
-	indices := ValidatorSet(indexedAttestation.AttestingIndices)
+	indices := ValidatorSet(indexedAttestation.AttestingIndices.Indices)
 
 	// Verify max number of indices
 	if count := uint64(len(indices)); count > spec.MAX_VALIDATORS_PER_COMMITTEE {
@@ -87,7 +97,7 @@ func (spec *Spec) ValidateIndexedAttestation(epc *EpochsContext, state *BeaconSt
 		return err
 	}
 	if !bls.FastAggregateVerify(pubkeys,
-		ComputeSigningRoot(ssz.HashTreeRoot(&indexedAttestation.Data, AttestationDataSSZ), dom),
+		ComputeSigningRoot(indexedAttestation.Data.HashTreeRoot(tree.GetHashFn()), dom),
 		indexedAttestation.Signature,
 	) {
 		return errors.New("could not verify BLS signature for indexed attestation")

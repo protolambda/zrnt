@@ -6,7 +6,7 @@ import (
 )
 
 type PendingAttestation struct {
-	AggregationBits CommitteeBits
+	AggregationBits CommitteeBitList
 	Data            AttestationData
 	InclusionDelay  Slot
 	ProposerIndex   ValidatorIndex

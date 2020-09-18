@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/protolambda/ztyp/tree"
 
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/merkle"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
-	"github.com/protolambda/zssz"
 	. "github.com/protolambda/ztyp/view"
 )
 
@@ -37,11 +37,15 @@ func (d *DepositData) ToMessage() *DepositMessage {
 	}
 }
 
+// hash-tree-root including the signature
+func (d *DepositData) HashTreeRoot(hFn tree.HashFn) Root {
+	hFn.HashTreeRoot(d.Pubkey, d.WithdrawalCredentials, d.Amount, d.Signature)
+}
+
+// hash-tree-root excluding the signature
 func (d *DepositData) MessageRoot() Root {
 	return ssz.HashTreeRoot(d.ToMessage(), DepositMessageSSZ)
 }
-
-var DepositMessageSSZ = zssz.GetSSZ((*DepositMessage)(nil))
 
 type DepositMessage struct {
 	Pubkey                BLSPubkey
@@ -67,7 +71,20 @@ func (c *Phase0Config) BlockDeposits() ListTypeDef {
 	return ListType(c.Deposit(), c.MAX_DEPOSITS)
 }
 
-type Deposits []Deposit
+type Deposits struct {
+	Items []Deposit
+	Limit uint64
+}
+
+func (li *Deposits) HashTreeRoot(hFn tree.HashFn) Root {
+	length := uint64(len(li.Items))
+	return hFn.Mixin(hFn.SeriesHTR(func(i uint64) tree.HTR {
+		if i < length {
+			return &li.Items[i]
+		}
+		return nil
+	}, length, li.Limit), length)
+}
 
 // Verify that outstanding deposits are processed up to the maximum number of deposits, then process all in order.
 func (spec *Spec) ProcessDeposits(ctx context.Context, epc *EpochsContext, state *BeaconStateView, ops []Deposit) error {
@@ -124,7 +141,7 @@ func (spec *Spec) ProcessDeposit(epc *EpochsContext, state *BeaconStateView, dep
 
 	// Verify the Merkle branch
 	if !ignoreSignatureAndProof && !merkle.VerifyMerkleBranch(
-		ssz.HashTreeRoot(&dep.Data, DepositDataSSZ),
+		dep.Data.HashTreeRoot(),
 		dep.Proof[:],
 		DEPOSIT_CONTRACT_TREE_DEPTH+1, // Add 1 for the `List` length mix-in
 		uint64(depositIndex),

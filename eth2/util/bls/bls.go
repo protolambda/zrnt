@@ -5,9 +5,17 @@ import (
 	"errors"
 	"fmt"
 	hbls "github.com/herumi/bls-eth-go-binary/bls"
+	"github.com/protolambda/ztyp/tree"
 )
 
 type BLSPubkey [48]byte
+
+func (s BLSPubkey) HashTreeRoot(hFn tree.HashFn) tree.Root {
+	var a, b tree.Root
+	copy(a[:], s[0:32])
+	copy(b[:], s[32:48])
+	return hFn(a, b)
+}
 
 func (p BLSPubkey) MarshalText() ([]byte, error) {
 	return []byte("0x" + hex.EncodeToString(p[:])), nil
@@ -32,6 +40,15 @@ func (p *BLSPubkey) UnmarshalText(text []byte) error {
 }
 
 type BLSSignature [96]byte
+
+func (s BLSSignature) HashTreeRoot(hFn tree.HashFn) tree.Root {
+	var a, b, c tree.Root
+	copy(a[:], s[0:32])
+	copy(b[:], s[32:64])
+	copy(c[:], s[64:96])
+
+	return hFn(hFn(a, b), hFn(c, tree.Root{}))
+}
 
 func (p BLSSignature) MarshalText() ([]byte, error) {
 	return []byte("0x" + hex.EncodeToString(p[:])), nil

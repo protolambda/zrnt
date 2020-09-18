@@ -1,8 +1,7 @@
 package beacon
 
 import (
-	"github.com/protolambda/zrnt/eth2/util/ssz"
-	"github.com/protolambda/zssz"
+	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
 
@@ -18,8 +17,6 @@ func (block *SignedBeaconBlock) SignedHeader() *SignedBeaconBlockHeader {
 	}
 }
 
-var BeaconBlockSSZ = zssz.GetSSZ((*BeaconBlock)(nil))
-
 type BeaconBlock struct {
 	Slot          Slot
 	ProposerIndex ValidatorIndex
@@ -28,8 +25,8 @@ type BeaconBlock struct {
 	Body          BeaconBlockBody
 }
 
-func (b *BeaconBlock) HashTreeRoot() Root {
-	return ssz.HashTreeRoot(b, BeaconBlockSSZ)
+func (b *BeaconBlock) HashTreeRoot(hFn tree.HashFn) Root {
+	return hFn.HashTreeRoot(b.Slot, b.ProposerIndex, b.ParentRoot, b.StateRoot, b.Body)
 }
 
 func (c *Phase0Config) BeaconBlock() *ContainerTypeDef {
@@ -71,8 +68,13 @@ type BeaconBlockBody struct {
 	VoluntaryExits    VoluntaryExits
 }
 
-func (b *BeaconBlockBody) HashTreeRoot() Root {
-	return ssz.HashTreeRoot(b, BeaconBlockBodySSZ)
+func (b *BeaconBlockBody) HashTreeRoot(hFn tree.HashFn) Root {
+	return hFn.HashTreeRoot(
+		b.RandaoReveal, &b.Eth1Data,
+		b.Graffiti, &b.ProposerSlashings,
+		&b.AttesterSlashings, &b.Attestations,
+		&b.Deposits, &b.VoluntaryExits,
+	)
 }
 
 func (c *Phase0Config) BeaconBlockBody() *ContainerTypeDef {

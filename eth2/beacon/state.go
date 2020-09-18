@@ -6,8 +6,6 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
-var BeaconStateSSZ = zssz.GetSSZ((*BeaconState)(nil))
-
 type BeaconState struct {
 	// Versioning
 	GenesisTime           Timestamp

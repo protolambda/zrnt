@@ -6,7 +6,6 @@ import (
 	"errors"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	. "github.com/protolambda/zrnt/eth2/util/hashing"
-	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
@@ -109,7 +108,7 @@ func (spec *Spec) ProcessRandaoReveal(ctx context.Context, epc *EpochsContext, s
 	if !bls.Verify(
 		proposerPubkey,
 		ComputeSigningRoot(
-			ssz.HashTreeRoot(epoch, RandaoEpochSSZ),
+			epoch.HashTreeRoot(tree.GetHashFn()),
 			domain),
 		reveal,
 	) {

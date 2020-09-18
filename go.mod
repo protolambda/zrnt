@@ -10,3 +10,7 @@ require (
 	github.com/protolambda/ztyp v0.0.2
 	gopkg.in/yaml.v2 v2.2.2
 )
+
+replace (
+	github.com/protolambda/ztyp latest => ../ztyp latest
+)

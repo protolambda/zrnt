@@ -4,14 +4,25 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/protolambda/zssz/bitfields"
+	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
 
+// CommitteeBits is formatted as a serialized SSZ bitlist, including the delimit bit
 type CommitteeBits []byte
 
 func (c *Phase0Config) View(cb CommitteeBits) *CommitteeBitsView {
 	v, _ := c.CommitteeBits().Deserialize(bytes.NewReader(cb), uint64(len(cb)))
 	return &CommitteeBitsView{v.(*BitListView)}
+}
+
+type CommitteeBitList struct {
+	Bits CommitteeBits
+	BitLimit uint64
+}
+
+func (li *CommitteeBitList) HashTreeRoot(hFn tree.HashFn) Root {
+	return hFn.BitListHTR(li.Bits, li.BitLimit)
 }
 
 func (cb CommitteeBits) BitLen() uint64 {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
 
@@ -27,6 +28,10 @@ type AttesterSlashing struct {
 	Attestation2 IndexedAttestation
 }
 
+func (p *AttesterSlashing) HashTreeRoot(hFn tree.HashFn) Root {
+	return hFn.HashTreeRoot(&p.Attestation1, &p.Attestation2)
+}
+
 func (c *Phase0Config) BlockAttesterSlashings() ListTypeDef {
 	return ListType(c.AttesterSlashing(), c.MAX_ATTESTER_SLASHINGS)
 }
@@ -38,7 +43,20 @@ func (c *Phase0Config) AttesterSlashing() *ContainerTypeDef {
 	})
 }
 
-type AttesterSlashings []AttesterSlashing
+type AttesterSlashings struct {
+	Items []AttesterSlashing
+	Limit uint64
+}
+
+func (li *AttesterSlashings) HashTreeRoot(hFn tree.HashFn) Root {
+	length := uint64(len(li.Items))
+	return hFn.Mixin(hFn.SeriesHTR(func(i uint64) tree.HTR {
+		if i < length {
+			return &li.Items[i]
+		}
+		return nil
+	}, length, li.Limit), length)
+}
 
 func (spec *Spec) ProcessAttesterSlashing(state *BeaconStateView, epc *EpochsContext, attesterSlashing *AttesterSlashing) error {
 	sa1 := &attesterSlashing.Attestation1

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
-	"github.com/protolambda/zssz"
+	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
 
@@ -13,7 +13,20 @@ func (c *Phase0Config) BlockVoluntaryExits() ListTypeDef {
 	return ListType(c.SignedVoluntaryExit(), c.MAX_VOLUNTARY_EXITS)
 }
 
-type VoluntaryExits []SignedVoluntaryExit
+type VoluntaryExits struct {
+	Items []SignedVoluntaryExit
+	Limit uint64
+}
+
+func (li *VoluntaryExits) HashTreeRoot(hFn tree.HashFn) Root {
+	length := uint64(len(li.Items))
+	return hFn.Mixin(hFn.SeriesHTR(func(i uint64) tree.HTR {
+		if i < length {
+			return &li.Items[i]
+		}
+		return nil
+	}, length, li.Limit), length)
+}
 
 func (spec *Spec) ProcessVoluntaryExits(ctx context.Context, epc *EpochsContext, state *BeaconStateView, ops []SignedVoluntaryExit) error {
 	for i := range ops {
@@ -30,8 +43,6 @@ func (spec *Spec) ProcessVoluntaryExits(ctx context.Context, epc *EpochsContext,
 	return nil
 }
 
-var VoluntaryExitSSZ = zssz.GetSSZ((*VoluntaryExit)(nil))
-
 type VoluntaryExit struct {
 	Epoch          Epoch // Earliest epoch when voluntary exit can be processed
 	ValidatorIndex ValidatorIndex
@@ -40,8 +51,6 @@ type VoluntaryExit struct {
 func (v *VoluntaryExit) HashTreeRoot() Root {
 	return ssz.HashTreeRoot(v, VoluntaryExitSSZ)
 }
-
-var SignedVoluntaryExitSSZ = zssz.GetSSZ((*SignedVoluntaryExit)(nil))
 
 type SignedVoluntaryExit struct {
 	Message   VoluntaryExit

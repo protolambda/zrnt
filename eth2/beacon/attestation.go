@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 	"sort"
 )
@@ -26,8 +27,20 @@ type Attestation struct {
 	Signature       BLSSignature
 }
 
-type Attestations []Attestation
+type Attestations struct {
+	Items []Attestation
+	Limit uint64
+}
 
+func (li *Attestations) HashTreeRoot(hFn tree.HashFn) Root {
+	length := uint64(len(li.Items))
+	return hFn.Mixin(hFn.SeriesHTR(func(i uint64) tree.HTR {
+		if i < length {
+			return &li.Items[i]
+		}
+		return nil
+	}, length, li.Limit), length)
+}
 
 func (spec *Spec) ProcessAttestations(ctx context.Context, epc *EpochsContext, state *BeaconStateView, ops []Attestation) error {
 	for i := range ops {

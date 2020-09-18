@@ -80,8 +80,6 @@ type ForkData struct {
 	GenesisValidatorsRoot Root
 }
 
-var ForkDataSSZ = zssz.GetSSZ((*ForkData)(nil))
-
 func ComputeForkDataRoot(currentVersion Version, genesisValidatorsRoot Root) Root {
 	data := ForkData{
 		CurrentVersion:        currentVersion,

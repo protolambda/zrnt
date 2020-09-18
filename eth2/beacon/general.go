@@ -11,9 +11,17 @@ const Bytes32Type = RootType
 
 type Shard Uint64View
 
+func (e Shard) HashTreeRoot(hFn tree.HashFn) Root {
+	return Uint64View(e).HashTreeRoot(hFn)
+}
+
 const ShardType = Uint64Type
 
 type CommitteeIndex Uint64View
+
+func (e CommitteeIndex) HashTreeRoot(hFn tree.HashFn) Root {
+	return Uint64View(e).HashTreeRoot(hFn)
+}
 
 const CommitteeIndexType = Uint64Type
 
@@ -34,6 +42,10 @@ func AsGwei(v View, err error) (Gwei, error) {
 type Checkpoint struct {
 	Epoch Epoch
 	Root  Root
+}
+
+func (p *Checkpoint) HashTreeRoot(hFn tree.HashFn) Root {
+	return hFn.HashTreeRoot(p.Epoch, p.Root)
 }
 
 func (c *Checkpoint) View() *CheckpointView {

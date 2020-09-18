@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/ssz"
+	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 	"sort"
 )
@@ -19,6 +20,10 @@ type IndexedAttestation struct {
 	AttestingIndices CommitteeIndices
 	Data             AttestationData
 	Signature        BLSSignature
+}
+
+func (p *IndexedAttestation) HashTreeRoot(hFn tree.HashFn) Root {
+	return hFn.HashTreeRoot(&p.AttestingIndices, &p.Data, p.Signature)
 }
 
 func (c *Phase0Config) IndexedAttestation() *ContainerTypeDef {

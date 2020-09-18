@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"github.com/protolambda/zrnt/eth2/util/ssz"
+	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 	"sort"
 )
@@ -14,6 +15,10 @@ type ValidatorIndex Uint64View
 func AsValidatorIndex(v View, err error) (ValidatorIndex, error) {
 	i, err := AsUint64(v, err)
 	return ValidatorIndex(i), err
+}
+
+func (i ValidatorIndex) HashTreeRoot(hFn tree.HashFn) Root {
+	return Uint64View(i).HashTreeRoot(hFn)
 }
 
 // Custom constant, not in spec:

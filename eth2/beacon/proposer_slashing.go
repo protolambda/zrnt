@@ -3,6 +3,7 @@ package beacon
 import (
 	"context"
 	"errors"
+	"github.com/protolambda/ztyp/tree"
 
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	. "github.com/protolambda/ztyp/view"
@@ -11,6 +12,10 @@ import (
 type ProposerSlashing struct {
 	SignedHeader1 SignedBeaconBlockHeader
 	SignedHeader2 SignedBeaconBlockHeader
+}
+
+func (p *ProposerSlashing) HashTreeRoot(hFn tree.HashFn) Root {
+	return hFn.HashTreeRoot(&p.SignedHeader1, &p.SignedHeader2)
 }
 
 func (c *Phase0Config) ProposerSlashing() *ContainerTypeDef {
@@ -24,7 +29,20 @@ func (c *Phase0Config) BlockProposerSlashings() ListTypeDef {
 	return ListType(c.ProposerSlashing(), c.MAX_PROPOSER_SLASHINGS)
 }
 
-type ProposerSlashings []ProposerSlashing
+type ProposerSlashings struct {
+	Items []ProposerSlashing
+	Limit uint64
+}
+
+func (li *ProposerSlashings) HashTreeRoot(hFn tree.HashFn) Root {
+	length := uint64(len(li.Items))
+	return hFn.Mixin(hFn.SeriesHTR(func(i uint64) tree.HTR {
+		if i < length {
+			return &li.Items[i]
+		}
+		return nil
+	}, length, li.Limit), length)
+}
 
 func (spec *Spec) ProcessProposerSlashings(ctx context.Context, epc *EpochsContext, state *BeaconStateView, ops []ProposerSlashing) error {
 	for i := range ops {
@@ -87,13 +105,13 @@ func (spec *Spec) ProcessProposerSlashing(epc *EpochsContext, state *BeaconState
 	// Verify signatures
 	if !bls.Verify(
 		pubkey,
-		ComputeSigningRoot(ps.SignedHeader1.Message.HashTreeRoot(), domain),
+		ComputeSigningRoot(ps.SignedHeader1.Message.HashTreeRoot(tree.GetHashFn()), domain),
 		ps.SignedHeader1.Signature) {
 		return errors.New("proposer slashing header 1 has invalid BLS signature")
 	}
 	if !bls.Verify(
 		pubkey,
-		ComputeSigningRoot(ps.SignedHeader2.Message.HashTreeRoot(), domain),
+		ComputeSigningRoot(ps.SignedHeader2.Message.HashTreeRoot(tree.GetHashFn()), domain),
 		ps.SignedHeader2.Signature) {
 		return errors.New("proposer slashing header 2 has invalid BLS signature")
 	}

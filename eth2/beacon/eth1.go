@@ -13,6 +13,10 @@ type Eth1Data struct {
 	BlockHash    Root
 }
 
+func (b *Eth1Data) HashTreeRoot(hFn tree.HashFn) Root {
+	return hFn.HashTreeRoot(b.DepositRoot, b.DepositCount, b.BlockHash)
+}
+
 func (dat *Eth1Data) View() *Eth1DataView {
 	depRv := RootView(dat.DepositRoot)
 	blockRv := RootView(dat.BlockHash)

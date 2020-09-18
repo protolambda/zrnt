@@ -3,9 +3,7 @@ package beacon
 import (
 	"bytes"
 	"github.com/protolambda/zrnt/eth2/util/bls"
-	"github.com/protolambda/zrnt/eth2/util/hashing"
-	"github.com/protolambda/zssz"
-	"github.com/protolambda/zssz/htr"
+	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
 
@@ -35,6 +33,10 @@ type BLSDomainType [4]byte
 // BLS domain (8 bytes): fork version (32 bits) concatenated with BLS domain type (32 bits)
 type BLSDomain [32]byte
 
+func (dom BLSDomain) HashTreeRoot(hFn tree.HashFn) Root {
+	return Root(dom) // just convert to root type (no hashing involved)
+}
+
 func ComputeDomain(domainType BLSDomainType, forkVersion Version, genesisValidatorsRoot Root) (out BLSDomain) {
 	copy(out[0:4], domainType[:])
 	forkDataRoot := ComputeForkDataRoot(forkVersion, genesisValidatorsRoot)
@@ -47,13 +49,16 @@ type SigningData struct {
 	Domain     BLSDomain
 }
 
+func (d *SigningData) HashTreeRoot(hFn tree.HashFn) Root {
+	return hFn(d.ObjectRoot, d.Domain.HashTreeRoot(hFn))
+}
+
 func ComputeSigningRoot(msgRoot Root, dom BLSDomain) Root {
 	withDomain := SigningData{
 		ObjectRoot: msgRoot,
 		Domain:     dom,
 	}
-	hFn := hashing.GetHashFn()
-	return zssz.HashTreeRoot(htr.HashFn(hFn), &withDomain, SigningDataSSZ)
+	return withDomain.HashTreeRoot(tree.GetHashFn())
 }
 
 // For pubkeys/signatures in state, a tree-representation is used. (TODO: cache optimized deserialized/parsed bls points)

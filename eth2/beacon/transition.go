@@ -137,19 +137,19 @@ func (spec *Spec) ProcessBlock(ctx context.Context, epc *EpochsContext, state *B
 	if err := spec.ProcessEth1Vote(ctx, epc, state, body.Eth1Data); err != nil {
 		return err
 	}
-	if err := spec.ProcessProposerSlashings(ctx, epc, state, body.ProposerSlashings); err != nil {
+	if err := spec.ProcessProposerSlashings(ctx, epc, state, &body.ProposerSlashings); err != nil {
 		return err
 	}
-	if err := spec.ProcessAttesterSlashings(ctx, epc, state, body.AttesterSlashings); err != nil {
+	if err := spec.ProcessAttesterSlashings(ctx, epc, state, &body.AttesterSlashings); err != nil {
 		return err
 	}
-	if err := spec.ProcessAttestations(ctx, epc, state, body.Attestations); err != nil {
+	if err := spec.ProcessAttestations(ctx, epc, state, &body.Attestations); err != nil {
 		return err
 	}
-	if err := spec.ProcessDeposits(ctx, epc, state, body.Deposits); err != nil {
+	if err := spec.ProcessDeposits(ctx, epc, state, &body.Deposits); err != nil {
 		return err
 	}
-	if err := spec.ProcessVoluntaryExits(ctx, epc, state, body.VoluntaryExits); err != nil {
+	if err := spec.ProcessVoluntaryExits(ctx, epc, state, &body.VoluntaryExits); err != nil {
 		return err
 	}
 	return nil

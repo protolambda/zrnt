@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/util/ssz"
-	"github.com/protolambda/zssz"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
@@ -32,8 +30,8 @@ func (h *BeaconBlockHeader) View() *BeaconBlockHeaderView {
 	return &BeaconBlockHeaderView{c}
 }
 
-func (b *BeaconBlockHeader) HashTreeRoot() Root {
-	return ssz.HashTreeRoot(b, BeaconBlockHeaderSSZ)
+func (b *BeaconBlockHeader) HashTreeRoot(hFn tree.HashFn) Root {
+	return hFn.HashTreeRoot(b.Slot, b.ProposerIndex, b.ParentRoot, b.StateRoot, b.BodyRoot)
 }
 
 type SignedBeaconBlockHeader struct {
@@ -41,10 +39,8 @@ type SignedBeaconBlockHeader struct {
 	Signature BLSSignature
 }
 
-var SignedBeaconBlockHeaderSSZ = zssz.GetSSZ((*SignedBeaconBlockHeader)(nil))
-
-func (b *SignedBeaconBlockHeader) HashTreeRoot() Root {
-	return ssz.HashTreeRoot(b, SignedBeaconBlockHeaderSSZ)
+func (s *SignedBeaconBlockHeader) HashTreeRoot(hFn tree.HashFn) Root {
+	return hFn.HashTreeRoot(&s.Message, s.Signature)
 }
 
 func (c *Phase0Config) SignedBeaconBlockHeader() *ContainerTypeDef {

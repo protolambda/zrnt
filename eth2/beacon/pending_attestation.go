@@ -1,6 +1,7 @@
 package beacon
 
 import (
+	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
 
@@ -31,6 +32,10 @@ type AttestationData struct {
 	// FFG vote
 	Source Checkpoint
 	Target Checkpoint
+}
+
+func (p *AttestationData) HashTreeRoot(hFn tree.HashFn) Root {
+	return hFn.HashTreeRoot(p.Slot, p.Index, p.BeaconBlockRoot, &p.Source, &p.Target)
 }
 
 func (data *AttestationData) View() *AttestationDataView {

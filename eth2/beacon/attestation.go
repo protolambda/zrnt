@@ -16,7 +16,7 @@ func (c *Phase0Config) BlockAttestations() ListTypeDef {
 func (c *Phase0Config) Attestation() *ContainerTypeDef {
 	return ContainerType("Attestation", []FieldDef{
 		{"aggregation_bits", c.CommitteeBits()},
-		{"data", c.AttestationData()},
+		{"data", AttestationDataType},
 		{"signature", BLSSignatureType},
 	})
 }

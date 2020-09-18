@@ -74,12 +74,12 @@ func (c *Phase0Config) BeaconState() *ContainerTypeDef {
 		{"slot", SlotType},
 		{"fork", ForkType},
 		// History
-		{"latest_block_header", c.BeaconBlockHeader()},
+		{"latest_block_header", BeaconBlockHeaderType},
 		{"block_roots", c.BatchRoots()},
 		{"state_roots", c.BatchRoots()},
 		{"historical_roots", c.HistoricalRoots()},
 		// Eth1
-		{"eth1_data", c.Eth1Data()},
+		{"eth1_data", Eth1DataType},
 		{"eth1_data_votes", c.Eth1DataVotes()},
 		{"eth1_deposit_index", Uint64Type},
 		// Registry
@@ -112,8 +112,8 @@ type BeaconStateView struct {
 	*ContainerView
 }
 
-func NewBeaconStateView() *BeaconStateView {
-	return &BeaconStateView{ContainerView: BeaconStateType.New()}
+func (c *Phase0Config) NewBeaconStateView() *BeaconStateView {
+	return &BeaconStateView{ContainerView: c.BeaconState().New()}
 }
 
 func (state *BeaconStateView) GenesisTime() (Timestamp, error) {

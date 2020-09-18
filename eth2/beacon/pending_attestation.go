@@ -13,8 +13,15 @@ type PendingAttestation struct {
 }
 
 func (att *PendingAttestation) View() *PendingAttestationView {
-	c, _ := PendingAttestationType.FromFields(
-		att.AggregationBits.View(),
+	bits := att.AggregationBits.View()
+	t := ContainerType("PendingAttestation", []FieldDef{
+		{"aggregation_bits", bits.Type()},
+		{"data", AttestationDataType},
+		{"inclusion_delay", SlotType},
+		{"proposer_index", ValidatorIndexType},
+	})
+	c, _ := t.FromFields(
+		bits,
 		att.Data.View(),
 		Uint64View(att.InclusionDelay),
 		Uint64View(att.ProposerIndex),
@@ -50,17 +57,15 @@ func (data *AttestationData) View() *AttestationDataView {
 	return &AttestationDataView{c}
 }
 
-func (c *Phase0Config) AttestationData() *ContainerTypeDef {
-	return ContainerType("AttestationData", []FieldDef{
-		{"slot", SlotType},
-		{"index", CommitteeIndexType},
-		// LMD GHOST vote
-		{"beacon_block_root", RootType},
-		// FFG vote
-		{"source", CheckpointType},
-		{"target", CheckpointType},
-	})
-}
+var AttestationDataType = ContainerType("AttestationData", []FieldDef{
+	{"slot", SlotType},
+	{"index", CommitteeIndexType},
+	// LMD GHOST vote
+	{"beacon_block_root", RootType},
+	// FFG vote
+	{"source", CheckpointType},
+	{"target", CheckpointType},
+})
 
 type AttestationDataView struct{ *ContainerView }
 
@@ -99,7 +104,7 @@ func AsAttestationData(v View, err error) (*AttestationDataView, error) {
 func (c *Phase0Config) PendingAttestation() *ContainerTypeDef {
 	return ContainerType("PendingAttestation", []FieldDef{
 		{"aggregation_bits", c.CommitteeBits()},
-		{"data", c.AttestationData()},
+		{"data", AttestationDataType},
 		{"inclusion_delay", SlotType},
 		{"proposer_index", ValidatorIndexType},
 	})
@@ -126,7 +131,10 @@ func (v *PendingAttestationView) Raw() (*PendingAttestation, error) {
 		return nil, err
 	}
 	return &PendingAttestation{
-		AggregationBits: rawBits,
+		AggregationBits: CommitteeBitList{
+			Bits:     rawBits,
+			BitLimit: bits.BitLimit,
+		},
 		Data:            *rawData,
 		InclusionDelay:  delay,
 		ProposerIndex:   proposerIndex,

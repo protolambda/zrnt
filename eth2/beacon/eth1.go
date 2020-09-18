@@ -24,13 +24,11 @@ func (dat *Eth1Data) View() *Eth1DataView {
 	return &Eth1DataView{c}
 }
 
-func (c *Phase0Config) Eth1Data() *ContainerTypeDef {
-	return ContainerType("Eth1Data", []FieldDef{
-		{"deposit_root", RootType},
-		{"deposit_count", Uint64Type},
-		{"block_hash", Bytes32Type},
-	})
-}
+var Eth1DataType = ContainerType("Eth1Data", []FieldDef{
+	{"deposit_root", RootType},
+	{"deposit_count", Uint64Type},
+	{"block_hash", Bytes32Type},
+})
 
 type Eth1DataView struct{ *ContainerView }
 
@@ -58,9 +56,8 @@ func (v *Eth1DataView) DepositIndex() (DepositIndex, error) {
 
 type Eth1DataVotes []Eth1Data
 
-
 func (c *Phase0Config) Eth1DataVotes() ListTypeDef {
-	return ListType(c.Eth1Data(), uint64(c.EPOCHS_PER_ETH1_VOTING_PERIOD) * uint64(c.SLOTS_PER_EPOCH))
+	return ListType(Eth1DataType, uint64(c.EPOCHS_PER_ETH1_VOTING_PERIOD)*uint64(c.SLOTS_PER_EPOCH))
 }
 
 type Eth1DataVotesView struct{ *ComplexListView }

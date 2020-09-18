@@ -21,6 +21,15 @@ type CommitteeBitList struct {
 	BitLimit uint64
 }
 
+func (li *CommitteeBitList) Configure(spec *Spec) {
+	li.BitLimit = spec.MAX_VALIDATORS_PER_COMMITTEE
+}
+
+func (li *CommitteeBitList) View() *CommitteeBitsView {
+	v, _ := BitListType(li.BitLimit).Deserialize(bytes.NewReader(li.Bits), uint64(len(li.Bits)))
+	return &CommitteeBitsView{v.(*BitListView)}
+}
+
 func (li *CommitteeBitList) HashTreeRoot(hFn tree.HashFn) Root {
 	return hFn.BitListHTR(li.Bits, li.BitLimit)
 }

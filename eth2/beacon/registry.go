@@ -8,7 +8,7 @@ import (
 type ValidatorRegistry []*Validator
 
 func (c *Phase0Config) ValidatorsRegistry() ListTypeDef {
-	return ComplexListType(c.Validator(), c.VALIDATOR_REGISTRY_LIMIT)
+	return ComplexListType(ValidatorType, c.VALIDATOR_REGISTRY_LIMIT)
 }
 
 type ValidatorsRegistryView struct{ *ComplexListView }

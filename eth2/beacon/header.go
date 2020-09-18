@@ -45,20 +45,18 @@ func (s *SignedBeaconBlockHeader) HashTreeRoot(hFn tree.HashFn) Root {
 
 func (c *Phase0Config) SignedBeaconBlockHeader() *ContainerTypeDef {
 	return ContainerType("SignedBeaconBlockHeader", []FieldDef{
-		{"message", c.BeaconBlockHeader()},
+		{"message", BeaconBlockHeaderType},
 		{"signature", BLSSignatureType},
 	})
 }
 
-func (c *Phase0Config) BeaconBlockHeader() *ContainerTypeDef {
-	return ContainerType("BeaconBlockHeader", []FieldDef{
-		{"slot", SlotType},
-		{"proposer_index", ValidatorIndexType},
-		{"parent_root", RootType},
-		{"state_root", RootType},
-		{"body_root", RootType},
-	})
-}
+var BeaconBlockHeaderType = ContainerType("BeaconBlockHeader", []FieldDef{
+	{"slot", SlotType},
+	{"proposer_index", ValidatorIndexType},
+	{"parent_root", RootType},
+	{"state_root", RootType},
+	{"body_root", RootType},
+})
 
 type BeaconBlockHeaderView struct {
 	*ContainerView

@@ -100,7 +100,7 @@ func (b BeaconBlockBody) CheckLimits() error {
 func (c *Phase0Config) BeaconBlockBody() *ContainerTypeDef {
 	return ContainerType("BeaconBlockBody", []FieldDef{
 		{"randao_reveal", BLSSignatureType},
-		{"eth1_data", c.Eth1Data()}, // Eth1 data vote
+		{"eth1_data", Eth1DataType}, // Eth1 data vote
 		{"graffiti", Bytes32Type},   // Arbitrary data
 		// Operations
 		{"proposer_slashings", c.BlockProposerSlashings()},

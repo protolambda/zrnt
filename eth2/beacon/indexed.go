@@ -39,7 +39,7 @@ func (p *IndexedAttestation) HashTreeRoot(hFn tree.HashFn) Root {
 func (c *Phase0Config) IndexedAttestation() *ContainerTypeDef {
 	return ContainerType("IndexedAttestation", []FieldDef{
 		{"attesting_indices", c.CommitteeIndices()},
-		{"data", c.AttestationData()},
+		{"data", AttestationDataType},
 		{"signature", BLSSignatureType},
 	})
 }

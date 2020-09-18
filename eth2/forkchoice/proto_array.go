@@ -61,8 +61,8 @@ func NewProtoArray(justifiedEpoch Epoch, finalizedEpoch Epoch, sink BlockSink) *
 		indexOffset:        0,
 		justifiedEpoch:     justifiedEpoch,
 		finalizedEpoch:     finalizedEpoch,
-		nodes:              make([]ProtoNode, 0, beacon.SLOTS_PER_EPOCH*10),
-		indices:            make(map[Root]ProtoNodeIndex, beacon.SLOTS_PER_EPOCH*10),
+		nodes:              make([]ProtoNode, 0, 100),
+		indices:            make(map[Root]ProtoNodeIndex, 100),
 		updatedConnections: true,
 	}
 	return &arr

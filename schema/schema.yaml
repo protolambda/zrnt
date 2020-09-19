@@ -1,0 +1,282 @@
+phase0:
+  Slot: uint64  # a slot number
+  Epoch: uint64  # an epoch number
+  CommitteeIndex: uint64  # a committee index at a slot
+  ValidatorIndex: uint64  # a validator registry index
+  Gwei: uint64  # an amount in Gwei
+  Root: Bytes32  # a Merkle root
+  Version: Bytes4  # a fork version number
+  DomainType: Bytes4  # a domain type
+  ForkDigest: Bytes4  # a digest of the current fork data
+  Domain: Bytes32  # a signature domain
+  BLSPubkey: Bytes48  # a BLS12-381 public key
+  BLSSignature: Bytes96  # a BLS12-381 signature
+
+  Fork:
+    container:
+      previous_version: Version
+      current_version: Version
+      epoch: Epoch  # Epoch of latest fork
+
+  ForkData:
+    container:
+      current_version: Version
+      genesis_validators_root: Root
+
+  Checkpoint:
+    container:
+      epoch: Epoch
+      root: Root
+
+  Validator:
+    container:
+      pubkey: BLSPubkey
+      withdrawal_credentials: Bytes32  # Commitment to pubkey for withdrawals
+      effective_balance: Gwei  # Balance at stake
+      slashed: boolean
+      # Status epochs
+      activation_eligibility_epoch: Epoch  # When criteria for activation were met
+      activation_epoch: Epoch
+      exit_epoch: Epoch
+      withdrawable_epoch: Epoch  # When validator can withdraw funds
+
+  AttestationData:
+    container:
+      slot: Slot
+      index: CommitteeIndex
+      # LMD GHOST vote
+      beacon_block_root: Root
+      # FFG vote
+      source: Checkpoint
+      target: Checkpoint
+
+  CommitteeIndices:
+    list:
+      elem: ValidatorIndex
+      limit: MAX_VALIDATORS_PER_COMMITTEE
+
+  IndexedAttestation:
+    container:
+      attesting_indices: CommitteeIndices
+      data: AttestationData
+      signature: BLSSignature
+
+  CommitteeBits:
+    bitlist:
+      limit: MAX_VALIDATORS_PER_COMMITTEE
+
+  PendingAttestation:
+    container:
+      aggregation_bits: CommitteeBits
+      data: AttestationData
+      inclusion_delay: Slot
+      proposer_index: ValidatorIndex
+
+  Eth1Data:
+    container:
+      deposit_root: Root
+      deposit_count: uint64
+      block_hash: Bytes32
+
+  BatchRoots:
+    vector:
+      elem: Root
+      length: SLOTS_PER_HISTORICAL_ROOT
+
+  HistoricalBatch:
+    container:
+      block_roots: BatchRoots
+      state_roots: BatchRoots
+
+  DepositMessage:
+    container:
+      pubkey: BLSPubkey
+      withdrawal_credentials: Bytes32
+      amount: Gwei
+
+  DepositData:
+    container:
+      pubkey: BLSPubkey
+      withdrawal_credentials: Bytes32
+      amount: Gwei
+      signature: BLSSignature  # Signing over DepositMessage
+
+  BeaconBlockHeader:
+    container:
+      slot: Slot
+      proposer_index: ValidatorIndex
+      parent_root: Root
+      state_root: Root
+      body_root: Root
+
+  SigningData:
+    container:
+      object_root: Root
+      domain: Domain
+
+  ProposerSlashing:
+    container:
+      signed_header_1: SignedBeaconBlockHeader
+      signed_header_2: SignedBeaconBlockHeader
+
+  AttesterSlashing:
+    container:
+      attestation_1: IndexedAttestation
+      attestation_2: IndexedAttestation
+
+  Attestation:
+    container:
+      aggregation_bits: CommitteeBits
+      data: AttestationData
+      signature: BLSSignature
+
+  DepositProof:  # Merkle path to deposit root
+    vector:
+      elem: Bytes32
+      length: DEPOSIT_CONTRACT_TREE_DEPTH + 1
+
+  Deposit:
+    container:
+      proof: DepositProof
+      data: DepositData
+
+  VoluntaryExit:
+    container:
+      epoch: Epoch  # Earliest epoch when voluntary exit can be processed
+      validator_index: ValidatorIndex
+
+  BlockProposerSlashings:
+    list:
+      elem: ProposerSlashing
+      limit: MAX_PROPOSER_SLASHINGS
+
+  BlockAttesterSlashings:
+    list:
+      elem: AttesterSlashing
+      limit: MAX_ATTESTER_SLASHINGS
+
+  BlockAttestations:
+    list:
+      elem: Attestation
+      limit: MAX_PROPOSER_SLASHINGS
+
+  BlockDeposits:
+    list:
+      elem: Deposit
+      limit: MAX_DEPOSITS
+
+  BlockSignedVoluntaryExits:
+    list:
+      elem: SignedVoluntaryExit
+      limit: MAX_VOLUNTARY_EXITS
+
+  BeaconBlockBody:
+    container:
+      randao_reveal: BLSSignature
+      eth1_data: Eth1Data  # Eth1 data vote
+      graffiti: Bytes32  # Arbitrary data
+      # Operations
+      proposer_slashings: BlockProposerSlashings
+      attester_slashings: BlockAttesterSlashings
+      attestations: BlockAttestations
+      deposits: BlockDeposits
+      voluntary_exits: BlockSignedVoluntaryExits
+
+  BeaconBlock:
+    container:
+      slot: Slot
+      proposer_index: ValidatorIndex
+      parent_root: Root
+      state_root: Root
+      body: BeaconBlockBody
+
+  RootsBatch:
+    vector:
+      elem: Root
+      length: SLOTS_PER_HISTORICAL_ROOT
+
+  HistoricalRoots:
+    list:
+      elem: Root
+      limit: HISTORICAL_ROOTS_LIMIT
+
+  Eth1DataVotes:
+    list:
+      elem: Eth1Data
+      limit: EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH
+
+  ValidatorRegistry:
+    list:
+      elem: Validator
+      limit: VALIDATOR_REGISTRY_LIMIT
+
+  ValidatorBalances:
+    list:
+      elem: Gwei
+      limit: VALIDATOR_REGISTRY_LIMIT
+
+  RandaoMixes:
+    vector:
+      elem: Bytes32
+      length: EPOCHS_PER_HISTORICAL_VECTOR
+
+  SlashingsHistory:  # Per-epoch sums of slashed effective balances
+    vector:
+      elem: Gwei
+      length: EPOCHS_PER_SLASHINGS_VECTOR
+
+  PendingAttestations:
+    list:
+      elem: PendingAttestation
+      limit: MAX_ATTESTATIONS * SLOTS_PER_EPOCH
+
+  JustificationBits:  # Bit set for every recent justified epoch
+    bitvector:
+      length: 4  # JUSTIFICATION_BITS_LENGTH constant
+
+  BeaconState:
+    container:
+      # Versioning
+      genesis_time: uint64
+      genesis_validators_root: Root
+      slot: Slot
+      fork: Fork
+      # History
+      latest_block_header: BeaconBlockHeader
+      block_roots: BatchRoots
+      state_roots: BatchRoots
+      historical_roots: HistoricalRoots
+      # Eth1
+      eth1_data: Eth1Data
+      eth1_data_votes: Eth1DataVotes
+      eth1_deposit_index: uint64
+      # Registry
+      validators: ValidatorRegistry
+      balances: ValidatorBalances
+      # Randomness
+      randao_mixes: RandaoMixes
+      # Slashings
+      slashings: SlashingsHistory
+      # Attestations
+      previous_epoch_attestations: PendingAttestations
+      current_epoch_attestations: PendingAttestations
+      # Finality
+      justification_bits: JustificationBits
+      previous_justified_checkpoint: Checkpoint  # Previous epoch snapshot
+      current_justified_checkpoint: Checkpoint
+      finalized_checkpoint: Checkpoint
+
+  SignedVoluntaryExit:
+    container:
+      message: VoluntaryExit
+      signature: BLSSignature
+
+  SignedBeaconBlock:
+    container:
+      message: BeaconBlock
+      signature: BLSSignature
+
+  SignedBeaconBlockHeader:
+    container:
+      message: BeaconBlockHeader
+      signature: BLSSignature

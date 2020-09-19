@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/protolambda/zssz/bitfields"
+	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
@@ -12,7 +13,7 @@ import (
 type CommitteeBits []byte
 
 func (c *Phase0Config) View(cb CommitteeBits) *CommitteeBitsView {
-	v, _ := c.CommitteeBits().Deserialize(bytes.NewReader(cb), uint64(len(cb)))
+	v, _ := c.CommitteeBits().Deserialize(codec.NewDecodingReader(bytes.NewReader(cb), uint64(len(cb))))
 	return &CommitteeBitsView{v.(*BitListView)}
 }
 
@@ -26,8 +27,12 @@ func (li *CommitteeBitList) Configure(spec *Spec) {
 }
 
 func (li *CommitteeBitList) View() *CommitteeBitsView {
-	v, _ := BitListType(li.BitLimit).Deserialize(bytes.NewReader(li.Bits), uint64(len(li.Bits)))
+	v, _ := BitListType(li.BitLimit).Deserialize(codec.NewDecodingReader(bytes.NewReader(li.Bits), uint64(len(li.Bits))))
 	return &CommitteeBitsView{v.(*BitListView)}
+}
+
+func (li *CommitteeBitList) Deserialize(dr *codec.DecodingReader) error {
+	return dr.BitList((*[]byte)(&li.Bits), li.BitLimit)
 }
 
 func (li *CommitteeBitList) HashTreeRoot(hFn tree.HashFn) Root {
@@ -106,7 +111,7 @@ func (v *CommitteeBitsView) Raw() (CommitteeBits, error) {
 	// rounded up, and then an extra bit for delimiting. ((bitLength + 7 + 1)/ 8)
 	byteLength := (bitLength / 8) + 1
 	var buf bytes.Buffer
-	if err := v.Serialize(&buf); err != nil {
+	if err := v.Serialize(codec.NewEncodingWriter(&buf)); err != nil {
 		return nil, err
 	}
 	out := CommitteeBits(buf.Bytes())

@@ -4,17 +4,26 @@ import (
 	"context"
 	"errors"
 	"github.com/protolambda/zrnt/eth2/util/bls"
+	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
 
 func (c *Phase0Config) BlockVoluntaryExits() ListTypeDef {
-	return ListType(c.SignedVoluntaryExit(), c.MAX_VOLUNTARY_EXITS)
+	return ListType(SignedVoluntaryExitType, c.MAX_VOLUNTARY_EXITS)
 }
 
 type VoluntaryExits struct {
 	Items []SignedVoluntaryExit
 	Limit uint64
+}
+
+func (a *VoluntaryExits) Deserialize(dr *codec.DecodingReader) error {
+	return dr.List(func() codec.Deserializable {
+		i := len(a.Items)
+		a.Items = append(a.Items, SignedVoluntaryExit{})
+		return &a.Items[i]
+	}, SignedVoluntaryExitType.TypeByteLength(), a.Limit)
 }
 
 func (li *VoluntaryExits) HashTreeRoot(hFn tree.HashFn) Root {
@@ -47,6 +56,15 @@ type VoluntaryExit struct {
 	ValidatorIndex ValidatorIndex
 }
 
+var VoluntaryExitType = ContainerType("VoluntaryExit", []FieldDef{
+	{"epoch", EpochType},
+	{"validator_index", ValidatorIndexType},
+})
+
+func (v *VoluntaryExit) Deserialize(dr *codec.DecodingReader) error {
+	return dr.Container(&v.Epoch, &v.ValidatorIndex)
+}
+
 func (v *VoluntaryExit) HashTreeRoot(hFn tree.HashFn) Root {
 	return hFn.HashTreeRoot(v.Epoch, v.ValidatorIndex)
 }
@@ -56,23 +74,18 @@ type SignedVoluntaryExit struct {
 	Signature BLSSignature
 }
 
+func (v *SignedVoluntaryExit) Deserialize(dr *codec.DecodingReader) error {
+	return dr.Container(&v.Message, &v.Signature)
+}
+
 func (v *SignedVoluntaryExit) HashTreeRoot(hFn tree.HashFn) Root {
 	return hFn.HashTreeRoot(&v.Message, v.Signature)
 }
 
-func (c *Phase0Config) VoluntaryExit() *ContainerTypeDef {
-	return ContainerType("VoluntaryExit", []FieldDef{
-		{"epoch", EpochType}, // Earliest epoch when voluntary exit can be processed
-		{"validator_index", ValidatorIndexType},
-	})
-}
-
-func (c *Phase0Config) SignedVoluntaryExit() *ContainerTypeDef {
-	return ContainerType("SignedVoluntaryExit", []FieldDef{
-		{"message", c.VoluntaryExit()},
-		{"signature", BLSSignatureType},
-	})
-}
+var SignedVoluntaryExitType = ContainerType("SignedVoluntaryExit", []FieldDef{
+	{"message", VoluntaryExitType},
+	{"signature", BLSSignatureType},
+})
 
 func (spec *Spec) ProcessVoluntaryExit(state *BeaconStateView, epc *EpochsContext, signedExit *SignedVoluntaryExit) error {
 	exit := &signedExit.Message

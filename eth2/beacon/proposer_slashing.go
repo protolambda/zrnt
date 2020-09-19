@@ -3,6 +3,7 @@ package beacon
 import (
 	"context"
 	"errors"
+	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 
 	"github.com/protolambda/zrnt/eth2/util/bls"
@@ -14,24 +15,34 @@ type ProposerSlashing struct {
 	SignedHeader2 SignedBeaconBlockHeader
 }
 
+func (a *ProposerSlashing) Deserialize(dr *codec.DecodingReader) error {
+	return dr.Container(&a.SignedHeader1, &a.SignedHeader2)
+}
+
 func (p *ProposerSlashing) HashTreeRoot(hFn tree.HashFn) Root {
 	return hFn.HashTreeRoot(&p.SignedHeader1, &p.SignedHeader2)
 }
 
-func (c *Phase0Config) ProposerSlashing() *ContainerTypeDef {
-	return ContainerType("ProposerSlashing", []FieldDef{
-		{"header_1", c.SignedBeaconBlockHeader()},
-		{"header_2", c.SignedBeaconBlockHeader()},
-	})
-}
+var ProposerSlashingType = ContainerType("ProposerSlashing", []FieldDef{
+	{"header_1", SignedBeaconBlockHeaderType},
+	{"header_2", SignedBeaconBlockHeaderType},
+})
 
 func (c *Phase0Config) BlockProposerSlashings() ListTypeDef {
-	return ListType(c.ProposerSlashing(), c.MAX_PROPOSER_SLASHINGS)
+	return ListType(ProposerSlashingType, c.MAX_PROPOSER_SLASHINGS)
 }
 
 type ProposerSlashings struct {
 	Items []ProposerSlashing
 	Limit uint64
+}
+
+func (a *ProposerSlashings) Deserialize(dr *codec.DecodingReader) error {
+	return dr.List(func() codec.Deserializable {
+		i := len(a.Items)
+		a.Items = append(a.Items, ProposerSlashing{})
+		return &a.Items[i]
+	}, ProposerSlashingType.TypeByteLength(), a.Limit)
 }
 
 func (li *ProposerSlashings) HashTreeRoot(hFn tree.HashFn) Root {

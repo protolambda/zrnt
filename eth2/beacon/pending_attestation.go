@@ -1,6 +1,7 @@
 package beacon
 
 import (
+	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
@@ -39,6 +40,10 @@ type AttestationData struct {
 	// FFG vote
 	Source Checkpoint
 	Target Checkpoint
+}
+
+func (a *AttestationData) Deserialize(dr *codec.DecodingReader) error {
+	return dr.Container(&a.Slot, &a.Index, &a.BeaconBlockRoot, &a.Source, &a.Target)
 }
 
 func (p *AttestationData) HashTreeRoot(hFn tree.HashFn) Root {

@@ -3,6 +3,7 @@ package beacon
 import (
 	"bytes"
 	"github.com/protolambda/zrnt/eth2/util/bls"
+	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
@@ -12,7 +13,7 @@ type CachedPubkey = bls.CachedPubkey
 type BLSPubkey = bls.BLSPubkey
 
 func ViewPubkey(pub *BLSPubkey) *BLSPubkeyView {
-	v, _ := BLSPubkeyType.Deserialize(bytes.NewReader(pub[:]), 48)
+	v, _ := BLSPubkeyType.Deserialize(codec.NewDecodingReader(bytes.NewReader(pub[:]), 48))
 	return &BLSPubkeyView{v.(*BasicVectorView)}
 }
 
@@ -21,7 +22,7 @@ var BLSPubkeyType = BasicVectorType(ByteType, 48)
 type BLSSignature = bls.BLSSignature
 
 func ViewSignature(sig *BLSSignature) *BLSSignatureView {
-	v, _ := BLSSignatureType.Deserialize(bytes.NewReader(sig[:]), 48)
+	v, _ := BLSSignatureType.Deserialize(codec.NewDecodingReader(bytes.NewReader(sig[:]), 48))
 	return &BLSSignatureView{v.(*BasicVectorView)}
 }
 
@@ -32,6 +33,11 @@ type BLSDomainType [4]byte
 
 // BLS domain (8 bytes): fork version (32 bits) concatenated with BLS domain type (32 bits)
 type BLSDomain [32]byte
+
+func (dom *BLSDomain) Deserialize(dr *codec.DecodingReader) error {
+	_, err := dr.Read(dom[:])
+	return err
+}
 
 func (dom BLSDomain) HashTreeRoot(hFn tree.HashFn) Root {
 	return Root(dom) // just convert to root type (no hashing involved)
@@ -78,7 +84,7 @@ func AsBLSPubkey(v View, err error) (BLSPubkey, error) {
 	pub := BLSPubkeyView{BasicVectorView: bv}
 	var out BLSPubkey
 	buf := bytes.NewBuffer(out[:0])
-	if err := pub.Serialize(buf); err != nil {
+	if err := pub.Serialize(codec.NewEncodingWriter(buf)); err != nil {
 		return BLSPubkey{}, nil
 	}
 	copy(out[:], buf.Bytes())
@@ -100,7 +106,7 @@ func AsBLSSignature(v View, err error) (BLSSignature, error) {
 	pub := BLSSignatureView{BasicVectorView: bv}
 	var out BLSSignature
 	buf := bytes.NewBuffer(out[:0])
-	if err := pub.Serialize(buf); err != nil {
+	if err := pub.Serialize(codec.NewEncodingWriter(buf)); err != nil {
 		return BLSSignature{}, nil
 	}
 	copy(out[:], buf.Bytes())

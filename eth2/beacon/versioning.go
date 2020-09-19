@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
@@ -13,6 +14,14 @@ const VersionType = Bytes4Type
 // 32 bits, not strictly an integer, hence represented as 4 bytes
 // (bytes not necessarily corresponding to versions)
 type Version [4]byte
+
+func (v *Version) Deserialize(dr *codec.DecodingReader) error {
+	if v == nil {
+		return errors.New("nil version")
+	}
+	_, err := dr.Read(v[:])
+	return err
+}
 
 func (p Version) HashTreeRoot(_ tree.HashFn) (out Root) {
 	copy(out[:], p[:])
@@ -81,6 +90,10 @@ func (p *ForkDigest) UnmarshalText(text []byte) error {
 type ForkData struct {
 	CurrentVersion        Version
 	GenesisValidatorsRoot Root
+}
+
+func (v *ForkData) Deserialize(dr *codec.DecodingReader) error {
+	return dr.Container(&v.CurrentVersion, &v.GenesisValidatorsRoot)
 }
 
 func (d *ForkData) HashTreeRoot(hFn tree.HashFn) Root {

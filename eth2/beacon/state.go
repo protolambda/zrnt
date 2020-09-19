@@ -3,6 +3,7 @@ package beacon
 import (
 	"bytes"
 	"github.com/protolambda/zssz"
+	"github.com/protolambda/ztyp/codec"
 	. "github.com/protolambda/ztyp/view"
 )
 
@@ -251,7 +252,7 @@ func (state *BeaconStateView) IsValidIndex(index ValidatorIndex) (bool, error) {
 // Raw converts the tree-structured state into a flattened native Go structure.
 func (state *BeaconStateView) Raw() (*BeaconState, error) {
 	var buf bytes.Buffer
-	if err := state.Serialize(&buf); err != nil {
+	if err := state.Serialize(codec.NewEncodingWriter(&buf)); err != nil {
 		return nil, err
 	}
 	var raw BeaconState

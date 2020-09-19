@@ -1,6 +1,7 @@
 package beacon
 
 import (
+	"github.com/protolambda/ztyp/codec"
 	. "github.com/protolambda/ztyp/view"
 )
 
@@ -15,6 +16,11 @@ type Validator struct {
 	ActivationEpoch            Epoch
 	ExitEpoch                  Epoch
 	WithdrawableEpoch          Epoch // When validator can withdraw funds
+}
+
+func (v *Validator) Deserialize(dr *codec.DecodingReader) error {
+	return dr.Container(&v.Pubkey, &v.WithdrawalCredentials,  &v.EffectiveBalance, (*BoolView)(&v.Slashed),
+		&v.ActivationEligibilityEpoch, &v.ActivationEpoch, &v.ExitEpoch, &v.WithdrawableEpoch)
 }
 
 func (v *Validator) View() *ValidatorView {

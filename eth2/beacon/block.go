@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"fmt"
+	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
@@ -9,6 +10,14 @@ import (
 type SignedBeaconBlock struct {
 	Message   BeaconBlock
 	Signature BLSSignature
+}
+
+func (b *SignedBeaconBlock) Deserialize(dr *codec.DecodingReader) error {
+	return dr.Container(&b.Message, &b.Signature)
+}
+
+func (b *SignedBeaconBlock) HashTreeRoot(hFn tree.HashFn) Root {
+	return hFn.HashTreeRoot(&b.Message, b.Signature)
 }
 
 func (block *SignedBeaconBlock) SignedHeader() *SignedBeaconBlockHeader {
@@ -24,6 +33,10 @@ type BeaconBlock struct {
 	ParentRoot    Root
 	StateRoot     Root
 	Body          BeaconBlockBody
+}
+
+func (b *BeaconBlock) Deserialize(dr *codec.DecodingReader) error {
+	return dr.Container(&b.Slot, &b.ProposerIndex, &b.ParentRoot, &b.StateRoot, &b.Body)
 }
 
 func (b *BeaconBlock) HashTreeRoot(hFn tree.HashFn) Root {
@@ -67,6 +80,15 @@ type BeaconBlockBody struct {
 	Attestations      Attestations
 	Deposits          Deposits
 	VoluntaryExits    VoluntaryExits
+}
+
+func (b *BeaconBlockBody) Deserialize(dr *codec.DecodingReader) error {
+	return dr.Container(
+		&b.RandaoReveal, &b.Eth1Data,
+		&b.Graffiti, &b.ProposerSlashings,
+		&b.AttesterSlashings, &b.Attestations,
+		&b.Deposits, &b.VoluntaryExits,
+	)
 }
 
 func (b *BeaconBlockBody) HashTreeRoot(hFn tree.HashFn) Root {

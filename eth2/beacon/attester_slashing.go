@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
@@ -28,6 +29,10 @@ type AttesterSlashing struct {
 	Attestation2 IndexedAttestation
 }
 
+func (a *AttesterSlashing) Deserialize(dr *codec.DecodingReader) error {
+	return dr.Container(&a.Attestation1, &a.Attestation2)
+}
+
 func (p *AttesterSlashing) HashTreeRoot(hFn tree.HashFn) Root {
 	return hFn.HashTreeRoot(&p.Attestation1, &p.Attestation2)
 }
@@ -46,6 +51,14 @@ func (c *Phase0Config) AttesterSlashing() *ContainerTypeDef {
 type AttesterSlashings struct {
 	Items []AttesterSlashing
 	Limit uint64
+}
+
+func (a *AttesterSlashings) Deserialize(dr *codec.DecodingReader) error {
+	return dr.List(func() codec.Deserializable {
+		i := len(a.Items)
+		a.Items = append(a.Items, AttesterSlashing{})
+		return &a.Items[i]
+	}, 0, a.Limit)
 }
 
 func (li *AttesterSlashings) HashTreeRoot(hFn tree.HashFn) Root {

@@ -1,6 +1,7 @@
 package beacon
 
 import (
+	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
@@ -11,6 +12,10 @@ const Bytes32Type = RootType
 
 type Shard Uint64View
 
+func (a *Shard) Deserialize(dr *codec.DecodingReader) error {
+	return (*Uint64View)(a).Deserialize(dr)
+}
+
 func (e Shard) HashTreeRoot(hFn tree.HashFn) Root {
 	return Uint64View(e).HashTreeRoot(hFn)
 }
@@ -19,8 +24,12 @@ const ShardType = Uint64Type
 
 type CommitteeIndex Uint64View
 
-func (e CommitteeIndex) HashTreeRoot(hFn tree.HashFn) Root {
-	return Uint64View(e).HashTreeRoot(hFn)
+func (i *CommitteeIndex) Deserialize(dr *codec.DecodingReader) error {
+	return (*Uint64View)(i).Deserialize(dr)
+}
+
+func (i CommitteeIndex) HashTreeRoot(hFn tree.HashFn) Root {
+	return Uint64View(i).HashTreeRoot(hFn)
 }
 
 const CommitteeIndexType = Uint64Type
@@ -32,8 +41,12 @@ func AsCommitteeIndex(v View, err error) (CommitteeIndex, error) {
 
 type Gwei Uint64View
 
-func (e Gwei) HashTreeRoot(hFn tree.HashFn) Root {
-	return Uint64View(e).HashTreeRoot(hFn)
+func (g *Gwei) Deserialize(dr *codec.DecodingReader) error {
+	return (*Uint64View)(g).Deserialize(dr)
+}
+
+func (g Gwei) HashTreeRoot(hFn tree.HashFn) Root {
+	return Uint64View(g).HashTreeRoot(hFn)
 }
 
 const GweiType = Uint64Type
@@ -48,8 +61,12 @@ type Checkpoint struct {
 	Root  Root
 }
 
-func (p *Checkpoint) HashTreeRoot(hFn tree.HashFn) Root {
-	return hFn.HashTreeRoot(p.Epoch, p.Root)
+func (c *Checkpoint) Deserialize(dr *codec.DecodingReader) error {
+	return dr.Container(&c.Epoch, &c.Root)
+}
+
+func (c *Checkpoint) HashTreeRoot(hFn tree.HashFn) Root {
+	return hFn.HashTreeRoot(c.Epoch, c.Root)
 }
 
 func (c *Checkpoint) View() *CheckpointView {

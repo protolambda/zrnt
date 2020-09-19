@@ -3,6 +3,7 @@ package beacon
 import (
 	"context"
 	"errors"
+	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
@@ -11,6 +12,10 @@ type Eth1Data struct {
 	DepositRoot  Root // Hash-tree-root of DepositData tree.
 	DepositCount DepositIndex
 	BlockHash    Root
+}
+
+func (b *Eth1Data) Deserialize(dr *codec.DecodingReader) error {
+	return dr.Container(&b.DepositRoot, &b.DepositCount, &b.BlockHash)
 }
 
 func (b *Eth1Data) HashTreeRoot(hFn tree.HashFn) Root {

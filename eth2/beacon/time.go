@@ -1,6 +1,7 @@
 package beacon
 
 import (
+	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
@@ -13,6 +14,10 @@ func (spec *Spec) TimeToSlot(t Timestamp, genesisTime Timestamp) Slot {
 		return 0
 	}
 	return Slot((t - genesisTime) / spec.SECONDS_PER_SLOT)
+}
+
+func (a *Timestamp) Deserialize(dr *codec.DecodingReader) error {
+	return (*Uint64View)(a).Deserialize(dr)
 }
 
 func (t Timestamp) HashTreeRoot(hFn tree.HashFn) Root {
@@ -32,6 +37,10 @@ func AsDepositIndex(v View, err error) (DepositIndex, error) {
 	return DepositIndex(i), err
 }
 
+func (i *DepositIndex) Deserialize(dr *codec.DecodingReader) error {
+	return (*Uint64View)(i).Deserialize(dr)
+}
+
 func (i DepositIndex) HashTreeRoot(hFn tree.HashFn) Root {
 	return Uint64View(i).HashTreeRoot(hFn)
 }
@@ -42,6 +51,10 @@ type Slot Uint64View
 
 func (spec *Spec) SlotToEpoch(s Slot) Epoch {
 	return Epoch(s / spec.SLOTS_PER_EPOCH)
+}
+
+func (a *Slot) Deserialize(dr *codec.DecodingReader) error {
+	return (*Uint64View)(a).Deserialize(dr)
 }
 
 func (s Slot) HashTreeRoot(hFn tree.HashFn) Root {
@@ -70,6 +83,10 @@ func (spec *Spec) EpochStartSlot(e Epoch) Slot {
 // Return the epoch at which an activation or exit triggered in epoch takes effect.
 func (spec *Spec) ComputeActivationExitEpoch(e Epoch) Epoch {
 	return e + 1 + spec.MAX_SEED_LOOKAHEAD
+}
+
+func (a *Epoch) Deserialize(dr *codec.DecodingReader) error {
+	return (*Uint64View)(a).Deserialize(dr)
 }
 
 func (e Epoch) HashTreeRoot(hFn tree.HashFn) Root {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
@@ -30,6 +31,10 @@ func (h *BeaconBlockHeader) View() *BeaconBlockHeaderView {
 	return &BeaconBlockHeaderView{c}
 }
 
+func (s *BeaconBlockHeader) Deserialize(dr *codec.DecodingReader) error {
+	return dr.Container(&s.Slot, &s.ProposerIndex, &s.ParentRoot, &s.StateRoot, &s.BodyRoot)
+}
+
 func (b *BeaconBlockHeader) HashTreeRoot(hFn tree.HashFn) Root {
 	return hFn.HashTreeRoot(b.Slot, b.ProposerIndex, b.ParentRoot, b.StateRoot, b.BodyRoot)
 }
@@ -39,16 +44,18 @@ type SignedBeaconBlockHeader struct {
 	Signature BLSSignature
 }
 
+func (s *SignedBeaconBlockHeader) Deserialize(dr *codec.DecodingReader) error {
+	return dr.Container(&s.Message, &s.Signature)
+}
+
 func (s *SignedBeaconBlockHeader) HashTreeRoot(hFn tree.HashFn) Root {
 	return hFn.HashTreeRoot(&s.Message, s.Signature)
 }
 
-func (c *Phase0Config) SignedBeaconBlockHeader() *ContainerTypeDef {
-	return ContainerType("SignedBeaconBlockHeader", []FieldDef{
-		{"message", BeaconBlockHeaderType},
-		{"signature", BLSSignatureType},
-	})
-}
+var SignedBeaconBlockHeaderType = ContainerType("SignedBeaconBlockHeader", []FieldDef{
+	{"message", BeaconBlockHeaderType},
+	{"signature", BLSSignatureType},
+})
 
 var BeaconBlockHeaderType = ContainerType("BeaconBlockHeader", []FieldDef{
 	{"slot", SlotType},

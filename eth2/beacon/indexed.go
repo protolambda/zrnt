@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/util/bls"
+	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 	"sort"
@@ -14,6 +15,14 @@ type CommitteeIndices []ValidatorIndex
 type CommitteeIndicesList struct {
 	Indices CommitteeIndices
 	Limit uint64
+}
+
+func (p *CommitteeIndicesList) Deserialize(dr *codec.DecodingReader) error {
+	return dr.List(func() codec.Deserializable {
+		i := len(p.Indices)
+		p.Indices = append(p.Indices, ValidatorIndex(0))
+		return &p.Indices[i]
+	}, ValidatorIndexType.TypeByteLength(), p.Limit)
 }
 
 func (p *CommitteeIndicesList) HashTreeRoot(hFn tree.HashFn) Root {
@@ -30,6 +39,10 @@ type IndexedAttestation struct {
 	AttestingIndices CommitteeIndicesList
 	Data             AttestationData
 	Signature        BLSSignature
+}
+
+func (p *IndexedAttestation) Deserialize(dr *codec.DecodingReader) error {
+	return dr.Container(&p.AttestingIndices, &p.Data, &p.Signature)
 }
 
 func (p *IndexedAttestation) HashTreeRoot(hFn tree.HashFn) Root {

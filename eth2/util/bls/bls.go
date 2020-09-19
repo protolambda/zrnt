@@ -5,15 +5,24 @@ import (
 	"errors"
 	"fmt"
 	hbls "github.com/herumi/bls-eth-go-binary/bls"
+	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 )
 
 type BLSPubkey [48]byte
 
-func (s BLSPubkey) HashTreeRoot(hFn tree.HashFn) tree.Root {
+func (p *BLSPubkey) Deserialize(dr *codec.DecodingReader) error {
+	if p == nil {
+		return errors.New("nil pubkey")
+	}
+	_, err := dr.Read(p[:])
+	return err
+}
+
+func (p BLSPubkey) HashTreeRoot(hFn tree.HashFn) tree.Root {
 	var a, b tree.Root
-	copy(a[:], s[0:32])
-	copy(b[:], s[32:48])
+	copy(a[:], p[0:32])
+	copy(b[:], p[32:48])
 	return hFn(a, b)
 }
 
@@ -40,6 +49,14 @@ func (p *BLSPubkey) UnmarshalText(text []byte) error {
 }
 
 type BLSSignature [96]byte
+
+func (s *BLSSignature) Deserialize(dr *codec.DecodingReader) error {
+	if s == nil {
+		return errors.New("nil signature")
+	}
+	_, err := dr.Read(s[:])
+	return err
+}
 
 func (s BLSSignature) HashTreeRoot(hFn tree.HashFn) tree.Root {
 	var a, b, c tree.Root

@@ -1,6 +1,7 @@
 package beacon
 
 import (
+	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 	"sort"
@@ -16,6 +17,10 @@ func AsValidatorIndex(v View, err error) (ValidatorIndex, error) {
 	return ValidatorIndex(i), err
 }
 
+func (i *ValidatorIndex) Deserialize(dr *codec.DecodingReader) error {
+	return (*Uint64View)(i).Deserialize(dr)
+}
+
 func (i ValidatorIndex) HashTreeRoot(hFn tree.HashFn) Root {
 	return Uint64View(i).HashTreeRoot(hFn)
 }
@@ -29,6 +34,14 @@ type RegistryIndices []ValidatorIndex
 type RegistryIndicesList struct {
 	Indices RegistryIndices
 	Limit uint64
+}
+
+func (p *RegistryIndicesList) Deserialize(dr *codec.DecodingReader) error {
+	return dr.List(func() codec.Deserializable {
+		i := len(p.Indices)
+		p.Indices = append(p.Indices, ValidatorIndex(0))
+		return &p.Indices[i]
+	}, ValidatorIndexType.TypeByteLength(), p.Limit)
 }
 
 func (p *RegistryIndicesList) HashTreeRoot(hFn tree.HashFn) Root {

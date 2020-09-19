@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 
 	"github.com/protolambda/zrnt/eth2/util/bls"
@@ -11,14 +12,12 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
-func (c *Phase0Config) DepositData() *ContainerTypeDef {
-	return ContainerType("DepositData", []FieldDef{
-		{"pubkey", BLSPubkeyType},
-		{"withdrawal_credentials", Bytes32Type},
-		{"amount", GweiType},
-		{"signature", BLSSignatureType},
-	})
-}
+var DepositDataType = ContainerType("DepositData", []FieldDef{
+	{"pubkey", BLSPubkeyType},
+	{"withdrawal_credentials", Bytes32Type},
+	{"amount", GweiType},
+	{"signature", BLSSignatureType},
+})
 
 type DepositData struct {
 	Pubkey                BLSPubkey
@@ -34,6 +33,10 @@ func (d *DepositData) ToMessage() *DepositMessage {
 		WithdrawalCredentials: d.WithdrawalCredentials,
 		Amount:                d.Amount,
 	}
+}
+
+func (d *DepositData) Deserialize(dr *codec.DecodingReader) error {
+	return dr.Container(&d.Pubkey, &d.WithdrawalCredentials, &d.Amount, &d.Signature)
 }
 
 // hash-tree-root including the signature
@@ -61,6 +64,12 @@ var DepositProofType = VectorType(Bytes32Type, DEPOSIT_CONTRACT_TREE_DEPTH+1)
 // DepositProof contains the proof for the merkle-path to deposit root, including list mix-in.
 type DepositProof [DEPOSIT_CONTRACT_TREE_DEPTH + 1]Root
 
+func (d *DepositProof) Deserialize(dr *codec.DecodingReader) error {
+	return dr.Vector(func(i uint64) codec.Deserializable {
+		return &d[i]
+	}, RootType.TypeByteLength(), DepositProofType.Length())
+}
+
 func (b *DepositProof) HashTreeRoot(hFn tree.HashFn) Root {
 	return hFn.ChunksHTR(func(i uint64) tree.Root {
 		return b[i]
@@ -72,24 +81,34 @@ type Deposit struct {
 	Data  DepositData
 }
 
+func (d *Deposit) Deserialize(dr *codec.DecodingReader) error {
+	return dr.Container(&d.Proof, &d.Data)
+}
+
 func (b *Deposit) HashTreeRoot(hFn tree.HashFn) Root {
 	return hFn.HashTreeRoot(&b.Proof, &b.Data)
 }
 
-func (c *Phase0Config) Deposit() *ContainerTypeDef {
-	return ContainerType("Deposit", []FieldDef{
-		{"proof", DepositProofType}, // Merkle path to deposit data list root
-		{"data", c.DepositData()},
-	})
-}
+var DepositType = ContainerType("Deposit", []FieldDef{
+	{"proof", DepositProofType}, // Merkle path to deposit data list root
+	{"data", DepositDataType},
+})
 
 func (c *Phase0Config) BlockDeposits() ListTypeDef {
-	return ListType(c.Deposit(), c.MAX_DEPOSITS)
+	return ListType(DepositType, c.MAX_DEPOSITS)
 }
 
 type Deposits struct {
 	Items []Deposit
 	Limit uint64
+}
+
+func (a *Deposits) Deserialize(dr *codec.DecodingReader) error {
+	return dr.List(func() codec.Deserializable {
+		i := len(a.Items)
+		a.Items = append(a.Items, Deposit{})
+		return &a.Items[i]
+	}, DepositType.TypeByteLength(), a.Limit)
 }
 
 func (li *Deposits) HashTreeRoot(hFn tree.HashFn) Root {

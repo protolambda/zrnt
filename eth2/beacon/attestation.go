@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 	"sort"
@@ -27,6 +28,10 @@ type Attestation struct {
 	Signature       BLSSignature
 }
 
+func (a *Attestation) Deserialize(dr *codec.DecodingReader) error {
+	return dr.Container(&a.AggregationBits, &a.Data, &a.Signature)
+}
+
 func (a *Attestation) HashTreeRoot(hFn tree.HashFn) Root {
 	return hFn.HashTreeRoot(&a.AggregationBits, &a.Data, a.Signature)
 }
@@ -34,6 +39,14 @@ func (a *Attestation) HashTreeRoot(hFn tree.HashFn) Root {
 type Attestations struct {
 	Items []Attestation
 	Limit uint64
+}
+
+func (a *Attestations) Deserialize(dr *codec.DecodingReader) error {
+	return dr.List(func() codec.Deserializable {
+		i := len(a.Items)
+		a.Items = append(a.Items, Attestation{})
+		return &a.Items[i]
+	}, 0, a.Limit)
 }
 
 func (li *Attestations) HashTreeRoot(hFn tree.HashFn) Root {

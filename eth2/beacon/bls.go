@@ -39,6 +39,10 @@ func (dom *BLSDomain) Deserialize(dr *codec.DecodingReader) error {
 	return err
 }
 
+func (a *BLSDomain) FixedLength() uint64 {
+	return 32
+}
+
 func (dom BLSDomain) HashTreeRoot(hFn tree.HashFn) Root {
 	return Root(dom) // just convert to root type (no hashing involved)
 }

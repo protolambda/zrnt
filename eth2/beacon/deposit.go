@@ -39,6 +39,10 @@ func (d *DepositData) Deserialize(dr *codec.DecodingReader) error {
 	return dr.Container(&d.Pubkey, &d.WithdrawalCredentials, &d.Amount, &d.Signature)
 }
 
+func (a *DepositData) FixedLength() uint64 {
+	return DepositDataType.TypeByteLength()
+}
+
 // hash-tree-root including the signature
 func (d *DepositData) HashTreeRoot(hFn tree.HashFn) Root {
 	return hFn.HashTreeRoot(d.Pubkey, d.WithdrawalCredentials, d.Amount, d.Signature)
@@ -70,6 +74,10 @@ func (d *DepositProof) Deserialize(dr *codec.DecodingReader) error {
 	}, RootType.TypeByteLength(), DepositProofType.Length())
 }
 
+func (a *DepositProof) FixedLength() uint64 {
+	return DepositProofType.TypeByteLength()
+}
+
 func (b *DepositProof) HashTreeRoot(hFn tree.HashFn) Root {
 	return hFn.ChunksHTR(func(i uint64) tree.Root {
 		return b[i]
@@ -83,6 +91,10 @@ type Deposit struct {
 
 func (d *Deposit) Deserialize(dr *codec.DecodingReader) error {
 	return dr.Container(&d.Proof, &d.Data)
+}
+
+func (a *Deposit) FixedLength() uint64 {
+	return DepositType.TypeByteLength()
 }
 
 func (b *Deposit) HashTreeRoot(hFn tree.HashFn) Root {
@@ -109,6 +121,10 @@ func (a *Deposits) Deserialize(dr *codec.DecodingReader) error {
 		a.Items = append(a.Items, Deposit{})
 		return &a.Items[i]
 	}, DepositType.TypeByteLength(), a.Limit)
+}
+
+func (a *Deposits) FixedLength() uint64 {
+	return 0
 }
 
 func (li *Deposits) HashTreeRoot(hFn tree.HashFn) Root {

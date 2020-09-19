@@ -19,6 +19,10 @@ func (a *ProposerSlashing) Deserialize(dr *codec.DecodingReader) error {
 	return dr.Container(&a.SignedHeader1, &a.SignedHeader2)
 }
 
+func (*ProposerSlashing) FixedLength() uint64 {
+	return SignedBeaconBlockHeaderType.TypeByteLength() * 2
+}
+
 func (p *ProposerSlashing) HashTreeRoot(hFn tree.HashFn) Root {
 	return hFn.HashTreeRoot(&p.SignedHeader1, &p.SignedHeader2)
 }
@@ -43,6 +47,10 @@ func (a *ProposerSlashings) Deserialize(dr *codec.DecodingReader) error {
 		a.Items = append(a.Items, ProposerSlashing{})
 		return &a.Items[i]
 	}, ProposerSlashingType.TypeByteLength(), a.Limit)
+}
+
+func (*ProposerSlashings) FixedLength() uint64 {
+	return 0
 }
 
 func (li *ProposerSlashings) HashTreeRoot(hFn tree.HashFn) Root {

@@ -19,6 +19,10 @@ func (p *BLSPubkey) Deserialize(dr *codec.DecodingReader) error {
 	return err
 }
 
+func (BLSPubkey) FixedLength() uint64 {
+	return 96
+}
+
 func (p BLSPubkey) HashTreeRoot(hFn tree.HashFn) tree.Root {
 	var a, b tree.Root
 	copy(a[:], p[0:32])
@@ -56,6 +60,10 @@ func (s *BLSSignature) Deserialize(dr *codec.DecodingReader) error {
 	}
 	_, err := dr.Read(s[:])
 	return err
+}
+
+func (BLSSignature) FixedLength() uint64 {
+	return 96
 }
 
 func (s BLSSignature) HashTreeRoot(hFn tree.HashFn) tree.Root {

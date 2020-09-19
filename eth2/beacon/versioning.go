@@ -23,6 +23,10 @@ func (v *Version) Deserialize(dr *codec.DecodingReader) error {
 	return err
 }
 
+func (*Version) FixedLength() uint64 {
+	return 4
+}
+
 func (p Version) HashTreeRoot(_ tree.HashFn) (out Root) {
 	copy(out[:], p[:])
 	return
@@ -94,6 +98,10 @@ type ForkData struct {
 
 func (v *ForkData) Deserialize(dr *codec.DecodingReader) error {
 	return dr.Container(&v.CurrentVersion, &v.GenesisValidatorsRoot)
+}
+
+func (*ForkData) FixedLength() uint64 {
+	return 4 + 32
 }
 
 func (d *ForkData) HashTreeRoot(hFn tree.HashFn) Root {

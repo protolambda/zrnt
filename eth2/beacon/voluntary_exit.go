@@ -26,6 +26,10 @@ func (a *VoluntaryExits) Deserialize(dr *codec.DecodingReader) error {
 	}, SignedVoluntaryExitType.TypeByteLength(), a.Limit)
 }
 
+func (*VoluntaryExits) FixedLength() uint64 {
+	return 0
+}
+
 func (li *VoluntaryExits) HashTreeRoot(hFn tree.HashFn) Root {
 	length := uint64(len(li.Items))
 	return hFn.ComplexListHTR(func(i uint64) tree.HTR {
@@ -65,6 +69,10 @@ func (v *VoluntaryExit) Deserialize(dr *codec.DecodingReader) error {
 	return dr.Container(&v.Epoch, &v.ValidatorIndex)
 }
 
+func (*VoluntaryExit) FixedLength() uint64 {
+	return VoluntaryExitType.TypeByteLength()
+}
+
 func (v *VoluntaryExit) HashTreeRoot(hFn tree.HashFn) Root {
 	return hFn.HashTreeRoot(v.Epoch, v.ValidatorIndex)
 }
@@ -76,6 +84,10 @@ type SignedVoluntaryExit struct {
 
 func (v *SignedVoluntaryExit) Deserialize(dr *codec.DecodingReader) error {
 	return dr.Container(&v.Message, &v.Signature)
+}
+
+func (*SignedVoluntaryExit) FixedLength() uint64 {
+	return SignedVoluntaryExitType.TypeByteLength()
 }
 
 func (v *SignedVoluntaryExit) HashTreeRoot(hFn tree.HashFn) Root {

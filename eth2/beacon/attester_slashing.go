@@ -33,6 +33,10 @@ func (a *AttesterSlashing) Deserialize(dr *codec.DecodingReader) error {
 	return dr.Container(&a.Attestation1, &a.Attestation2)
 }
 
+func (a *AttesterSlashing) FixedLength() uint64 {
+	return 0
+}
+
 func (p *AttesterSlashing) HashTreeRoot(hFn tree.HashFn) Root {
 	return hFn.HashTreeRoot(&p.Attestation1, &p.Attestation2)
 }
@@ -59,6 +63,10 @@ func (a *AttesterSlashings) Deserialize(dr *codec.DecodingReader) error {
 		a.Items = append(a.Items, AttesterSlashing{})
 		return &a.Items[i]
 	}, 0, a.Limit)
+}
+
+func (a *AttesterSlashings) FixedLength() uint64 {
+	return 0
 }
 
 func (li *AttesterSlashings) HashTreeRoot(hFn tree.HashFn) Root {

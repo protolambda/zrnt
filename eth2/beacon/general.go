@@ -16,6 +16,10 @@ func (a *Shard) Deserialize(dr *codec.DecodingReader) error {
 	return (*Uint64View)(a).Deserialize(dr)
 }
 
+func (Shard) FixedLength() uint64 {
+	return 8
+}
+
 func (e Shard) HashTreeRoot(hFn tree.HashFn) Root {
 	return Uint64View(e).HashTreeRoot(hFn)
 }
@@ -26,6 +30,10 @@ type CommitteeIndex Uint64View
 
 func (i *CommitteeIndex) Deserialize(dr *codec.DecodingReader) error {
 	return (*Uint64View)(i).Deserialize(dr)
+}
+
+func (CommitteeIndex) FixedLength() uint64 {
+	return 8
 }
 
 func (i CommitteeIndex) HashTreeRoot(hFn tree.HashFn) Root {
@@ -43,6 +51,10 @@ type Gwei Uint64View
 
 func (g *Gwei) Deserialize(dr *codec.DecodingReader) error {
 	return (*Uint64View)(g).Deserialize(dr)
+}
+
+func (g Gwei) FixedLength() uint64 {
+	return 8
 }
 
 func (g Gwei) HashTreeRoot(hFn tree.HashFn) Root {
@@ -63,6 +75,10 @@ type Checkpoint struct {
 
 func (c *Checkpoint) Deserialize(dr *codec.DecodingReader) error {
 	return dr.Container(&c.Epoch, &c.Root)
+}
+
+func (g *Checkpoint) FixedLength() uint64 {
+	return 8 + 32
 }
 
 func (c *Checkpoint) HashTreeRoot(hFn tree.HashFn) Root {

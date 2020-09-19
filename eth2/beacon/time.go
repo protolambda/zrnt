@@ -20,6 +20,10 @@ func (a *Timestamp) Deserialize(dr *codec.DecodingReader) error {
 	return (*Uint64View)(a).Deserialize(dr)
 }
 
+func (Timestamp) FixedLength() uint64 {
+	return 8
+}
+
 func (t Timestamp) HashTreeRoot(hFn tree.HashFn) Root {
 	return Uint64View(t).HashTreeRoot(hFn)
 }
@@ -41,6 +45,10 @@ func (i *DepositIndex) Deserialize(dr *codec.DecodingReader) error {
 	return (*Uint64View)(i).Deserialize(dr)
 }
 
+func (DepositIndex) FixedLength() uint64 {
+	return 8
+}
+
 func (i DepositIndex) HashTreeRoot(hFn tree.HashFn) Root {
 	return Uint64View(i).HashTreeRoot(hFn)
 }
@@ -55,6 +63,10 @@ func (spec *Spec) SlotToEpoch(s Slot) Epoch {
 
 func (a *Slot) Deserialize(dr *codec.DecodingReader) error {
 	return (*Uint64View)(a).Deserialize(dr)
+}
+
+func (Slot) FixedLength() uint64 {
+	return 8
 }
 
 func (s Slot) HashTreeRoot(hFn tree.HashFn) Root {
@@ -87,6 +99,10 @@ func (spec *Spec) ComputeActivationExitEpoch(e Epoch) Epoch {
 
 func (a *Epoch) Deserialize(dr *codec.DecodingReader) error {
 	return (*Uint64View)(a).Deserialize(dr)
+}
+
+func (Epoch) FixedLength() uint64 {
+	return 8
 }
 
 func (e Epoch) HashTreeRoot(hFn tree.HashFn) Root {

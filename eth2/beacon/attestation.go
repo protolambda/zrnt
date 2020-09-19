@@ -32,6 +32,10 @@ func (a *Attestation) Deserialize(dr *codec.DecodingReader) error {
 	return dr.Container(&a.AggregationBits, &a.Data, &a.Signature)
 }
 
+func (a *Attestation) FixedLength() uint64 {
+	return 0
+}
+
 func (a *Attestation) HashTreeRoot(hFn tree.HashFn) Root {
 	return hFn.HashTreeRoot(&a.AggregationBits, &a.Data, a.Signature)
 }
@@ -47,6 +51,10 @@ func (a *Attestations) Deserialize(dr *codec.DecodingReader) error {
 		a.Items = append(a.Items, Attestation{})
 		return &a.Items[i]
 	}, 0, a.Limit)
+}
+
+func (a *Attestations) FixedLength() uint64 {
+	return 0
 }
 
 func (li *Attestations) HashTreeRoot(hFn tree.HashFn) Root {

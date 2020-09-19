@@ -18,6 +18,10 @@ func (b *Eth1Data) Deserialize(dr *codec.DecodingReader) error {
 	return dr.Container(&b.DepositRoot, &b.DepositCount, &b.BlockHash)
 }
 
+func (a *Eth1Data) FixedLength() uint64 {
+	return Eth1DataType.TypeByteLength()
+}
+
 func (b *Eth1Data) HashTreeRoot(hFn tree.HashFn) Root {
 	return hFn.HashTreeRoot(b.DepositRoot, b.DepositCount, b.BlockHash)
 }

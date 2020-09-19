@@ -35,6 +35,10 @@ func (li *CommitteeBitList) Deserialize(dr *codec.DecodingReader) error {
 	return dr.BitList((*[]byte)(&li.Bits), li.BitLimit)
 }
 
+func (a *CommitteeBitList) FixedLength() uint64 {
+	return 0
+}
+
 func (li *CommitteeBitList) HashTreeRoot(hFn tree.HashFn) Root {
 	return hFn.BitListHTR(li.Bits, li.BitLimit)
 }

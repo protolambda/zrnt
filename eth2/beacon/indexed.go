@@ -25,6 +25,10 @@ func (p *CommitteeIndicesList) Deserialize(dr *codec.DecodingReader) error {
 	}, ValidatorIndexType.TypeByteLength(), p.Limit)
 }
 
+func (b *CommitteeIndicesList) FixedLength() uint64 {
+	return 0
+}
+
 func (p *CommitteeIndicesList) HashTreeRoot(hFn tree.HashFn) Root {
 	return hFn.Uint64ListHTR(func(i uint64) uint64 {
 		return uint64(p.Indices[i])
@@ -43,6 +47,10 @@ type IndexedAttestation struct {
 
 func (p *IndexedAttestation) Deserialize(dr *codec.DecodingReader) error {
 	return dr.Container(&p.AttestingIndices, &p.Data, &p.Signature)
+}
+
+func (*IndexedAttestation) FixedLength() uint64 {
+	return 0
 }
 
 func (p *IndexedAttestation) HashTreeRoot(hFn tree.HashFn) Root {

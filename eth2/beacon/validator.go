@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"github.com/protolambda/ztyp/codec"
+	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
 
@@ -21,6 +22,15 @@ type Validator struct {
 func (v *Validator) Deserialize(dr *codec.DecodingReader) error {
 	return dr.Container(&v.Pubkey, &v.WithdrawalCredentials,  &v.EffectiveBalance, (*BoolView)(&v.Slashed),
 		&v.ActivationEligibilityEpoch, &v.ActivationEpoch, &v.ExitEpoch, &v.WithdrawableEpoch)
+}
+
+func (*Validator) FixedLength() uint64 {
+	return ValidatorType.TypeByteLength()
+}
+
+func (v *Validator) HashTreeRoot(hFn tree.HashFn) Root {
+	return hFn.HashTreeRoot(v.Pubkey, v.WithdrawalCredentials,  v.EffectiveBalance, (BoolView)(v.Slashed),
+		v.ActivationEligibilityEpoch, v.ActivationEpoch, v.ExitEpoch, v.WithdrawableEpoch)
 }
 
 func (v *Validator) View() *ValidatorView {

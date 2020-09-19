@@ -46,6 +46,10 @@ func (a *AttestationData) Deserialize(dr *codec.DecodingReader) error {
 	return dr.Container(&a.Slot, &a.Index, &a.BeaconBlockRoot, &a.Source, &a.Target)
 }
 
+func (*AttestationData) FixedLength() uint64 {
+	return AttestationDataType.TypeByteLength()
+}
+
 func (p *AttestationData) HashTreeRoot(hFn tree.HashFn) Root {
 	return hFn.HashTreeRoot(p.Slot, p.Index, p.BeaconBlockRoot, &p.Source, &p.Target)
 }

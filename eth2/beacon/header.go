@@ -35,6 +35,10 @@ func (s *BeaconBlockHeader) Deserialize(dr *codec.DecodingReader) error {
 	return dr.Container(&s.Slot, &s.ProposerIndex, &s.ParentRoot, &s.StateRoot, &s.BodyRoot)
 }
 
+func (b *BeaconBlockHeader) FixedLength() uint64 {
+	return BeaconBlockHeaderType.TypeByteLength()
+}
+
 func (b *BeaconBlockHeader) HashTreeRoot(hFn tree.HashFn) Root {
 	return hFn.HashTreeRoot(b.Slot, b.ProposerIndex, b.ParentRoot, b.StateRoot, b.BodyRoot)
 }
@@ -46,6 +50,10 @@ type SignedBeaconBlockHeader struct {
 
 func (s *SignedBeaconBlockHeader) Deserialize(dr *codec.DecodingReader) error {
 	return dr.Container(&s.Message, &s.Signature)
+}
+
+func (b *SignedBeaconBlockHeader) FixedLength() uint64 {
+	return SignedBeaconBlockHeaderType.TypeByteLength()
 }
 
 func (s *SignedBeaconBlockHeader) HashTreeRoot(hFn tree.HashFn) Root {

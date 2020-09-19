@@ -103,7 +103,7 @@ func (c *Phase0Config) BeaconState() *ContainerTypeDef {
 
 // To load a state:
 //
-//     state, err := beacon.AsBeaconStateView(beacon.BeaconStateType.Deserialize(reader, size))
+//     state, err := beacon.AsBeaconStateView(beacon.BeaconStateType.Deserialize(codec.NewDecodingReader(reader, size)))
 func AsBeaconStateView(v View, err error) (*BeaconStateView, error) {
 	c, err := AsContainer(v, err)
 	return &BeaconStateView{c}, err

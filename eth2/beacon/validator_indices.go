@@ -21,6 +21,10 @@ func (i *ValidatorIndex) Deserialize(dr *codec.DecodingReader) error {
 	return (*Uint64View)(i).Deserialize(dr)
 }
 
+func (ValidatorIndex) FixedLength() uint64 {
+	return 8
+}
+
 func (i ValidatorIndex) HashTreeRoot(hFn tree.HashFn) Root {
 	return Uint64View(i).HashTreeRoot(hFn)
 }
@@ -42,6 +46,10 @@ func (p *RegistryIndicesList) Deserialize(dr *codec.DecodingReader) error {
 		p.Indices = append(p.Indices, ValidatorIndex(0))
 		return &p.Indices[i]
 	}, ValidatorIndexType.TypeByteLength(), p.Limit)
+}
+
+func (*RegistryIndicesList) FixedLength() uint64 {
+	return 0
 }
 
 func (p *RegistryIndicesList) HashTreeRoot(hFn tree.HashFn) Root {

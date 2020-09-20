@@ -41,7 +41,7 @@ func (a *AttesterSlashing) ByteLength(spec *Spec) uint64 {
 	return 2*codec.OFFSET_SIZE + a.Attestation1.ByteLength(spec) + a.Attestation2.ByteLength(spec)
 }
 
-func (a *AttesterSlashing) FixedLength() uint64 {
+func (a *AttesterSlashing) FixedLength(*Spec) uint64 {
 	return 0
 }
 
@@ -76,14 +76,14 @@ func (a AttesterSlashings) Serialize(spec *Spec, w *codec.EncodingWriter) error 
 	}, 0, spec.MAX_ATTESTER_SLASHINGS)
 }
 
-func (a AttesterSlashings) ByteLength(spec *Spec)(out uint64) {
+func (a AttesterSlashings) ByteLength(spec *Spec) (out uint64) {
 	for _, v := range a {
 		out += v.ByteLength(spec) + codec.OFFSET_SIZE
 	}
 	return
 }
 
-func (a *AttesterSlashings) FixedLength() uint64 {
+func (a *AttesterSlashings) FixedLength(*Spec) uint64 {
 	return 0
 }
 

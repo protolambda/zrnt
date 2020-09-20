@@ -252,7 +252,7 @@ type EpochsContext struct {
 	// PubkeyCache may be replaced when a new forked-out cache takes over to process an alternative Eth1 deposit chain.
 	PubkeyCache *PubkeyCache
 	// Proposers is a slice of SLOTS_PER_EPOCH proposer indices for the current epoch
-	Proposers   []ValidatorIndex
+	Proposers []ValidatorIndex
 
 	PreviousEpoch *ShufflingEpoch
 	CurrentEpoch  *ShufflingEpoch
@@ -266,7 +266,7 @@ func (spec *Spec) NewEpochsContext(state *BeaconStateView) (*EpochsContext, erro
 		return nil, err
 	}
 	epc := &EpochsContext{
-		Spec: spec,
+		Spec:        spec,
 		PubkeyCache: pc,
 	}
 	if err := epc.LoadShuffling(state); err != nil {

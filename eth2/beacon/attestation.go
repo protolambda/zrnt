@@ -40,7 +40,7 @@ func (a *Attestation) ByteLength(spec *Spec) uint64 {
 	return a.AggregationBits.ByteLength(spec) + a.Data.ByteLength() + a.Signature.ByteLength()
 }
 
-func (a *Attestation) FixedLength() uint64 {
+func (a *Attestation) FixedLength(*Spec) uint64 {
 	return 0
 }
 
@@ -64,14 +64,14 @@ func (a Attestations) Serialize(spec *Spec, w *codec.EncodingWriter) error {
 	}, 0, spec.MAX_ATTESTATIONS)
 }
 
-func (a Attestations) ByteLength(spec *Spec)(out uint64) {
+func (a Attestations) ByteLength(spec *Spec) (out uint64) {
 	for _, v := range a {
 		out += v.ByteLength(spec) + codec.OFFSET_SIZE
 	}
 	return
 }
 
-func (a *Attestations) FixedLength() uint64 {
+func (a *Attestations) FixedLength(*Spec) uint64 {
 	return 0
 }
 

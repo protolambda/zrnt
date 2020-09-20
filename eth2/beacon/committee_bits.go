@@ -35,7 +35,7 @@ func (a CommitteeBits) ByteLength(spec *Spec) uint64 {
 	return uint64(len(a))
 }
 
-func (a *CommitteeBits) FixedLength() uint64 {
+func (a *CommitteeBits) FixedLength(*Spec) uint64 {
 	return 0
 }
 

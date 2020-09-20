@@ -6,6 +6,7 @@ import (
 	"errors"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	. "github.com/protolambda/zrnt/eth2/util/hashing"
+	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
@@ -13,7 +14,43 @@ import (
 // RandaoMixes is a EPOCHS_PER_HISTORICAL_VECTOR vector
 type RandaoMixes []Root
 
-// TODO
+func (a *RandaoMixes) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
+	if Epoch(len(*a)) != spec.EPOCHS_PER_HISTORICAL_VECTOR {
+		// re-use space if available (for recycling old state objects)
+		if Epoch(cap(*a)) >= spec.EPOCHS_PER_HISTORICAL_VECTOR {
+			*a = (*a)[:spec.EPOCHS_PER_HISTORICAL_VECTOR]
+		} else {
+			*a = make([]Root, spec.EPOCHS_PER_HISTORICAL_VECTOR, spec.EPOCHS_PER_HISTORICAL_VECTOR)
+		}
+	}
+	return dr.Vector(func(i uint64) codec.Deserializable {
+		return &(*a)[i]
+	}, 32, uint64(spec.EPOCHS_PER_HISTORICAL_VECTOR))
+}
+
+func (a RandaoMixes) Serialize(spec *Spec, w *codec.EncodingWriter) error {
+	return w.Vector(func(i uint64) codec.Serializable {
+		return &a[i]
+	}, 32, uint64(spec.EPOCHS_PER_HISTORICAL_VECTOR))
+}
+
+func (a RandaoMixes) ByteLength(spec *Spec) (out uint64) {
+	return uint64(spec.EPOCHS_PER_HISTORICAL_VECTOR) * 32
+}
+
+func (a *RandaoMixes) FixedLength(spec *Spec) uint64 {
+	return uint64(spec.EPOCHS_PER_HISTORICAL_VECTOR) * 32
+}
+
+func (li RandaoMixes) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
+	length := uint64(len(li))
+	return hFn.ComplexVectorHTR(func(i uint64) tree.HTR {
+		if i < length {
+			return &li[i]
+		}
+		return nil
+	}, length)
+}
 
 func (c *Phase0Config) RandaoMixes() VectorTypeDef {
 	return VectorType(Bytes32Type, uint64(c.EPOCHS_PER_HISTORICAL_VECTOR))

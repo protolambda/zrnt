@@ -39,7 +39,7 @@ func (dom *BLSDomain) Deserialize(dr *codec.DecodingReader) error {
 	return err
 }
 
-func (a *BLSDomain) FixedLength() uint64 {
+func (a *BLSDomain) FixedLength(*Spec) uint64 {
 	return 32
 }
 

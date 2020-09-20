@@ -3,6 +3,8 @@ package beacon
 import (
 	"context"
 	"fmt"
+	"github.com/protolambda/ztyp/codec"
+	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
 
@@ -121,6 +123,31 @@ func (spec *Spec) ProcessEpochJustification(ctx context.Context, epc *EpochsCont
 }
 
 type JustificationBits [1]byte
+
+func (b *JustificationBits) Deserialize(dr *codec.DecodingReader) error {
+	v, err := dr.ReadByte()
+	if err != nil {
+		return err
+	}
+	b[0] = v
+	return nil
+}
+
+func (a JustificationBits) Serialize(w *codec.EncodingWriter) error {
+	return w.WriteByte(a[0])
+}
+
+func (jb JustificationBits) FixedLength() uint64 {
+	return 1
+}
+
+func (jb JustificationBits) ByteLength() uint64 {
+	return 1
+}
+
+func (jb JustificationBits) HashTreeRoot(hFn tree.HashFn) Root {
+	return Root{0: jb[0]}
+}
 
 func (jb *JustificationBits) BitLen() uint64 {
 	return JUSTIFICATION_BITS_LENGTH

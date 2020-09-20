@@ -21,10 +21,10 @@ func (b *SignedBeaconBlock) Serialize(spec *Spec, w *codec.EncodingWriter) error
 }
 
 func (b *SignedBeaconBlock) ByteLength() uint64 {
-	return 0// TODO
+	return 0 // TODO
 }
 
-func (a *SignedBeaconBlock) FixedLength() uint64 {
+func (a *SignedBeaconBlock) FixedLength(*Spec) uint64 {
 	return 0
 }
 
@@ -56,10 +56,10 @@ func (b *BeaconBlock) Serialize(spec *Spec, w *codec.EncodingWriter) error {
 }
 
 func (b *BeaconBlock) ByteLength(spec *Spec) uint64 {
-	return 0// TODO
+	return 0 // TODO
 }
 
-func (a *BeaconBlock) FixedLength() uint64 {
+func (a *BeaconBlock) FixedLength(*Spec) uint64 {
 	return 0
 }
 
@@ -125,10 +125,10 @@ func (b *BeaconBlockBody) Serialize(spec *Spec, w *codec.EncodingWriter) error {
 }
 
 func (b *BeaconBlockBody) ByteLength(spec *Spec) uint64 {
-	return 0// TODO
+	return 0 // TODO
 }
 
-func (a *BeaconBlockBody) FixedLength() uint64 {
+func (a *BeaconBlockBody) FixedLength(*Spec) uint64 {
 	return 0
 }
 

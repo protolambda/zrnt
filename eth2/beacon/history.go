@@ -1,12 +1,52 @@
 package beacon
 
 import (
+	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
 
-// Vector[Root, SLOTS_PER_HISTORICAL_ROOT]
+// HistoricalBatchRoots stores roots: a batch of state or block roots.
+// It represents a Vector[Root, SLOTS_PER_HISTORICAL_ROOT]
 type HistoricalBatchRoots []Root
+
+func (a *HistoricalBatchRoots) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
+	if Slot(len(*a)) != spec.SLOTS_PER_HISTORICAL_ROOT {
+		// re-use space if available (for recycling old state objects)
+		if Slot(cap(*a)) >= spec.SLOTS_PER_HISTORICAL_ROOT {
+			*a = (*a)[:spec.SLOTS_PER_HISTORICAL_ROOT]
+		} else {
+			*a = make([]Root, spec.SLOTS_PER_HISTORICAL_ROOT, spec.SLOTS_PER_HISTORICAL_ROOT)
+		}
+	}
+	return dr.Vector(func(i uint64) codec.Deserializable {
+		return &(*a)[i]
+	}, 32, uint64(spec.SLOTS_PER_HISTORICAL_ROOT))
+}
+
+func (a HistoricalBatchRoots) Serialize(spec *Spec, w *codec.EncodingWriter) error {
+	return w.Vector(func(i uint64) codec.Serializable {
+		return &a[i]
+	}, 32, uint64(spec.SLOTS_PER_HISTORICAL_ROOT))
+}
+
+func (a HistoricalBatchRoots) ByteLength(spec *Spec) (out uint64) {
+	return uint64(spec.SLOTS_PER_HISTORICAL_ROOT) * 32
+}
+
+func (a *HistoricalBatchRoots) FixedLength(spec *Spec) uint64 {
+	return uint64(spec.SLOTS_PER_HISTORICAL_ROOT) * 32
+}
+
+func (li HistoricalBatchRoots) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
+	length := uint64(len(li))
+	return hFn.ComplexVectorHTR(func(i uint64) tree.HTR {
+		if i < length {
+			return &li[i]
+		}
+		return nil
+	}, length)
+}
 
 type HistoricalBatch struct {
 	BlockRoots HistoricalBatchRoots

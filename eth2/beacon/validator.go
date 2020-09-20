@@ -20,12 +20,12 @@ type Validator struct {
 }
 
 func (v *Validator) Deserialize(dr *codec.DecodingReader) error {
-	return dr.Container(&v.Pubkey, &v.WithdrawalCredentials,  &v.EffectiveBalance, (*BoolView)(&v.Slashed),
+	return dr.Container(&v.Pubkey, &v.WithdrawalCredentials, &v.EffectiveBalance, (*BoolView)(&v.Slashed),
 		&v.ActivationEligibilityEpoch, &v.ActivationEpoch, &v.ExitEpoch, &v.WithdrawableEpoch)
 }
 
 func (v *Validator) Serialize(w *codec.EncodingWriter) error {
-	return w.Container(v.Pubkey, v.WithdrawalCredentials,  v.EffectiveBalance, (BoolView)(v.Slashed),
+	return w.Container(v.Pubkey, v.WithdrawalCredentials, v.EffectiveBalance, (BoolView)(v.Slashed),
 		v.ActivationEligibilityEpoch, v.ActivationEpoch, v.ExitEpoch, v.WithdrawableEpoch)
 }
 
@@ -38,7 +38,7 @@ func (*Validator) FixedLength() uint64 {
 }
 
 func (v *Validator) HashTreeRoot(hFn tree.HashFn) Root {
-	return hFn.HashTreeRoot(v.Pubkey, v.WithdrawalCredentials,  v.EffectiveBalance, (BoolView)(v.Slashed),
+	return hFn.HashTreeRoot(v.Pubkey, v.WithdrawalCredentials, v.EffectiveBalance, (BoolView)(v.Slashed),
 		v.ActivationEligibilityEpoch, v.ActivationEpoch, v.ExitEpoch, v.WithdrawableEpoch)
 }
 

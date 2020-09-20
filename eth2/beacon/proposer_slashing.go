@@ -60,11 +60,11 @@ func (a ProposerSlashings) Serialize(spec *Spec, w *codec.EncodingWriter) error 
 	}, ProposerSlashingType.TypeByteLength(), spec.MAX_PROPOSER_SLASHINGS)
 }
 
-func (a ProposerSlashings) ByteLength(spec *Spec)(out uint64) {
+func (a ProposerSlashings) ByteLength(spec *Spec) (out uint64) {
 	return ProposerSlashingType.TypeByteLength() * uint64(len(a))
 }
 
-func (*ProposerSlashings) FixedLength() uint64 {
+func (*ProposerSlashings) FixedLength(*Spec) uint64 {
 	return 0
 }
 

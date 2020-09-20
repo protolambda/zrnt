@@ -29,11 +29,11 @@ func (a VoluntaryExits) Serialize(spec *Spec, w *codec.EncodingWriter) error {
 	}, SignedVoluntaryExitType.TypeByteLength(), spec.MAX_VOLUNTARY_EXITS)
 }
 
-func (a VoluntaryExits) ByteLength(spec *Spec)(out uint64) {
+func (a VoluntaryExits) ByteLength(spec *Spec) (out uint64) {
 	return SignedVoluntaryExitType.TypeByteLength() * uint64(len(a))
 }
 
-func (*VoluntaryExits) FixedLength() uint64 {
+func (*VoluntaryExits) FixedLength(*Spec) uint64 {
 	return 0
 }
 

@@ -23,10 +23,10 @@ type BeaconState struct {
 	Eth1DataVotes Eth1DataVotes
 	DepositIndex  DepositIndex
 	// Registry
-	Validators ValidatorRegistry
-	Balances   Balances
+	Validators  ValidatorRegistry
+	Balances    Balances
 	RandaoMixes RandaoMixes
-	Slashings SlashingsHistory
+	Slashings   SlashingsHistory
 	// Attestations
 	PreviousEpochAttestations PendingAttestations
 	CurrentEpochAttestations  PendingAttestations
@@ -40,11 +40,11 @@ type BeaconState struct {
 func (v *BeaconState) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
 	return dr.Container(&v.GenesisTime, &v.GenesisValidatorsRoot,
 		&v.Slot, &v.Fork, &v.LatestBlockHeader,
-		&v.BlockRoots, &v.StateRoots, &v.HistoricalRoots,
-		&v.Eth1Data, &v.Eth1DataVotes, &v.DepositIndex,
-		&v.Validators, &v.Balances,
-		&v.RandaoMixes, &v.Slashings,
-		&v.PreviousEpochAttestations, &v.CurrentEpochAttestations,
+		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), spec.Wrap(&v.HistoricalRoots),
+		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.DepositIndex,
+		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances),
+		spec.Wrap(&v.RandaoMixes), spec.Wrap(&v.Slashings),
+		spec.Wrap(&v.PreviousEpochAttestations), spec.Wrap(&v.CurrentEpochAttestations),
 		&v.JustificationBits,
 		&v.PreviousJustifiedCheckpoint, &v.CurrentJustifiedCheckpoint,
 		&v.FinalizedCheckpoint)
@@ -53,25 +53,34 @@ func (v *BeaconState) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
 func (v *BeaconState) Serialize(spec *Spec, w *codec.EncodingWriter) error {
 	return w.Container(&v.GenesisTime, &v.GenesisValidatorsRoot,
 		&v.Slot, &v.Fork, &v.LatestBlockHeader,
-		&v.BlockRoots, &v.StateRoots, &v.HistoricalRoots,
-		&v.Eth1Data, &v.Eth1DataVotes, &v.DepositIndex,
-		&v.Validators, &v.Balances,
-		&v.RandaoMixes, &v.Slashings,
-		&v.PreviousEpochAttestations, &v.CurrentEpochAttestations,
+		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), spec.Wrap(&v.HistoricalRoots),
+		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.DepositIndex,
+		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances),
+		spec.Wrap(&v.RandaoMixes), spec.Wrap(&v.Slashings),
+		spec.Wrap(&v.PreviousEpochAttestations), spec.Wrap(&v.CurrentEpochAttestations),
 		&v.JustificationBits,
 		&v.PreviousJustifiedCheckpoint, &v.CurrentJustifiedCheckpoint,
 		&v.FinalizedCheckpoint)
 }
 
-func (a *BeaconState) ByteLength() uint64 {
-	return 123 // TODO
+func (v *BeaconState) ByteLength(spec *Spec) uint64 {
+	return codec.ContainerLength(&v.GenesisTime, &v.GenesisValidatorsRoot,
+		&v.Slot, &v.Fork, &v.LatestBlockHeader,
+		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), spec.Wrap(&v.HistoricalRoots),
+		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.DepositIndex,
+		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances),
+		spec.Wrap(&v.RandaoMixes), spec.Wrap(&v.Slashings),
+		spec.Wrap(&v.PreviousEpochAttestations), spec.Wrap(&v.CurrentEpochAttestations),
+		&v.JustificationBits,
+		&v.PreviousJustifiedCheckpoint, &v.CurrentJustifiedCheckpoint,
+		&v.FinalizedCheckpoint)
 }
 
-func (*BeaconState) FixedLength() uint64 {
-	return 0
+func (*BeaconState) FixedLength(spec *Spec) uint64 {
+	return 0 // dynamic size
 }
 
-func (v *BeaconState) HashTreeRoot(hFn tree.HashFn) Root {
+func (v *BeaconState) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
 	return hFn.HashTreeRoot(&v.GenesisTime, &v.GenesisValidatorsRoot,
 		&v.Slot, &v.Fork, &v.LatestBlockHeader,
 		&v.BlockRoots, &v.StateRoots, &v.HistoricalRoots,

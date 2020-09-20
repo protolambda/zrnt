@@ -107,7 +107,7 @@ func (spec *Spec) ProcessSlots(ctx context.Context, epc *EpochsContext, state *B
 		}
 		// Per-epoch transition happens at the start of the first slot of every epoch.
 		// (with the slot still at the end of the last epoch)
-		isEpochEnd := spec.SlotToEpoch(currentSlot + 1) != spec.SlotToEpoch(currentSlot)
+		isEpochEnd := spec.SlotToEpoch(currentSlot+1) != spec.SlotToEpoch(currentSlot)
 		if isEpochEnd {
 			if err := spec.ProcessEpoch(ctx, epc, state); err != nil {
 				return err

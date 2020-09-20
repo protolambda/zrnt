@@ -26,11 +26,11 @@ func (a CommitteeIndices) Serialize(spec *Spec, w *codec.EncodingWriter) error {
 	}, ValidatorIndexType.TypeByteLength(), uint64(len(a)))
 }
 
-func (a CommitteeIndices) ByteLength(spec *Spec) uint64 {
+func (a CommitteeIndices) ByteLength(*Spec) uint64 {
 	return ValidatorIndexType.TypeByteLength() * uint64(len(a))
 }
 
-func (*CommitteeIndices) FixedLength() uint64 {
+func (*CommitteeIndices) FixedLength(*Spec) uint64 {
 	return 0
 }
 
@@ -63,7 +63,7 @@ func (a *IndexedAttestation) ByteLength(spec *Spec) uint64 {
 		AttestationDataType.TypeByteLength() + BLSSignatureType.TypeByteLength()
 }
 
-func (*IndexedAttestation) FixedLength() uint64 {
+func (*IndexedAttestation) FixedLength(*Spec) uint64 {
 	return 0
 }
 

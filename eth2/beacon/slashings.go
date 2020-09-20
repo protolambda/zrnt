@@ -8,7 +8,6 @@ import (
 // SlashingsHistory is a EPOCHS_PER_SLASHINGS_VECTOR vector
 type SlashingsHistory []Gwei
 
-
 // Balances slashed at every withdrawal period
 func (c *Phase0Config) Slashings() VectorTypeDef {
 	return VectorType(GweiType, uint64(c.EPOCHS_PER_SLASHINGS_VECTOR))
@@ -22,12 +21,12 @@ func AsSlashings(v View, err error) (*SlashingsView, error) {
 }
 
 func (sl *SlashingsView) GetSlashingsValue(epoch Epoch) (Gwei, error) {
-	i := uint64(epoch )% sl.VectorLength
+	i := uint64(epoch) % sl.VectorLength
 	return AsGwei(sl.Get(i))
 }
 
 func (sl *SlashingsView) ResetSlashings(epoch Epoch) error {
-	i := uint64(epoch )% sl.VectorLength
+	i := uint64(epoch) % sl.VectorLength
 	return sl.Set(i, Uint64View(0))
 }
 
@@ -36,7 +35,7 @@ func (sl *SlashingsView) AddSlashing(epoch Epoch, add Gwei) error {
 	if err != nil {
 		return err
 	}
-	i := uint64(epoch )% sl.VectorLength
+	i := uint64(epoch) % sl.VectorLength
 	return sl.Set(i, Uint64View(prev+add))
 }
 

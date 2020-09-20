@@ -1,8 +1,8 @@
 package beacon
 
 import (
-	"github.com/protolambda/ztyp/tree"
 	"github.com/protolambda/ztyp/codec"
+	"github.com/protolambda/ztyp/tree"
 	"math/big"
 )
 
@@ -165,7 +165,7 @@ type SpecObj interface {
 	Serialize(spec *Spec, w *codec.EncodingWriter) error
 	ByteLength(spec *Spec) uint64
 	HashTreeRoot(spec *Spec, h tree.HashFn) Root
-	codec.FixedLength
+	FixedLength(spec *Spec) uint64
 }
 
 type SSZObj interface {
@@ -177,7 +177,7 @@ type SSZObj interface {
 
 type specObj struct {
 	spec *Spec
-	des SpecObj
+	des  SpecObj
 }
 
 func (s specObj) Deserialize(dr *codec.DecodingReader) error {
@@ -197,7 +197,7 @@ func (s specObj) HashTreeRoot(h tree.HashFn) Root {
 }
 
 func (s specObj) FixedLength() uint64 {
-	return s.des.FixedLength()
+	return s.des.FixedLength(s.spec)
 }
 
 type Spec struct {

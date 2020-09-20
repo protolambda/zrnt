@@ -205,8 +205,8 @@ func (spec *Spec) PrepareEpochProcess(ctx context.Context, epc *EpochsContext, s
 				return err
 			}
 
-			participants = participants[:0]                                          // reset old slice (re-used in for loop)
-			participants = append(participants, committee...)                        // add committee indices
+			participants = participants[:0]                                     // reset old slice (re-used in for loop)
+			participants = append(participants, committee...)                   // add committee indices
 			participants = att.AggregationBits.FilterParticipants(participants) // only keep the participants
 
 			if epoch == prevEpoch {

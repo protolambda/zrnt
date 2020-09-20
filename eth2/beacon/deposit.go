@@ -103,7 +103,7 @@ func (b *DepositProof) HashTreeRoot(hFn tree.HashFn) Root {
 }
 
 type Deposit struct {
-	Proof  DepositProof
+	Proof DepositProof
 	Data  DepositData
 }
 
@@ -152,11 +152,11 @@ func (a Deposits) Serialize(spec *Spec, w *codec.EncodingWriter) error {
 	}, DepositType.TypeByteLength(), spec.MAX_DEPOSITS)
 }
 
-func (a Deposits) ByteLength(spec *Spec)(out uint64) {
+func (a Deposits) ByteLength(*Spec) (out uint64) {
 	return DepositType.TypeByteLength() * uint64(len(a))
 }
 
-func (a *Deposits) FixedLength() uint64 {
+func (a *Deposits) FixedLength(*Spec) uint64 {
 	return 0
 }
 

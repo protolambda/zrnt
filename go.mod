@@ -12,5 +12,5 @@ require (
 )
 
 replace (
-	github.com/protolambda/ztyp latest => ../ztyp latest
+	github.com/protolambda/ztyp => ../ztyp
 )

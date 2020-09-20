@@ -5,6 +5,10 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
+// SlashingsHistory is a EPOCHS_PER_SLASHINGS_VECTOR vector
+type SlashingsHistory []Gwei
+
+
 // Balances slashed at every withdrawal period
 func (c *Phase0Config) Slashings() VectorTypeDef {
 	return VectorType(GweiType, uint64(c.EPOCHS_PER_SLASHINGS_VECTOR))

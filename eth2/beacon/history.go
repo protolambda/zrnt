@@ -5,11 +5,12 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
+// Vector[Root, SLOTS_PER_HISTORICAL_ROOT]
+type HistoricalBatchRoots []Root
+
 type HistoricalBatch struct {
-	// BlockRoots is a Vector[Root, SLOTS_PER_HISTORICAL_ROOT]
-	BlockRoots []Root
-	// StateRoots is a Vector[Root, SLOTS_PER_HISTORICAL_ROOT]
-	StateRoots []Root
+	BlockRoots HistoricalBatchRoots
+	StateRoots HistoricalBatchRoots
 }
 
 func (c *Phase0Config) BatchRoots() VectorTypeDef {

@@ -10,6 +10,11 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
+// RandaoMixes is a EPOCHS_PER_HISTORICAL_VECTOR vector
+type RandaoMixes []Root
+
+// TODO
+
 func (c *Phase0Config) RandaoMixes() VectorTypeDef {
 	return VectorType(Bytes32Type, uint64(c.EPOCHS_PER_HISTORICAL_VECTOR))
 }

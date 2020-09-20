@@ -2,7 +2,6 @@ package beacon
 
 import (
 	"bytes"
-	"github.com/protolambda/zssz"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
@@ -16,10 +15,8 @@ type BeaconState struct {
 	Fork                  Fork
 	// History
 	LatestBlockHeader BeaconBlockHeader
-	// BlockRoots is a SLOTS_PER_HISTORICAL_ROOT vector
-	BlockRoots        []Root
-	// StateRoots is a SLOTS_PER_HISTORICAL_ROOT vector
-	StateRoots        []Root
+	BlockRoots        HistoricalBatchRoots
+	StateRoots        HistoricalBatchRoots
 	HistoricalRoots   HistoricalRoots
 	// Eth1
 	Eth1Data      Eth1Data
@@ -28,10 +25,8 @@ type BeaconState struct {
 	// Registry
 	Validators ValidatorRegistry
 	Balances   Balances
-	// RandaoMixes is a EPOCHS_PER_HISTORICAL_VECTOR vector
-	RandaoMixes []Root
-	// Slashings is a EPOCHS_PER_SLASHINGS_VECTOR vector
-	Slashings []Gwei
+	RandaoMixes RandaoMixes
+	Slashings SlashingsHistory
 	// Attestations
 	PreviousEpochAttestations PendingAttestations
 	CurrentEpochAttestations  PendingAttestations

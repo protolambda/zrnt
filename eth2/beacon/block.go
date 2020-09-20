@@ -12,21 +12,29 @@ type SignedBeaconBlock struct {
 	Signature BLSSignature
 }
 
-func (b *SignedBeaconBlock) Deserialize(dr *codec.DecodingReader) error {
-	return dr.Container(&b.Message, &b.Signature)
+func (b *SignedBeaconBlock) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
+	return dr.Container(spec.Wrap(&b.Message), &b.Signature)
+}
+
+func (b *SignedBeaconBlock) Serialize(spec *Spec, w *codec.EncodingWriter) error {
+	return w.Container(spec.Wrap(&b.Message), &b.Signature)
+}
+
+func (b *SignedBeaconBlock) ByteLength() uint64 {
+	return 0// TODO
 }
 
 func (a *SignedBeaconBlock) FixedLength() uint64 {
 	return 0
 }
 
-func (b *SignedBeaconBlock) HashTreeRoot(hFn tree.HashFn) Root {
-	return hFn.HashTreeRoot(&b.Message, b.Signature)
+func (b *SignedBeaconBlock) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
+	return hFn.HashTreeRoot(spec.Wrap(&b.Message), b.Signature)
 }
 
-func (block *SignedBeaconBlock) SignedHeader() *SignedBeaconBlockHeader {
+func (block *SignedBeaconBlock) SignedHeader(spec *Spec) *SignedBeaconBlockHeader {
 	return &SignedBeaconBlockHeader{
-		Message:   *block.Message.Header(),
+		Message:   *block.Message.Header(spec),
 		Signature: block.Signature,
 	}
 }
@@ -39,16 +47,24 @@ type BeaconBlock struct {
 	Body          BeaconBlockBody
 }
 
-func (b *BeaconBlock) Deserialize(dr *codec.DecodingReader) error {
-	return dr.Container(&b.Slot, &b.ProposerIndex, &b.ParentRoot, &b.StateRoot, &b.Body)
+func (b *BeaconBlock) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
+	return dr.Container(&b.Slot, &b.ProposerIndex, &b.ParentRoot, &b.StateRoot, spec.Wrap(&b.Body))
+}
+
+func (b *BeaconBlock) Serialize(spec *Spec, w *codec.EncodingWriter) error {
+	return w.Container(&b.Slot, &b.ProposerIndex, &b.ParentRoot, &b.StateRoot, spec.Wrap(&b.Body))
+}
+
+func (b *BeaconBlock) ByteLength(spec *Spec) uint64 {
+	return 0// TODO
 }
 
 func (a *BeaconBlock) FixedLength() uint64 {
 	return 0
 }
 
-func (b *BeaconBlock) HashTreeRoot(hFn tree.HashFn) Root {
-	return hFn.HashTreeRoot(b.Slot, b.ProposerIndex, b.ParentRoot, b.StateRoot, &b.Body)
+func (b *BeaconBlock) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
+	return hFn.HashTreeRoot(b.Slot, b.ProposerIndex, b.ParentRoot, b.StateRoot, spec.Wrap(&b.Body))
 }
 
 func (c *Phase0Config) BeaconBlock() *ContainerTypeDef {
@@ -68,13 +84,13 @@ func (c *Phase0Config) SignedBeaconBlock() *ContainerTypeDef {
 	})
 }
 
-func (block *BeaconBlock) Header() *BeaconBlockHeader {
+func (block *BeaconBlock) Header(spec *Spec) *BeaconBlockHeader {
 	return &BeaconBlockHeader{
 		Slot:          block.Slot,
 		ProposerIndex: block.ProposerIndex,
 		ParentRoot:    block.ParentRoot,
 		StateRoot:     block.StateRoot,
-		BodyRoot:      block.Body.HashTreeRoot(tree.GetHashFn()),
+		BodyRoot:      block.Body.HashTreeRoot(spec, tree.GetHashFn()),
 	}
 }
 
@@ -90,42 +106,55 @@ type BeaconBlockBody struct {
 	VoluntaryExits    VoluntaryExits
 }
 
-func (b *BeaconBlockBody) Deserialize(dr *codec.DecodingReader) error {
+func (b *BeaconBlockBody) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
 	return dr.Container(
 		&b.RandaoReveal, &b.Eth1Data,
-		&b.Graffiti, &b.ProposerSlashings,
-		&b.AttesterSlashings, &b.Attestations,
-		&b.Deposits, &b.VoluntaryExits,
+		&b.Graffiti, spec.Wrap(&b.ProposerSlashings),
+		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
+		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
 	)
+}
+
+func (b *BeaconBlockBody) Serialize(spec *Spec, w *codec.EncodingWriter) error {
+	return w.Container(
+		&b.RandaoReveal, &b.Eth1Data,
+		&b.Graffiti, spec.Wrap(&b.ProposerSlashings),
+		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
+		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
+	)
+}
+
+func (b *BeaconBlockBody) ByteLength(spec *Spec) uint64 {
+	return 0// TODO
 }
 
 func (a *BeaconBlockBody) FixedLength() uint64 {
 	return 0
 }
 
-func (b *BeaconBlockBody) HashTreeRoot(hFn tree.HashFn) Root {
+func (b *BeaconBlockBody) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
 	return hFn.HashTreeRoot(
 		b.RandaoReveal, &b.Eth1Data,
-		b.Graffiti, &b.ProposerSlashings,
-		&b.AttesterSlashings, &b.Attestations,
-		&b.Deposits, &b.VoluntaryExits,
+		b.Graffiti, spec.Wrap(&b.ProposerSlashings),
+		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
+		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
 	)
 }
 
-func (b BeaconBlockBody) CheckLimits() error {
-	if x := uint64(len(b.ProposerSlashings.Items)); x > b.ProposerSlashings.Limit {
+func (b BeaconBlockBody) CheckLimits(spec *Spec) error {
+	if x := uint64(len(b.ProposerSlashings)); x > spec.MAX_PROPOSER_SLASHINGS {
 		return fmt.Errorf("too many proposer slashings: %d", x)
 	}
-	if x := uint64(len(b.AttesterSlashings.Items)); x > b.AttesterSlashings.Limit {
+	if x := uint64(len(b.AttesterSlashings)); x > spec.MAX_ATTESTER_SLASHINGS {
 		return fmt.Errorf("too many attester slashings: %d", x)
 	}
-	if x := uint64(len(b.Attestations.Items)); x > b.Attestations.Limit {
+	if x := uint64(len(b.Attestations)); x > spec.MAX_ATTESTATIONS {
 		return fmt.Errorf("too many attestations: %d", x)
 	}
-	if x := uint64(len(b.Deposits.Items)); x > b.Deposits.Limit {
+	if x := uint64(len(b.Deposits)); x > spec.MAX_DEPOSITS {
 		return fmt.Errorf("too many deposits: %d", x)
 	}
-	if x := uint64(len(b.VoluntaryExits.Items)); x > b.VoluntaryExits.Limit {
+	if x := uint64(len(b.VoluntaryExits)); x > spec.MAX_VOLUNTARY_EXITS {
 		return fmt.Errorf("too many voluntary exits: %d", x)
 	}
 	return nil

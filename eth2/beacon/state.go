@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"github.com/protolambda/zssz"
 	"github.com/protolambda/ztyp/codec"
+	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
 
@@ -39,6 +40,53 @@ type BeaconState struct {
 	PreviousJustifiedCheckpoint Checkpoint
 	CurrentJustifiedCheckpoint  Checkpoint
 	FinalizedCheckpoint         Checkpoint
+}
+
+func (v *BeaconState) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
+	return dr.Container(&v.GenesisTime, &v.GenesisValidatorsRoot,
+		&v.Slot, &v.Fork, &v.LatestBlockHeader,
+		&v.BlockRoots, &v.StateRoots, &v.HistoricalRoots,
+		&v.Eth1Data, &v.Eth1DataVotes, &v.DepositIndex,
+		&v.Validators, &v.Balances,
+		&v.RandaoMixes, &v.Slashings,
+		&v.PreviousEpochAttestations, &v.CurrentEpochAttestations,
+		&v.JustificationBits,
+		&v.PreviousJustifiedCheckpoint, &v.CurrentJustifiedCheckpoint,
+		&v.FinalizedCheckpoint)
+}
+
+func (v *BeaconState) Serialize(spec *Spec, w *codec.EncodingWriter) error {
+	return w.Container(&v.GenesisTime, &v.GenesisValidatorsRoot,
+		&v.Slot, &v.Fork, &v.LatestBlockHeader,
+		&v.BlockRoots, &v.StateRoots, &v.HistoricalRoots,
+		&v.Eth1Data, &v.Eth1DataVotes, &v.DepositIndex,
+		&v.Validators, &v.Balances,
+		&v.RandaoMixes, &v.Slashings,
+		&v.PreviousEpochAttestations, &v.CurrentEpochAttestations,
+		&v.JustificationBits,
+		&v.PreviousJustifiedCheckpoint, &v.CurrentJustifiedCheckpoint,
+		&v.FinalizedCheckpoint)
+}
+
+func (a *BeaconState) ByteLength() uint64 {
+	return 123 // TODO
+}
+
+func (*BeaconState) FixedLength() uint64 {
+	return 0
+}
+
+func (v *BeaconState) HashTreeRoot(hFn tree.HashFn) Root {
+	return hFn.HashTreeRoot(&v.GenesisTime, &v.GenesisValidatorsRoot,
+		&v.Slot, &v.Fork, &v.LatestBlockHeader,
+		&v.BlockRoots, &v.StateRoots, &v.HistoricalRoots,
+		&v.Eth1Data, &v.Eth1DataVotes, &v.DepositIndex,
+		&v.Validators, &v.Balances,
+		&v.RandaoMixes, &v.Slashings,
+		&v.PreviousEpochAttestations, &v.CurrentEpochAttestations,
+		&v.JustificationBits,
+		&v.PreviousJustifiedCheckpoint, &v.CurrentJustifiedCheckpoint,
+		&v.FinalizedCheckpoint)
 }
 
 // Hack to make state fields consistent and verifiable without using many hardcoded indices
@@ -250,13 +298,13 @@ func (state *BeaconStateView) IsValidIndex(index ValidatorIndex) (bool, error) {
 }
 
 // Raw converts the tree-structured state into a flattened native Go structure.
-func (state *BeaconStateView) Raw() (*BeaconState, error) {
+func (state *BeaconStateView) Raw(spec *Spec) (*BeaconState, error) {
 	var buf bytes.Buffer
 	if err := state.Serialize(codec.NewEncodingWriter(&buf)); err != nil {
 		return nil, err
 	}
 	var raw BeaconState
-	err := zssz.Decode(bytes.NewReader(buf.Bytes()), uint64(len(buf.Bytes())), &raw, BeaconStateSSZ)
+	err := raw.Deserialize(spec, codec.NewDecodingReader(bytes.NewReader(buf.Bytes()), uint64(len(buf.Bytes()))))
 	if err != nil {
 		return nil, err
 	}

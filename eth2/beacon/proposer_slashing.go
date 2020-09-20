@@ -19,6 +19,14 @@ func (a *ProposerSlashing) Deserialize(dr *codec.DecodingReader) error {
 	return dr.Container(&a.SignedHeader1, &a.SignedHeader2)
 }
 
+func (a *ProposerSlashing) Serialize(w *codec.EncodingWriter) error {
+	return w.Container(&a.SignedHeader1, &a.SignedHeader2)
+}
+
+func (a *ProposerSlashing) ByteLength() uint64 {
+	return SignedBeaconBlockHeaderType.TypeByteLength() * 2
+}
+
 func (*ProposerSlashing) FixedLength() uint64 {
 	return SignedBeaconBlockHeaderType.TypeByteLength() * 2
 }
@@ -36,31 +44,38 @@ func (c *Phase0Config) BlockProposerSlashings() ListTypeDef {
 	return ListType(ProposerSlashingType, c.MAX_PROPOSER_SLASHINGS)
 }
 
-type ProposerSlashings struct {
-	Items []ProposerSlashing
-	Limit uint64
+type ProposerSlashings []ProposerSlashing
+
+func (a *ProposerSlashings) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
+	return dr.List(func() codec.Deserializable {
+		i := len(*a)
+		*a = append(*a, ProposerSlashing{})
+		return &((*a)[i])
+	}, 0, spec.MAX_PROPOSER_SLASHINGS)
 }
 
-func (a *ProposerSlashings) Deserialize(dr *codec.DecodingReader) error {
-	return dr.List(func() codec.Deserializable {
-		i := len(a.Items)
-		a.Items = append(a.Items, ProposerSlashing{})
-		return &a.Items[i]
-	}, ProposerSlashingType.TypeByteLength(), a.Limit)
+func (a ProposerSlashings) Serialize(spec *Spec, w *codec.EncodingWriter) error {
+	return w.List(func(i uint64) codec.Serializable {
+		return &a[i]
+	}, ProposerSlashingType.TypeByteLength(), spec.MAX_PROPOSER_SLASHINGS)
+}
+
+func (a ProposerSlashings) ByteLength(spec *Spec)(out uint64) {
+	return ProposerSlashingType.TypeByteLength() * uint64(len(a))
 }
 
 func (*ProposerSlashings) FixedLength() uint64 {
 	return 0
 }
 
-func (li *ProposerSlashings) HashTreeRoot(hFn tree.HashFn) Root {
-	length := uint64(len(li.Items))
+func (li ProposerSlashings) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
+	length := uint64(len(li))
 	return hFn.ComplexListHTR(func(i uint64) tree.HTR {
 		if i < length {
-			return &li.Items[i]
+			return &li[i]
 		}
 		return nil
-	}, length, li.Limit)
+	}, length, spec.MAX_ATTESTATIONS)
 }
 
 func (spec *Spec) ProcessProposerSlashings(ctx context.Context, epc *EpochsContext, state *BeaconStateView, ops []ProposerSlashing) error {

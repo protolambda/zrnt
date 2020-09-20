@@ -23,48 +23,66 @@ func (c *Phase0Config) Attestation() *ContainerTypeDef {
 }
 
 type Attestation struct {
-	AggregationBits CommitteeBitList
+	AggregationBits CommitteeBits
 	Data            AttestationData
 	Signature       BLSSignature
 }
 
-func (a *Attestation) Deserialize(dr *codec.DecodingReader) error {
-	return dr.Container(&a.AggregationBits, &a.Data, &a.Signature)
+func (a *Attestation) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
+	return dr.Container(spec.Wrap(&a.AggregationBits), &a.Data, &a.Signature)
+}
+
+func (a *Attestation) Serialize(spec *Spec, w *codec.EncodingWriter) error {
+	return w.Container(spec.Wrap(&a.AggregationBits), &a.Data, &a.Signature)
+}
+
+func (a *Attestation) ByteLength(spec *Spec) uint64 {
+	return a.AggregationBits.ByteLength(spec) + a.Data.ByteLength() + a.Signature.ByteLength()
 }
 
 func (a *Attestation) FixedLength() uint64 {
 	return 0
 }
 
-func (a *Attestation) HashTreeRoot(hFn tree.HashFn) Root {
-	return hFn.HashTreeRoot(&a.AggregationBits, &a.Data, a.Signature)
+func (a *Attestation) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
+	return hFn.HashTreeRoot(spec.Wrap(&a.AggregationBits), &a.Data, a.Signature)
 }
 
-type Attestations struct {
-	Items []Attestation
-	Limit uint64
-}
+type Attestations []Attestation
 
-func (a *Attestations) Deserialize(dr *codec.DecodingReader) error {
+func (a *Attestations) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
 	return dr.List(func() codec.Deserializable {
-		i := len(a.Items)
-		a.Items = append(a.Items, Attestation{})
-		return &a.Items[i]
-	}, 0, a.Limit)
+		i := len(*a)
+		*a = append(*a, Attestation{})
+		return spec.Wrap(&((*a)[i]))
+	}, 0, spec.MAX_ATTESTATIONS)
+}
+
+func (a Attestations) Serialize(spec *Spec, w *codec.EncodingWriter) error {
+	return w.List(func(i uint64) codec.Serializable {
+		return spec.Wrap(&a[i])
+	}, 0, spec.MAX_ATTESTATIONS)
+}
+
+func (a Attestations) ByteLength(spec *Spec)(out uint64) {
+	for _, v := range a {
+		out += v.ByteLength(spec) + codec.OFFSET_SIZE
+	}
+	return
 }
 
 func (a *Attestations) FixedLength() uint64 {
 	return 0
 }
 
-func (li *Attestations) HashTreeRoot(hFn tree.HashFn) Root {
-	length := uint64(len(li.Items))
+func (li Attestations) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
+	length := uint64(len(li))
 	return hFn.ComplexListHTR(func(i uint64) tree.HTR {
 		if i < length {
-			return &li.Items[i]
+			return spec.Wrap(&li[i])
 		}
 		return nil
-	}, length, li.Limit)
+	}, length, spec.MAX_ATTESTATIONS)
 }
 
 func (spec *Spec) ProcessAttestations(ctx context.Context, epc *EpochsContext, state *BeaconStateView, ops []Attestation) error {
@@ -150,7 +168,7 @@ func (spec *Spec) ProcessAttestation(state *BeaconStateView, epc *EpochsContext,
 	if err != nil {
 		return err
 	}
-	if indexedAtt, err := attestation.ConvertToIndexed(committee); err != nil {
+	if indexedAtt, err := attestation.ConvertToIndexed(spec, committee); err != nil {
 		return fmt.Errorf("attestation could not be converted to an indexed attestation: %v", err)
 	} else if err := spec.ValidateIndexedAttestation(epc, state, indexedAtt); err != nil {
 		return fmt.Errorf("attestation could not be verified in its indexed form: %v", err)
@@ -168,7 +186,7 @@ func (spec *Spec) ProcessAttestation(state *BeaconStateView, epc *EpochsContext,
 		InclusionDelay:  currentSlot - data.Slot,
 		ProposerIndex:   proposerIndex,
 	}
-	pendingAttestation := pendingAttestationRaw.View()
+	pendingAttestation := pendingAttestationRaw.View(spec)
 
 	if data.Target.Epoch == currentEpoch {
 		atts, err := state.CurrentEpochAttestations()
@@ -191,15 +209,15 @@ func (spec *Spec) ProcessAttestation(state *BeaconStateView, epc *EpochsContext,
 }
 
 // Convert attestation to (almost) indexed-verifiable form
-func (attestation *Attestation) ConvertToIndexed(committee []ValidatorIndex) (*IndexedAttestation, error) {
-	bitLen := attestation.AggregationBits.Bits.BitLen()
+func (attestation *Attestation) ConvertToIndexed(spec *Spec, committee []ValidatorIndex) (*IndexedAttestation, error) {
+	bitLen := attestation.AggregationBits.BitLen()
 	if uint64(len(committee)) != bitLen {
 		return nil, fmt.Errorf("committee size does not match bits size: %d <> %d", len(committee), bitLen)
 	}
 
 	participants := make([]ValidatorIndex, 0, len(committee))
 	for i := uint64(0); i < bitLen; i++ {
-		if attestation.AggregationBits.Bits.GetBit(i) {
+		if attestation.AggregationBits.GetBit(i) {
 			participants = append(participants, committee[i])
 		}
 	}
@@ -208,10 +226,7 @@ func (attestation *Attestation) ConvertToIndexed(committee []ValidatorIndex) (*I
 	})
 
 	return &IndexedAttestation{
-		AttestingIndices: CommitteeIndicesList{
-			Indices: participants,
-			Limit:   attestation.AggregationBits.BitLimit,
-		},
+		AttestingIndices: participants,
 		Data:             attestation.Data,
 		Signature:        attestation.Signature,
 	}, nil

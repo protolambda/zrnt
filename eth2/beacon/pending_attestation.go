@@ -7,14 +7,14 @@ import (
 )
 
 type PendingAttestation struct {
-	AggregationBits CommitteeBitList
+	AggregationBits CommitteeBits
 	Data            AttestationData
 	InclusionDelay  Slot
 	ProposerIndex   ValidatorIndex
 }
 
-func (att *PendingAttestation) View() *PendingAttestationView {
-	bits := att.AggregationBits.View()
+func (att *PendingAttestation) View(spec *Spec) *PendingAttestationView {
+	bits := att.AggregationBits.View(spec)
 	t := ContainerType("PendingAttestation", []FieldDef{
 		{"aggregation_bits", bits.Type()},
 		{"data", AttestationDataType},
@@ -44,6 +44,14 @@ type AttestationData struct {
 
 func (a *AttestationData) Deserialize(dr *codec.DecodingReader) error {
 	return dr.Container(&a.Slot, &a.Index, &a.BeaconBlockRoot, &a.Source, &a.Target)
+}
+
+func (a *AttestationData) Serialize(w *codec.EncodingWriter) error {
+	return w.Container(a.Slot, a.Index, &a.BeaconBlockRoot, &a.Source, &a.Target)
+}
+
+func (a *AttestationData) ByteLength() uint64 {
+	return AttestationDataType.TypeByteLength()
 }
 
 func (*AttestationData) FixedLength() uint64 {
@@ -140,10 +148,7 @@ func (v *PendingAttestationView) Raw() (*PendingAttestation, error) {
 		return nil, err
 	}
 	return &PendingAttestation{
-		AggregationBits: CommitteeBitList{
-			Bits:     rawBits,
-			BitLimit: bits.BitLimit,
-		},
+		AggregationBits: rawBits,
 		Data:            *rawData,
 		InclusionDelay:  delay,
 		ProposerIndex:   proposerIndex,

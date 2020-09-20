@@ -18,6 +18,14 @@ func (b *Eth1Data) Deserialize(dr *codec.DecodingReader) error {
 	return dr.Container(&b.DepositRoot, &b.DepositCount, &b.BlockHash)
 }
 
+func (a *Eth1Data) Serialize(w *codec.EncodingWriter) error {
+	return w.Container(a.DepositRoot, a.DepositCount, a.BlockHash)
+}
+
+func (a *Eth1Data) ByteLength() uint64 {
+	return Eth1DataType.TypeByteLength()
+}
+
 func (a *Eth1Data) FixedLength() uint64 {
 	return Eth1DataType.TypeByteLength()
 }

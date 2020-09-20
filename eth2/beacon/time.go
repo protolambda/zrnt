@@ -20,6 +20,14 @@ func (a *Timestamp) Deserialize(dr *codec.DecodingReader) error {
 	return (*Uint64View)(a).Deserialize(dr)
 }
 
+func (i Timestamp) Serialize(w *codec.EncodingWriter) error {
+	return w.WriteUint64(uint64(i))
+}
+
+func (Timestamp) ByteLength() uint64 {
+	return 8
+}
+
 func (Timestamp) FixedLength() uint64 {
 	return 8
 }
@@ -45,6 +53,14 @@ func (i *DepositIndex) Deserialize(dr *codec.DecodingReader) error {
 	return (*Uint64View)(i).Deserialize(dr)
 }
 
+func (i DepositIndex) Serialize(w *codec.EncodingWriter) error {
+	return w.WriteUint64(uint64(i))
+}
+
+func (DepositIndex) ByteLength() uint64 {
+	return 8
+}
+
 func (DepositIndex) FixedLength() uint64 {
 	return 8
 }
@@ -63,6 +79,14 @@ func (spec *Spec) SlotToEpoch(s Slot) Epoch {
 
 func (a *Slot) Deserialize(dr *codec.DecodingReader) error {
 	return (*Uint64View)(a).Deserialize(dr)
+}
+
+func (i Slot) Serialize(w *codec.EncodingWriter) error {
+	return w.WriteUint64(uint64(i))
+}
+
+func (Slot) ByteLength() uint64 {
+	return 8
 }
 
 func (Slot) FixedLength() uint64 {
@@ -99,6 +123,14 @@ func (spec *Spec) ComputeActivationExitEpoch(e Epoch) Epoch {
 
 func (a *Epoch) Deserialize(dr *codec.DecodingReader) error {
 	return (*Uint64View)(a).Deserialize(dr)
+}
+
+func (i Epoch) Serialize(w *codec.EncodingWriter) error {
+	return w.WriteUint64(uint64(i))
+}
+
+func (Epoch) ByteLength() uint64 {
+	return 8
 }
 
 func (Epoch) FixedLength() uint64 {

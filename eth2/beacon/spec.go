@@ -1,6 +1,10 @@
 package beacon
 
-import "math/big"
+import (
+	"github.com/protolambda/ztyp/tree"
+	"github.com/protolambda/ztyp/codec"
+	"math/big"
+)
 
 type Phase0Config struct {
 
@@ -156,8 +160,52 @@ type Phase1Config struct {
 	MINOR_REWARD_QUOTIENT                            uint64
 }
 
+type SpecObj interface {
+	Deserialize(spec *Spec, dr *codec.DecodingReader) error
+	Serialize(spec *Spec, w *codec.EncodingWriter) error
+	ByteLength(spec *Spec) uint64
+	HashTreeRoot(spec *Spec, h tree.HashFn) Root
+	codec.FixedLength
+}
+
+type SSZObj interface {
+	codec.Serializable
+	codec.Deserializable
+	codec.FixedLength
+	tree.HTR
+}
+
+type specObj struct {
+	spec *Spec
+	des SpecObj
+}
+
+func (s specObj) Deserialize(dr *codec.DecodingReader) error {
+	return s.des.Deserialize(s.spec, dr)
+}
+
+func (s specObj) Serialize(w *codec.EncodingWriter) error {
+	return s.des.Serialize(s.spec, w)
+}
+
+func (s specObj) ByteLength() uint64 {
+	return s.des.ByteLength(s.spec)
+}
+
+func (s specObj) HashTreeRoot(h tree.HashFn) Root {
+	return s.des.HashTreeRoot(s.spec, h)
+}
+
+func (s specObj) FixedLength() uint64 {
+	return s.des.FixedLength()
+}
+
 type Spec struct {
 	PRESET_NAME string
 	Phase0Config
 	Phase1Config
+}
+
+func (spec *Spec) Wrap(des SpecObj) SSZObj {
+	return specObj{spec, des}
 }

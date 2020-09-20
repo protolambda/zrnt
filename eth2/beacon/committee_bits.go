@@ -17,30 +17,30 @@ func (c *Phase0Config) View(cb CommitteeBits) *CommitteeBitsView {
 	return &CommitteeBitsView{v.(*BitListView)}
 }
 
-type CommitteeBitList struct {
-	Bits CommitteeBits
-	BitLimit uint64
-}
-
-func (li *CommitteeBitList) Configure(spec *Spec) {
-	li.BitLimit = spec.MAX_VALIDATORS_PER_COMMITTEE
-}
-
-func (li *CommitteeBitList) View() *CommitteeBitsView {
-	v, _ := BitListType(li.BitLimit).Deserialize(codec.NewDecodingReader(bytes.NewReader(li.Bits), uint64(len(li.Bits))))
+func (li CommitteeBits) View(spec *Spec) *CommitteeBitsView {
+	v, _ := BitListType(spec.MAX_VALIDATORS_PER_COMMITTEE).Deserialize(
+		codec.NewDecodingReader(bytes.NewReader(li), uint64(len(li))))
 	return &CommitteeBitsView{v.(*BitListView)}
 }
 
-func (li *CommitteeBitList) Deserialize(dr *codec.DecodingReader) error {
-	return dr.BitList((*[]byte)(&li.Bits), li.BitLimit)
+func (li *CommitteeBits) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
+	return dr.BitList((*[]byte)(li), spec.MAX_VALIDATORS_PER_COMMITTEE)
 }
 
-func (a *CommitteeBitList) FixedLength() uint64 {
+func (a CommitteeBits) Serialize(spec *Spec, w *codec.EncodingWriter) error {
+	return w.BitList(a[:])
+}
+
+func (a CommitteeBits) ByteLength(spec *Spec) uint64 {
+	return uint64(len(a))
+}
+
+func (a *CommitteeBits) FixedLength() uint64 {
 	return 0
 }
 
-func (li *CommitteeBitList) HashTreeRoot(hFn tree.HashFn) Root {
-	return hFn.BitListHTR(li.Bits, li.BitLimit)
+func (li CommitteeBits) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
+	return hFn.BitListHTR(li, spec.MAX_VALIDATORS_PER_COMMITTEE)
 }
 
 func (cb CommitteeBits) BitLen() uint64 {

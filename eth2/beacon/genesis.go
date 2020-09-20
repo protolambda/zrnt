@@ -22,7 +22,7 @@ func NewDepositRootsView() *DepositRootsView {
 }
 
 func (spec *Spec) GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Deposit, ignoreSignaturesAndProofs bool) (*BeaconStateView, *EpochsContext, error) {
-	state := NewBeaconStateView()
+	state := spec.NewBeaconStateView()
 	if err := state.SetGenesisTime(time + spec.GENESIS_DELAY); err != nil {
 		return nil, nil, err
 	}
@@ -43,7 +43,7 @@ func (spec *Spec) GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Dep
 	}
 	emptyBody := BeaconBlockBody{}
 	latestHeader := BeaconBlockHeader{
-		BodyRoot: emptyBody.HashTreeRoot(tree.GetHashFn()),
+		BodyRoot: emptyBody.HashTreeRoot(spec, tree.GetHashFn()),
 	}
 	if err := state.SetLatestBlockHeader(latestHeader.View()); err != nil {
 		return nil, nil, err

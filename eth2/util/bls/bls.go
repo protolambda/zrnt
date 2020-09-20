@@ -19,6 +19,14 @@ func (p *BLSPubkey) Deserialize(dr *codec.DecodingReader) error {
 	return err
 }
 
+func (p BLSPubkey) Serialize(w *codec.EncodingWriter) error {
+	return w.Write(p[:])
+}
+
+func (BLSPubkey) ByteLength() uint64 {
+	return 96
+}
+
 func (BLSPubkey) FixedLength() uint64 {
 	return 96
 }
@@ -60,6 +68,14 @@ func (s *BLSSignature) Deserialize(dr *codec.DecodingReader) error {
 	}
 	_, err := dr.Read(s[:])
 	return err
+}
+
+func (s BLSSignature) Serialize(w *codec.EncodingWriter) error {
+	return w.Write(s[:])
+}
+
+func (BLSSignature) ByteLength() uint64 {
+	return 96
 }
 
 func (BLSSignature) FixedLength() uint64 {

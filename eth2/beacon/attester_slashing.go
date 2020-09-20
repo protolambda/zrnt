@@ -29,16 +29,24 @@ type AttesterSlashing struct {
 	Attestation2 IndexedAttestation
 }
 
-func (a *AttesterSlashing) Deserialize(dr *codec.DecodingReader) error {
-	return dr.Container(&a.Attestation1, &a.Attestation2)
+func (a *AttesterSlashing) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
+	return dr.Container(spec.Wrap(&a.Attestation1), spec.Wrap(&a.Attestation2))
+}
+
+func (a *AttesterSlashing) Serialize(spec *Spec, w *codec.EncodingWriter) error {
+	return w.Container(spec.Wrap(&a.Attestation1), spec.Wrap(&a.Attestation2))
+}
+
+func (a *AttesterSlashing) ByteLength(spec *Spec) uint64 {
+	return 2*codec.OFFSET_SIZE + a.Attestation1.ByteLength(spec) + a.Attestation2.ByteLength(spec)
 }
 
 func (a *AttesterSlashing) FixedLength() uint64 {
 	return 0
 }
 
-func (p *AttesterSlashing) HashTreeRoot(hFn tree.HashFn) Root {
-	return hFn.HashTreeRoot(&p.Attestation1, &p.Attestation2)
+func (a *AttesterSlashing) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
+	return hFn.HashTreeRoot(spec.Wrap(&a.Attestation1), spec.Wrap(&a.Attestation2))
 }
 
 func (c *Phase0Config) BlockAttesterSlashings() ListTypeDef {
@@ -52,31 +60,41 @@ func (c *Phase0Config) AttesterSlashing() *ContainerTypeDef {
 	})
 }
 
-type AttesterSlashings struct {
-	Items []AttesterSlashing
-	Limit uint64
+type AttesterSlashings []AttesterSlashing
+
+func (a *AttesterSlashings) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
+	return dr.List(func() codec.Deserializable {
+		i := len(*a)
+		*a = append(*a, AttesterSlashing{})
+		return spec.Wrap(&((*a)[i]))
+	}, 0, spec.MAX_ATTESTER_SLASHINGS)
 }
 
-func (a *AttesterSlashings) Deserialize(dr *codec.DecodingReader) error {
-	return dr.List(func() codec.Deserializable {
-		i := len(a.Items)
-		a.Items = append(a.Items, AttesterSlashing{})
-		return &a.Items[i]
-	}, 0, a.Limit)
+func (a AttesterSlashings) Serialize(spec *Spec, w *codec.EncodingWriter) error {
+	return w.List(func(i uint64) codec.Serializable {
+		return spec.Wrap(&a[i])
+	}, 0, spec.MAX_ATTESTER_SLASHINGS)
+}
+
+func (a AttesterSlashings) ByteLength(spec *Spec)(out uint64) {
+	for _, v := range a {
+		out += v.ByteLength(spec) + codec.OFFSET_SIZE
+	}
+	return
 }
 
 func (a *AttesterSlashings) FixedLength() uint64 {
 	return 0
 }
 
-func (li *AttesterSlashings) HashTreeRoot(hFn tree.HashFn) Root {
-	length := uint64(len(li.Items))
+func (li AttesterSlashings) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
+	length := uint64(len(li))
 	return hFn.ComplexListHTR(func(i uint64) tree.HTR {
 		if i < length {
-			return &li.Items[i]
+			return spec.Wrap(&li[i])
 		}
 		return nil
-	}, length, li.Limit)
+	}, length, spec.MAX_ATTESTER_SLASHINGS)
 }
 
 func (spec *Spec) ProcessAttesterSlashing(state *BeaconStateView, epc *EpochsContext, attesterSlashing *AttesterSlashing) error {
@@ -106,7 +124,7 @@ func (spec *Spec) ProcessAttesterSlashing(state *BeaconStateView, epc *EpochsCon
 	}
 	// run slashings where applicable
 	// use ZigZagJoin for efficient intersection: the indicies are already sorted (as validated above)
-	ValidatorSet(sa1.AttestingIndices.Indices).ZigZagJoin(ValidatorSet(sa2.AttestingIndices.Indices), func(i ValidatorIndex) {
+	ValidatorSet(sa1.AttestingIndices).ZigZagJoin(ValidatorSet(sa2.AttestingIndices), func(i ValidatorIndex) {
 		if errorAny != nil {
 			return
 		}

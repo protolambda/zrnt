@@ -12,27 +12,32 @@ import (
 
 type CommitteeIndices []ValidatorIndex
 
-type CommitteeIndicesList struct {
-	Indices CommitteeIndices
-	Limit uint64
-}
-
-func (p *CommitteeIndicesList) Deserialize(dr *codec.DecodingReader) error {
+func (p *CommitteeIndices) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
 	return dr.List(func() codec.Deserializable {
-		i := len(p.Indices)
-		p.Indices = append(p.Indices, ValidatorIndex(0))
-		return &p.Indices[i]
-	}, ValidatorIndexType.TypeByteLength(), p.Limit)
+		i := len(*p)
+		*p = append(*p, ValidatorIndex(0))
+		return &((*p)[i])
+	}, ValidatorIndexType.TypeByteLength(), spec.MAX_VALIDATORS_PER_COMMITTEE)
 }
 
-func (b *CommitteeIndicesList) FixedLength() uint64 {
+func (a CommitteeIndices) Serialize(spec *Spec, w *codec.EncodingWriter) error {
+	return w.List(func(i uint64) codec.Serializable {
+		return a[i]
+	}, ValidatorIndexType.TypeByteLength(), uint64(len(a)))
+}
+
+func (a CommitteeIndices) ByteLength(spec *Spec) uint64 {
+	return ValidatorIndexType.TypeByteLength() * uint64(len(a))
+}
+
+func (*CommitteeIndices) FixedLength() uint64 {
 	return 0
 }
 
-func (p *CommitteeIndicesList) HashTreeRoot(hFn tree.HashFn) Root {
+func (p CommitteeIndices) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
 	return hFn.Uint64ListHTR(func(i uint64) uint64 {
-		return uint64(p.Indices[i])
-	}, uint64(len(p.Indices)), p.Limit)
+		return uint64(p[i])
+	}, uint64(len(p)), spec.MAX_VALIDATORS_PER_COMMITTEE)
 }
 
 func (c *Phase0Config) CommitteeIndices() ListTypeDef {
@@ -40,21 +45,30 @@ func (c *Phase0Config) CommitteeIndices() ListTypeDef {
 }
 
 type IndexedAttestation struct {
-	AttestingIndices CommitteeIndicesList
+	AttestingIndices CommitteeIndices
 	Data             AttestationData
 	Signature        BLSSignature
 }
 
-func (p *IndexedAttestation) Deserialize(dr *codec.DecodingReader) error {
-	return dr.Container(&p.AttestingIndices, &p.Data, &p.Signature)
+func (p *IndexedAttestation) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
+	return dr.Container(spec.Wrap(&p.AttestingIndices), &p.Data, &p.Signature)
+}
+
+func (a *IndexedAttestation) Serialize(spec *Spec, w *codec.EncodingWriter) error {
+	return w.Container(spec.Wrap(&a.AttestingIndices), &a.Data, &a.Signature)
+}
+
+func (a *IndexedAttestation) ByteLength(spec *Spec) uint64 {
+	return codec.OFFSET_SIZE + a.AttestingIndices.ByteLength(spec) +
+		AttestationDataType.TypeByteLength() + BLSSignatureType.TypeByteLength()
 }
 
 func (*IndexedAttestation) FixedLength() uint64 {
 	return 0
 }
 
-func (p *IndexedAttestation) HashTreeRoot(hFn tree.HashFn) Root {
-	return hFn.HashTreeRoot(&p.AttestingIndices, &p.Data, p.Signature)
+func (p *IndexedAttestation) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
+	return hFn.HashTreeRoot(spec.Wrap(&p.AttestingIndices), &p.Data, p.Signature)
 }
 
 func (c *Phase0Config) IndexedAttestation() *ContainerTypeDef {
@@ -68,7 +82,7 @@ func (c *Phase0Config) IndexedAttestation() *ContainerTypeDef {
 // Verify validity of slashable_attestation fields.
 func (spec *Spec) ValidateIndexedAttestation(epc *EpochsContext, state *BeaconStateView, indexedAttestation *IndexedAttestation) error {
 	// wrap it in validator-sets. Does not sort it, but does make checking if it is a lot easier.
-	indices := ValidatorSet(indexedAttestation.AttestingIndices.Indices)
+	indices := ValidatorSet(indexedAttestation.AttestingIndices)
 
 	// Verify max number of indices
 	if count := uint64(len(indices)); count > spec.MAX_VALIDATORS_PER_COMMITTEE {

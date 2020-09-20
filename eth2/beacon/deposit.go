@@ -39,6 +39,14 @@ func (d *DepositData) Deserialize(dr *codec.DecodingReader) error {
 	return dr.Container(&d.Pubkey, &d.WithdrawalCredentials, &d.Amount, &d.Signature)
 }
 
+func (d *DepositData) Serialize(w *codec.EncodingWriter) error {
+	return w.Container(&d.Pubkey, &d.WithdrawalCredentials, &d.Amount, &d.Signature)
+}
+
+func (a *DepositData) ByteLength() uint64 {
+	return DepositDataType.TypeByteLength()
+}
+
 func (a *DepositData) FixedLength() uint64 {
 	return DepositDataType.TypeByteLength()
 }
@@ -74,6 +82,16 @@ func (d *DepositProof) Deserialize(dr *codec.DecodingReader) error {
 	}, RootType.TypeByteLength(), DepositProofType.Length())
 }
 
+func (d *DepositProof) Serialize(w *codec.EncodingWriter) error {
+	return w.Vector(func(i uint64) codec.Serializable {
+		return &d[i]
+	}, RootType.TypeByteLength(), DepositProofType.Length())
+}
+
+func (a *DepositProof) ByteLength() uint64 {
+	return DepositProofType.TypeByteLength()
+}
+
 func (a *DepositProof) FixedLength() uint64 {
 	return DepositProofType.TypeByteLength()
 }
@@ -93,6 +111,14 @@ func (d *Deposit) Deserialize(dr *codec.DecodingReader) error {
 	return dr.Container(&d.Proof, &d.Data)
 }
 
+func (d *Deposit) Serialize(w *codec.EncodingWriter) error {
+	return w.Container(&d.Proof, &d.Data)
+}
+
+func (a *Deposit) ByteLength() uint64 {
+	return Eth1DataType.TypeByteLength()
+}
+
 func (a *Deposit) FixedLength() uint64 {
 	return DepositType.TypeByteLength()
 }
@@ -110,31 +136,38 @@ func (c *Phase0Config) BlockDeposits() ListTypeDef {
 	return ListType(DepositType, c.MAX_DEPOSITS)
 }
 
-type Deposits struct {
-	Items []Deposit
-	Limit uint64
+type Deposits []Deposit
+
+func (a *Deposits) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
+	return dr.List(func() codec.Deserializable {
+		i := len(*a)
+		*a = append(*a, Deposit{})
+		return &((*a)[i])
+	}, DepositType.TypeByteLength(), spec.MAX_DEPOSITS)
 }
 
-func (a *Deposits) Deserialize(dr *codec.DecodingReader) error {
-	return dr.List(func() codec.Deserializable {
-		i := len(a.Items)
-		a.Items = append(a.Items, Deposit{})
-		return &a.Items[i]
-	}, DepositType.TypeByteLength(), a.Limit)
+func (a Deposits) Serialize(spec *Spec, w *codec.EncodingWriter) error {
+	return w.List(func(i uint64) codec.Serializable {
+		return &a[i]
+	}, DepositType.TypeByteLength(), spec.MAX_DEPOSITS)
+}
+
+func (a Deposits) ByteLength(spec *Spec)(out uint64) {
+	return DepositType.TypeByteLength() * uint64(len(a))
 }
 
 func (a *Deposits) FixedLength() uint64 {
 	return 0
 }
 
-func (li *Deposits) HashTreeRoot(hFn tree.HashFn) Root {
-	length := uint64(len(li.Items))
+func (li Deposits) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
+	length := uint64(len(li))
 	return hFn.ComplexListHTR(func(i uint64) tree.HTR {
 		if i < length {
-			return &li.Items[i]
+			return &li[i]
 		}
 		return nil
-	}, length, li.Limit)
+	}, length, spec.MAX_ATTESTATIONS)
 }
 
 // Verify that outstanding deposits are processed up to the maximum number of deposits, then process all in order.

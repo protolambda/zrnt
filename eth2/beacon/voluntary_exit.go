@@ -13,31 +13,38 @@ func (c *Phase0Config) BlockVoluntaryExits() ListTypeDef {
 	return ListType(SignedVoluntaryExitType, c.MAX_VOLUNTARY_EXITS)
 }
 
-type VoluntaryExits struct {
-	Items []SignedVoluntaryExit
-	Limit uint64
+type VoluntaryExits []SignedVoluntaryExit
+
+func (a *VoluntaryExits) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
+	return dr.List(func() codec.Deserializable {
+		i := len(*a)
+		*a = append(*a, SignedVoluntaryExit{})
+		return &(*a)[i]
+	}, SignedVoluntaryExitType.TypeByteLength(), spec.MAX_VOLUNTARY_EXITS)
 }
 
-func (a *VoluntaryExits) Deserialize(dr *codec.DecodingReader) error {
-	return dr.List(func() codec.Deserializable {
-		i := len(a.Items)
-		a.Items = append(a.Items, SignedVoluntaryExit{})
-		return &a.Items[i]
-	}, SignedVoluntaryExitType.TypeByteLength(), a.Limit)
+func (a VoluntaryExits) Serialize(spec *Spec, w *codec.EncodingWriter) error {
+	return w.List(func(i uint64) codec.Serializable {
+		return &a[i]
+	}, SignedVoluntaryExitType.TypeByteLength(), spec.MAX_VOLUNTARY_EXITS)
+}
+
+func (a VoluntaryExits) ByteLength(spec *Spec)(out uint64) {
+	return SignedVoluntaryExitType.TypeByteLength() * uint64(len(a))
 }
 
 func (*VoluntaryExits) FixedLength() uint64 {
 	return 0
 }
 
-func (li *VoluntaryExits) HashTreeRoot(hFn tree.HashFn) Root {
-	length := uint64(len(li.Items))
+func (li VoluntaryExits) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
+	length := uint64(len(li))
 	return hFn.ComplexListHTR(func(i uint64) tree.HTR {
 		if i < length {
-			return &li.Items[i]
+			return &li[i]
 		}
 		return nil
-	}, length, li.Limit)
+	}, length, spec.MAX_VOLUNTARY_EXITS)
 }
 
 func (spec *Spec) ProcessVoluntaryExits(ctx context.Context, epc *EpochsContext, state *BeaconStateView, ops []SignedVoluntaryExit) error {
@@ -69,6 +76,14 @@ func (v *VoluntaryExit) Deserialize(dr *codec.DecodingReader) error {
 	return dr.Container(&v.Epoch, &v.ValidatorIndex)
 }
 
+func (v *VoluntaryExit) Serialize(w *codec.EncodingWriter) error {
+	return w.Container(&v.Epoch, &v.ValidatorIndex)
+}
+
+func (v *VoluntaryExit) ByteLength() uint64 {
+	return VoluntaryExitType.TypeByteLength()
+}
+
 func (*VoluntaryExit) FixedLength() uint64 {
 	return VoluntaryExitType.TypeByteLength()
 }
@@ -84,6 +99,14 @@ type SignedVoluntaryExit struct {
 
 func (v *SignedVoluntaryExit) Deserialize(dr *codec.DecodingReader) error {
 	return dr.Container(&v.Message, &v.Signature)
+}
+
+func (v *SignedVoluntaryExit) Serialize(w *codec.EncodingWriter) error {
+	return w.Container(&v.Message, &v.Signature)
+}
+
+func (v *SignedVoluntaryExit) ByteLength() uint64 {
+	return SignedVoluntaryExitType.TypeByteLength()
 }
 
 func (*SignedVoluntaryExit) FixedLength() uint64 {

@@ -35,6 +35,14 @@ func (s *BeaconBlockHeader) Deserialize(dr *codec.DecodingReader) error {
 	return dr.Container(&s.Slot, &s.ProposerIndex, &s.ParentRoot, &s.StateRoot, &s.BodyRoot)
 }
 
+func (s *BeaconBlockHeader) Serialize(w *codec.EncodingWriter) error {
+	return w.Container(&s.Slot, &s.ProposerIndex, &s.ParentRoot, &s.StateRoot, &s.BodyRoot)
+}
+
+func (s *BeaconBlockHeader) ByteLength() uint64 {
+	return codec.Sum(&s.Slot, &s.ProposerIndex, &s.ParentRoot, &s.StateRoot, &s.BodyRoot)
+}
+
 func (b *BeaconBlockHeader) FixedLength() uint64 {
 	return BeaconBlockHeaderType.TypeByteLength()
 }
@@ -50,6 +58,14 @@ type SignedBeaconBlockHeader struct {
 
 func (s *SignedBeaconBlockHeader) Deserialize(dr *codec.DecodingReader) error {
 	return dr.Container(&s.Message, &s.Signature)
+}
+
+func (s *SignedBeaconBlockHeader) Serialize(w *codec.EncodingWriter) error {
+	return w.Container(&s.Message, &s.Signature)
+}
+
+func (s *SignedBeaconBlockHeader) ByteLength() uint64 {
+	return codec.Sum(&s.Message, &s.Signature)
 }
 
 func (b *SignedBeaconBlockHeader) FixedLength() uint64 {
@@ -198,7 +214,7 @@ func (spec *Spec) ProcessHeader(ctx context.Context, epc *EpochsContext, state *
 		// state_root is zeroed and overwritten in the next `process_slot` call.
 		// with BlockHeaderState.UpdateStateRoot(), once the post state is available.
 		StateRoot: Root{},
-		BodyRoot:  header.Body.HashTreeRoot(tree.GetHashFn()),
+		BodyRoot:  header.Body.HashTreeRoot(spec, tree.GetHashFn()),
 	}
 	return state.SetLatestBlockHeader(headerRaw.View())
 }

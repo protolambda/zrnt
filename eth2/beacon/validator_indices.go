@@ -21,6 +21,14 @@ func (i *ValidatorIndex) Deserialize(dr *codec.DecodingReader) error {
 	return (*Uint64View)(i).Deserialize(dr)
 }
 
+func (i ValidatorIndex) Serialize(w *codec.EncodingWriter) error {
+	return w.WriteUint64(uint64(i))
+}
+
+func (ValidatorIndex) ByteLength() uint64 {
+	return 8
+}
+
 func (ValidatorIndex) FixedLength() uint64 {
 	return 8
 }
@@ -35,27 +43,32 @@ const ValidatorIndexMarker = ValidatorIndex(^uint64(0))
 
 type RegistryIndices []ValidatorIndex
 
-type RegistryIndicesList struct {
-	Indices RegistryIndices
-	Limit uint64
-}
-
-func (p *RegistryIndicesList) Deserialize(dr *codec.DecodingReader) error {
+func (p *RegistryIndices) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
 	return dr.List(func() codec.Deserializable {
-		i := len(p.Indices)
-		p.Indices = append(p.Indices, ValidatorIndex(0))
-		return &p.Indices[i]
-	}, ValidatorIndexType.TypeByteLength(), p.Limit)
+		i := len(*p)
+		*p = append(*p, ValidatorIndex(0))
+		return &((*p)[i])
+	}, ValidatorIndexType.TypeByteLength(), spec.VALIDATOR_REGISTRY_LIMIT)
 }
 
-func (*RegistryIndicesList) FixedLength() uint64 {
+func (a RegistryIndices) Serialize(spec *Spec, w *codec.EncodingWriter) error {
+	return w.List(func(i uint64) codec.Serializable {
+		return a[i]
+	}, ValidatorIndexType.TypeByteLength(), uint64(len(a)))
+}
+
+func (a RegistryIndices) ByteLength(spec *Spec) uint64 {
+	return ValidatorIndexType.TypeByteLength() * uint64(len(a))
+}
+
+func (*RegistryIndices) FixedLength() uint64 {
 	return 0
 }
 
-func (p *RegistryIndicesList) HashTreeRoot(hFn tree.HashFn) Root {
+func (p RegistryIndices) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
 	return hFn.Uint64ListHTR(func(i uint64) uint64 {
-		return uint64(p.Indices[i])
-	}, uint64(len(p.Indices)), p.Limit)
+		return uint64(p[i])
+	}, uint64(len(p)), spec.VALIDATOR_REGISTRY_LIMIT)
 }
 
 // Collection of validators, should always be sorted.

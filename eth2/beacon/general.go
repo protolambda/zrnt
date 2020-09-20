@@ -16,6 +16,14 @@ func (a *Shard) Deserialize(dr *codec.DecodingReader) error {
 	return (*Uint64View)(a).Deserialize(dr)
 }
 
+func (i Shard) Serialize(w *codec.EncodingWriter) error {
+	return w.WriteUint64(uint64(i))
+}
+
+func (Shard) ByteLength() uint64 {
+	return 8
+}
+
 func (Shard) FixedLength() uint64 {
 	return 8
 }
@@ -30,6 +38,14 @@ type CommitteeIndex Uint64View
 
 func (i *CommitteeIndex) Deserialize(dr *codec.DecodingReader) error {
 	return (*Uint64View)(i).Deserialize(dr)
+}
+
+func (i CommitteeIndex) Serialize(w *codec.EncodingWriter) error {
+	return w.WriteUint64(uint64(i))
+}
+
+func (CommitteeIndex) ByteLength() uint64 {
+	return 8
 }
 
 func (CommitteeIndex) FixedLength() uint64 {
@@ -51,6 +67,14 @@ type Gwei Uint64View
 
 func (g *Gwei) Deserialize(dr *codec.DecodingReader) error {
 	return (*Uint64View)(g).Deserialize(dr)
+}
+
+func (i Gwei) Serialize(w *codec.EncodingWriter) error {
+	return w.WriteUint64(uint64(i))
+}
+
+func (Gwei) ByteLength() uint64 {
+	return 8
 }
 
 func (g Gwei) FixedLength() uint64 {
@@ -75,6 +99,14 @@ type Checkpoint struct {
 
 func (c *Checkpoint) Deserialize(dr *codec.DecodingReader) error {
 	return dr.Container(&c.Epoch, &c.Root)
+}
+
+func (a *Checkpoint) Serialize(w *codec.EncodingWriter) error {
+	return w.Container(a.Epoch, &a.Root)
+}
+
+func (a *Checkpoint) ByteLength() uint64 {
+	return 8 + 32
 }
 
 func (g *Checkpoint) FixedLength() uint64 {

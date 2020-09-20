@@ -24,6 +24,15 @@ func (v *Validator) Deserialize(dr *codec.DecodingReader) error {
 		&v.ActivationEligibilityEpoch, &v.ActivationEpoch, &v.ExitEpoch, &v.WithdrawableEpoch)
 }
 
+func (v *Validator) Serialize(w *codec.EncodingWriter) error {
+	return w.Container(v.Pubkey, v.WithdrawalCredentials,  v.EffectiveBalance, (BoolView)(v.Slashed),
+		v.ActivationEligibilityEpoch, v.ActivationEpoch, v.ExitEpoch, v.WithdrawableEpoch)
+}
+
+func (a *Validator) ByteLength() uint64 {
+	return ValidatorType.TypeByteLength()
+}
+
 func (*Validator) FixedLength() uint64 {
 	return ValidatorType.TypeByteLength()
 }

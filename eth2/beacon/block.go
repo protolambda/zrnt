@@ -20,8 +20,8 @@ func (b *SignedBeaconBlock) Serialize(spec *Spec, w *codec.EncodingWriter) error
 	return w.Container(spec.Wrap(&b.Message), &b.Signature)
 }
 
-func (b *SignedBeaconBlock) ByteLength() uint64 {
-	return 0 // TODO
+func (b *SignedBeaconBlock) ByteLength(spec *Spec) uint64 {
+	return codec.ContainerLength(spec.Wrap(&b.Message), &b.Signature)
 }
 
 func (a *SignedBeaconBlock) FixedLength(*Spec) uint64 {
@@ -56,7 +56,7 @@ func (b *BeaconBlock) Serialize(spec *Spec, w *codec.EncodingWriter) error {
 }
 
 func (b *BeaconBlock) ByteLength(spec *Spec) uint64 {
-	return 0 // TODO
+	return codec.ContainerLength(&b.Slot, &b.ProposerIndex, &b.ParentRoot, &b.StateRoot, spec.Wrap(&b.Body))
 }
 
 func (a *BeaconBlock) FixedLength(*Spec) uint64 {

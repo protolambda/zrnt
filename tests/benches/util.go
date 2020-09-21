@@ -3,6 +3,7 @@ package benches
 import (
 	"encoding/binary"
 	. "github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/configs"
 )
 
 func CreateTestValidators(count uint64, balance Gwei) []KickstartValidatorData {
@@ -22,7 +23,7 @@ func CreateTestValidators(count uint64, balance Gwei) []KickstartValidatorData {
 }
 
 func CreateTestState(validatorCount uint64, balance Gwei) (*BeaconStateView, *EpochsContext) {
-	out, epc, err := KickStartState(Root{123}, 1564000000, CreateTestValidators(validatorCount, balance))
+	out, epc, err := configs.Mainnet.KickStartState(Root{123}, 1564000000, CreateTestValidators(validatorCount, balance))
 	if err != nil {
 		panic(err)
 	}

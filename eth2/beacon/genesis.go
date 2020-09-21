@@ -63,6 +63,7 @@ func (spec *Spec) GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Dep
 	}
 	// Create mostly empty epochs context. Just need the pubkey cache first
 	epc := &EpochsContext{
+		Spec:        spec,
 		PubkeyCache: pc,
 	}
 

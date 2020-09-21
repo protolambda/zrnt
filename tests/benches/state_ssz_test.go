@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-const stateValidatorFill = 300000
+const stateValidatorFill = 3000
 
 var spec = configs.Mainnet
 var MAX_EFFECTIVE_BALANCE = spec.MAX_EFFECTIVE_BALANCE
@@ -209,4 +209,28 @@ func BenchmarkRawStateSerializeGob(b *testing.B) {
 		buf.Reset()
 	}
 	//b.Logf("res: %d, N: %d", res, b.N)
+}
+
+func TestRawStateSerialize(t *testing.T) {
+	stateTree, _ := CreateTestState(stateValidatorFill, MAX_EFFECTIVE_BALANCE)
+	state, err := stateTree.Raw(spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	err = state.Serialize(spec, codec.NewEncodingWriter(&buf))
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRawHashTreeRoot(t *testing.T) {
+	stateTree, _ := CreateTestState(stateValidatorFill, MAX_EFFECTIVE_BALANCE)
+	state, err := stateTree.Raw(spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if root := state.HashTreeRoot(spec, tree.GetHashFn()); root == (tree.Root{}) {
+		t.Fatal("unexpected zero root")
+	}
 }

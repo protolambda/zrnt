@@ -2,10 +2,44 @@ package beacon
 
 import (
 	"context"
+	"github.com/protolambda/ztyp/codec"
+	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
 
 type ValidatorRegistry []*Validator
+
+func (a *ValidatorRegistry) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
+	return dr.List(func() codec.Deserializable {
+		i := len(*a)
+		*a = append(*a, &Validator{})
+		return (*a)[i]
+	}, ValidatorType.TypeByteLength(), spec.VALIDATOR_REGISTRY_LIMIT)
+}
+
+func (a ValidatorRegistry) Serialize(spec *Spec, w *codec.EncodingWriter) error {
+	return w.List(func(i uint64) codec.Serializable {
+		return a[i]
+	}, ValidatorType.TypeByteLength(), uint64(len(a)))
+}
+
+func (a ValidatorRegistry) ByteLength(spec *Spec) (out uint64) {
+	return uint64(len(a)) * ValidatorType.TypeByteLength()
+}
+
+func (a *ValidatorRegistry) FixedLength(spec *Spec) uint64 {
+	return 0 // it's a list, no fixed length
+}
+
+func (li ValidatorRegistry) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
+	length := uint64(len(li))
+	return hFn.ComplexListHTR(func(i uint64) tree.HTR {
+		if i < length {
+			return li[i]
+		}
+		return nil
+	}, length, spec.VALIDATOR_REGISTRY_LIMIT)
+}
 
 func (c *Phase0Config) ValidatorsRegistry() ListTypeDef {
 	return ComplexListType(ValidatorType, c.VALIDATOR_REGISTRY_LIMIT)

@@ -13,6 +13,26 @@ type PendingAttestation struct {
 	ProposerIndex   ValidatorIndex
 }
 
+func (a *PendingAttestation) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
+	return dr.Container(spec.Wrap(&a.AggregationBits), &a.Data, &a.InclusionDelay, &a.ProposerIndex)
+}
+
+func (a *PendingAttestation) Serialize(spec *Spec, w *codec.EncodingWriter) error {
+	return w.Container(spec.Wrap(&a.AggregationBits), &a.Data, a.InclusionDelay, a.ProposerIndex)
+}
+
+func (a *PendingAttestation) ByteLength(spec *Spec) uint64 {
+	return codec.ContainerLength(spec.Wrap(&a.AggregationBits), &a.Data, a.InclusionDelay, a.ProposerIndex)
+}
+
+func (a *PendingAttestation) FixedLength(*Spec) uint64 {
+	return 0
+}
+
+func (a *PendingAttestation) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
+	return hFn.HashTreeRoot(spec.Wrap(&a.AggregationBits), &a.Data, a.InclusionDelay, a.ProposerIndex)
+}
+
 func (att *PendingAttestation) View(spec *Spec) *PendingAttestationView {
 	bits := att.AggregationBits.View(spec)
 	t := ContainerType("PendingAttestation", []FieldDef{
@@ -161,6 +181,41 @@ func AsPendingAttestation(v View, err error) (*PendingAttestationView, error) {
 }
 
 type PendingAttestations []*PendingAttestation
+
+func (a *PendingAttestations) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
+	return dr.List(func() codec.Deserializable {
+		i := len(*a)
+		*a = append(*a, &PendingAttestation{})
+		return spec.Wrap((*a)[i])
+	}, 0, spec.MAX_ATTESTATIONS*uint64(spec.SLOTS_PER_EPOCH))
+}
+
+func (a PendingAttestations) Serialize(spec *Spec, w *codec.EncodingWriter) error {
+	return w.List(func(i uint64) codec.Serializable {
+		return spec.Wrap(a[i])
+	}, 0, uint64(len(a)))
+}
+
+func (p PendingAttestations) ByteLength(spec *Spec) (out uint64) {
+	for _, a := range p {
+		out += a.ByteLength(spec)
+	}
+	return
+}
+
+func (a *PendingAttestations) FixedLength(*Spec) uint64 {
+	return 0 // it's a list, no fixed length
+}
+
+func (li PendingAttestations) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
+	length := uint64(len(li))
+	return hFn.ComplexListHTR(func(i uint64) tree.HTR {
+		if i < length {
+			return spec.Wrap(li[i])
+		}
+		return nil
+	}, length, spec.MAX_ATTESTATIONS*uint64(spec.SLOTS_PER_EPOCH))
+}
 
 func (c *Phase0Config) PendingAttestations() ListTypeDef {
 	return ComplexListType(c.PendingAttestation(), c.MAX_ATTESTATIONS*uint64(c.SLOTS_PER_EPOCH))

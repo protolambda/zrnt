@@ -76,18 +76,18 @@ func (v *BeaconState) ByteLength(spec *Spec) uint64 {
 		&v.FinalizedCheckpoint)
 }
 
-func (*BeaconState) FixedLength(spec *Spec) uint64 {
+func (*BeaconState) FixedLength(*Spec) uint64 {
 	return 0 // dynamic size
 }
 
 func (v *BeaconState) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
 	return hFn.HashTreeRoot(&v.GenesisTime, &v.GenesisValidatorsRoot,
 		&v.Slot, &v.Fork, &v.LatestBlockHeader,
-		&v.BlockRoots, &v.StateRoots, &v.HistoricalRoots,
-		&v.Eth1Data, &v.Eth1DataVotes, &v.DepositIndex,
-		&v.Validators, &v.Balances,
-		&v.RandaoMixes, &v.Slashings,
-		&v.PreviousEpochAttestations, &v.CurrentEpochAttestations,
+		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), spec.Wrap(&v.HistoricalRoots),
+		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.DepositIndex,
+		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances),
+		spec.Wrap(&v.RandaoMixes), spec.Wrap(&v.Slashings),
+		spec.Wrap(&v.PreviousEpochAttestations), spec.Wrap(&v.CurrentEpochAttestations),
 		&v.JustificationBits,
 		&v.PreviousJustifiedCheckpoint, &v.CurrentJustifiedCheckpoint,
 		&v.FinalizedCheckpoint)

@@ -2,11 +2,47 @@ package beacon
 
 import (
 	"context"
+	"github.com/protolambda/ztyp/codec"
+	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
 
 // SlashingsHistory is a EPOCHS_PER_SLASHINGS_VECTOR vector
 type SlashingsHistory []Gwei
+
+func (a *SlashingsHistory) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
+	if Epoch(len(*a)) != spec.EPOCHS_PER_SLASHINGS_VECTOR {
+		// re-use space if available (for recycling old state objects)
+		if Epoch(cap(*a)) >= spec.EPOCHS_PER_SLASHINGS_VECTOR {
+			*a = (*a)[:spec.EPOCHS_PER_SLASHINGS_VECTOR]
+		} else {
+			*a = make([]Gwei, spec.EPOCHS_PER_SLASHINGS_VECTOR, spec.EPOCHS_PER_SLASHINGS_VECTOR)
+		}
+	}
+	return dr.Vector(func(i uint64) codec.Deserializable {
+		return &(*a)[i]
+	}, GweiType.TypeByteLength(), uint64(spec.EPOCHS_PER_SLASHINGS_VECTOR))
+}
+
+func (a SlashingsHistory) Serialize(spec *Spec, w *codec.EncodingWriter) error {
+	return w.Vector(func(i uint64) codec.Serializable {
+		return &a[i]
+	}, GweiType.TypeByteLength(), uint64(len(a)))
+}
+
+func (a SlashingsHistory) ByteLength(spec *Spec) (out uint64) {
+	return uint64(len(a)) * GweiType.TypeByteLength()
+}
+
+func (a *SlashingsHistory) FixedLength(spec *Spec) uint64 {
+	return uint64(spec.EPOCHS_PER_SLASHINGS_VECTOR) * GweiType.TypeByteLength()
+}
+
+func (li SlashingsHistory) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
+	return hFn.Uint64VectorHTR(func(i uint64) uint64 {
+		return uint64(li[i])
+	}, uint64(len(li)))
+}
 
 // Balances slashed at every withdrawal period
 func (c *Phase0Config) Slashings() VectorTypeDef {

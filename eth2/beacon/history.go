@@ -119,6 +119,38 @@ func AsHistoricalBatch(v View, err error) (*HistoricalBatchView, error) {
 // roots of HistoricalBatch
 type HistoricalRoots []Root
 
+func (a *HistoricalRoots) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
+	return dr.List(func() codec.Deserializable {
+		i := len(*a)
+		*a = append(*a, Root{})
+		return &(*a)[i]
+	}, 32, spec.HISTORICAL_ROOTS_LIMIT)
+}
+
+func (a HistoricalRoots) Serialize(spec *Spec, w *codec.EncodingWriter) error {
+	return w.List(func(i uint64) codec.Serializable {
+		return &a[i]
+	}, 32, uint64(len(a)))
+}
+
+func (a HistoricalRoots) ByteLength(spec *Spec) (out uint64) {
+	return uint64(len(a)) * 32
+}
+
+func (a *HistoricalRoots) FixedLength(spec *Spec) uint64 {
+	return 0 // it's a list, no fixed length
+}
+
+func (li HistoricalRoots) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
+	length := uint64(len(li))
+	return hFn.ComplexListHTR(func(i uint64) tree.HTR {
+		if i < length {
+			return &li[i]
+		}
+		return nil
+	}, length, spec.HISTORICAL_ROOTS_LIMIT)
+}
+
 func (c *Phase0Config) HistoricalRoots() ListTypeDef {
 	return ListType(RootType, c.HISTORICAL_ROOTS_LIMIT)
 }

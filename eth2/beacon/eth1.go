@@ -73,6 +73,38 @@ func (v *Eth1DataView) DepositIndex() (DepositIndex, error) {
 
 type Eth1DataVotes []Eth1Data
 
+func (a *Eth1DataVotes) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
+	return dr.List(func() codec.Deserializable {
+		i := len(*a)
+		*a = append(*a, Eth1Data{})
+		return &(*a)[i]
+	}, Eth1DataType.TypeByteLength(), uint64(spec.EPOCHS_PER_ETH1_VOTING_PERIOD)*uint64(spec.SLOTS_PER_EPOCH))
+}
+
+func (a Eth1DataVotes) Serialize(spec *Spec, w *codec.EncodingWriter) error {
+	return w.List(func(i uint64) codec.Serializable {
+		return &a[i]
+	}, Eth1DataType.TypeByteLength(), uint64(len(a)))
+}
+
+func (a Eth1DataVotes) ByteLength(spec *Spec) (out uint64) {
+	return uint64(len(a)) * Eth1DataType.TypeByteLength()
+}
+
+func (a *Eth1DataVotes) FixedLength(spec *Spec) uint64 {
+	return 0 // it's a list, no fixed length
+}
+
+func (li Eth1DataVotes) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
+	length := uint64(len(li))
+	return hFn.ComplexListHTR(func(i uint64) tree.HTR {
+		if i < length {
+			return &li[i]
+		}
+		return nil
+	}, length, uint64(spec.EPOCHS_PER_ETH1_VOTING_PERIOD)*uint64(spec.SLOTS_PER_EPOCH))
+}
+
 func (c *Phase0Config) Eth1DataVotes() ListTypeDef {
 	return ListType(Eth1DataType, uint64(c.EPOCHS_PER_ETH1_VOTING_PERIOD)*uint64(c.SLOTS_PER_EPOCH))
 }

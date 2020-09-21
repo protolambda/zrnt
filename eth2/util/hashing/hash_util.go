@@ -1,10 +1,7 @@
 package hashing
 
 import (
-	"encoding/binary"
 	"github.com/minio/sha256-simd"
-	"github.com/protolambda/zssz/htr"
-	"hash"
 )
 
 // Hash the given input. Use a new hashing object, and ditch it after hashing.
@@ -13,7 +10,7 @@ import (
 var Hash HashFn = sha256.Sum256
 
 // Hashes the input, and returns the hash as a byte slice
-type HashFn = htr.HashFn
+type HashFn func(input []byte) [32]byte
 
 type NewHashFn func() HashFn
 
@@ -38,39 +35,3 @@ func XorBytes32(a [32]byte, b [32]byte) (out [32]byte) {
 	}
 	return
 }
-
-type MerkleFn = htr.MerkleFn
-
-type NewMerkleFn func() MerkleFn
-
-type sha256Scratch struct {
-	inst    hash.Hash
-	scratch [64]byte
-}
-
-func (s *sha256Scratch) Combi(a [32]byte, b [32]byte) (out [32]byte) {
-	copy(s.scratch[:32], a[:])
-	copy(s.scratch[32:], b[:])
-	s.inst.Reset()
-	s.inst.Write(s.scratch[:])
-	copy(out[:], s.inst.Sum(nil))
-	return
-}
-
-func (s *sha256Scratch) MixIn(a [32]byte, i uint64) (out [32]byte) {
-	copy(s.scratch[:32], a[:])
-	copy(s.scratch[32:], make([]byte, 32, 32))
-	binary.LittleEndian.PutUint64(s.scratch[32:], i)
-	s.inst.Reset()
-	s.inst.Write(s.scratch[:])
-	copy(out[:], s.inst.Sum(nil))
-	return
-}
-
-func Sha256Merkle() MerkleFn {
-	return &sha256Scratch{inst: sha256.New()}
-}
-
-// Get a merkle-function that re-uses the hashing working-variables as well as the merkle work variables.
-// Defaults to SHA-256.
-var GetMerkleFn NewMerkleFn = Sha256Merkle

@@ -4,14 +4,16 @@ import (
 	"bytes"
 	"encoding/gob"
 	"github.com/minio/sha256-simd"
-	. "github.com/protolambda/zrnt/eth2/beacon"
-	"github.com/protolambda/zrnt/eth2/util/ssz"
-	"github.com/protolambda/zssz"
+	"github.com/protolambda/zrnt/eth2/configs"
+	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	"testing"
 )
 
 const stateValidatorFill = 300000
+
+var spec = configs.Mainnet
+var MAX_EFFECTIVE_BALANCE = spec.MAX_EFFECTIVE_BALANCE
 
 func BenchmarkTreeStateHash(b *testing.B) {
 	stateTree, _ := CreateTestState(stateValidatorFill, MAX_EFFECTIVE_BALANCE)
@@ -33,7 +35,7 @@ func BenchmarkTreeStateFlatHash(b *testing.B) {
 	b.ResetTimer()
 	res := byte(0)
 	for i := 0; i < b.N; i++ {
-		err := stateTree.Serialize(h)
+		err := stateTree.Serialize(codec.NewEncodingWriter(h))
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -45,15 +47,16 @@ func BenchmarkTreeStateFlatHash(b *testing.B) {
 
 func BenchmarkRawStateHash(b *testing.B) {
 	stateTree, _ := CreateTestState(stateValidatorFill, MAX_EFFECTIVE_BALANCE)
-	state, err := stateTree.Raw()
+	state, err := stateTree.Raw(spec)
 	if err != nil {
 		b.Fatal(err)
 	}
 	b.ReportAllocs()
 	b.ResetTimer()
+	h := tree.GetHashFn()
 	res := byte(0)
 	for i := 0; i < b.N; i++ {
-		root := ssz.HashTreeRoot(state, BeaconStateSSZ)
+		root := state.HashTreeRoot(spec, h)
 		res += root[0]
 	}
 	//b.Logf("res: %d, N: %d", res, b.N)
@@ -61,7 +64,7 @@ func BenchmarkRawStateHash(b *testing.B) {
 
 func BenchmarkRawStateFlatHash(b *testing.B) {
 	stateTree, _ := CreateTestState(stateValidatorFill, MAX_EFFECTIVE_BALANCE)
-	state, err := stateTree.Raw()
+	state, err := stateTree.Raw(spec)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -70,7 +73,7 @@ func BenchmarkRawStateFlatHash(b *testing.B) {
 	b.ResetTimer()
 	res := byte(0)
 	for i := 0; i < b.N; i++ {
-		_, err := zssz.Encode(h, state, BeaconStateSSZ)
+		err := state.Serialize(spec, codec.NewEncodingWriter(h))
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -82,12 +85,12 @@ func BenchmarkRawStateFlatHash(b *testing.B) {
 
 func BenchmarkStateNoEncodingFlatHash(b *testing.B) {
 	stateTree, _ := CreateTestState(stateValidatorFill, MAX_EFFECTIVE_BALANCE)
-	state, err := stateTree.Raw()
+	state, err := stateTree.Raw(spec)
 	if err != nil {
 		b.Fatal(err)
 	}
 	var buf bytes.Buffer
-	_, err = zssz.Encode(&buf, state, BeaconStateSSZ)
+	err = state.Serialize(spec, codec.NewEncodingWriter(&buf))
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -112,7 +115,7 @@ func BenchmarkTreeStateBufferedFlatHash(b *testing.B) {
 	b.ResetTimer()
 	res := byte(0)
 	for i := 0; i < b.N; i++ {
-		err := stateTree.Serialize(&buf)
+		err := stateTree.Serialize(codec.NewEncodingWriter(&buf))
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -126,7 +129,7 @@ func BenchmarkTreeStateBufferedFlatHash(b *testing.B) {
 
 func BenchmarkRawStateBufferedFlatHash(b *testing.B) {
 	stateTree, _ := CreateTestState(stateValidatorFill, MAX_EFFECTIVE_BALANCE)
-	state, err := stateTree.Raw()
+	state, err := stateTree.Raw(spec)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -136,7 +139,7 @@ func BenchmarkRawStateBufferedFlatHash(b *testing.B) {
 	b.ResetTimer()
 	res := byte(0)
 	for i := 0; i < b.N; i++ {
-		_, err := zssz.Encode(&buf, state, BeaconStateSSZ)
+		err := state.Serialize(spec, codec.NewEncodingWriter(&buf))
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -150,7 +153,7 @@ func BenchmarkRawStateBufferedFlatHash(b *testing.B) {
 
 func BenchmarkRawStateSerialize(b *testing.B) {
 	stateTree, _ := CreateTestState(stateValidatorFill, MAX_EFFECTIVE_BALANCE)
-	state, err := stateTree.Raw()
+	state, err := stateTree.Raw(spec)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -159,7 +162,7 @@ func BenchmarkRawStateSerialize(b *testing.B) {
 	b.ResetTimer()
 	res := byte(0)
 	for i := 0; i < b.N; i++ {
-		_, err := zssz.Encode(&buf, state, BeaconStateSSZ)
+		err := state.Serialize(spec, codec.NewEncodingWriter(&buf))
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -176,7 +179,7 @@ func BenchmarkTreeStateSerialize(b *testing.B) {
 	b.ResetTimer()
 	res := byte(0)
 	for i := 0; i < b.N; i++ {
-		err := stateTree.Serialize(&buf)
+		err := stateTree.Serialize(codec.NewEncodingWriter(&buf))
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -188,7 +191,7 @@ func BenchmarkTreeStateSerialize(b *testing.B) {
 
 func BenchmarkRawStateSerializeGob(b *testing.B) {
 	stateTree, _ := CreateTestState(stateValidatorFill, MAX_EFFECTIVE_BALANCE)
-	state, err := stateTree.Raw()
+	state, err := stateTree.Raw(spec)
 	if err != nil {
 		b.Fatal(err)
 	}

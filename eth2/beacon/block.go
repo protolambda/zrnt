@@ -125,7 +125,12 @@ func (b *BeaconBlockBody) Serialize(spec *Spec, w *codec.EncodingWriter) error {
 }
 
 func (b *BeaconBlockBody) ByteLength(spec *Spec) uint64 {
-	return 0 // TODO
+	return codec.ContainerLength(
+		&b.RandaoReveal, &b.Eth1Data,
+		&b.Graffiti, spec.Wrap(&b.ProposerSlashings),
+		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
+		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
+	)
 }
 
 func (a *BeaconBlockBody) FixedLength(*Spec) uint64 {

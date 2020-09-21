@@ -174,7 +174,6 @@ func (spec *Spec) ProcessAttestation(state *BeaconStateView, epc *EpochsContext,
 		return fmt.Errorf("attestation could not be verified in its indexed form: %v", err)
 	}
 
-	// TODO pending attestation to att node, append to tree
 	proposerIndex, err := epc.GetBeaconProposer(currentSlot)
 	if err != nil {
 		return err

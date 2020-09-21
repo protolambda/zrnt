@@ -2,6 +2,8 @@
 
 package generated
 
+import "github.com/protolambda/zrnt/presets/util"
+
 const PRESET_NAME string = "minimal"
 
 const MAX_COMMITTEES_PER_SLOT = 4
@@ -175,3 +177,7 @@ const MAX_CUSTODY_SLASHINGS = 1
 const EARLY_DERIVED_SECRET_REVEAL_SLOT_REWARD_MULTIPLE = 2
 
 const MINOR_REWARD_QUOTIENT = 256
+
+func init() {
+	util.MustBigInt()
+}

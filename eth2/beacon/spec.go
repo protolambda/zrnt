@@ -1,3 +1,5 @@
+//go:generate go run ../../presets/cmd/main.go --presets-dir=../../presets/configs --output-dir=../../presets/generated
+
 package beacon
 
 import (

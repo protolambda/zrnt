@@ -1,11 +1,11 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -14,19 +14,29 @@ import (
 )
 
 type ContstantsPresetData struct {
-	Name    string
-	Entries []string
+	Name      string
+	NeedsUtil bool
+	Entries   []string
 }
 
-type ConstantsPreset struct {
-	BuildConstraint string
-	Data            *ContstantsPresetData
-}
-
-// hex input should not be prefixed with 0x
-func hexStrToLiteralStr(hex string) string {
-	byteCount := len(hex)
-	formattedValue := fmt.Sprintf("[%d]byte{", byteCount)
+func hexStrToLiteralStr(hex string, typeName string, expByteLen int) (string, error) {
+	if strings.HasPrefix(hex, "0x") {
+		strNibbles := hex[2:]
+		if len(strNibbles)%2 != 0 {
+			return "", fmt.Errorf("invalid value: %s", hex)
+		}
+		hex = strNibbles
+	}
+	byteCount := len(hex) / 2
+	if expByteLen >= 0 {
+		if expByteLen != byteCount {
+			return "", fmt.Errorf("unexpected byte length %d, expected %d", byteCount, expByteLen)
+		}
+	}
+	if typeName == "" {
+		typeName = fmt.Sprintf("[%d]byte", byteCount)
+	}
+	formattedValue := typeName + "{"
 	for i := 0; i < len(hex); i += 2 {
 		formattedValue += "0x" + hex[i:i+2]
 		if i+2 < len(hex) {
@@ -34,12 +44,12 @@ func hexStrToLiteralStr(hex string) string {
 		}
 	}
 	formattedValue += "}"
-	return formattedValue
+	return formattedValue, nil
 }
 
 func buildPreset(path string) (*ContstantsPresetData, error) {
 	presetName := filepath.Base(path)
-	presetName = presetName[:len(presetName)-len(".yaml")]
+	presetName = presetName[:len(presetName)-len(filepath.Ext(path))]
 
 	fmt.Println("processing preset", presetName)
 
@@ -47,47 +57,79 @@ func buildPreset(path string) (*ContstantsPresetData, error) {
 	if err != nil {
 		return nil, err
 	}
-	rawPreset := yaml.MapSlice{}
+	var rawPreset yaml.Node
 	if err := yaml.Unmarshal(yamlBytes, &rawPreset); err != nil {
 		return nil, err
 	}
 
 	preset := ContstantsPresetData{
-		Name:    presetName,
-		Entries: make([]string, 0, len(rawPreset)),
+		Name:      presetName,
+		NeedsUtil: false,
+		Entries:   make([]string, 0),
 	}
-	for _, item := range rawPreset {
-		k := item.Key.(string)
-		v := item.Value
-		intFormat := "%d"
-		if strings.HasPrefix(k, "DOMAIN_") {
-			intFormat = "0x%08x"
+	if len(rawPreset.Content) != 1 || rawPreset.Content[0].Kind != yaml.MappingNode {
+		return nil, fmt.Errorf("bad config root content")
+	}
+	items := rawPreset.Content[0].Content
+	for i := 0; i < len(items); i += 2 {
+		rk := items[i]
+		if rk.Kind != yaml.ScalarNode {
+			return nil, fmt.Errorf("key %s (index %d) is invalid kind: %d", rk.Value, i/2, rk.Kind)
 		}
+		k := rk.Value
+
 		formattedValue := ""
-		formattedStart := "const " + k + " = "
-		if strV, ok := v.(string); ok {
-			if intV, err := strconv.ParseInt(strV, 0, 64); err == nil {
-				formattedValue = fmt.Sprintf("%d", intV)
-			} else if strings.HasPrefix(strV, "0x") {
-				strNibbles := strV[2:]
-				if len(strNibbles)%2 != 0 {
-					return nil, errors.New(fmt.Sprintf("invalid constant, %s has value %s", k, strV))
+		formattedStart := k + ": "
+
+		rv := items[i+1]
+		switch rv.Kind {
+		case yaml.ScalarNode:
+			v := rv.Value
+			if strings.HasPrefix(k, "DOMAIN_") {
+				formattedValue, err = hexStrToLiteralStr(v, "BLSDomainType", 4)
+				if err != nil {
+					return nil, fmt.Errorf("bad domain value: %s: %s", k, v)
 				}
-				formattedValue = hexStrToLiteralStr(strNibbles)
-				// arrays cannot be constants
-				formattedStart = "var " + k + " = "
+			} else if strings.HasSuffix(k, "_FORK_VERSION") {
+				formattedValue, err = hexStrToLiteralStr(v, "Version", 4)
+				if err != nil {
+					return nil, fmt.Errorf("bad version value: %s: %s", k, v)
+				}
+			} else if k == "BLS_WITHDRAWAL_PREFIX" {
+				formattedValue, err = hexStrToLiteralStr(v, "Version", 1)
+				if err != nil {
+					return nil, fmt.Errorf("bad withdrawal prefix value: %s: %s", k, v)
+				}
+			} else if k == "DEPOSIT_CONTRACT_ADDRESS" {
+				formattedValue, err = hexStrToLiteralStr(v, "[20]byte", 20)
+				if err != nil {
+					return nil, fmt.Errorf("bad contract address value: %s: %s", k, v)
+				}
+			} else if k == "CUSTODY_PRIME" {
+				var x big.Int
+				if err := x.UnmarshalText([]byte(v)); err != nil {
+					return nil, fmt.Errorf("invalid big int: %s: %s, error: %v", k, v, err)
+				}
+				preset.NeedsUtil = true
+				formattedValue = fmt.Sprintf("util.MustBigInt(\"%s\")", x.String())
 			} else {
-				return nil, errors.New(fmt.Sprintf("could not convert string formatted value in %s, key: %s, value: %s", presetName, k, strV))
+				// format values nicely: if starts with 0x, keep it.
+				// Or if it's a high number (Configs generally do decimal representation more often)
+				if intV, err := strconv.ParseUint(v, 0, 64); err == nil {
+					if strings.HasPrefix(v, "0x") || intV > 10000 {
+						formattedValue = fmt.Sprintf("0x%x", intV)
+					} else {
+						formattedValue = fmt.Sprintf("%d", intV)
+					}
+				} else {
+					formattedStart = "// " + formattedStart
+					formattedValue = fmt.Sprintf("(unrecognized type) %v", v)
+				}
 			}
-		} else if uintV, ok := v.(uint64); ok {
-			formattedValue = fmt.Sprintf(intFormat, uintV)
-		} else if uintV, ok := v.(uint32); ok {
-			formattedValue = fmt.Sprintf(intFormat, uintV)
-		} else if intV, ok := v.(int); ok {
-			formattedValue = fmt.Sprintf(intFormat, intV)
-		} else {
-			formattedStart = "// " + formattedStart
-			formattedValue = fmt.Sprintf("(unrecognized type) %v", v)
+		case yaml.SequenceNode:
+			// TODO
+		default:
+			return nil, fmt.Errorf("key %s has invalid value kind: %d", k, rv.Kind)
 		}
 
 		preset.Entries = append(preset.Entries, formattedStart+formattedValue)
@@ -96,47 +138,27 @@ func buildPreset(path string) (*ContstantsPresetData, error) {
 }
 
 func main() {
-	var presetsDirPath, outputDirPath, defaultPreset string
+	var presetsDirPath, outputDirPath string
 	flag.StringVar(&presetsDirPath, "presets-dir", "", "The file path to the directory containing yaml constant presets")
 	flag.StringVar(&outputDirPath, "output-dir", "", "The file path to the directory to output generated Go code to")
-	flag.StringVar(&defaultPreset, "default-preset", "mainnet", "The name of the preset to duplicate, with build constraints to use it if no other preset is used")
 	flag.Parse()
 
-	templ := template.Must(template.New("constants_file").Parse(constantsFileTemplate))
+	templ := template.Must(template.New("preset").Parse(presetTemplate))
 
-	var presetNames []string
 	if err := filepath.Walk(presetsDirPath,
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
-
-			fmt.Println("found preset file", path)
-
-			extension := filepath.Ext(path)
-			if extension != ".yaml" {
+			// skip directories
+			if info.IsDir() {
 				return nil
-			}
-
-			presetName := filepath.Base(path)
-			presetName = presetName[:len(presetName)-len(".yaml")]
-
-			presetNames = append(presetNames, presetName)
-			return nil
-		}); err != nil {
-		panic(err)
-	}
-
-	if err := filepath.Walk(presetsDirPath,
-		func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
 			}
 
 			fmt.Println("processing preset file", path)
 
 			extension := filepath.Ext(path)
-			if extension != ".yaml" {
+			if extension != ".yaml" && extension != ".yml" {
 				return nil
 			}
 
@@ -151,29 +173,8 @@ func main() {
 			if err != nil {
 				return err
 			}
-			preset := ConstantsPreset{
-				BuildConstraint: "preset_" + presetData.Name,
-				Data:            presetData,
-			}
-			if err := templ.Execute(f, preset); err != nil {
+			if err := templ.Execute(f, presetData); err != nil {
 				return err
-			}
-
-			if presetData.Name == defaultPreset {
-				outPath := filepath.Join(outputDirPath, "defaults.go")
-				fmt.Printf("writing default preset, alias %s to %s\n", presetData.Name, outPath)
-				f, err := os.Create(outPath)
-				if err != nil {
-					return err
-				}
-				preset := ConstantsPreset{
-					// when all other presets are not active, then use the default
-					BuildConstraint: "!preset_" + strings.Join(presetNames, ",!preset_"),
-					Data:            presetData,
-				}
-				if err := templ.Execute(f, preset); err != nil {
-					return err
-				}
 			}
 			return nil
 		}); err != nil {
@@ -182,11 +183,13 @@ func main() {
 
 }
 
-var constantsFileTemplate = `// +build {{.BuildConstraint}}
-
+var presetTemplate = `
 package generated
 
-const PRESET_NAME string = "{{.Data.Name}}"
-{{ range .Data.Entries }}
+{{ if .NeedsUtil }}
+import "github.com/protolambda/zrnt/presets/util"
+{{ end }}
+const PRESET_NAME string = "{{.Name}}"
+{{ range .Entries }}
 {{.}}
 {{ end }}`

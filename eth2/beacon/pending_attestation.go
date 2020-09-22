@@ -198,7 +198,7 @@ func (a PendingAttestations) Serialize(spec *Spec, w *codec.EncodingWriter) erro
 
 func (p PendingAttestations) ByteLength(spec *Spec) (out uint64) {
 	for _, a := range p {
-		out += a.ByteLength(spec)
+		out += a.ByteLength(spec) + codec.OFFSET_SIZE
 	}
 	return
 }

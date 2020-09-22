@@ -1,10 +1,8 @@
 package test_util
 
 import (
-	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon"
-	"github.com/protolambda/zssz"
-	"github.com/protolambda/zssz/types"
+	"github.com/protolambda/ztyp/codec"
 	"io"
 	"io/ioutil"
 	"os"
@@ -13,14 +11,6 @@ import (
 	"testing"
 )
 
-type ConfigMismatchError struct {
-	Config string
-}
-
-func (confErr ConfigMismatchError) Error() string {
-	return fmt.Sprintf("cannot load suite for config: %s, current config is: %s", confErr.Config, beacon.PRESET_NAME)
-}
-
 type TestPart interface {
 	io.Reader
 	io.Closer
@@ -28,7 +18,10 @@ type TestPart interface {
 	Exists() bool
 }
 
-type TestPartReader func(name string) TestPart
+type TestPartReader interface {
+	Part(name string) TestPart
+	Spec() *beacon.Spec
+}
 
 // Runs a test case
 type CaseRunner func(t *testing.T, readPart TestPartReader)
@@ -56,18 +49,25 @@ func (p *testPartFile) Exists() bool {
 	return p.File != nil
 }
 
-func RunHandler(t *testing.T, handlerPath string, caseRunner CaseRunner, config string) {
-	// general config is allowed
-	if config != beacon.PRESET_NAME && config != "general" {
-		t.Logf("Config %s does not match current config %s, "+
-			"skipping handler %s", config, beacon.PRESET_NAME, handlerPath)
-	}
+type partAndSpec struct {
+	readPart func(name string) TestPart
+	spec     *beacon.Spec
+}
 
+func (s *partAndSpec) Part(name string) TestPart {
+	return s.readPart(name)
+}
+
+func (s *partAndSpec) Spec() *beacon.Spec {
+	return s.spec
+}
+
+func RunHandler(t *testing.T, handlerPath string, caseRunner CaseRunner, spec *beacon.Spec) {
 	// get the current path, go to the root, and get the tests path
 	_, filename, _, _ := runtime.Caller(0)
 	basepath := filepath.Dir(filepath.Dir(filename))
 	handlerAbsPath := filepath.Join(basepath, "eth2.0-spec-tests", "tests",
-		config, "phase0", filepath.FromSlash(handlerPath))
+		spec.PRESET_NAME, "phase0", filepath.FromSlash(handlerPath))
 
 	forEachDir := func(t *testing.T, path string, callItem func(t *testing.T, path string)) {
 		if _, err := os.Stat(path); os.IsNotExist(err) {
@@ -98,7 +98,7 @@ func RunHandler(t *testing.T, handlerPath string, caseRunner CaseRunner, config 
 				return &testPartFile{File: f}
 			}
 		}
-		caseRunner(t, partReader)
+		caseRunner(t, &partAndSpec{readPart: partReader, spec: spec})
 	}
 
 	runSuite := func(t *testing.T, path string) {
@@ -112,12 +112,26 @@ func RunHandler(t *testing.T, handlerPath string, caseRunner CaseRunner, config 
 	})
 }
 
-func LoadSSZ(t *testing.T, name string, dst interface{}, ssz types.SSZ, readPart TestPartReader) bool {
-	p := readPart(name + ".ssz")
+func LoadSpecObj(t *testing.T, name string, dst beacon.SpecObj, readPart TestPartReader) bool {
+	p := readPart.Part(name + ".ssz")
 	if p.Exists() {
 		size, err := p.Size()
 		Check(t, err)
-		Check(t, zssz.Decode(p, size, dst, ssz))
+		spec := readPart.Spec()
+		Check(t, dst.Deserialize(spec, codec.NewDecodingReader(p, size)))
+		Check(t, p.Close())
+		return true
+	} else {
+		return false
+	}
+}
+
+func LoadSSZ(t *testing.T, name string, dst codec.Deserializable, readPart TestPartReader) bool {
+	p := readPart.Part(name + ".ssz")
+	if p.Exists() {
+		size, err := p.Size()
+		Check(t, err)
+		Check(t, dst.Deserialize(codec.NewDecodingReader(p, size)))
 		Check(t, p.Close())
 		return true
 	} else {

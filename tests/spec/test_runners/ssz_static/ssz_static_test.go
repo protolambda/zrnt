@@ -1,36 +1,40 @@
 package ssz_static
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/hex"
 	. "github.com/protolambda/zrnt/eth2/beacon"
-	"github.com/protolambda/zrnt/eth2/util/hashing"
+	"github.com/protolambda/zrnt/eth2/configs"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
-	"github.com/protolambda/zssz"
-	"github.com/protolambda/zssz/htr"
-	"github.com/protolambda/zssz/types"
-	"gopkg.in/yaml.v2"
+	"github.com/protolambda/ztyp/codec"
+	"github.com/protolambda/ztyp/tree"
+	"gopkg.in/yaml.v3"
 	"testing"
 )
 
 type SSZStaticTestCase struct {
-	TypeName string
-
-	SSZ        types.SSZ
+	TypeName   string
+	Spec       *Spec
 	Value      interface{}
 	Serialized []byte
 
-	Root        Root
-	SigningRoot Root
+	Root Root
 }
 
 func (testCase *SSZStaticTestCase) Run(t *testing.T) {
 	// deserialization is the pre-requisite
 	{
 		r := bytes.NewReader(testCase.Serialized)
-		if err := zssz.Decode(r, uint64(len(testCase.Serialized)), testCase.Value, testCase.SSZ); err != nil {
-			t.Fatal(err)
+		if obj, ok := testCase.Value.(SpecObj); ok {
+			if err := obj.Deserialize(testCase.Spec, codec.NewDecodingReader(r, uint64(len(testCase.Serialized)))); err != nil {
+				t.Fatal(err)
+			}
+		} else if des, ok := testCase.Value.(codec.Deserializable); ok {
+			if err := des.Deserialize(codec.NewDecodingReader(r, uint64(len(testCase.Serialized)))); err != nil {
+				t.Fatal(err)
+			}
+		} else {
+			t.Fatalf("type %s cannot be deserialized", testCase.TypeName)
 		}
 	}
 
@@ -38,14 +42,16 @@ func (testCase *SSZStaticTestCase) Run(t *testing.T) {
 		var data []byte
 		{
 			var buf bytes.Buffer
-			bufWriter := bufio.NewWriter(&buf)
-			if _, err := zssz.Encode(bufWriter, testCase.Value, testCase.SSZ); err != nil {
-				t.Error(err)
-				return
-			}
-			if err := bufWriter.Flush(); err != nil {
-				t.Error(err)
-				return
+			if obj, ok := testCase.Value.(SpecObj); ok {
+				if err := obj.Serialize(testCase.Spec, codec.NewEncodingWriter(&buf)); err != nil {
+					t.Fatal(err)
+				}
+			} else if ser, ok := testCase.Value.(codec.Serializable); ok {
+				if err := ser.Serialize(codec.NewEncodingWriter(&buf)); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				t.Fatalf("type %s cannot be serialized", testCase.TypeName)
 			}
 			data = buf.Bytes()
 		}
@@ -63,26 +69,21 @@ func (testCase *SSZStaticTestCase) Run(t *testing.T) {
 	})
 
 	t.Run("hash_tree_root", func(t *testing.T) {
-		hfn := hashing.GetHashFn()
-		root := Root(zssz.HashTreeRoot(htr.HashFn(hfn), testCase.Value, testCase.SSZ))
+		hfn := tree.GetHashFn()
+
+		var root Root
+		if obj, ok := testCase.Value.(SpecObj); ok {
+			root = obj.HashTreeRoot(testCase.Spec, hfn)
+		} else if v, ok := testCase.Value.(tree.HTR); ok {
+			root = v.HashTreeRoot(hfn)
+		} else {
+			t.Fatalf("type %s cannot be serialized", testCase.TypeName)
+		}
 		if root != testCase.Root {
 			t.Errorf("hash-tree-roots differ: %x (spec) <-> %x (zrnt)", testCase.Root, root)
 			return
 		}
 	})
-
-	if testCase.SigningRoot != (Root{}) {
-		signedSSZ, ok := testCase.SSZ.(types.SignedSSZ)
-		if ok {
-			t.Run("signing_root", func(t *testing.T) {
-				hfn := hashing.GetHashFn()
-				root := Root(zssz.SigningRoot(htr.HashFn(hfn), testCase.Value, signedSSZ))
-				if root != testCase.SigningRoot {
-					t.Errorf("signing-roots differ: %x (spec) <-> %x (zrnt)", testCase.SigningRoot, root)
-				}
-			})
-		}
-	}
 }
 
 type ObjAllocator func() interface{}
@@ -113,59 +114,58 @@ var objs = []*ObjData{
 }
 
 type RootsYAML struct {
-	Root        string `yaml:"root"`
-	SigningRoot string `yaml:"signing_root"`
+	Root string `yaml:"root"`
+}
+
+func (obj *ObjData) runSSZStaticTest(spec *Spec) func(t *testing.T) {
+	return func(t *testing.T) {
+
+		test_util.RunHandler(t, "ssz_static/"+obj.TypeName, func(t *testing.T, readPart test_util.TestPartReader) {
+			c := &SSZStaticTestCase{
+				TypeName: obj.TypeName,
+			}
+
+			// Allocate an empty value to decode into later for testing.
+			c.Value = obj.Alloc()
+
+			// Load the SSZ encoded data as a bytes array. The test will serialize it both ways.
+			{
+				p := readPart.Part("serialized.ssz")
+				size, err := p.Size()
+				test_util.Check(t, err)
+				buf := new(bytes.Buffer)
+				n, err := buf.ReadFrom(p)
+				test_util.Check(t, err)
+				test_util.Check(t, p.Close())
+				if uint64(n) != size {
+					t.Errorf("could not read full serialized data")
+				}
+				c.Serialized = buf.Bytes()
+			}
+
+			{
+				p := readPart.Part("roots.yaml")
+				dec := yaml.NewDecoder(p)
+				roots := &RootsYAML{}
+				test_util.Check(t, dec.Decode(roots))
+				test_util.Check(t, p.Close())
+				{
+					root, err := hex.DecodeString(roots.Root[2:])
+					test_util.Check(t, err)
+					copy(c.Root[:], root)
+				}
+			}
+
+			// Run the test case
+			c.Run(t)
+
+		}, spec)
+	}
 }
 
 func (obj *ObjData) RunHandler(t *testing.T) {
-	test_util.RunHandler(t, "ssz_static/"+obj.TypeName, func(t *testing.T, readPart test_util.TestPartReader) {
-		c := &SSZStaticTestCase{
-			TypeName: obj.TypeName,
-		}
-
-		// Allocate an empty value to decode into later for testing.
-		c.Value = obj.Alloc()
-
-		// Get the SSZ type
-		c.SSZ = zssz.GetSSZ(c.Value)
-
-		// Load the SSZ encoded data as a bytes array. The test will serialize it both ways.
-		{
-			p := readPart("serialized.ssz")
-			size, err := p.Size()
-			test_util.Check(t, err)
-			buf := new(bytes.Buffer)
-			n, err := buf.ReadFrom(p)
-			test_util.Check(t, err)
-			test_util.Check(t, p.Close())
-			if uint64(n) != size {
-				t.Errorf("could not read full serialized data")
-			}
-			c.Serialized = buf.Bytes()
-		}
-
-		{
-			p := readPart("roots.yaml")
-			dec := yaml.NewDecoder(p)
-			roots := &RootsYAML{}
-			test_util.Check(t, dec.Decode(roots))
-			test_util.Check(t, p.Close())
-			{
-				root, err := hex.DecodeString(roots.Root[2:])
-				test_util.Check(t, err)
-				copy(c.Root[:], root)
-			}
-			if len(roots.SigningRoot) >= 2 {
-				root, err := hex.DecodeString(roots.SigningRoot[2:])
-				test_util.Check(t, err)
-				copy(c.SigningRoot[:], root)
-			}
-		}
-
-		// Run the test case
-		c.Run(t)
-
-	}, PRESET_NAME)
+	t.Run("minimal", obj.runSSZStaticTest(configs.Minimal))
+	t.Run("mainnet", obj.runSSZStaticTest(configs.Mainnet))
 }
 
 func TestSSZStatic(t *testing.T) {

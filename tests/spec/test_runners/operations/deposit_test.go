@@ -13,15 +13,15 @@ type DepositTestCase struct {
 
 func (c *DepositTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
 	c.BaseTransitionTest.Load(t, readPart)
-	test_util.LoadSSZ(t, "deposit", &c.Deposit, beacon.DepositSSZ, readPart)
+	test_util.LoadSSZ(t, "deposit", &c.Deposit, readPart)
 }
 
 func (c *DepositTestCase) Run() error {
-	epc, err := c.Pre.NewEpochsContext()
+	epc, err := c.Spec.NewEpochsContext(c.Pre)
 	if err != nil {
 		return err
 	}
-	return c.Pre.ProcessDeposit(epc, &c.Deposit, false)
+	return c.Spec.ProcessDeposit(epc, c.Pre, &c.Deposit, false)
 }
 
 func TestDeposit(t *testing.T) {

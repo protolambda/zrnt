@@ -14,15 +14,15 @@ type BlockHeaderTestCase struct {
 
 func (c *BlockHeaderTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
 	c.BaseTransitionTest.Load(t, readPart)
-	test_util.LoadSSZ(t, "block", &c.Block, beacon.BeaconBlockSSZ, readPart)
+	test_util.LoadSpecObj(t, "block", &c.Block, readPart)
 }
 
 func (c *BlockHeaderTestCase) Run() error {
-	epc, err := c.Pre.NewEpochsContext()
+	epc, err := c.Spec.NewEpochsContext(c.Pre)
 	if err != nil {
 		return err
 	}
-	return c.Pre.ProcessHeader(context.Background(), epc, &c.Block)
+	return c.Spec.ProcessHeader(context.Background(), epc, c.Pre, &c.Block)
 }
 
 func TestBlockHeader(t *testing.T) {

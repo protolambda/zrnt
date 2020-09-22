@@ -55,7 +55,7 @@ func (spec *Spec) ProcessVoluntaryExits(ctx context.Context, epc *EpochsContext,
 		default: // Don't block.
 			break
 		}
-		if err := spec.ProcessVoluntaryExit(state, epc, &ops[i]); err != nil {
+		if err := spec.ProcessVoluntaryExit(epc, state, &ops[i]); err != nil {
 			return err
 		}
 	}
@@ -122,7 +122,7 @@ var SignedVoluntaryExitType = ContainerType("SignedVoluntaryExit", []FieldDef{
 	{"signature", BLSSignatureType},
 })
 
-func (spec *Spec) ProcessVoluntaryExit(state *BeaconStateView, epc *EpochsContext, signedExit *SignedVoluntaryExit) error {
+func (spec *Spec) ProcessVoluntaryExit(epc *EpochsContext, state *BeaconStateView, signedExit *SignedVoluntaryExit) error {
 	exit := &signedExit.Message
 	currentEpoch := epc.CurrentEpoch.Epoch
 	if valid, err := state.IsValidIndex(exit.ValidatorIndex); err != nil {

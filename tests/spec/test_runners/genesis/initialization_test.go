@@ -5,11 +5,13 @@ import (
 	"fmt"
 	. "github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
+	"github.com/protolambda/ztyp/codec"
 	"gopkg.in/yaml.v2"
 	"testing"
 )
 
 type InitializationTestCase struct {
+	Spec          *Spec
 	GenesisState  *BeaconStateView
 	ExpectedState *BeaconStateView
 	Eth1Timestamp Timestamp
@@ -22,12 +24,13 @@ type DepositsCountMeta struct {
 }
 
 func (c *InitializationTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
+	c.Spec = readPart.Spec()
 	{
-		p := readPart("state.ssz")
+		p := readPart.Part("state.ssz")
 		if p.Exists() {
 			stateSize, err := p.Size()
 			test_util.Check(t, err)
-			state, err := AsBeaconStateView(BeaconStateType.Deserialize(p, stateSize))
+			state, err := AsBeaconStateView(c.Spec.BeaconState().Deserialize(codec.NewDecodingReader(p, stateSize)))
 			test_util.Check(t, err)
 			c.ExpectedState = state
 		} else {
@@ -36,7 +39,7 @@ func (c *InitializationTestCase) Load(t *testing.T, readPart test_util.TestPartR
 		}
 	}
 	{
-		p := readPart("eth1_block_hash.yaml")
+		p := readPart.Part("eth1_block_hash.yaml")
 		dec := yaml.NewDecoder(p)
 		var blockHash string
 		test_util.Check(t, dec.Decode(&blockHash))
@@ -45,7 +48,7 @@ func (c *InitializationTestCase) Load(t *testing.T, readPart test_util.TestPartR
 		test_util.Check(t, err)
 	}
 	{
-		p := readPart("eth1_timestamp.yaml")
+		p := readPart.Part("eth1_timestamp.yaml")
 		dec := yaml.NewDecoder(p)
 		var timestamp Timestamp
 		test_util.Check(t, dec.Decode(&timestamp))
@@ -54,7 +57,7 @@ func (c *InitializationTestCase) Load(t *testing.T, readPart test_util.TestPartR
 	}
 	m := &DepositsCountMeta{}
 	{
-		p := readPart("meta.yaml")
+		p := readPart.Part("meta.yaml")
 		dec := yaml.NewDecoder(p)
 		test_util.Check(t, dec.Decode(&m))
 		test_util.Check(t, p.Close())
@@ -62,14 +65,14 @@ func (c *InitializationTestCase) Load(t *testing.T, readPart test_util.TestPartR
 	{
 		for i := uint64(0); i < m.DepositsCount; i++ {
 			var dep Deposit
-			test_util.LoadSSZ(t, fmt.Sprintf("deposits_%d", i), &dep, DepositSSZ, readPart)
+			test_util.LoadSSZ(t, fmt.Sprintf("deposits_%d", i), &dep, readPart)
 			c.Deposits = append(c.Deposits, dep)
 		}
 	}
 }
 
 func (c *InitializationTestCase) Run() error {
-	res, _, err := GenesisFromEth1(c.Eth1BlockHash, c.Eth1Timestamp, c.Deposits, false)
+	res, _, err := c.Spec.GenesisFromEth1(c.Eth1BlockHash, c.Eth1Timestamp, c.Deposits, false)
 	if err != nil {
 		return err
 	}
@@ -85,7 +88,7 @@ func (c *InitializationTestCase) Check(t *testing.T) {
 	if c.ExpectingFailure() {
 		t.Errorf("was expecting failure, but no error was raised")
 	} else {
-		diff, err := test_util.CompareStates(c.GenesisState, c.ExpectedState)
+		diff, err := test_util.CompareStates(c.Spec, c.GenesisState, c.ExpectedState)
 		if err != nil {
 			t.Fatal(err)
 		}

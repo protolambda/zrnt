@@ -15,14 +15,14 @@ type SlotsTestCase struct {
 
 func (c *SlotsTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
 	c.BaseTransitionTest.Load(t, readPart)
-	p := readPart("slots.yaml")
+	p := readPart.Part("slots.yaml")
 	dec := yaml.NewDecoder(p)
 	test_util.Check(t, dec.Decode(&c.Slots))
 	test_util.Check(t, p.Close())
 }
 
 func (c *SlotsTestCase) Run() error {
-	epc, err := c.Pre.NewEpochsContext()
+	epc, err := c.Spec.NewEpochsContext(c.Pre)
 	if err != nil {
 		return err
 	}
@@ -30,7 +30,7 @@ func (c *SlotsTestCase) Run() error {
 	if err != nil {
 		return err
 	}
-	return c.Pre.ProcessSlots(context.Background(), epc, slot+c.Slots)
+	return c.Spec.ProcessSlots(context.Background(), epc, c.Pre, slot+c.Slots)
 }
 
 func TestSlots(t *testing.T) {

@@ -13,15 +13,15 @@ type ProposerSlashingTestCase struct {
 
 func (c *ProposerSlashingTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
 	c.BaseTransitionTest.Load(t, readPart)
-	test_util.LoadSSZ(t, "proposer_slashing", &c.ProposerSlashing, beacon.ProposerSlashingSSZ, readPart)
+	test_util.LoadSSZ(t, "proposer_slashing", &c.ProposerSlashing, readPart)
 }
 
 func (c *ProposerSlashingTestCase) Run() error {
-	epc, err := c.Pre.NewEpochsContext()
+	epc, err := c.Spec.NewEpochsContext(c.Pre)
 	if err != nil {
 		return err
 	}
-	return c.Pre.ProcessProposerSlashing(epc, &c.ProposerSlashing)
+	return c.Spec.ProcessProposerSlashing(epc, c.Pre, &c.ProposerSlashing)
 }
 
 func TestProposerSlashing(t *testing.T) {

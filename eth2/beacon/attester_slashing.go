@@ -17,7 +17,7 @@ func (spec *Spec) ProcessAttesterSlashings(ctx context.Context, epc *EpochsConte
 		default: // Don't block.
 			break
 		}
-		if err := spec.ProcessAttesterSlashing(state, epc, &ops[i]); err != nil {
+		if err := spec.ProcessAttesterSlashing(epc, state, &ops[i]); err != nil {
 			return err
 		}
 	}
@@ -97,7 +97,7 @@ func (li AttesterSlashings) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
 	}, length, spec.MAX_ATTESTER_SLASHINGS)
 }
 
-func (spec *Spec) ProcessAttesterSlashing(state *BeaconStateView, epc *EpochsContext, attesterSlashing *AttesterSlashing) error {
+func (spec *Spec) ProcessAttesterSlashing(epc *EpochsContext, state *BeaconStateView, attesterSlashing *AttesterSlashing) error {
 	sa1 := &attesterSlashing.Attestation1
 	sa2 := &attesterSlashing.Attestation2
 

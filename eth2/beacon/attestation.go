@@ -93,14 +93,14 @@ func (spec *Spec) ProcessAttestations(ctx context.Context, epc *EpochsContext, s
 		default: // Don't block.
 			break
 		}
-		if err := spec.ProcessAttestation(state, epc, &ops[i]); err != nil {
+		if err := spec.ProcessAttestation(epc, state, &ops[i]); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (spec *Spec) ProcessAttestation(state *BeaconStateView, epc *EpochsContext, attestation *Attestation) error {
+func (spec *Spec) ProcessAttestation(epc *EpochsContext, state *BeaconStateView, attestation *Attestation) error {
 	data := &attestation.Data
 
 	// Check slot

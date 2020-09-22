@@ -13,15 +13,15 @@ type AttestationTestCase struct {
 
 func (c *AttestationTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
 	c.BaseTransitionTest.Load(t, readPart)
-	test_util.LoadSSZ(t, "attestation", &c.Attestation, beacon.AttestationSSZ, readPart)
+	test_util.LoadSpecObj(t, "attestation", &c.Attestation, readPart)
 }
 
 func (c *AttestationTestCase) Run() error {
-	epc, err := c.Pre.NewEpochsContext()
+	epc, err := c.Spec.NewEpochsContext(c.Pre)
 	if err != nil {
 		return err
 	}
-	return c.Pre.ProcessAttestation(epc, &c.Attestation)
+	return c.Spec.ProcessAttestation(epc, c.Pre, &c.Attestation)
 }
 
 func TestAttestation(t *testing.T) {

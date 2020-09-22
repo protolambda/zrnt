@@ -13,15 +13,15 @@ type AttesterSlashingTestCase struct {
 
 func (c *AttesterSlashingTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
 	c.BaseTransitionTest.Load(t, readPart)
-	test_util.LoadSSZ(t, "attester_slashing", &c.AttesterSlashing, beacon.AttesterSlashingSSZ, readPart)
+	test_util.LoadSpecObj(t, "attester_slashing", &c.AttesterSlashing, readPart)
 }
 
 func (c *AttesterSlashingTestCase) Run() error {
-	epc, err := c.Pre.NewEpochsContext()
+	epc, err := c.Spec.NewEpochsContext(c.Pre)
 	if err != nil {
 		return err
 	}
-	return c.Pre.ProcessAttesterSlashing(epc, &c.AttesterSlashing)
+	return c.Spec.ProcessAttesterSlashing(epc, c.Pre, &c.AttesterSlashing)
 }
 
 func TestAttesterSlashing(t *testing.T) {

@@ -3,11 +3,14 @@ package test_util
 import (
 	"github.com/protolambda/messagediff"
 	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/configs"
+	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	"testing"
 )
 
 type BaseTransitionTest struct {
+	Spec *beacon.Spec
 	Pre  *beacon.BeaconStateView
 	Post *beacon.BeaconStateView
 }
@@ -17,11 +20,12 @@ func (c *BaseTransitionTest) ExpectingFailure() bool {
 }
 
 func LoadState(t *testing.T, name string, readPart TestPartReader) *beacon.BeaconStateView {
-	p := readPart(name + ".ssz")
+	p := readPart.Part(name + ".ssz")
+	spec := readPart.Spec()
 	if p.Exists() {
 		size, err := p.Size()
 		Check(t, err)
-		state, err := beacon.AsBeaconStateView(beacon.BeaconStateType.Deserialize(p, size))
+		state, err := beacon.AsBeaconStateView(spec.BeaconState().Deserialize(codec.NewDecodingReader(p, size)))
 		Check(t, err)
 		Check(t, p.Close())
 		return state
@@ -29,8 +33,8 @@ func LoadState(t *testing.T, name string, readPart TestPartReader) *beacon.Beaco
 		return nil
 	}
 }
-func (c *BaseTransitionTest) Load(t *testing.T, readPart TestPartReader) {
 
+func (c *BaseTransitionTest) Load(t *testing.T, readPart TestPartReader) {
 	if pre := LoadState(t, "pre", readPart); pre != nil {
 		c.Pre = pre
 	} else {
@@ -46,7 +50,7 @@ func (c *BaseTransitionTest) Check(t *testing.T) {
 	if c.ExpectingFailure() {
 		t.Errorf("was expecting failure, but no error was raised")
 	} else {
-		diff, err := CompareStates(c.Pre, c.Post)
+		diff, err := CompareStates(c.Spec, c.Pre, c.Post)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -56,17 +60,17 @@ func (c *BaseTransitionTest) Check(t *testing.T) {
 	}
 }
 
-func CompareStates(a *beacon.BeaconStateView, b *beacon.BeaconStateView) (diff string, err error) {
+func CompareStates(spec *beacon.Spec, a *beacon.BeaconStateView, b *beacon.BeaconStateView) (diff string, err error) {
 	hFn := tree.GetHashFn()
 	preRoot := a.HashTreeRoot(hFn)
 	postRoot := b.HashTreeRoot(hFn)
 	if preRoot != postRoot {
 		// Hack to get the structural state representation, and then diff those.
-		pre, err := a.Raw()
+		pre, err := a.Raw(spec)
 		if err != nil {
 			return "", err
 		}
-		post, err := b.Raw()
+		post, err := b.Raw(spec)
 		if err != nil {
 			return "", err
 		}
@@ -87,16 +91,21 @@ type TransitionTest interface {
 type TransitionCaseMaker func() TransitionTest
 
 func RunTransitionTest(t *testing.T, runnerName string, handlerName string, mkr TransitionCaseMaker) {
-	RunHandler(t, runnerName+"/"+handlerName,
-		HandleBLS(func(t *testing.T, readPart TestPartReader) {
-			c := mkr()
-			c.Load(t, readPart)
-			if err := c.Run(); err != nil {
-				if c.ExpectingFailure() {
-					return
-				}
-				t.Errorf("%s/%s process error: %v", runnerName, handlerName, err)
+	caseRunner := HandleBLS(func(t *testing.T, readPart TestPartReader) {
+		c := mkr()
+		c.Load(t, readPart)
+		if err := c.Run(); err != nil {
+			if c.ExpectingFailure() {
+				return
 			}
-			c.Check(t)
-		}), beacon.PRESET_NAME)
+			t.Errorf("%s/%s process error: %v", runnerName, handlerName, err)
+		}
+		c.Check(t)
+	})
+	t.Run("minimal", func(t *testing.T) {
+		RunHandler(t, runnerName+"/"+handlerName, caseRunner, configs.Minimal)
+	})
+	t.Run("mainnet", func(t *testing.T) {
+		RunHandler(t, runnerName+"/"+handlerName, caseRunner, configs.Mainnet)
+	})
 }

@@ -35,6 +35,7 @@ func LoadState(t *testing.T, name string, readPart TestPartReader) *beacon.Beaco
 }
 
 func (c *BaseTransitionTest) Load(t *testing.T, readPart TestPartReader) {
+	c.Spec = readPart.Spec()
 	if pre := LoadState(t, "pre", readPart); pre != nil {
 		c.Pre = pre
 	} else {

@@ -18,7 +18,7 @@ type BLSMeta struct {
 
 func HandleBLS(testRunner CaseRunner) CaseRunner {
 	return func(t *testing.T, readPart TestPartReader) {
-		part := readPart("meta.yaml")
+		part := readPart.Part("meta.yaml")
 		if part.Exists() {
 			meta := BLSMeta{}
 			dec := yaml.NewDecoder(part)

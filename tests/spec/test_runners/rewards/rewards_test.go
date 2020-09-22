@@ -10,8 +10,8 @@ import (
 )
 
 type RewardsTest struct {
-	Pre *BeaconStateView
-
+	Spec   *Spec
+	Pre    *BeaconStateView
 	Input  *RewardsAndPenalties
 	Output *RewardsAndPenalties
 }
@@ -21,35 +21,37 @@ func (c *RewardsTest) ExpectingFailure() bool {
 }
 
 func (c *RewardsTest) Load(t *testing.T, readPart test_util.TestPartReader) {
+	c.Spec = readPart.Spec()
+
 	c.Pre = test_util.LoadState(t, "pre", readPart)
 
 	c.Input = &RewardsAndPenalties{}
 	sourceDeltas := new(Deltas)
-	if test_util.LoadSSZ(t, "source_deltas", sourceDeltas, DeltasSSZ, readPart) {
+	if test_util.LoadSpecObj(t, "source_deltas", sourceDeltas, readPart) {
 		c.Input.Source = sourceDeltas
 	} else {
 		t.Fatalf("failed to load source_deltas")
 	}
 	targetDeltas := new(Deltas)
-	if test_util.LoadSSZ(t, "target_deltas", targetDeltas, DeltasSSZ, readPart) {
+	if test_util.LoadSpecObj(t, "target_deltas", targetDeltas, readPart) {
 		c.Input.Target = targetDeltas
 	} else {
 		t.Fatalf("failed to load target_deltas")
 	}
 	headDeltas := new(Deltas)
-	if test_util.LoadSSZ(t, "head_deltas", headDeltas, DeltasSSZ, readPart) {
+	if test_util.LoadSpecObj(t, "head_deltas", headDeltas, readPart) {
 		c.Input.Head = headDeltas
 	} else {
 		t.Fatalf("failed to load head_deltas")
 	}
 	inclusionDelayDeltas := new(Deltas)
-	if test_util.LoadSSZ(t, "inclusion_delay_deltas", inclusionDelayDeltas, DeltasSSZ, readPart) {
+	if test_util.LoadSpecObj(t, "inclusion_delay_deltas", inclusionDelayDeltas, readPart) {
 		c.Input.InclusionDelay = inclusionDelayDeltas
 	} else {
 		t.Fatalf("failed to load inclusion_delay_deltas")
 	}
 	inactivityPenaltyDeltas := new(Deltas)
-	if test_util.LoadSSZ(t, "inactivity_penalty_deltas", inactivityPenaltyDeltas, DeltasSSZ, readPart) {
+	if test_util.LoadSpecObj(t, "inactivity_penalty_deltas", inactivityPenaltyDeltas, readPart) {
 		c.Input.Inactivity = inactivityPenaltyDeltas
 	} else {
 		t.Fatalf("failed to load inactivity_penalty_deltas")
@@ -87,15 +89,15 @@ func (c *RewardsTest) Check(t *testing.T) {
 }
 
 func (c *RewardsTest) Run() error {
-	epc, err := c.Pre.NewEpochsContext()
+	epc, err := c.Spec.NewEpochsContext(c.Pre)
 	if err != nil {
 		return err
 	}
-	process, err := c.Pre.PrepareEpochProcess(context.Background(), epc)
+	process, err := c.Spec.PrepareEpochProcess(context.Background(), epc, c.Pre)
 	if err != nil {
 		return err
 	}
-	c.Output, err = c.Pre.AttestationRewardsAndPenalties(context.Background(), epc, process)
+	c.Output, err = c.Spec.AttestationRewardsAndPenalties(context.Background(), epc, process, c.Pre)
 	return err
 }
 

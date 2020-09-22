@@ -2,6 +2,9 @@ package beacon
 
 import (
 	"bytes"
+	"encoding/hex"
+	"errors"
+	"fmt"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
@@ -30,6 +33,28 @@ var BLSSignatureType = BasicVectorType(ByteType, 96)
 
 // Mixed into a BLS domain to define its type
 type BLSDomainType [4]byte
+
+func (p BLSDomainType) MarshalText() ([]byte, error) {
+	return []byte("0x" + hex.EncodeToString(p[:])), nil
+}
+
+func (p BLSDomainType) String() string {
+	return "0x" + hex.EncodeToString(p[:])
+}
+
+func (p *BLSDomainType) UnmarshalText(text []byte) error {
+	if p == nil {
+		return errors.New("cannot decode into nil BLSDomainType")
+	}
+	if len(text) >= 2 && text[0] == '0' && (text[1] == 'x' || text[1] == 'X') {
+		text = text[2:]
+	}
+	if len(text) != 8 {
+		return fmt.Errorf("unexpected length string '%s'", string(text))
+	}
+	_, err := hex.Decode(p[:], text)
+	return err
+}
 
 // BLS domain (8 bytes): fork version (32 bits) concatenated with BLS domain type (32 bits)
 type BLSDomain [32]byte

@@ -20,13 +20,13 @@ type Validator struct {
 }
 
 func (v *Validator) Deserialize(dr *codec.DecodingReader) error {
-	return dr.Container(&v.Pubkey, &v.WithdrawalCredentials, &v.EffectiveBalance, (*BoolView)(&v.Slashed),
+	return dr.FixedLenContainer(&v.Pubkey, &v.WithdrawalCredentials, &v.EffectiveBalance, (*BoolView)(&v.Slashed),
 		&v.ActivationEligibilityEpoch, &v.ActivationEpoch, &v.ExitEpoch, &v.WithdrawableEpoch)
 }
 
 func (v *Validator) Serialize(w *codec.EncodingWriter) error {
-	return w.Container(v.Pubkey, v.WithdrawalCredentials, v.EffectiveBalance, (BoolView)(v.Slashed),
-		v.ActivationEligibilityEpoch, v.ActivationEpoch, v.ExitEpoch, v.WithdrawableEpoch)
+	return w.FixedLenContainer(&v.Pubkey, &v.WithdrawalCredentials, &v.EffectiveBalance, (*BoolView)(&v.Slashed),
+		&v.ActivationEligibilityEpoch, &v.ActivationEpoch, &v.ExitEpoch, &v.WithdrawableEpoch)
 }
 
 func (a *Validator) ByteLength() uint64 {

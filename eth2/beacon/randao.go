@@ -15,23 +15,11 @@ import (
 type RandaoMixes []Root
 
 func (a *RandaoMixes) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
-	if Epoch(len(*a)) != spec.EPOCHS_PER_HISTORICAL_VECTOR {
-		// re-use space if available (for recycling old state objects)
-		if Epoch(cap(*a)) >= spec.EPOCHS_PER_HISTORICAL_VECTOR {
-			*a = (*a)[:spec.EPOCHS_PER_HISTORICAL_VECTOR]
-		} else {
-			*a = make([]Root, spec.EPOCHS_PER_HISTORICAL_VECTOR, spec.EPOCHS_PER_HISTORICAL_VECTOR)
-		}
-	}
-	return dr.Vector(func(i uint64) codec.Deserializable {
-		return &(*a)[i]
-	}, 32, uint64(spec.EPOCHS_PER_HISTORICAL_VECTOR))
+	return tree.ReadRoots(dr, (*[]Root)(a), uint64(spec.EPOCHS_PER_HISTORICAL_VECTOR))
 }
 
 func (a RandaoMixes) Serialize(spec *Spec, w *codec.EncodingWriter) error {
-	return w.Vector(func(i uint64) codec.Serializable {
-		return &a[i]
-	}, 32, uint64(spec.EPOCHS_PER_HISTORICAL_VECTOR))
+	return tree.WriteRoots(w, a)
 }
 
 func (a RandaoMixes) ByteLength(spec *Spec) (out uint64) {

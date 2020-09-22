@@ -98,11 +98,11 @@ type Checkpoint struct {
 }
 
 func (c *Checkpoint) Deserialize(dr *codec.DecodingReader) error {
-	return dr.Container(&c.Epoch, &c.Root)
+	return dr.FixedLenContainer(&c.Epoch, &c.Root)
 }
 
 func (a *Checkpoint) Serialize(w *codec.EncodingWriter) error {
-	return w.Container(a.Epoch, &a.Root)
+	return w.FixedLenContainer(a.Epoch, &a.Root)
 }
 
 func (a *Checkpoint) ByteLength() uint64 {

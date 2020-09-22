@@ -36,11 +36,11 @@ func (d *DepositData) ToMessage() *DepositMessage {
 }
 
 func (d *DepositData) Deserialize(dr *codec.DecodingReader) error {
-	return dr.Container(&d.Pubkey, &d.WithdrawalCredentials, &d.Amount, &d.Signature)
+	return dr.FixedLenContainer(&d.Pubkey, &d.WithdrawalCredentials, &d.Amount, &d.Signature)
 }
 
 func (d *DepositData) Serialize(w *codec.EncodingWriter) error {
-	return w.Container(&d.Pubkey, &d.WithdrawalCredentials, &d.Amount, &d.Signature)
+	return w.FixedLenContainer(&d.Pubkey, &d.WithdrawalCredentials, &d.Amount, &d.Signature)
 }
 
 func (a *DepositData) ByteLength() uint64 {
@@ -112,7 +112,7 @@ func (d *Deposit) Deserialize(dr *codec.DecodingReader) error {
 }
 
 func (d *Deposit) Serialize(w *codec.EncodingWriter) error {
-	return w.Container(&d.Proof, &d.Data)
+	return w.FixedLenContainer(&d.Proof, &d.Data)
 }
 
 func (a *Deposit) ByteLength() uint64 {

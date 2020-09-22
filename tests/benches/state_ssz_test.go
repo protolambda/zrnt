@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-const stateValidatorFill = 3000
+const stateValidatorFill = 30000
 
 var spec = configs.Mainnet
 var MAX_EFFECTIVE_BALANCE = spec.MAX_EFFECTIVE_BALANCE

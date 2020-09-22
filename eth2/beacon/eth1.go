@@ -41,11 +41,11 @@ type Eth1Data struct {
 }
 
 func (b *Eth1Data) Deserialize(dr *codec.DecodingReader) error {
-	return dr.Container(&b.DepositRoot, &b.DepositCount, &b.BlockHash)
+	return dr.FixedLenContainer(&b.DepositRoot, &b.DepositCount, &b.BlockHash)
 }
 
 func (a *Eth1Data) Serialize(w *codec.EncodingWriter) error {
-	return w.Container(a.DepositRoot, a.DepositCount, a.BlockHash)
+	return w.FixedLenContainer(a.DepositRoot, a.DepositCount, a.BlockHash)
 }
 
 func (a *Eth1Data) ByteLength() uint64 {

@@ -63,11 +63,11 @@ type AttestationData struct {
 }
 
 func (a *AttestationData) Deserialize(dr *codec.DecodingReader) error {
-	return dr.Container(&a.Slot, &a.Index, &a.BeaconBlockRoot, &a.Source, &a.Target)
+	return dr.FixedLenContainer(&a.Slot, &a.Index, &a.BeaconBlockRoot, &a.Source, &a.Target)
 }
 
 func (a *AttestationData) Serialize(w *codec.EncodingWriter) error {
-	return w.Container(a.Slot, a.Index, &a.BeaconBlockRoot, &a.Source, &a.Target)
+	return w.FixedLenContainer(a.Slot, a.Index, &a.BeaconBlockRoot, &a.Source, &a.Target)
 }
 
 func (a *AttestationData) ByteLength() uint64 {

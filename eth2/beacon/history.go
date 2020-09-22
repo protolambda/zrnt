@@ -11,23 +11,11 @@ import (
 type HistoricalBatchRoots []Root
 
 func (a *HistoricalBatchRoots) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
-	if Slot(len(*a)) != spec.SLOTS_PER_HISTORICAL_ROOT {
-		// re-use space if available (for recycling old state objects)
-		if Slot(cap(*a)) >= spec.SLOTS_PER_HISTORICAL_ROOT {
-			*a = (*a)[:spec.SLOTS_PER_HISTORICAL_ROOT]
-		} else {
-			*a = make([]Root, spec.SLOTS_PER_HISTORICAL_ROOT, spec.SLOTS_PER_HISTORICAL_ROOT)
-		}
-	}
-	return dr.Vector(func(i uint64) codec.Deserializable {
-		return &(*a)[i]
-	}, 32, uint64(spec.SLOTS_PER_HISTORICAL_ROOT))
+	return tree.ReadRoots(dr, (*[]Root)(a), uint64(spec.SLOTS_PER_HISTORICAL_ROOT))
 }
 
 func (a HistoricalBatchRoots) Serialize(spec *Spec, w *codec.EncodingWriter) error {
-	return w.Vector(func(i uint64) codec.Serializable {
-		return &a[i]
-	}, 32, uint64(spec.SLOTS_PER_HISTORICAL_ROOT))
+	return tree.WriteRoots(w, a)
 }
 
 func (a HistoricalBatchRoots) ByteLength(spec *Spec) (out uint64) {
@@ -54,11 +42,11 @@ type HistoricalBatch struct {
 }
 
 func (a *HistoricalBatch) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
-	return dr.Container(spec.Wrap(&a.BlockRoots), spec.Wrap(&a.StateRoots))
+	return dr.FixedLenContainer(spec.Wrap(&a.BlockRoots), spec.Wrap(&a.StateRoots))
 }
 
 func (a *HistoricalBatch) Serialize(spec *Spec, w *codec.EncodingWriter) error {
-	return w.Container(spec.Wrap(&a.BlockRoots), spec.Wrap(&a.StateRoots))
+	return w.FixedLenContainer(spec.Wrap(&a.BlockRoots), spec.Wrap(&a.StateRoots))
 }
 
 func (a *HistoricalBatch) ByteLength(spec *Spec) uint64 {

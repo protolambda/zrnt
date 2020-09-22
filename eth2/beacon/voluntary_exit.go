@@ -73,11 +73,11 @@ var VoluntaryExitType = ContainerType("VoluntaryExit", []FieldDef{
 })
 
 func (v *VoluntaryExit) Deserialize(dr *codec.DecodingReader) error {
-	return dr.Container(&v.Epoch, &v.ValidatorIndex)
+	return dr.FixedLenContainer(&v.Epoch, &v.ValidatorIndex)
 }
 
 func (v *VoluntaryExit) Serialize(w *codec.EncodingWriter) error {
-	return w.Container(&v.Epoch, &v.ValidatorIndex)
+	return w.FixedLenContainer(&v.Epoch, &v.ValidatorIndex)
 }
 
 func (v *VoluntaryExit) ByteLength() uint64 {
@@ -98,11 +98,11 @@ type SignedVoluntaryExit struct {
 }
 
 func (v *SignedVoluntaryExit) Deserialize(dr *codec.DecodingReader) error {
-	return dr.Container(&v.Message, &v.Signature)
+	return dr.FixedLenContainer(&v.Message, &v.Signature)
 }
 
 func (v *SignedVoluntaryExit) Serialize(w *codec.EncodingWriter) error {
-	return w.Container(&v.Message, &v.Signature)
+	return w.FixedLenContainer(&v.Message, &v.Signature)
 }
 
 func (v *SignedVoluntaryExit) ByteLength() uint64 {

@@ -32,11 +32,11 @@ func (h *BeaconBlockHeader) View() *BeaconBlockHeaderView {
 }
 
 func (s *BeaconBlockHeader) Deserialize(dr *codec.DecodingReader) error {
-	return dr.Container(&s.Slot, &s.ProposerIndex, &s.ParentRoot, &s.StateRoot, &s.BodyRoot)
+	return dr.FixedLenContainer(&s.Slot, &s.ProposerIndex, &s.ParentRoot, &s.StateRoot, &s.BodyRoot)
 }
 
 func (s *BeaconBlockHeader) Serialize(w *codec.EncodingWriter) error {
-	return w.Container(&s.Slot, &s.ProposerIndex, &s.ParentRoot, &s.StateRoot, &s.BodyRoot)
+	return w.FixedLenContainer(&s.Slot, &s.ProposerIndex, &s.ParentRoot, &s.StateRoot, &s.BodyRoot)
 }
 
 func (s *BeaconBlockHeader) ByteLength() uint64 {
@@ -57,11 +57,11 @@ type SignedBeaconBlockHeader struct {
 }
 
 func (s *SignedBeaconBlockHeader) Deserialize(dr *codec.DecodingReader) error {
-	return dr.Container(&s.Message, &s.Signature)
+	return dr.FixedLenContainer(&s.Message, &s.Signature)
 }
 
 func (s *SignedBeaconBlockHeader) Serialize(w *codec.EncodingWriter) error {
-	return w.Container(&s.Message, &s.Signature)
+	return w.FixedLenContainer(&s.Message, &s.Signature)
 }
 
 func (s *SignedBeaconBlockHeader) ByteLength() uint64 {

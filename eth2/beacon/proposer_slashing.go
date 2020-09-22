@@ -16,11 +16,11 @@ type ProposerSlashing struct {
 }
 
 func (a *ProposerSlashing) Deserialize(dr *codec.DecodingReader) error {
-	return dr.Container(&a.SignedHeader1, &a.SignedHeader2)
+	return dr.FixedLenContainer(&a.SignedHeader1, &a.SignedHeader2)
 }
 
 func (a *ProposerSlashing) Serialize(w *codec.EncodingWriter) error {
-	return w.Container(&a.SignedHeader1, &a.SignedHeader2)
+	return w.FixedLenContainer(&a.SignedHeader1, &a.SignedHeader2)
 }
 
 func (a *ProposerSlashing) ByteLength() uint64 {

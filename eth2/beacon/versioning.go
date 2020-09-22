@@ -138,11 +138,11 @@ type Fork struct {
 }
 
 func (b *Fork) Deserialize(dr *codec.DecodingReader) error {
-	return dr.Container(&b.PreviousVersion, &b.CurrentVersion, &b.Epoch)
+	return dr.FixedLenContainer(&b.PreviousVersion, &b.CurrentVersion, &b.Epoch)
 }
 
 func (a *Fork) Serialize(w *codec.EncodingWriter) error {
-	return w.Container(a.PreviousVersion, a.CurrentVersion, a.Epoch)
+	return w.FixedLenContainer(a.PreviousVersion, a.CurrentVersion, a.Epoch)
 }
 
 func (a *Fork) ByteLength() uint64 {

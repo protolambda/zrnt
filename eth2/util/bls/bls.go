@@ -19,7 +19,7 @@ func (p *BLSPubkey) Deserialize(dr *codec.DecodingReader) error {
 	return err
 }
 
-func (p BLSPubkey) Serialize(w *codec.EncodingWriter) error {
+func (p *BLSPubkey) Serialize(w *codec.EncodingWriter) error {
 	return w.Write(p[:])
 }
 
@@ -70,7 +70,7 @@ func (s *BLSSignature) Deserialize(dr *codec.DecodingReader) error {
 	return err
 }
 
-func (s BLSSignature) Serialize(w *codec.EncodingWriter) error {
+func (s *BLSSignature) Serialize(w *codec.EncodingWriter) error {
 	return w.Write(s[:])
 }
 

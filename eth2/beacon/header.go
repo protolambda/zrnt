@@ -40,7 +40,7 @@ func (s *BeaconBlockHeader) Serialize(w *codec.EncodingWriter) error {
 }
 
 func (s *BeaconBlockHeader) ByteLength() uint64 {
-	return codec.Sum(&s.Slot, &s.ProposerIndex, &s.ParentRoot, &s.StateRoot, &s.BodyRoot)
+	return BeaconBlockHeaderType.TypeByteLength()
 }
 
 func (b *BeaconBlockHeader) FixedLength() uint64 {
@@ -65,7 +65,7 @@ func (s *SignedBeaconBlockHeader) Serialize(w *codec.EncodingWriter) error {
 }
 
 func (s *SignedBeaconBlockHeader) ByteLength() uint64 {
-	return codec.Sum(&s.Message, &s.Signature)
+	return SignedBeaconBlockHeaderType.TypeByteLength()
 }
 
 func (b *SignedBeaconBlockHeader) FixedLength() uint64 {

@@ -38,7 +38,7 @@ func (a *AttesterSlashing) Serialize(spec *Spec, w *codec.EncodingWriter) error 
 }
 
 func (a *AttesterSlashing) ByteLength(spec *Spec) uint64 {
-	return 2*codec.OFFSET_SIZE + a.Attestation1.ByteLength(spec) + a.Attestation2.ByteLength(spec)
+	return codec.ContainerLength(spec.Wrap(&a.Attestation1), spec.Wrap(&a.Attestation2))
 }
 
 func (a *AttesterSlashing) FixedLength(*Spec) uint64 {
@@ -73,7 +73,7 @@ func (a *AttesterSlashings) Deserialize(spec *Spec, dr *codec.DecodingReader) er
 func (a AttesterSlashings) Serialize(spec *Spec, w *codec.EncodingWriter) error {
 	return w.List(func(i uint64) codec.Serializable {
 		return spec.Wrap(&a[i])
-	}, 0, spec.MAX_ATTESTER_SLASHINGS)
+	}, 0, uint64(len(a)))
 }
 
 func (a AttesterSlashings) ByteLength(spec *Spec) (out uint64) {

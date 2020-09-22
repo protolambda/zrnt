@@ -149,7 +149,7 @@ func (a *Deposits) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
 func (a Deposits) Serialize(spec *Spec, w *codec.EncodingWriter) error {
 	return w.List(func(i uint64) codec.Serializable {
 		return &a[i]
-	}, DepositType.TypeByteLength(), spec.MAX_DEPOSITS)
+	}, DepositType.TypeByteLength(), uint64(len(a)))
 }
 
 func (a Deposits) ByteLength(*Spec) (out uint64) {
@@ -167,7 +167,7 @@ func (li Deposits) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
 			return &li[i]
 		}
 		return nil
-	}, length, spec.MAX_ATTESTATIONS)
+	}, length, spec.MAX_DEPOSITS)
 }
 
 // Verify that outstanding deposits are processed up to the maximum number of deposits, then process all in order.

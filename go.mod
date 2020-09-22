@@ -13,3 +13,4 @@ require (
 )
 
 replace github.com/protolambda/ztyp => ../ztyp
+replace github.com/protolambda/messagediff => ../messagediff

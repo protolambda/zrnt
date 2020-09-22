@@ -37,7 +37,7 @@ func (a *Attestation) Serialize(spec *Spec, w *codec.EncodingWriter) error {
 }
 
 func (a *Attestation) ByteLength(spec *Spec) uint64 {
-	return a.AggregationBits.ByteLength(spec) + a.Data.ByteLength() + a.Signature.ByteLength()
+	return codec.ContainerLength(spec.Wrap(&a.AggregationBits), &a.Data, &a.Signature)
 }
 
 func (a *Attestation) FixedLength(*Spec) uint64 {
@@ -61,7 +61,7 @@ func (a *Attestations) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
 func (a Attestations) Serialize(spec *Spec, w *codec.EncodingWriter) error {
 	return w.List(func(i uint64) codec.Serializable {
 		return spec.Wrap(&a[i])
-	}, 0, spec.MAX_ATTESTATIONS)
+	}, 0, uint64(len(a)))
 }
 
 func (a Attestations) ByteLength(spec *Spec) (out uint64) {

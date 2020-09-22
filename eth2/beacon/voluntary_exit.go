@@ -26,7 +26,7 @@ func (a *VoluntaryExits) Deserialize(spec *Spec, dr *codec.DecodingReader) error
 func (a VoluntaryExits) Serialize(spec *Spec, w *codec.EncodingWriter) error {
 	return w.List(func(i uint64) codec.Serializable {
 		return &a[i]
-	}, SignedVoluntaryExitType.TypeByteLength(), spec.MAX_VOLUNTARY_EXITS)
+	}, SignedVoluntaryExitType.TypeByteLength(), uint64(len(a)))
 }
 
 func (a VoluntaryExits) ByteLength(spec *Spec) (out uint64) {

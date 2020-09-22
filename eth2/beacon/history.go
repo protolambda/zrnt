@@ -53,6 +53,26 @@ type HistoricalBatch struct {
 	StateRoots HistoricalBatchRoots
 }
 
+func (a *HistoricalBatch) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
+	return dr.Container(spec.Wrap(&a.BlockRoots), spec.Wrap(&a.StateRoots))
+}
+
+func (a *HistoricalBatch) Serialize(spec *Spec, w *codec.EncodingWriter) error {
+	return w.Container(spec.Wrap(&a.BlockRoots), spec.Wrap(&a.StateRoots))
+}
+
+func (a *HistoricalBatch) ByteLength(spec *Spec) uint64 {
+	return uint64(spec.SLOTS_PER_HISTORICAL_ROOT) * 32 * 2
+}
+
+func (*HistoricalBatch) FixedLength(spec *Spec) uint64 {
+	return uint64(spec.SLOTS_PER_HISTORICAL_ROOT) * 32 * 2
+}
+
+func (p *HistoricalBatch) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
+	return hFn.HashTreeRoot(spec.Wrap(&p.BlockRoots), spec.Wrap(&p.StateRoots))
+}
+
 func (c *Phase0Config) BatchRoots() VectorTypeDef {
 	return VectorType(RootType, uint64(c.SLOTS_PER_HISTORICAL_ROOT))
 }

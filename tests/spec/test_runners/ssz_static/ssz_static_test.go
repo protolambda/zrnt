@@ -80,7 +80,7 @@ func (testCase *SSZStaticTestCase) Run(t *testing.T) {
 			t.Fatalf("type %s cannot be serialized", testCase.TypeName)
 		}
 		if root != testCase.Root {
-			t.Errorf("hash-tree-roots differ: %x (spec) <-> %x (zrnt)", testCase.Root, root)
+			t.Errorf("hash-tree-roots differ: %s (spec) <-> %s (zrnt)", testCase.Root, root)
 			return
 		}
 	})
@@ -122,6 +122,7 @@ func (obj *ObjData) runSSZStaticTest(spec *Spec) func(t *testing.T) {
 
 		test_util.RunHandler(t, "ssz_static/"+obj.TypeName, func(t *testing.T, readPart test_util.TestPartReader) {
 			c := &SSZStaticTestCase{
+				Spec:     readPart.Spec(),
 				TypeName: obj.TypeName,
 			}
 

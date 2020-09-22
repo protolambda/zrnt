@@ -59,8 +59,7 @@ func (a *IndexedAttestation) Serialize(spec *Spec, w *codec.EncodingWriter) erro
 }
 
 func (a *IndexedAttestation) ByteLength(spec *Spec) uint64 {
-	return codec.OFFSET_SIZE + a.AttestingIndices.ByteLength(spec) +
-		AttestationDataType.TypeByteLength() + BLSSignatureType.TypeByteLength()
+	return codec.ContainerLength(spec.Wrap(&a.AttestingIndices), &a.Data, &a.Signature)
 }
 
 func (*IndexedAttestation) FixedLength(*Spec) uint64 {

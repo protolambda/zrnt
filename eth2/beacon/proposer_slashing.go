@@ -51,13 +51,13 @@ func (a *ProposerSlashings) Deserialize(spec *Spec, dr *codec.DecodingReader) er
 		i := len(*a)
 		*a = append(*a, ProposerSlashing{})
 		return &((*a)[i])
-	}, 0, spec.MAX_PROPOSER_SLASHINGS)
+	}, ProposerSlashingType.TypeByteLength(), spec.MAX_PROPOSER_SLASHINGS)
 }
 
 func (a ProposerSlashings) Serialize(spec *Spec, w *codec.EncodingWriter) error {
 	return w.List(func(i uint64) codec.Serializable {
 		return &a[i]
-	}, ProposerSlashingType.TypeByteLength(), spec.MAX_PROPOSER_SLASHINGS)
+	}, ProposerSlashingType.TypeByteLength(), uint64(len(a)))
 }
 
 func (a ProposerSlashings) ByteLength(spec *Spec) (out uint64) {
@@ -75,7 +75,7 @@ func (li ProposerSlashings) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
 			return &li[i]
 		}
 		return nil
-	}, length, spec.MAX_ATTESTATIONS)
+	}, length, spec.MAX_PROPOSER_SLASHINGS)
 }
 
 func (spec *Spec) ProcessProposerSlashings(ctx context.Context, epc *EpochsContext, state *BeaconStateView, ops []ProposerSlashing) error {

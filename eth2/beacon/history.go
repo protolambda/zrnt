@@ -128,17 +128,11 @@ func AsHistoricalBatch(v View, err error) (*HistoricalBatchView, error) {
 type HistoricalRoots []Root
 
 func (a *HistoricalRoots) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
-	return dr.List(func() codec.Deserializable {
-		i := len(*a)
-		*a = append(*a, Root{})
-		return &(*a)[i]
-	}, 32, spec.HISTORICAL_ROOTS_LIMIT)
+	return tree.ReadRootsLimited(dr, (*[]Root)(a), spec.HISTORICAL_ROOTS_LIMIT)
 }
 
 func (a HistoricalRoots) Serialize(spec *Spec, w *codec.EncodingWriter) error {
-	return w.List(func(i uint64) codec.Serializable {
-		return &a[i]
-	}, 32, uint64(len(a)))
+	return tree.WriteRoots(w, a)
 }
 
 func (a HistoricalRoots) ByteLength(spec *Spec) (out uint64) {

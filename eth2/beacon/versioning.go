@@ -77,6 +77,31 @@ func AsVersion(v View, err error) (Version, error) {
 // A digest of the current fork data
 type ForkDigest [4]byte
 
+func (p *ForkDigest) Deserialize(dr *codec.DecodingReader) error {
+	if p == nil {
+		return errors.New("nil version")
+	}
+	_, err := dr.Read(p[:])
+	return err
+}
+
+func (p ForkDigest) Serialize(w *codec.EncodingWriter) error {
+	return w.Write(p[:])
+}
+
+func (p ForkDigest) ByteLength() uint64 {
+	return 4
+}
+
+func (ForkDigest) FixedLength() uint64 {
+	return 4
+}
+
+func (p ForkDigest) HashTreeRoot(_ tree.HashFn) (out Root) {
+	copy(out[:], p[:])
+	return
+}
+
 func (p ForkDigest) MarshalText() ([]byte, error) {
 	return []byte("0x" + hex.EncodeToString(p[:])), nil
 }
@@ -105,7 +130,15 @@ type ForkData struct {
 }
 
 func (v *ForkData) Deserialize(dr *codec.DecodingReader) error {
-	return dr.Container(&v.CurrentVersion, &v.GenesisValidatorsRoot)
+	return dr.FixedLenContainer(&v.CurrentVersion, &v.GenesisValidatorsRoot)
+}
+
+func (v *ForkData) Serialize(w *codec.EncodingWriter) error {
+	return w.FixedLenContainer(&v.CurrentVersion, &v.GenesisValidatorsRoot)
+}
+
+func (p ForkData) ByteLength() uint64 {
+	return 4 + 32
 }
 
 func (*ForkData) FixedLength() uint64 {

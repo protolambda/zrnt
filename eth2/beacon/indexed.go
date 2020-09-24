@@ -45,9 +45,9 @@ func (c *Phase0Config) CommitteeIndices() ListTypeDef {
 }
 
 type IndexedAttestation struct {
-	AttestingIndices CommitteeIndices
-	Data             AttestationData
-	Signature        BLSSignature
+	AttestingIndices CommitteeIndices `json:"attesting_indices" yaml:"attesting_indices"`
+	Data             AttestationData  `json:"data" yaml:"data"`
+	Signature        BLSSignature     `json:"signature" yaml:"signature"`
 }
 
 func (p *IndexedAttestation) Deserialize(spec *Spec, dr *codec.DecodingReader) error {

@@ -7,10 +7,10 @@ import (
 )
 
 type PendingAttestation struct {
-	AggregationBits CommitteeBits
-	Data            AttestationData
-	InclusionDelay  Slot
-	ProposerIndex   ValidatorIndex
+	AggregationBits CommitteeBits   `json:"aggregation_bits" yaml:"aggregation_bits"`
+	Data            AttestationData `json:"data" yaml:"data"`
+	InclusionDelay  Slot            `json:"inclusion_delay" yaml:"inclusion_delay"`
+	ProposerIndex   ValidatorIndex  `json:"proposer_index" yaml:"proposer_index"`
 }
 
 func (a *PendingAttestation) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
@@ -51,15 +51,15 @@ func (att *PendingAttestation) View(spec *Spec) *PendingAttestationView {
 }
 
 type AttestationData struct {
-	Slot  Slot
-	Index CommitteeIndex
+	Slot  Slot           `json:"slot" yaml:"slot"`
+	Index CommitteeIndex `json:"index" yaml:"index"`
 
 	// LMD GHOST vote
-	BeaconBlockRoot Root
+	BeaconBlockRoot Root `json:"beacon_block_root" yaml:"beacon_block_root"`
 
 	// FFG vote
-	Source Checkpoint
-	Target Checkpoint
+	Source Checkpoint `json:"source" yaml:"source"`
+	Target Checkpoint `json:"target" yaml:"target"`
 }
 
 func (a *AttestationData) Deserialize(dr *codec.DecodingReader) error {

@@ -35,9 +35,10 @@ func (p *Eth1Address) UnmarshalText(text []byte) error {
 }
 
 type Eth1Data struct {
-	DepositRoot  Root // Hash-tree-root of DepositData tree.
-	DepositCount DepositIndex
-	BlockHash    Root
+	// Hash-tree-root of DepositData tree.
+	DepositRoot  Root         `json:"deposit_root" yaml:"deposit_root"`
+	DepositCount DepositIndex `json:"deposit_count" yaml:"deposit_count"`
+	BlockHash    Root         `json:"block_hash" yaml:"block_hash"`
 }
 
 func (b *Eth1Data) Deserialize(dr *codec.DecodingReader) error {

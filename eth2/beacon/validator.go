@@ -7,16 +7,15 @@ import (
 )
 
 type Validator struct {
-	Pubkey                BLSPubkey
-	WithdrawalCredentials Root // Commitment to pubkey for withdrawals
-	EffectiveBalance      Gwei // Balance at stake
-	Slashed               bool
+	Pubkey                BLSPubkey `json:"pubkey" yaml:"pubkey"`
+	WithdrawalCredentials Root      `json:"withdrawal_credentials" yaml:"withdrawal_credentials"`
+	EffectiveBalance      Gwei      `json:"effective_balance" yaml:"effective_balance"`
+	Slashed               bool      `json:"slashed" yaml:"slashed"`
 
-	// Status epochs
-	ActivationEligibilityEpoch Epoch // When criteria for activation were met
-	ActivationEpoch            Epoch
-	ExitEpoch                  Epoch
-	WithdrawableEpoch          Epoch // When validator can withdraw funds
+	ActivationEligibilityEpoch Epoch `json:"activation_eligibility_epoch" yaml:"activation_eligibility_epoch"`
+	ActivationEpoch            Epoch `json:"activation_epoch" yaml:"activation_epoch"`
+	ExitEpoch                  Epoch `json:"exit_epoch" yaml:"exit_epoch"`
+	WithdrawableEpoch          Epoch `json:"withdrawable_epoch" yaml:"withdrawable_epoch"`
 }
 
 func (v *Validator) Deserialize(dr *codec.DecodingReader) error {

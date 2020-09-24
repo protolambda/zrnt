@@ -9,32 +9,32 @@ import (
 
 type BeaconState struct {
 	// Versioning
-	GenesisTime           Timestamp
-	GenesisValidatorsRoot Root
-	Slot                  Slot
-	Fork                  Fork
+	GenesisTime           Timestamp `json:"genesis_time" yaml:"genesis_time"`
+	GenesisValidatorsRoot Root      `json:"genesis_validators_root" yaml:"genesis_validators_root"`
+	Slot                  Slot      `json:"slot" yaml:"slot"`
+	Fork                  Fork      `json:"fork" yaml:"fork"`
 	// History
-	LatestBlockHeader BeaconBlockHeader
-	BlockRoots        HistoricalBatchRoots
-	StateRoots        HistoricalBatchRoots
-	HistoricalRoots   HistoricalRoots
+	LatestBlockHeader BeaconBlockHeader    `json:"latest_block_header" yaml:"latest_block_header"`
+	BlockRoots        HistoricalBatchRoots `json:"block_roots" yaml:"block_roots"`
+	StateRoots        HistoricalBatchRoots `json:"state_roots" yaml:"state_roots"`
+	HistoricalRoots   HistoricalRoots      `json:"historical_roots" yaml:"historical_roots"`
 	// Eth1
-	Eth1Data      Eth1Data
-	Eth1DataVotes Eth1DataVotes
-	DepositIndex  DepositIndex
+	Eth1Data      Eth1Data      `json:"eth1_data" yaml:"eth1_data"`
+	Eth1DataVotes Eth1DataVotes `json:"eth1_data_votes" yaml:"eth1_data_votes"`
+	DepositIndex  DepositIndex  `json:"eth1_deposit_index" yaml:"eth1_deposit_index"`
 	// Registry
-	Validators  ValidatorRegistry
-	Balances    Balances
-	RandaoMixes RandaoMixes
-	Slashings   SlashingsHistory
+	Validators  ValidatorRegistry `json:"validators" yaml:"validators"`
+	Balances    Balances          `json:"balances" yaml:"balances"`
+	RandaoMixes RandaoMixes       `json:"randao_mixes" yaml:"randao_mixes"`
+	Slashings   SlashingsHistory  `json:"slashings" yaml:"slashings"`
 	// Attestations
-	PreviousEpochAttestations PendingAttestations
-	CurrentEpochAttestations  PendingAttestations
+	PreviousEpochAttestations PendingAttestations `json:"previous_epoch_attestations" yaml:"previous_epoch_attestations"`
+	CurrentEpochAttestations  PendingAttestations `json:"current_epoch_attestations" yaml:"current_epoch_attestations"`
 	// Finality
-	JustificationBits           JustificationBits
-	PreviousJustifiedCheckpoint Checkpoint
-	CurrentJustifiedCheckpoint  Checkpoint
-	FinalizedCheckpoint         Checkpoint
+	JustificationBits           JustificationBits `json:"justification_bits" yaml:"justification_bits"`
+	PreviousJustifiedCheckpoint Checkpoint        `json:"previous_justified_checkpoint" yaml:"previous_justified_checkpoint"`
+	CurrentJustifiedCheckpoint  Checkpoint        `json:"current_justified_checkpoint" yaml:"current_justified_checkpoint"`
+	FinalizedCheckpoint         Checkpoint        `json:"finalized_checkpoint" yaml:"finalized_checkpoint"`
 }
 
 func (v *BeaconState) Deserialize(spec *Spec, dr *codec.DecodingReader) error {

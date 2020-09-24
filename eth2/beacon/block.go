@@ -8,8 +8,8 @@ import (
 )
 
 type SignedBeaconBlock struct {
-	Message   BeaconBlock
-	Signature BLSSignature
+	Message   BeaconBlock  `json:"message" yaml:"message"`
+	Signature BLSSignature `json:"signature" yaml:"signature"`
 }
 
 func (b *SignedBeaconBlock) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
@@ -40,11 +40,11 @@ func (block *SignedBeaconBlock) SignedHeader(spec *Spec) *SignedBeaconBlockHeade
 }
 
 type BeaconBlock struct {
-	Slot          Slot
-	ProposerIndex ValidatorIndex
-	ParentRoot    Root
-	StateRoot     Root
-	Body          BeaconBlockBody
+	Slot          Slot            `json:"slot" yaml:"slot"`
+	ProposerIndex ValidatorIndex  `json:"proposer_index" yaml:"proposer_index"`
+	ParentRoot    Root            `json:"parent_root" yaml:"parent_root"`
+	StateRoot     Root            `json:"state_root" yaml:"state_root"`
+	Body          BeaconBlockBody `json:"body_root" yaml:"body_root"`
 }
 
 func (b *BeaconBlock) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
@@ -95,15 +95,15 @@ func (block *BeaconBlock) Header(spec *Spec) *BeaconBlockHeader {
 }
 
 type BeaconBlockBody struct {
-	RandaoReveal BLSSignature
-	Eth1Data     Eth1Data // Eth1 data vote
-	Graffiti     Root     // Arbitrary data
+	RandaoReveal BLSSignature `json:"randao_reveal" yaml:"randao_reveal"`
+	Eth1Data     Eth1Data     `json:"eth1_data" yaml:"eth1_data"`
+	Graffiti     Root         `json:"graffiti" yaml:"graffiti"`
 
-	ProposerSlashings ProposerSlashings
-	AttesterSlashings AttesterSlashings
-	Attestations      Attestations
-	Deposits          Deposits
-	VoluntaryExits    VoluntaryExits
+	ProposerSlashings ProposerSlashings `json:"proposer_slashings" yaml:"proposer_slashings"`
+	AttesterSlashings AttesterSlashings `json:"attester_slashings" yaml:"attester_slashings"`
+	Attestations      Attestations      `json:"attestations" yaml:"attestations"`
+	Deposits          Deposits          `json:"deposits" yaml:"deposits"`
+	VoluntaryExits    VoluntaryExits    `json:"voluntary_exits" yaml:"voluntary_exits"`
 }
 
 func (b *BeaconBlockBody) Deserialize(spec *Spec, dr *codec.DecodingReader) error {

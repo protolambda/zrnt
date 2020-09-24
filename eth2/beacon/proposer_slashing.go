@@ -11,8 +11,8 @@ import (
 )
 
 type ProposerSlashing struct {
-	SignedHeader1 SignedBeaconBlockHeader
-	SignedHeader2 SignedBeaconBlockHeader
+	SignedHeader1 SignedBeaconBlockHeader `json:"signed_header_1" yaml:"signed_header_1"`
+	SignedHeader2 SignedBeaconBlockHeader `json:"signed_header_2" yaml:"signed_header_2"`
 }
 
 func (a *ProposerSlashing) Deserialize(dr *codec.DecodingReader) error {

@@ -23,9 +23,9 @@ func (c *Phase0Config) Attestation() *ContainerTypeDef {
 }
 
 type Attestation struct {
-	AggregationBits CommitteeBits
-	Data            AttestationData
-	Signature       BLSSignature
+	AggregationBits CommitteeBits   `json:"aggregation_bits" yaml:"aggregation_bits"`
+	Data            AttestationData `json:"data" yaml:"data"`
+	Signature       BLSSignature    `json:"signature" yaml:"signature"`
 }
 
 func (a *Attestation) Deserialize(spec *Spec, dr *codec.DecodingReader) error {

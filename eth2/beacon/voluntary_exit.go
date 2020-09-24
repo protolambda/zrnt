@@ -63,8 +63,9 @@ func (spec *Spec) ProcessVoluntaryExits(ctx context.Context, epc *EpochsContext,
 }
 
 type VoluntaryExit struct {
-	Epoch          Epoch // Earliest epoch when voluntary exit can be processed
-	ValidatorIndex ValidatorIndex
+	// Earliest epoch when voluntary exit can be processed
+	Epoch          Epoch          `json:"epoch" yaml:"epoch"`
+	ValidatorIndex ValidatorIndex `json:"validator_index" yaml:"validator_index"`
 }
 
 var VoluntaryExitType = ContainerType("VoluntaryExit", []FieldDef{
@@ -93,8 +94,8 @@ func (v *VoluntaryExit) HashTreeRoot(hFn tree.HashFn) Root {
 }
 
 type SignedVoluntaryExit struct {
-	Message   VoluntaryExit
-	Signature BLSSignature
+	Message   VoluntaryExit `json:"message" yaml:"message"`
+	Signature BLSSignature  `json:"signature" yaml:"signature"`
 }
 
 func (v *SignedVoluntaryExit) Deserialize(dr *codec.DecodingReader) error {

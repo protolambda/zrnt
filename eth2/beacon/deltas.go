@@ -41,8 +41,8 @@ func (li GweiList) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
 }
 
 type Deltas struct {
-	Rewards   GweiList
-	Penalties GweiList
+	Rewards   GweiList `json:"rewards" yaml:"rewards"`
+	Penalties GweiList `json:"penalties" yaml:"penalties"`
 }
 
 func (a *Deltas) Deserialize(spec *Spec, dr *codec.DecodingReader) error {

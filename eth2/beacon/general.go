@@ -93,8 +93,8 @@ func AsGwei(v View, err error) (Gwei, error) {
 }
 
 type Checkpoint struct {
-	Epoch Epoch
-	Root  Root
+	Epoch Epoch `json:"epoch" yaml:"epoch"`
+	Root  Root  `json:"root" yaml:"root"`
 }
 
 func (c *Checkpoint) Deserialize(dr *codec.DecodingReader) error {

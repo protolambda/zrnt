@@ -37,8 +37,8 @@ func (li HistoricalBatchRoots) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
 }
 
 type HistoricalBatch struct {
-	BlockRoots HistoricalBatchRoots
-	StateRoots HistoricalBatchRoots
+	BlockRoots HistoricalBatchRoots `json:"block_roots" yaml:"block_roots"`
+	StateRoots HistoricalBatchRoots `json:"state_roots" yaml:"state_roots"`
 }
 
 func (a *HistoricalBatch) Deserialize(spec *Spec, dr *codec.DecodingReader) error {

@@ -25,8 +25,8 @@ func (spec *Spec) ProcessAttesterSlashings(ctx context.Context, epc *EpochsConte
 }
 
 type AttesterSlashing struct {
-	Attestation1 IndexedAttestation
-	Attestation2 IndexedAttestation
+	Attestation1 IndexedAttestation `json:"attestation_1" yaml:"attestation_1"`
+	Attestation2 IndexedAttestation `json:"attestation_2" yaml:"attestation_2"`
 }
 
 func (a *AttesterSlashing) Deserialize(spec *Spec, dr *codec.DecodingReader) error {

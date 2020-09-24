@@ -125,8 +125,8 @@ func (p *ForkDigest) UnmarshalText(text []byte) error {
 }
 
 type ForkData struct {
-	CurrentVersion        Version
-	GenesisValidatorsRoot Root
+	CurrentVersion        Version `json:"curent_version" yaml:"curent_version"`
+	GenesisValidatorsRoot Root    `json:"genesis_validators_root" yaml:"genesis_validators_root"`
 }
 
 func (v *ForkData) Deserialize(dr *codec.DecodingReader) error {
@@ -165,9 +165,9 @@ func ComputeForkDigest(currentVersion Version, genesisValidatorsRoot Root) ForkD
 }
 
 type Fork struct {
-	PreviousVersion Version
-	CurrentVersion  Version
-	Epoch           Epoch
+	PreviousVersion Version `json:"previous_version" yaml:"previous_version"`
+	CurrentVersion  Version `json:"current_version" yaml:"current_version"`
+	Epoch           Epoch   `json:"epoch" yaml:"epoch"`
 }
 
 func (b *Fork) Deserialize(dr *codec.DecodingReader) error {

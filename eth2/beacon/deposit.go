@@ -20,11 +20,11 @@ var DepositDataType = ContainerType("DepositData", []FieldDef{
 })
 
 type DepositData struct {
-	Pubkey                BLSPubkey
-	WithdrawalCredentials Root
-	Amount                Gwei
+	Pubkey                BLSPubkey `json:"pubkey" yaml:"pubkey"`
+	WithdrawalCredentials Root      `json:"withdrawal_credentials" yaml:"withdrawal_credentials"`
+	Amount                Gwei      `json:"amount" yaml:"amount"`
 	// Signing over DepositMessage
-	Signature BLSSignature
+	Signature BLSSignature `json:"signature" yaml:"signature"`
 }
 
 func (d *DepositData) ToMessage() *DepositMessage {
@@ -62,9 +62,9 @@ func (d *DepositData) MessageRoot() Root {
 }
 
 type DepositMessage struct {
-	Pubkey                BLSPubkey
-	WithdrawalCredentials Root
-	Amount                Gwei
+	Pubkey                BLSPubkey `json:"pubkey" yaml:"pubkey"`
+	WithdrawalCredentials Root      `json:"withdrawal_credentials" yaml:"withdrawal_credentials"`
+	Amount                Gwei      `json:"amount" yaml:"amount"`
 }
 
 func (b *DepositMessage) HashTreeRoot(hFn tree.HashFn) Root {
@@ -103,8 +103,8 @@ func (b *DepositProof) HashTreeRoot(hFn tree.HashFn) Root {
 }
 
 type Deposit struct {
-	Proof DepositProof
-	Data  DepositData
+	Proof DepositProof `json:"proof" yaml:"proof"`
+	Data  DepositData  `json:"data" yaml:"data"`
 }
 
 func (d *Deposit) Deserialize(dr *codec.DecodingReader) error {

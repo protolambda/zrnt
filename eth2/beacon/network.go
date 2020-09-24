@@ -10,9 +10,9 @@ import (
 )
 
 type Eth2Data struct {
-	ForkDigest      ForkDigest `json:"fork_digest"`
-	NextForkVersion Version    `json:"next_fork_version"`
-	NextForkEpoch   Epoch      `json:"next_fork_epoch"`
+	ForkDigest      ForkDigest `json:"fork_digest" yaml:"fork_digest"`
+	NextForkVersion Version    `json:"next_fork_version" yaml:"next_fork_version"`
+	NextForkEpoch   Epoch      `json:"next_fork_epoch" yaml:"next_fork_epoch"`
 }
 
 func (d *Eth2Data) Deserialize(dr *codec.DecodingReader) error {
@@ -171,8 +171,8 @@ func (i Pong) HashTreeRoot(hFn tree.HashFn) Root {
 }
 
 type MetaData struct {
-	SeqNumber SeqNr      `json:"seq_number"`
-	Attnets   AttnetBits `json:"attnets"`
+	SeqNumber SeqNr      `json:"seq_number" yaml:"seq_number"`
+	Attnets   AttnetBits `json:"attnets" yaml:"attnets"`
 }
 
 func (m *MetaData) Data() map[string]interface{} {
@@ -209,11 +209,11 @@ func (m *MetaData) String() string {
 }
 
 type Status struct {
-	ForkDigest     ForkDigest `json:"fork_digest"`
-	FinalizedRoot  Root       `json:"finalized_root"`
-	FinalizedEpoch Epoch      `json:"finalized_epoch"`
-	HeadRoot       Root       `json:"head_root"`
-	HeadSlot       Slot       `json:"head_slot"`
+	ForkDigest     ForkDigest `json:"fork_digest" yaml:"fork_digest"`
+	FinalizedRoot  Root       `json:"finalized_root" yaml:"finalized_root"`
+	FinalizedEpoch Epoch      `json:"finalized_epoch" yaml:"finalized_epoch"`
+	HeadRoot       Root       `json:"head_root" yaml:"head_root"`
+	HeadSlot       Slot       `json:"head_slot" yaml:"head_slot"`
 }
 
 func (s *Status) Data() map[string]interface{} {

@@ -10,11 +10,11 @@ import (
 )
 
 type BeaconBlockHeader struct {
-	Slot          Slot
-	ProposerIndex ValidatorIndex
-	ParentRoot    Root
-	StateRoot     Root
-	BodyRoot      Root
+	Slot          Slot           `json:"slot" yaml:"slot"`
+	ProposerIndex ValidatorIndex `json:"proposer_index" yaml:"proposer_index"`
+	ParentRoot    Root           `json:"parent_root" yaml:"parent_root"`
+	StateRoot     Root           `json:"state_root" yaml:"state_root"`
+	BodyRoot      Root           `json:"body_root" yaml:"body_root"`
 }
 
 func (h *BeaconBlockHeader) View() *BeaconBlockHeaderView {
@@ -52,8 +52,8 @@ func (b *BeaconBlockHeader) HashTreeRoot(hFn tree.HashFn) Root {
 }
 
 type SignedBeaconBlockHeader struct {
-	Message   BeaconBlockHeader
-	Signature BLSSignature
+	Message   BeaconBlockHeader `json:"message" yaml:"message"`
+	Signature BLSSignature      `json:"signature" yaml:"signature"`
 }
 
 func (s *SignedBeaconBlockHeader) Deserialize(dr *codec.DecodingReader) error {

@@ -4,7 +4,7 @@ import (
 	"context"
 	. "github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	"testing"
 )
 

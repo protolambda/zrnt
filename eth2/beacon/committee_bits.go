@@ -3,7 +3,7 @@ package beacon
 import (
 	"bytes"
 	"fmt"
-	"github.com/protolambda/zssz/bitfields"
+	"github.com/protolambda/ztyp/bitfields"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"

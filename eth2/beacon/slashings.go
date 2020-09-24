@@ -183,6 +183,13 @@ func (spec *Spec) ProcessEpochSlashings(ctx context.Context, epc *EpochsContext,
 	if err != nil {
 		return err
 	}
+	slashingsWeight := slashingsSum * Gwei(spec.PROPORTIONAL_SLASHING_MULTIPLIER)
+	var adjustedTotalSlashingBalance Gwei
+	if totalBalance < slashingsWeight {
+		adjustedTotalSlashingBalance = totalBalance
+	} else {
+		adjustedTotalSlashingBalance = slashingsWeight
+	}
 
 	bals, err := state.Balances()
 	if err != nil {
@@ -192,11 +199,7 @@ func (spec *Spec) ProcessEpochSlashings(ctx context.Context, epc *EpochsContext,
 		// Factored out from penalty numerator to avoid uint64 overflow
 		slashedEffectiveBal := process.Statuses[index].Validator.EffectiveBalance
 		penaltyNumerator := slashedEffectiveBal / spec.EFFECTIVE_BALANCE_INCREMENT
-		if slashingsWeight := slashingsSum * 3; totalBalance < slashingsWeight {
-			penaltyNumerator *= totalBalance
-		} else {
-			penaltyNumerator *= slashingsWeight
-		}
+		penaltyNumerator *= adjustedTotalSlashingBalance
 		penalty := penaltyNumerator / totalBalance * spec.EFFECTIVE_BALANCE_INCREMENT
 
 		if err := bals.DecreaseBalance(index, penalty); err != nil {

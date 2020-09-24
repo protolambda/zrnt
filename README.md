@@ -19,17 +19,18 @@ The beacon package covers the phase0 state transition, following the Beacon-chai
 #### Globals
 
 Globals are split up as following:
-- `<something>Type`: a ZTYP SSZ type description, used to create typed views with.
+- `<something>Type`: a ZTYP SSZ type description, used to create typed views with. Some types can be derived from a `*Spec` only.
 - `<something>View`: a ZTYP SSZ view. This wraps a binary-tree backing,
  to provide typed a mutable interface to the persistent cached binary-tree datastructure.
-- `<something>SSZ`: a ZSSZ SSZ definition. Used to enhance native Go datastructures with SSZ type info,
- to directly hash/encode the raw data structures, without representing them as binary tree.
-- `<something>`: Other types are mostly just raw ZSSZ-compatible Go datastructures, and can be used with the corresponding `<something>SSZ`
-- `(state *BeaconStateView) Process<something>`: The processing functions are all prefixed, and attached to the beacon-state view.
-- `(state *BeaconStateView) StateTransition`: the main transition function
-- `EpochsContext` and `(state *BeaconStateView) NewEpochsContext`: to efficiently transition, data that is used accross the epoch slot is cached in a special container.
+- `(spec *Spec) Process<something>`: The processing functions are all prefixed, and attached to the beacon-state view.
+- `(spec *Spec) StateTransition`: The main transition function
+- `EpochsContext` and `(spec *Spec) NewEpochsContext`: to efficiently transition, data that is used accross the epoch slot is cached in a special container.
  This includes beacon proposers, committee shuffling, pubkey cache, etc. Functions to efficiently copy and update are included.
-- `GenesisFromEth1` and `KickStartState` two functions to create a `*BeaconStateView` and accompanying `*EpochsContext` with.
+- `(spec *Spec) GenesisFromEth1` and `KickStartState` two functions to create a `*BeaconStateView` and accompanying `*EpochsContext` with.
+
+The `Spec` type is very central, and enables multiple different spec configurations at the same time, as well as full customization of the configuration.
+Default configs are available in the `configs` package: `Mainnet` and `configs.Minimal`: preconfigured `*Spec`s to use for common tooling/tests.
+Alternatively, load phase0 and phase1 configs in `Spec` from YAML, and then embed them in a `Spec` object to use them.
 
 #### Working around lack of Generics
 
@@ -52,11 +53,9 @@ Hashing, merkleization, and other utils can be found in `eth2/util`.
 
 BLS is a package that wraps Herumi BLS. However, it is put behind a build-flag. Use `bls_on` and `bls_off` to use it or not.
 
-SSZ is provided by two components:
-- ZRNT-SSZ (ZSSZ), optimized for speed on small raw Go datasturctures (no hash-tree-root caching, but serialization is 10x as fast as Gob):
- [`github.com/protolambda/zssz`](https://github.com/protolambda/zssz). Primarily used for inputs such as blocks and attestations.
-  Not repeatedly hashed, and important to quickly decode, read/mutate, and encode.
-- ZTYP, optimized for caching, representing data as binary trees. Primarily used for the `BeaconStateView`.
+SSZ is provided by ZTYP, but has two forms:
+- Native Go structs, with `Deserialize`, `Serialize` and `HashTreeRoot` methods, built on the `hashing` and `codec` packages.
+- Type descriptions and Views, optimized for caching, representing data as binary trees. Primarily used for the `BeaconStateView`.
 
 ### Building
 

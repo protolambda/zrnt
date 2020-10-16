@@ -5,7 +5,7 @@ import (
 )
 
 var Mainnet = &beacon.Spec{
-	PRESET_NAME: "mainnet",
+	CONFIG_NAME: "mainnet",
 	Phase0Config: beacon.Phase0Config{
 		MAX_COMMITTEES_PER_SLOT:               64,
 		TARGET_COMMITTEE_SIZE:                 128,

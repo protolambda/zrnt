@@ -5,7 +5,7 @@ import (
 )
 
 var Minimal = &beacon.Spec{
-	PRESET_NAME: "minimal",
+	CONFIG_NAME: "minimal",
 	Phase0Config: beacon.Phase0Config{
 		MAX_COMMITTEES_PER_SLOT:               4,
 		TARGET_COMMITTEE_SIZE:                 4,

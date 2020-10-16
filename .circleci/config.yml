@@ -1,8 +1,5 @@
 version: 2.1
 
-orbs:
-  codecov: codecov/codecov@1.0.5
-
 jobs:
   build:
     docker:
@@ -43,9 +40,6 @@ jobs:
           key: go-mod-v1-{{ checksum "go.sum" }}
           paths:
             - "/go/pkg/mod"
-
-      - codecov/upload:
-          file: /tmp/test-results/coverage.out
 
       - store_artifacts: # upload test summary for display in Artifacts
           path: /tmp/test-results

@@ -203,9 +203,9 @@ func (s specObj) FixedLength() uint64 {
 }
 
 type Spec struct {
-	PRESET_NAME string
-	Phase0Config
-	Phase1Config
+	CONFIG_NAME  string `yaml:"CONFIG_NAME,omitempty"`
+	Phase0Config `yaml:",inline"`
+	Phase1Config `yaml:",inline"`
 }
 
 func (spec *Spec) Wrap(des SpecObj) SSZObj {

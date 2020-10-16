@@ -44,7 +44,7 @@ type BeaconBlock struct {
 	ProposerIndex ValidatorIndex  `json:"proposer_index" yaml:"proposer_index"`
 	ParentRoot    Root            `json:"parent_root" yaml:"parent_root"`
 	StateRoot     Root            `json:"state_root" yaml:"state_root"`
-	Body          BeaconBlockBody `json:"body_root" yaml:"body_root"`
+	Body          BeaconBlockBody `json:"body" yaml:"body"`
 }
 
 func (b *BeaconBlock) Deserialize(spec *Spec, dr *codec.DecodingReader) error {

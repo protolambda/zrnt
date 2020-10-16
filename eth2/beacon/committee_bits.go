@@ -2,9 +2,11 @@ package beacon
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"github.com/protolambda/ztyp/bitfields"
 	"github.com/protolambda/ztyp/codec"
+	"github.com/protolambda/ztyp/conv"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
@@ -41,6 +43,27 @@ func (a *CommitteeBits) FixedLength(*Spec) uint64 {
 
 func (li CommitteeBits) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
 	return hFn.BitListHTR(li, spec.MAX_VALIDATORS_PER_COMMITTEE)
+}
+
+func (cb CommitteeBits) MarshalText() ([]byte, error) {
+	return conv.BytesMarshalText(cb[:])
+}
+
+func (cb *CommitteeBits) UnmarshalText(text []byte) error {
+	return bytesUnmarshalText((*[]byte)(cb), text)
+}
+
+func bytesUnmarshalText(dst *[]byte, text []byte) error {
+	if len(text) >= 2 && text[0] == '0' && (text[1] == 'x' || text[1] == 'X') {
+		text = text[2:]
+	}
+	res := make([]byte, len(text)/2, len(text)/2)
+	_, err := hex.Decode(res, text)
+	if err != nil {
+		return err
+	}
+	*dst = res
+	return nil
 }
 
 func (cb CommitteeBits) BitLen() uint64 {

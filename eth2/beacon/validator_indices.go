@@ -37,6 +37,14 @@ func (i ValidatorIndex) HashTreeRoot(hFn tree.HashFn) Root {
 	return Uint64View(i).HashTreeRoot(hFn)
 }
 
+func (e ValidatorIndex) MarshalJSON() ([]byte, error) {
+	return Uint64View(e).MarshalJSON()
+}
+
+func (e *ValidatorIndex) UnmarshalJSON(b []byte) error {
+	return ((*Uint64View)(e)).UnmarshalJSON(b)
+}
+
 // Custom constant, not in spec:
 // An impossible high validator index used to mark special internal cases. (all 1s binary)
 const ValidatorIndexMarker = ValidatorIndex(^uint64(0))

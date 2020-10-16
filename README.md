@@ -97,7 +97,6 @@ Instructions on the usage of these test-vectors with ZRNT can be found in the [t
 After running `make test`, run `make open-coverage` to open a Go-test coverage report in your browser.
 
 Note: half of the project consists of `if err != nil` due to tree-structure accesses that do not fit Go error handling well, thus low coverage.
-[![codecov](https://codecov.io/gh/protolambda/zrnt/branch/master/graph/badge.svg?no-cache)](https://codecov.io/gh/protolambda/zrnt) 
 
 ## Contributing
 

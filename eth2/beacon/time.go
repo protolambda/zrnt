@@ -36,6 +36,14 @@ func (t Timestamp) HashTreeRoot(hFn tree.HashFn) Root {
 	return Uint64View(t).HashTreeRoot(hFn)
 }
 
+func (e Timestamp) MarshalJSON() ([]byte, error) {
+	return Uint64View(e).MarshalJSON()
+}
+
+func (e *Timestamp) UnmarshalJSON(b []byte) error {
+	return ((*Uint64View)(e)).UnmarshalJSON(b)
+}
+
 func AsTimestamp(v View, err error) (Timestamp, error) {
 	i, err := AsUint64(v, err)
 	return Timestamp(i), err
@@ -69,6 +77,14 @@ func (i DepositIndex) HashTreeRoot(hFn tree.HashFn) Root {
 	return Uint64View(i).HashTreeRoot(hFn)
 }
 
+func (e DepositIndex) MarshalJSON() ([]byte, error) {
+	return Uint64View(e).MarshalJSON()
+}
+
+func (e *DepositIndex) UnmarshalJSON(b []byte) error {
+	return ((*Uint64View)(e)).UnmarshalJSON(b)
+}
+
 const SlotType = Uint64Type
 
 type Slot Uint64View
@@ -95,6 +111,14 @@ func (Slot) FixedLength() uint64 {
 
 func (s Slot) HashTreeRoot(hFn tree.HashFn) Root {
 	return Uint64View(s).HashTreeRoot(hFn)
+}
+
+func (e Slot) MarshalJSON() ([]byte, error) {
+	return Uint64View(e).MarshalJSON()
+}
+
+func (e *Slot) UnmarshalJSON(b []byte) error {
+	return ((*Uint64View)(e)).UnmarshalJSON(b)
 }
 
 func AsSlot(v View, err error) (Slot, error) {
@@ -147,6 +171,14 @@ func (e Epoch) Previous() Epoch {
 	} else {
 		return e - 1
 	}
+}
+
+func (e Epoch) MarshalJSON() ([]byte, error) {
+	return Uint64View(e).MarshalJSON()
+}
+
+func (e *Epoch) UnmarshalJSON(b []byte) error {
+	return ((*Uint64View)(e)).UnmarshalJSON(b)
 }
 
 func AsEpoch(v View, err error) (Epoch, error) {

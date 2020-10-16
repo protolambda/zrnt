@@ -32,6 +32,14 @@ func (e Shard) HashTreeRoot(hFn tree.HashFn) Root {
 	return Uint64View(e).HashTreeRoot(hFn)
 }
 
+func (e Shard) MarshalJSON() ([]byte, error) {
+	return Uint64View(e).MarshalJSON()
+}
+
+func (e *Shard) UnmarshalJSON(b []byte) error {
+	return ((*Uint64View)(e)).UnmarshalJSON(b)
+}
+
 const ShardType = Uint64Type
 
 type CommitteeIndex Uint64View
@@ -54,6 +62,14 @@ func (CommitteeIndex) FixedLength() uint64 {
 
 func (i CommitteeIndex) HashTreeRoot(hFn tree.HashFn) Root {
 	return Uint64View(i).HashTreeRoot(hFn)
+}
+
+func (e CommitteeIndex) MarshalJSON() ([]byte, error) {
+	return Uint64View(e).MarshalJSON()
+}
+
+func (e *CommitteeIndex) UnmarshalJSON(b []byte) error {
+	return ((*Uint64View)(e)).UnmarshalJSON(b)
 }
 
 const CommitteeIndexType = Uint64Type
@@ -83,6 +99,14 @@ func (g Gwei) FixedLength() uint64 {
 
 func (g Gwei) HashTreeRoot(hFn tree.HashFn) Root {
 	return Uint64View(g).HashTreeRoot(hFn)
+}
+
+func (e Gwei) MarshalJSON() ([]byte, error) {
+	return Uint64View(e).MarshalJSON()
+}
+
+func (e *Gwei) UnmarshalJSON(b []byte) error {
+	return ((*Uint64View)(e)).UnmarshalJSON(b)
 }
 
 const GweiType = Uint64Type

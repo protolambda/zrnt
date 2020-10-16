@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestStateLoad(t *testing.T) {
+func TestStateJSON(t *testing.T) {
 	b, err := ioutil.ReadFile("data/zinken_genesis_state.json")
 	if err != nil {
 		t.Fatalf("failed to open state: %v", err)
@@ -22,9 +22,21 @@ func TestStateLoad(t *testing.T) {
 	if root.String() != "0x7bf61f7e24ae8d6c21d61b066af5637c5e7ef5022d1deb001094d83b468610a1" {
 		t.Fatalf("bad state root, decoded data must be wrong. Got state root: %s", root)
 	}
+	out, err := json.Marshal(&state)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	var state2 beacon.BeaconState
+	if err := json.Unmarshal(out, &state2); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	root2 := state2.HashTreeRoot(configs.Mainnet, tree.GetHashFn())
+	if root != root2 {
+		t.Fatalf("round trip encode/decode failed, got root: %s", root)
+	}
 }
 
-func TestSignedBeaconBlockLoad(t *testing.T) {
+func TestSignedBeaconBlockJSON(t *testing.T) {
 	b, err := ioutil.ReadFile("data/zinken_signed_block.json")
 	if err != nil {
 		t.Fatalf("failed to open block: %v", err)
@@ -43,9 +55,21 @@ func TestSignedBeaconBlockLoad(t *testing.T) {
 		}
 		t.Fatalf("bad block root, decoded data must be wrong. Got block root: %s", root)
 	}
+	out, err := json.Marshal(&signedBlock)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	var signedBlock2 beacon.SignedBeaconBlock
+	if err := json.Unmarshal(out, &signedBlock2); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	root2 := signedBlock2.HashTreeRoot(configs.Mainnet, tree.GetHashFn())
+	if root != root2 {
+		t.Fatalf("round trip encode/decode failed, got root: %s", root)
+	}
 }
 
-func TestSignedBeaconHeaderLoad(t *testing.T) {
+func TestSignedBeaconHeaderJSON(t *testing.T) {
 	b, err := ioutil.ReadFile("data/zinken_signed_header.json")
 	if err != nil {
 		t.Fatalf("failed to open block: %v", err)
@@ -66,5 +90,17 @@ func TestSignedBeaconHeaderLoad(t *testing.T) {
 		}
 		t.Log(signedHeader.Message.BodyRoot.String())
 		t.Fatalf("bad block root, decoded data must be wrong. Got block root: %s", root)
+	}
+	out, err := json.Marshal(&signedHeader)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	var signedHeader2 beacon.SignedBeaconBlockHeader
+	if err := json.Unmarshal(out, &signedHeader2); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	root2 := signedHeader2.HashTreeRoot(tree.GetHashFn())
+	if root != root2 {
+		t.Fatalf("round trip encode/decode failed, got root: %s", root)
 	}
 }

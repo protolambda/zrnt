@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/protolambda/ztyp/codec"
+	"github.com/protolambda/ztyp/conv"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
@@ -166,6 +167,14 @@ func (jb *JustificationBits) IsJustified(epochsAgo ...Epoch) bool {
 		}
 	}
 	return true
+}
+
+func (jb JustificationBits) MarshalText() ([]byte, error) {
+	return conv.BytesMarshalText(jb[:])
+}
+
+func (jb *JustificationBits) UnmarshalText(text []byte) error {
+	return conv.FixedBytesUnmarshalText(jb[:], text)
 }
 
 var JustificationBitsType = BitVectorType(JUSTIFICATION_BITS_LENGTH)

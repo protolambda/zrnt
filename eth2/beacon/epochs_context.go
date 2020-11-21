@@ -319,6 +319,10 @@ func (epc *EpochsContext) LoadProposers(state *BeaconStateView) error {
 }
 
 func (epc *EpochsContext) resetProposers(state *BeaconStateView) error {
+	// no validators? No proposers to compute. Keep it nil so we can detect and compute it later.
+	if len(epc.CurrentEpoch.ActiveIndices) == 0 {
+		return nil
+	}
 	epc.Proposers = make([]ValidatorIndex, epc.Spec.SLOTS_PER_EPOCH, epc.Spec.SLOTS_PER_EPOCH)
 	mixes, err := state.RandaoMixes()
 	if err != nil {

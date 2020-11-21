@@ -106,15 +106,22 @@ func (spec *Spec) GenesisFromEth1(eth1BlockHash Root, time Timestamp, deps []Dep
 	if Slot(valCount) < spec.SLOTS_PER_EPOCH {
 		return nil, nil, errors.New("not enough validators to init full featured BeaconState")
 	}
-
+	bals, err := state.Balances()
+	if err != nil {
+		panic(err)
+	}
 	// Process activations
 	for i := uint64(0); i < valCount; i++ {
 		val, err := AsValidator(vals.Get(i))
 		if err != nil {
 			return nil, nil, err
 		}
-		vEff, err := val.EffectiveBalance()
-		if err != nil {
+		balance, err := bals.GetBalance(ValidatorIndex(i))
+		vEff := balance - (balance % spec.EFFECTIVE_BALANCE_INCREMENT)
+		if vEff > spec.MAX_EFFECTIVE_BALANCE {
+			vEff = spec.MAX_EFFECTIVE_BALANCE
+		}
+		if err := val.SetEffectiveBalance(vEff); err != nil {
 			return nil, nil, err
 		}
 		if vEff == spec.MAX_EFFECTIVE_BALANCE {

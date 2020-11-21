@@ -252,10 +252,8 @@ func (spec *Spec) ProcessDeposit(epc *EpochsContext, state *BeaconStateView, dep
 	}
 	valIndex, ok := epc.PubkeyCache.ValidatorIndex(dep.Data.Pubkey)
 	// it exists if: it exists in the pubkey cache AND the validator index is lower than the current validator count.
-	exists := ok
-	if ok {
-		exists = uint64(valIndex) < valCount
-	} else {
+	exists := ok && uint64(valIndex) < valCount
+	if !exists {
 		valIndex = ValidatorIndex(valCount)
 	}
 

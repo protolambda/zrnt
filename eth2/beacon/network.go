@@ -94,10 +94,6 @@ func (p *AttnetBits) UnmarshalText(text []byte) error {
 
 type SeqNr Uint64View
 
-func (i SeqNr) String() string {
-	return fmt.Sprintf("SeqNr(%d)", i)
-}
-
 func (i *SeqNr) Deserialize(dr *codec.DecodingReader) error {
 	return (*Uint64View)(i).Deserialize(dr)
 }
@@ -126,11 +122,11 @@ func (i *SeqNr) UnmarshalJSON(b []byte) error {
 	return ((*Uint64View)(i)).UnmarshalJSON(b)
 }
 
-type Ping SeqNr
-
-func (i Ping) String() string {
-	return fmt.Sprintf("Ping(%d)", i)
+func (i SeqNr) String() string {
+	return Uint64View(i).String()
 }
+
+type Ping SeqNr
 
 func (i *Ping) Deserialize(dr *codec.DecodingReader) error {
 	return (*Uint64View)(i).Deserialize(dr)
@@ -160,11 +156,11 @@ func (i *Ping) UnmarshalJSON(b []byte) error {
 	return ((*Uint64View)(i)).UnmarshalJSON(b)
 }
 
-type Pong SeqNr
-
-func (i Pong) String() string {
-	return fmt.Sprintf("Pong(%d)", i)
+func (i Ping) String() string {
+	return Uint64View(i).String()
 }
+
+type Pong SeqNr
 
 func (i *Pong) Deserialize(dr *codec.DecodingReader) error {
 	return (*Uint64View)(i).Deserialize(dr)
@@ -192,6 +188,10 @@ func (i Pong) MarshalJSON() ([]byte, error) {
 
 func (i *Pong) UnmarshalJSON(b []byte) error {
 	return ((*Uint64View)(i)).UnmarshalJSON(b)
+}
+
+func (i Pong) String() string {
+	return Uint64View(i).String()
 }
 
 type MetaData struct {
@@ -299,14 +299,14 @@ func (i Goodbye) HashTreeRoot(hFn tree.HashFn) Root {
 	return Uint64View(i).HashTreeRoot(hFn)
 }
 
-func (i Goodbye) String() string {
-	return fmt.Sprintf("Goodbye(%d)", i)
-}
-
 func (i Goodbye) MarshalJSON() ([]byte, error) {
 	return Uint64View(i).MarshalJSON()
 }
 
 func (i *Goodbye) UnmarshalJSON(b []byte) error {
 	return ((*Uint64View)(i)).UnmarshalJSON(b)
+}
+
+func (i Goodbye) String() string {
+	return Uint64View(i).String()
 }

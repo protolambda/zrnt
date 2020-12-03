@@ -72,6 +72,10 @@ func (dom BLSDomain) HashTreeRoot(hFn tree.HashFn) Root {
 	return Root(dom) // just convert to root type (no hashing involved)
 }
 
+func (dom BLSDomain) String() string {
+	return "0x" + hex.EncodeToString(dom[:])
+}
+
 func ComputeDomain(domainType BLSDomainType, forkVersion Version, genesisValidatorsRoot Root) (out BLSDomain) {
 	copy(out[0:4], domainType[:])
 	forkDataRoot := ComputeForkDataRoot(forkVersion, genesisValidatorsRoot)

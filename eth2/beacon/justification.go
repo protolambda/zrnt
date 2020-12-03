@@ -177,6 +177,10 @@ func (jb *JustificationBits) UnmarshalText(text []byte) error {
 	return conv.FixedBytesUnmarshalText(jb[:], text)
 }
 
+func (jb *JustificationBits) String() string {
+	return conv.BytesString(jb[:])
+}
+
 var JustificationBitsType = BitVectorType(JUSTIFICATION_BITS_LENGTH)
 
 type JustificationBitsView struct {

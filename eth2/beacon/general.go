@@ -40,6 +40,10 @@ func (e *Shard) UnmarshalJSON(b []byte) error {
 	return ((*Uint64View)(e)).UnmarshalJSON(b)
 }
 
+func (e Shard) String() string {
+	return Uint64View(e).String()
+}
+
 const ShardType = Uint64Type
 
 type CommitteeIndex Uint64View
@@ -70,6 +74,10 @@ func (e CommitteeIndex) MarshalJSON() ([]byte, error) {
 
 func (e *CommitteeIndex) UnmarshalJSON(b []byte) error {
 	return ((*Uint64View)(e)).UnmarshalJSON(b)
+}
+
+func (e CommitteeIndex) String() string {
+	return Uint64View(e).String()
 }
 
 const CommitteeIndexType = Uint64Type
@@ -107,6 +115,10 @@ func (e Gwei) MarshalJSON() ([]byte, error) {
 
 func (e *Gwei) UnmarshalJSON(b []byte) error {
 	return ((*Uint64View)(e)).UnmarshalJSON(b)
+}
+
+func (e Gwei) String() string {
+	return Uint64View(e).String()
 }
 
 const GweiType = Uint64Type

@@ -45,6 +45,10 @@ func (e *ValidatorIndex) UnmarshalJSON(b []byte) error {
 	return ((*Uint64View)(e)).UnmarshalJSON(b)
 }
 
+func (e ValidatorIndex) String() string {
+	return Uint64View(e).String()
+}
+
 // Custom constant, not in spec:
 // An impossible high validator index used to mark special internal cases. (all 1s binary)
 const ValidatorIndexMarker = ValidatorIndex(^uint64(0))

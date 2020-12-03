@@ -44,6 +44,10 @@ func (e *Timestamp) UnmarshalJSON(b []byte) error {
 	return ((*Uint64View)(e)).UnmarshalJSON(b)
 }
 
+func (e Timestamp) String() string {
+	return Uint64View(e).String()
+}
+
 func AsTimestamp(v View, err error) (Timestamp, error) {
 	i, err := AsUint64(v, err)
 	return Timestamp(i), err
@@ -85,6 +89,10 @@ func (e *DepositIndex) UnmarshalJSON(b []byte) error {
 	return ((*Uint64View)(e)).UnmarshalJSON(b)
 }
 
+func (e DepositIndex) String() string {
+	return Uint64View(e).String()
+}
+
 const SlotType = Uint64Type
 
 type Slot Uint64View
@@ -119,6 +127,10 @@ func (e Slot) MarshalJSON() ([]byte, error) {
 
 func (e *Slot) UnmarshalJSON(b []byte) error {
 	return ((*Uint64View)(e)).UnmarshalJSON(b)
+}
+
+func (e Slot) String() string {
+	return Uint64View(e).String()
 }
 
 func AsSlot(v View, err error) (Slot, error) {
@@ -179,6 +191,10 @@ func (e Epoch) MarshalJSON() ([]byte, error) {
 
 func (e *Epoch) UnmarshalJSON(b []byte) error {
 	return ((*Uint64View)(e)).UnmarshalJSON(b)
+}
+
+func (e Epoch) String() string {
+	return Uint64View(e).String()
 }
 
 func AsEpoch(v View, err error) (Epoch, error) {

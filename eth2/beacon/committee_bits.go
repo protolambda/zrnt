@@ -66,6 +66,10 @@ func bytesUnmarshalText(dst *[]byte, text []byte) error {
 	return nil
 }
 
+func (cb CommitteeBits) String() string {
+	return conv.BytesString(cb[:])
+}
+
 func (cb CommitteeBits) BitLen() uint64 {
 	return bitfields.BitlistLen(cb)
 }

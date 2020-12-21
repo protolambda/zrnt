@@ -2,8 +2,8 @@ package forkchoice
 
 import (
 	"errors"
-	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon"
+	"sync"
 )
 
 type Root = beacon.Root
@@ -100,14 +100,11 @@ func (pr *ProtoArray) CanonicalChain(anchorRoot Root) ([]BlockRef, error) {
 	return chain, nil
 }
 
+// Find the blocks before, at and after the requested slot. Returned refs are zeroed if not available.
 func (pr *ProtoArray) BlocksAroundSlot(anchor Root, slot Slot) (before BlockRef, at BlockRef, after BlockRef, err error) {
 	var head BlockRef
 	head, err = pr.FindHead(anchor)
 	if err != nil {
-		return
-	}
-	if slot > head.Slot {
-		err = fmt.Errorf("head is too old for slot. Head at %d, but request was %d", head.Slot, slot)
 		return
 	}
 	// Walk back the canonical chain, and stop as soon as we find the blocks around the slot of interest.
@@ -124,14 +121,11 @@ func (pr *ProtoArray) BlocksAroundSlot(anchor Root, slot Slot) (before BlockRef,
 		if node.Block.Slot == slot {
 			at = node.Block
 		}
-		if node.Block.Slot < head.Slot {
+		if node.Block.Slot < slot {
 			before = node.Block
 			break
 		}
 		index = node.Parent
-	}
-	if at.Root == (Root{}) {
-		err = errors.New("could not find block")
 	}
 	return
 }
@@ -206,7 +200,7 @@ func (pr *ProtoArray) updateConnections() error {
 
 // Register a block with the fork choice.
 //
-// It is only sane to supply a `None` parent for the genesis block.
+// It is only sane to supply a `None` parent for the genesis block (zeroed root).
 func (pr *ProtoArray) OnBlock(block BlockRef, parent Root, justifiedEpoch Epoch, finalizedEpoch Epoch) {
 	// If the block is already known, simply ignore it.
 	if pr.ContainsBlock(block.Root) {
@@ -435,27 +429,42 @@ type VoteTracker struct {
 }
 
 type ForkChoice struct {
+	sync.RWMutex
 	protoArray *ProtoArray
 	votes      []VoteTracker
 	balances   []Gwei
-	justified  Checkpoint
-	finalized  Checkpoint
+	// The block root to start forkchoice from.
+	// At genesis, explicitly set to genesis, since there is no "justified" root yet.
+	// Later updated with justified state.
+	// May be modified to pin a sub-tree for soft-fork purposes.
+	anchor    Root
+	justified Checkpoint
+	finalized Checkpoint
 }
 
-func NewForkChoice(finalized Checkpoint, justified Checkpoint, sink BlockSink) *ForkChoice {
-	return &ForkChoice{
+func NewForkChoice(finalized Checkpoint, justified Checkpoint, anchor BlockRef, anchorParent Root, sink BlockSink) *ForkChoice {
+	fc := &ForkChoice{
 		protoArray: NewProtoArray(justified.Epoch, finalized.Epoch, sink),
 		votes:      nil,
 		balances:   nil,
 		justified:  justified,
 		finalized:  finalized,
 	}
+	fc.ProcessBlock(anchor, anchorParent, justified.Epoch, finalized.Epoch)
+	fc.anchor = anchor.Root
+	return fc
 }
 
 func (fc *ForkChoice) ProcessAttestation(index ValidatorIndex, blockRoot Root, targetEpoch Epoch) {
-	if index > ValidatorIndex(len(fc.votes)) {
-		extension := make([]VoteTracker, index-ValidatorIndex(len(fc.votes)))
-		fc.votes = append(fc.votes, extension...)
+	fc.Lock()
+	defer fc.Unlock()
+	if index >= ValidatorIndex(len(fc.votes)) {
+		if index < ValidatorIndex(cap(fc.votes)) {
+			fc.votes = fc.votes[:index+1]
+		} else {
+			extension := make([]VoteTracker, index+1-ValidatorIndex(len(fc.votes)))
+			fc.votes = append(fc.votes, extension...)
+		}
 	}
 	vote := &fc.votes[index]
 	if targetEpoch > vote.NextEpoch {
@@ -465,10 +474,20 @@ func (fc *ForkChoice) ProcessAttestation(index ValidatorIndex, blockRoot Root, t
 }
 
 func (fc *ForkChoice) ProcessBlock(block BlockRef, parentRoot Root, justifiedEpoch Epoch, finalizedEpoch Epoch) {
+	fc.Lock()
+	defer fc.Unlock()
 	fc.protoArray.OnBlock(block, parentRoot, justifiedEpoch, finalizedEpoch)
 }
 
+func (fc *ForkChoice) PinAnchor(root Root) {
+	fc.Lock()
+	defer fc.Unlock()
+	fc.anchor = root
+}
+
 func (fc *ForkChoice) UpdateJustified(justified Checkpoint, finalized Checkpoint, justifiedStateBalances []Gwei) error {
+	fc.Lock()
+	defer fc.Unlock()
 	oldBals := fc.balances
 	newBals := justifiedStateBalances
 
@@ -481,6 +500,7 @@ func (fc *ForkChoice) UpdateJustified(justified Checkpoint, finalized Checkpoint
 	fc.balances = newBals
 	fc.justified = justified
 	fc.finalized = finalized
+	fc.anchor = justified.Root
 
 	return nil
 }
@@ -493,16 +513,23 @@ func (fc *ForkChoice) Finalized() Checkpoint {
 	return fc.finalized
 }
 
+// Find the blocks before, at and after the requested slot. Returned refs are zeroed if not available.
 func (fc *ForkChoice) BlocksAroundSlot(anchor Root, slot Slot) (before BlockRef, at BlockRef, after BlockRef, err error) {
+	fc.RLock()
+	defer fc.RUnlock()
 	return fc.protoArray.BlocksAroundSlot(anchor, slot)
 }
 
 func (fc *ForkChoice) GetBlock(root Root) (block BlockRef, ok bool) {
+	fc.RLock()
+	defer fc.RUnlock()
 	return fc.protoArray.GetBlock(root)
 }
 
 func (fc *ForkChoice) FindHead() (BlockRef, error) {
-	return fc.protoArray.FindHead(fc.justified.Root)
+	fc.Lock()
+	defer fc.Unlock()
+	return fc.protoArray.FindHead(fc.anchor)
 }
 
 // Returns a list of `deltas`, where there is one delta for each of the ProtoArray nodes.

@@ -92,7 +92,7 @@ func (spec *Spec) ProcessSlots(ctx context.Context, epc *EpochsContext, state *B
 	if err != nil {
 		return err
 	}
-	if currentSlot > slot {
+	if currentSlot >= slot {
 		return errors.New("cannot transition from pre-state with higher or equal slot than transition target")
 	}
 	for currentSlot < slot {

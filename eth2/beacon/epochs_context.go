@@ -332,7 +332,10 @@ func (epc *EpochsContext) resetProposers(state *BeaconStateView) error {
 	if err != nil {
 		return err
 	}
-	slot := epc.Spec.EpochStartSlot(epc.CurrentEpoch.Epoch)
+	slot, err := epc.Spec.EpochStartSlot(epc.CurrentEpoch.Epoch)
+	if err != nil {
+		return err
+	}
 	hFn := hashing.GetHashFn()
 	var buf [32 + 8]byte
 	copy(buf[0:32], epochSeed[:])

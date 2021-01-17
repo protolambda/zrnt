@@ -230,3 +230,14 @@ func (attestation *Attestation) ConvertToIndexed(spec *Spec, committee []Validat
 		Signature:        attestation.Signature,
 	}, nil
 }
+
+func (spec *Spec) ComputeSubnetForAttestation(committeesPerSlot uint64, slot Slot, committeeIndex CommitteeIndex) (uint64, error) {
+	maxCommitteeIndex := CommitteeIndex(committeesPerSlot * uint64(spec.SLOTS_PER_EPOCH))
+	if committeeIndex >= maxCommitteeIndex {
+		return 0, fmt.Errorf("committee index %d >= maximum %d", committeeIndex, maxCommitteeIndex)
+	}
+	slotsSinceEpochStart := uint64(slot % spec.SLOTS_PER_EPOCH)
+	committeesSinceEpochStart := committeesPerSlot * slotsSinceEpochStart
+
+	return (committeesSinceEpochStart + uint64(committeeIndex)) % ATTESTATION_SUBNET_COUNT, nil
+}

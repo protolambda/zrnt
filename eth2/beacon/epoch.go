@@ -161,7 +161,11 @@ func (spec *Spec) PrepareEpochProcess(ctx context.Context, epc *EpochsContext, s
 		epoch Epoch,
 		sourceFlag, targetFlag, headFlag AttesterFlag) error {
 
-		actualTargetBlockRoot, err := spec.GetBlockRootAtSlot(state, spec.EpochStartSlot(epoch))
+		startSlot, err := spec.EpochStartSlot(epoch)
+		if err != nil {
+			return err
+		}
+		actualTargetBlockRoot, err := spec.GetBlockRootAtSlot(state, startSlot)
 		if err != nil {
 			return err
 		}

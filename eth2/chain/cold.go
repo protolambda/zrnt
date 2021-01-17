@@ -147,6 +147,10 @@ func (f *FinalizedChain) ByStateRoot(root Root) (ChainEntry, error) {
 func (f *FinalizedChain) ByBlockRoot(root Root) (ChainEntry, error) {
 	f.RLock()
 	defer f.RUnlock()
+	return f.byBlockRoot(root)
+}
+
+func (f *FinalizedChain) byBlockRoot(root Root) (ChainEntry, error) {
 	slot, ok := f.SlotsByBlockRoot[root]
 	if !ok {
 		return nil, UnknownRootErr
@@ -172,6 +176,27 @@ func (f *FinalizedChain) ClosestFrom(fromBlockRoot Root, toSlot Slot) (ChainEntr
 		toSlot = end - 1
 	}
 	return f.bySlot(toSlot)
+}
+
+func (f *FinalizedChain) IsAncestor(root Root, ofRoot Root) (unknown bool, isAncestor bool) {
+	f.RLock()
+	defer f.RUnlock()
+
+	// can't be ancestors if they are equal.
+	if root == ofRoot {
+		return false, false
+	}
+	anchor, err := f.byBlockRoot(ofRoot)
+	if err != nil {
+		return true, false
+	}
+	lookup, err := f.byBlockRoot(root)
+	if err != nil {
+		return true, false
+	}
+	// if the nodes are the other way around,
+	// they do not have the same ancestor relation, even though they are on the same chain.
+	return true, anchor.Slot() < lookup.Slot()
 }
 
 func (f *FinalizedChain) BySlot(slot Slot) (ChainEntry, error) {

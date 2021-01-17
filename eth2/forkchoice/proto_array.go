@@ -264,6 +264,41 @@ func (pr *ProtoArray) FindHead(anchorRoot Root) (BlockRef, error) {
 	return bestNode.Block, nil
 }
 
+func (pr *ProtoArray) IsAncestor(root Root, ofRoot Root) (unknown bool, isAncestor bool) {
+	// can't be ancestors if they are equal.
+	if root == ofRoot {
+		return false, false
+	}
+	if !pr.updatedConnections {
+		if err := pr.updateConnections(); err != nil {
+			return true, false
+		}
+	}
+	anchorIndex, ok := pr.indices[ofRoot]
+	if !ok {
+		return true, false
+	}
+	anchorNode, err := pr.getNode(anchorIndex)
+	if err != nil {
+		return true, false
+	}
+	lookupIndex, ok := pr.indices[root]
+	if !ok {
+		return true, false
+	}
+	lookupNode, err := pr.getNode(lookupIndex)
+	if err != nil {
+		return true, false
+	}
+	// ofRoot is later on the same chain than the looked up root.
+	// So ofRoot may be an ancestor of root, but not vice versa.
+	if anchorNode.Block.Slot >= lookupNode.Block.Slot {
+		return false, false
+	}
+	sameChain := anchorNode.BestDescendant == lookupNode.BestDescendant
+	return false, sameChain
+}
+
 var HeadUnknownErr = errors.New("array has invalid state, head has no index")
 
 // Update the tree with new finalization information (or alternatively another trusted root)
@@ -511,6 +546,12 @@ func (fc *ForkChoice) Justified() Checkpoint {
 
 func (fc *ForkChoice) Finalized() Checkpoint {
 	return fc.finalized
+}
+
+func (fc *ForkChoice) IsAncestor(root Root, ofRoot Root) (unknown bool, isAncestor bool) {
+	fc.RLock()
+	defer fc.RUnlock()
+	return fc.protoArray.IsAncestor(root, ofRoot)
 }
 
 // Find the blocks before, at and after the requested slot. Returned refs are zeroed if not available.

@@ -9,6 +9,7 @@ import (
 	"github.com/protolambda/ztyp/conv"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
+	"math/bits"
 )
 
 // CommitteeBits is formatted as a serialized SSZ bitlist, including the delimit bit
@@ -91,6 +92,8 @@ func (cb CommitteeBits) Or(other CommitteeBits) {
 
 // In-place filters a list of committees indices to only keep the bitfield participants.
 // The result is not sorted. Returns the re-sliced filtered participants list.
+//
+// WARNING: unsafe to use, panics if committee size does not match.
 func (cb CommitteeBits) FilterParticipants(committee []ValidatorIndex) []ValidatorIndex {
 	bitLen := cb.BitLen()
 	out := committee[:0]
@@ -107,6 +110,8 @@ func (cb CommitteeBits) FilterParticipants(committee []ValidatorIndex) []Validat
 
 // In-place filters a list of committees indices to only keep the bitfield NON-participants.
 // The result is not sorted. Returns the re-sliced filtered non-participants list.
+//
+// WARNING: unsafe to use, panics if committee size does not match.
 func (cb CommitteeBits) FilterNonParticipants(committee []ValidatorIndex) []ValidatorIndex {
 	bitLen := cb.BitLen()
 	out := committee[:0]
@@ -119,6 +124,45 @@ func (cb CommitteeBits) FilterNonParticipants(committee []ValidatorIndex) []Vali
 		}
 	}
 	return out
+}
+
+func (cb CommitteeBits) OnesCount() uint64 {
+	if len(cb) == 0 {
+		return 0
+	}
+	count := uint64(0)
+	for i := 0; i < len(cb)-1; i++ {
+		count += uint64(bits.OnesCount8(cb[i]))
+	}
+	last := cb[len(cb)-1]
+	if last == 0 {
+		return count
+	}
+	// ignore the delimiter bit.
+	last ^= uint8(1) << (cb.BitLen() % 8)
+	count += uint64(bits.OnesCount8(last))
+	return count
+}
+
+func (cb CommitteeBits) SingleParticipant(committee []ValidatorIndex) (ValidatorIndex, error) {
+	bitLen := cb.BitLen()
+	if bitLen != uint64(len(committee)) {
+		return 0, fmt.Errorf("committee mismatch, bitfield length %d does not match committee size %d", bitLen, len(committee))
+	}
+	var found *ValidatorIndex
+	for i := uint64(0); i < bitLen; i++ {
+		if cb.GetBit(i) {
+			if found == nil {
+				found = &committee[i]
+			} else {
+				return 0, fmt.Errorf("found at least two participants: %d and %d", *found, committee[i])
+			}
+		}
+	}
+	if found == nil {
+		return 0, fmt.Errorf("found no participants")
+	}
+	return *found, nil
 }
 
 func (c *Phase0Config) CommitteeBits() *BitListTypeDef {

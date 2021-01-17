@@ -36,6 +36,9 @@ type Chain interface {
 	ByStateRoot(root Root) (ChainEntry, error)
 	ByBlockRoot(root Root) (ChainEntry, error)
 	ClosestFrom(fromBlockRoot Root, toSlot Slot) (ChainEntry, error)
+	// Returns true if the given root is something that builds (maybe indirectly)
+	// on the ofRoot on the same chain.
+	IsAncestor(root Root, ofRoot Root) (unknown bool, isAncestor bool)
 	BySlot(slot Slot) (ChainEntry, error)
 	Iter() (ChainIter, error)
 }
@@ -139,6 +142,23 @@ func (hc *HotColdChain) ClosestFrom(fromBlockRoot Root, toSlot Slot) (ChainEntry
 		return coldEntry, nil
 	}
 	return hotEntry, nil
+}
+
+func (hc *HotColdChain) IsAncestor(root Root, ofRoot Root) (unknown bool, isAncestor bool) {
+	// if the last two of the roots is known in the cold chain, just have the cold chain deal with it.
+	_, err := hc.ColdChain.ByBlockRoot(root)
+	if err == nil {
+		return hc.ColdChain.IsAncestor(root, ofRoot)
+	}
+	// if the first of the roots is known in the cold chain, while the later one is not,
+	//  then it's an ancestor if the later one builds on the dividing node between the two chains
+	_, err = hc.ColdChain.ByBlockRoot(ofRoot)
+	if err == nil {
+		fin := hc.HotChain.Finalized()
+		return hc.HotChain.IsAncestor(root, fin.Root)
+	}
+	// Both are not in the cold chain, have the hot chain deal with it.
+	return hc.HotChain.IsAncestor(root, ofRoot)
 }
 
 func (hc *HotColdChain) BySlot(slot Slot) (ChainEntry, error) {

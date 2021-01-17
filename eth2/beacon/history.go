@@ -99,7 +99,11 @@ func (spec *Spec) GetBlockRoot(state *BeaconStateView, epoch Epoch) (Root, error
 	if err != nil {
 		return Root{}, err
 	}
-	return blockRoots.GetRoot(spec.EpochStartSlot(epoch))
+	startSlot, err := spec.EpochStartSlot(epoch)
+	if err != nil {
+		return Root{}, err
+	}
+	return blockRoots.GetRoot(startSlot)
 }
 
 func (c *Phase0Config) HistoricalBatch() *ContainerTypeDef {

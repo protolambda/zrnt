@@ -275,13 +275,15 @@ func (uc *UnfinalizedChain) ClosestFrom(fromBlockRoot Root, toSlot Slot) (ChainE
 		return uc.byBlockSlot(NewBlockSlotKey(at.Root, at.Slot))
 	}
 	if before != (forkchoice.BlockRef{}) {
-		key := NewBlockSlotKey(before.Root, before.Slot)
-		entry, ok := uc.Entries[key]
-		if ok {
-			return entry, nil
-		}
+		return uc.byBlockSlot(NewBlockSlotKey(before.Root, before.Slot))
 	}
 	return nil, fmt.Errorf("could not find closest hot block starting from root %s, up to slot %d", fromBlockRoot, toSlot)
+}
+
+func (uc *UnfinalizedChain) IsAncestor(root Root, ofRoot Root) (unknown bool, isAncestor bool) {
+	uc.RLock()
+	defer uc.RUnlock()
+	return uc.ForkChoice.IsAncestor(root, ofRoot)
 }
 
 func (uc *UnfinalizedChain) BySlot(slot Slot) (ChainEntry, error) {

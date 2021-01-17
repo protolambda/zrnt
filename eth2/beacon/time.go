@@ -1,6 +1,7 @@
 package beacon
 
 import (
+	"errors"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
@@ -142,13 +143,12 @@ const EpochType = Uint64Type
 
 type Epoch Uint64View
 
-func (spec *Spec) EpochStartSlot(e Epoch) Slot {
+func (spec *Spec) EpochStartSlot(e Epoch) (Slot, error) {
 	out := Slot(e) * spec.SLOTS_PER_EPOCH
-	// check if it overflowed, saturate on max value if so.
 	if e != spec.SlotToEpoch(out) {
-		return ^Slot(0)
+		return 0, errors.New("epoch to slot overflow")
 	} else {
-		return out
+		return out, nil
 	}
 }
 

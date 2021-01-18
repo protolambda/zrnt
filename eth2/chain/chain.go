@@ -35,9 +35,12 @@ type ChainEntry interface {
 type Chain interface {
 	ByStateRoot(root Root) (ChainEntry, error)
 	ByBlockRoot(root Root) (ChainEntry, error)
+	// Find closest ref in subtree, up to given slot (may return entry of fromBlockRoot itself).
+	// Err if none, incl. fromBlockRoot, could be found.
 	ClosestFrom(fromBlockRoot Root, toSlot Slot) (ChainEntry, error)
 	// Returns true if the given root is something that builds (maybe indirectly)
 	// on the ofRoot on the same chain.
+	// If root == ofRoot, then it is NOT considered an ancestor here.
 	IsAncestor(root Root, ofRoot Root) (unknown bool, isAncestor bool)
 	BySlot(slot Slot) (ChainEntry, error)
 	Iter() (ChainIter, error)
@@ -145,6 +148,10 @@ func (hc *HotColdChain) ClosestFrom(fromBlockRoot Root, toSlot Slot) (ChainEntry
 }
 
 func (hc *HotColdChain) IsAncestor(root Root, ofRoot Root) (unknown bool, isAncestor bool) {
+	// can't be ancestors if they are equal.
+	if root == ofRoot {
+		return false, false
+	}
 	// if the last two of the roots is known in the cold chain, just have the cold chain deal with it.
 	_, err := hc.ColdChain.ByBlockRoot(root)
 	if err == nil {

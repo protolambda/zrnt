@@ -49,7 +49,6 @@ type GossipValidator struct {
 	// Returns the slot after the given duration elapsed. The duration may be negative. It clips on genesis.
 	SlotAfter func(delta time.Duration) beacon.Slot
 
-	// Like BeaconState.GetDomain, but with full checkpoint information,
-	// to determine the fork and such without the state.
-	GetDomain func(dom beacon.BLSDomainType, message beacon.Checkpoint) (beacon.BLSDomain, error)
+	// Like BeaconState.GetDomain, but assuming only one canonical fork schedule is maintained.
+	GetDomain func(dom beacon.BLSDomainType, epoch beacon.Epoch) (beacon.BLSDomain, error)
 }

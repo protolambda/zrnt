@@ -162,7 +162,7 @@ func (gv *GossipValidator) ValidateAttestation(ctx context.Context, subnet uint6
 	if !ok {
 		return GossipValidatorResult{IGNORE, errors.New("failed to find pubkey for voter, cache is wrong")}
 	}
-	dom, err := gv.GetDomain(gv.Spec.DOMAIN_BEACON_ATTESTER, att.Data.Target)
+	dom, err := gv.GetDomain(gv.Spec.DOMAIN_BEACON_ATTESTER, att.Data.Target.Epoch)
 	if err != nil {
 		return GossipValidatorResult{IGNORE, errors.New("failed to get domain info for signature check")}
 	}

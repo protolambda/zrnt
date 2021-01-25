@@ -86,18 +86,33 @@ func (gv *GossipValidator) ValidateBeaconBlock(ctx context.Context, signedBlock 
 	// [REJECT] The block is proposed by the expected proposer_index for the block's slot in the context of
 	// the current shuffling (defined by parent_root/slot).
 
-	// TODO: get target epoch EPC from chain, with potential necessary slot transitioning. Transitioning is missing now.
 	targetEpoch := gv.Spec.SlotToEpoch(block.Slot)
 	parentEpoch := gv.Spec.SlotToEpoch(parentRef.Slot())
 	var proposer beacon.ValidatorIndex
-	if targetEpoch == parentEpoch {
+	if parentEpoch == targetEpoch {
 		proposer, err = parentEpc.GetBeaconProposer(block.Slot)
 		if err != nil {
 			return GossipValidatorResult{IGNORE, fmt.Errorf("could not get proposer index for slot %d, from same epoch as parent block", block.Slot)}
 		}
+	} else if parentEpoch > targetEpoch {
+		return GossipValidatorResult{REJECT, fmt.Errorf("expected parent epoch %d to not be after target %d", parentEpoch, targetEpoch)}
 	} else {
-		// TODO There's transitioning to do.
-		proposer = 1234
+		towardsCtx, cancel := context.WithTimeout(ctx, catchupTimeout)
+		defer cancel()
+		// the block slot was valid, so this must be valid.
+		targetSlot, _ := gv.Spec.EpochStartSlot(targetEpoch)
+		slotRef, err := gv.Chain.Towards(towardsCtx, block.ParentRoot, targetSlot)
+		if err != nil {
+			return GossipValidatorResult{IGNORE, fmt.Errorf("could not transition towards target: %v", err)}
+		}
+		slotEpc, err := slotRef.EpochsContext(ctx)
+		if err != nil {
+			return GossipValidatorResult{IGNORE, fmt.Errorf("could not fetch epochs context for slot reference: %v", err)}
+		}
+		proposer, err = slotEpc.GetBeaconProposer(block.Slot)
+		if err != nil {
+			return GossipValidatorResult{IGNORE, fmt.Errorf("could not fetch block proposer slot reference: %v", err)}
+		}
 	}
 
 	if proposer != block.ProposerIndex {

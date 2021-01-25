@@ -19,6 +19,8 @@ type AttestationSeenFn func(targetEpoch beacon.Epoch, voter beacon.ValidatorInde
 // If votes for this block should be rejected.
 type IsBadBlockFn func(root beacon.Root) bool
 
+const catchupTimeout = time.Second * 2
+
 func (gv *GossipValidator) ValidateAttestation(ctx context.Context, subnet uint64, att *beacon.Attestation,
 	hasSeen AttestationSeenFn, isBadBlock IsBadBlockFn) GossipValidatorResult {
 
@@ -48,16 +50,6 @@ func (gv *GossipValidator) ValidateAttestation(ctx context.Context, subnet uint6
 	attEpoch := gv.Spec.SlotToEpoch(att.Data.Slot)
 	if att.Data.Target.Epoch != attEpoch {
 		return GossipValidatorResult{REJECT, fmt.Errorf("attestation slot %d is epoch %d and does not match target %d", att.Data.Slot, attEpoch, att.Data.Target.Epoch)}
-	}
-
-	targetRef, err := gv.Chain.ClosestFrom(att.Data.Target.Root, targetSlot)
-	if err != nil {
-		return GossipValidatorResult{IGNORE, fmt.Errorf("unknown target root %s: %w", att.Data.Target.Root, err)}
-	}
-
-	targetEpc, err := targetRef.EpochsContext(ctx)
-	if err != nil {
-		return GossipValidatorResult{IGNORE, fmt.Errorf("unavailable target epc %s: %w", att.Data.Target.Root, err)}
 	}
 
 	// [REJECT] The attestation is unaggregated -- that is, it has exactly one participating validator
@@ -111,7 +103,17 @@ func (gv *GossipValidator) ValidateAttestation(ctx context.Context, subnet uint6
 
 	// TODO: additional validation of data.source?
 
-	// TODO: transition to compute later committees
+	towardsCtx, cancel := context.WithTimeout(ctx, catchupTimeout)
+	defer cancel()
+	targetRef, err := gv.Chain.Towards(towardsCtx, att.Data.Target.Root, targetSlot)
+	if err != nil {
+		return GossipValidatorResult{IGNORE, fmt.Errorf("unknown target root %s: %w", att.Data.Target.Root, err)}
+	}
+
+	targetEpc, err := targetRef.EpochsContext(ctx)
+	if err != nil {
+		return GossipValidatorResult{IGNORE, fmt.Errorf("unavailable target epc %s: %w", att.Data.Target.Root, err)}
+	}
 
 	// [REJECT] The committee index is within the expected range --
 	// i.e. data.index < get_committee_count_per_slot(state, data.target.epoch).

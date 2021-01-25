@@ -3,6 +3,7 @@ package beacon
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 
@@ -54,13 +55,13 @@ func (a *ProposerSlashings) Deserialize(spec *Spec, dr *codec.DecodingReader) er
 	}, ProposerSlashingType.TypeByteLength(), spec.MAX_PROPOSER_SLASHINGS)
 }
 
-func (a ProposerSlashings) Serialize(spec *Spec, w *codec.EncodingWriter) error {
+func (a ProposerSlashings) Serialize(_ *Spec, w *codec.EncodingWriter) error {
 	return w.List(func(i uint64) codec.Serializable {
 		return &a[i]
 	}, ProposerSlashingType.TypeByteLength(), uint64(len(a)))
 }
 
-func (a ProposerSlashings) ByteLength(spec *Spec) (out uint64) {
+func (a ProposerSlashings) ByteLength(_ *Spec) (out uint64) {
 	return ProposerSlashingType.TypeByteLength() * uint64(len(a))
 }
 
@@ -93,14 +94,25 @@ func (spec *Spec) ProcessProposerSlashings(ctx context.Context, epc *EpochsConte
 	return nil
 }
 
-func (spec *Spec) ProcessProposerSlashing(epc *EpochsContext, state *BeaconStateView, ps *ProposerSlashing) error {
+func (spec *Spec) ValidateProposerSlashingNoSignature(ps *ProposerSlashing) error {
 	// Verify header slots match
-	if ps.SignedHeader1.Message.Slot != ps.SignedHeader2.Message.Slot {
-		return errors.New("proposer slashing requires slashing headers to have the same slot")
+	if a, b := ps.SignedHeader1.Message.Slot, ps.SignedHeader2.Message.Slot; a != b {
+		return fmt.Errorf("proposer slashing requires slashing headers to have the same slot: %d <> %d", a, b)
 	}
 	// Verify header proposer indices match
-	if ps.SignedHeader1.Message.ProposerIndex != ps.SignedHeader2.Message.ProposerIndex {
-		return errors.New("proposer slashing headers proposer-indices do not match")
+	if a, b := ps.SignedHeader1.Message.ProposerIndex, ps.SignedHeader2.Message.ProposerIndex; a != b {
+		return fmt.Errorf("proposer slashing headers proposer-indices do not match: %d <> %d", a, b)
+	}
+	// Verify the headers are different
+	if ps.SignedHeader1.Message == ps.SignedHeader2.Message {
+		return errors.New("proposer slashing requires two different headers")
+	}
+	return nil
+}
+
+func (spec *Spec) ProcessProposerSlashing(epc *EpochsContext, state *BeaconStateView, ps *ProposerSlashing) error {
+	if err := spec.ValidateProposerSlashingNoSignature(ps); err != nil {
+		return err
 	}
 	proposerIndex := ps.SignedHeader1.Message.ProposerIndex
 	// Verify header proposer index is valid
@@ -108,10 +120,6 @@ func (spec *Spec) ProcessProposerSlashing(epc *EpochsContext, state *BeaconState
 		return err
 	} else if !valid {
 		return errors.New("invalid proposer index")
-	}
-	// Verify the headers are different
-	if ps.SignedHeader1.Message == ps.SignedHeader2.Message {
-		return errors.New("proposer slashing requires two different headers")
 	}
 	currentEpoch := epc.CurrentEpoch.Epoch
 	// Verify the proposer is slashable

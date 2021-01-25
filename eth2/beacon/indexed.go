@@ -20,7 +20,7 @@ func (p *CommitteeIndices) Deserialize(spec *Spec, dr *codec.DecodingReader) err
 	}, ValidatorIndexType.TypeByteLength(), spec.MAX_VALIDATORS_PER_COMMITTEE)
 }
 
-func (a CommitteeIndices) Serialize(spec *Spec, w *codec.EncodingWriter) error {
+func (a CommitteeIndices) Serialize(_ *Spec, w *codec.EncodingWriter) error {
 	return w.List(func(i uint64) codec.Serializable {
 		return a[i]
 	}, ValidatorIndexType.TypeByteLength(), uint64(len(a)))
@@ -78,7 +78,7 @@ func (c *Phase0Config) IndexedAttestation() *ContainerTypeDef {
 	})
 }
 
-func ValidateIndexedAttestationIndicesSet(indexedAttestation *IndexedAttestation) (ValidatorSet, error) {
+func (spec *Spec) ValidateIndexedAttestationIndicesSet(indexedAttestation *IndexedAttestation) (ValidatorSet, error) {
 	// wrap it in validator-sets. Does not sort it, but does make checking if it is a lot easier.
 	indices := ValidatorSet(indexedAttestation.AttestingIndices)
 
@@ -107,7 +107,7 @@ func ValidateIndexedAttestationIndicesSet(indexedAttestation *IndexedAttestation
 }
 
 func (spec *Spec) ValidateIndexedAttestationNoSignature(state *BeaconStateView, indexedAttestation *IndexedAttestation) error {
-	indices, err := ValidateIndexedAttestationIndicesSet(indexedAttestation)
+	indices, err := spec.ValidateIndexedAttestationIndicesSet(indexedAttestation)
 	if err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func (spec *Spec) ValidateIndexedAttestationNoSignature(state *BeaconStateView, 
 	return nil
 }
 
-func ValidateIndexedAttestationSignature(dom BLSDomain, pubCache *PubkeyCache, indexedAttestation *IndexedAttestation) error {
+func (spec *Spec) ValidateIndexedAttestationSignature(dom BLSDomain, pubCache *PubkeyCache, indexedAttestation *IndexedAttestation) error {
 	pubkeys := make([]*CachedPubkey, 0, len(indexedAttestation.AttestingIndices))
 	for _, i := range indexedAttestation.AttestingIndices {
 		pub, ok := pubCache.Pubkey(i)
@@ -156,5 +156,5 @@ func (spec *Spec) ValidateIndexedAttestation(epc *EpochsContext, state *BeaconSt
 	if err != nil {
 		return err
 	}
-	return ValidateIndexedAttestationSignature(dom, epc.PubkeyCache, indexedAttestation)
+	return spec.ValidateIndexedAttestationSignature(dom, epc.PubkeyCache, indexedAttestation)
 }

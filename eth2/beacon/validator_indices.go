@@ -1,6 +1,7 @@
 package beacon
 
 import (
+	"fmt"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
@@ -140,6 +141,25 @@ func (vs ValidatorSet) MergeDisjoint(other ValidatorSet) ValidatorSet {
 		}
 	}
 	return out
+}
+
+// Filter the set in-place. Retains every validator for which the function returns true.
+func (vs *ValidatorSet) Filter(retain func(index ValidatorIndex) (bool, error)) error {
+	if vs == nil {
+		return nil
+	}
+	j := 0
+	vsr := *vs
+	for i := 0; i < len(vsr); i++ {
+		if res, err := retain(vsr[i]); err != nil {
+			return fmt.Errorf("validator %d failed check", vsr[i])
+		} else if res {
+			vsr[j] = vsr[i]
+			j++
+		}
+	}
+	*vs = vsr[:j]
+	return nil
 }
 
 // Joins two validator sets: check if there is any overlap

@@ -38,6 +38,11 @@ type Chain interface {
 	// Find closest ref in subtree, up to given slot (may return entry of fromBlockRoot itself).
 	// Err if none, incl. fromBlockRoot, could be found.
 	ClosestFrom(fromBlockRoot Root, toSlot Slot) (ChainEntry, error)
+	// TODO: implement this.
+	// First gets the closets ref from the given block root to the requested slot,
+	// then transitions empty slots to get up to the requested slot.
+	// A strict context should be provided to avoid costly long transitions.
+	Towards(ctx context.Context, fromBlockRoot Root, toSlot Slot) (ChainEntry, error)
 	// Returns true if the given root is something that builds (maybe indirectly)
 	// on the ofRoot on the same chain.
 	// If root == ofRoot, then it is NOT considered an ancestor here.

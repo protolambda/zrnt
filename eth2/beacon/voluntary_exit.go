@@ -123,7 +123,7 @@ var SignedVoluntaryExitType = ContainerType("SignedVoluntaryExit", []FieldDef{
 	{"signature", BLSSignatureType},
 })
 
-func (spec *Spec) ProcessVoluntaryExit(epc *EpochsContext, state *BeaconStateView, signedExit *SignedVoluntaryExit) error {
+func (spec *Spec) ValidateVoluntaryExit(epc *EpochsContext, state *BeaconStateView, signedExit *SignedVoluntaryExit) error {
 	exit := &signedExit.Message
 	currentEpoch := epc.CurrentEpoch.Epoch
 	if valid, err := state.IsValidIndex(exit.ValidatorIndex); err != nil {
@@ -180,8 +180,13 @@ func (spec *Spec) ProcessVoluntaryExit(epc *EpochsContext, state *BeaconStateVie
 		signedExit.Signature) {
 		return errors.New("voluntary exit signature could not be verified")
 	}
-	// Initiate exit
-	return spec.InitiateValidatorExit(epc, state, exit.ValidatorIndex)
+}
+
+func (spec *Spec) ProcessVoluntaryExit(epc *EpochsContext, state *BeaconStateView, signedExit *SignedVoluntaryExit) error {
+	if err := spec.ValidateVoluntaryExit(epc, state, signedExit); err != nil {
+		return err
+	}
+	return spec.InitiateValidatorExit(epc, state, signedExit.Message.ValidatorIndex)
 }
 
 // Initiate the exit of the validator of the given index

@@ -42,17 +42,9 @@ func (gv *GossipValidator) ValidateAttesterSlashing(ctx context.Context, attSl *
 		return GossipValidatorResult{IGNORE, errors.New("no unseen slashable attester indices")}
 	}
 
-	headRef, err := gv.Chain.Head()
+	_, epc, state, err := gv.HeadInfo(ctx)
 	if err != nil {
-		return GossipValidatorResult{IGNORE, errors.New("could not fetch head ref for validation")}
-	}
-	epc, err := headRef.EpochsContext(ctx)
-	if err != nil {
-		return GossipValidatorResult{IGNORE, errors.New("could not fetch head EPC for validation")}
-	}
-	state, err := headRef.State(ctx)
-	if err != nil {
-		return GossipValidatorResult{IGNORE, errors.New("could not fetch head state for validation")}
+		return GossipValidatorResult{IGNORE, err}
 	}
 	validators, err := state.Validators()
 	if err != nil {

@@ -2,7 +2,6 @@ package gossip
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon"
 )
@@ -23,17 +22,9 @@ func (gv *GossipValidator) ValidateProposerSlashing(ctx context.Context, propSl 
 
 	// [REJECT] All of the conditions within process_proposer_slashing pass validation.
 	// Part 2: now the full check
-	headRef, err := gv.Chain.Head()
+	_, epc, state, err := gv.HeadInfo(ctx)
 	if err != nil {
-		return GossipValidatorResult{IGNORE, errors.New("could not fetch head ref for validation")}
-	}
-	epc, err := headRef.EpochsContext(ctx)
-	if err != nil {
-		return GossipValidatorResult{IGNORE, errors.New("could not fetch head EPC for validation")}
-	}
-	state, err := headRef.State(ctx)
-	if err != nil {
-		return GossipValidatorResult{IGNORE, errors.New("could not fetch head state for validation")}
+		return GossipValidatorResult{IGNORE, err}
 	}
 	if err := gv.Spec.ValidateProposerSlashing(epc, state, propSl); err != nil {
 		return GossipValidatorResult{REJECT, err}

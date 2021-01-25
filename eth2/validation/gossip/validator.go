@@ -1,6 +1,8 @@
 package gossip
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/chain"
@@ -51,4 +53,20 @@ type GossipValidator struct {
 
 	// Like BeaconState.GetDomain, but assuming only one canonical fork schedule is maintained.
 	GetDomain func(dom beacon.BLSDomainType, epoch beacon.Epoch) (beacon.BLSDomain, error)
+}
+
+func (gv *GossipValidator) HeadInfo(ctx context.Context) (chain.ChainEntry, *beacon.EpochsContext, *beacon.BeaconStateView, error) {
+	headRef, err := gv.Chain.Head()
+	if err != nil {
+		return nil, nil, nil, errors.New("could not fetch head ref for validation")
+	}
+	epc, err := headRef.EpochsContext(ctx)
+	if err != nil {
+		return nil, nil, nil, errors.New("could not fetch head EPC for validation")
+	}
+	state, err := headRef.State(ctx)
+	if err != nil {
+		return nil, nil, nil, errors.New("could not fetch head state for validation")
+	}
+	return headRef, epc, state, nil
 }

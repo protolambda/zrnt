@@ -110,7 +110,7 @@ func (spec *Spec) ValidateProposerSlashingNoSignature(ps *ProposerSlashing) erro
 	return nil
 }
 
-func (spec *Spec) ProcessProposerSlashing(epc *EpochsContext, state *BeaconStateView, ps *ProposerSlashing) error {
+func (spec *Spec) ValidateProposerSlashing(epc *EpochsContext, state *BeaconStateView, ps *ProposerSlashing) error {
 	if err := spec.ValidateProposerSlashingNoSignature(ps); err != nil {
 		return err
 	}
@@ -157,5 +157,12 @@ func (spec *Spec) ProcessProposerSlashing(epc *EpochsContext, state *BeaconState
 		ps.SignedHeader2.Signature) {
 		return errors.New("proposer slashing header 2 has invalid BLS signature")
 	}
-	return spec.SlashValidator(epc, state, proposerIndex, nil)
+	return nil
+}
+
+func (spec *Spec) ProcessProposerSlashing(epc *EpochsContext, state *BeaconStateView, ps *ProposerSlashing) error {
+	if err := spec.ValidateProposerSlashing(epc, state, ps); err != nil {
+		return err
+	}
+	return spec.SlashValidator(epc, state, ps.SignedHeader1.Message.ProposerIndex, nil)
 }

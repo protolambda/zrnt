@@ -56,6 +56,10 @@ func (p *BLSDomainType) UnmarshalText(text []byte) error {
 	return err
 }
 
+// Sometimes a beacon state is not available, or too much for what it is good for.
+// Functions that just need a specific BLS domain can use this function.
+type BLSDomainFn func(typ BLSDomainType, epoch Epoch) (BLSDomain, error)
+
 // BLS domain (8 bytes): fork version (32 bits) concatenated with BLS domain type (32 bits)
 type BLSDomain [32]byte
 

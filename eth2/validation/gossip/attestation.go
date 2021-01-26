@@ -22,7 +22,7 @@ type IsBadBlockFn func(root beacon.Root) bool
 const catchupTimeout = time.Second * 2
 
 func (gv *GossipValidator) ValidateAttestation(ctx context.Context, subnet uint64, att *beacon.Attestation,
-	hasSeen AttestationSeenFn, isBadBlock IsBadBlockFn) GossipValidatorResult {
+	seenFn AttestationSeenFn, isBadBlock IsBadBlockFn) GossipValidatorResult {
 
 	targetSlot, err := gv.Spec.EpochStartSlot(att.Data.Target.Epoch)
 	if err != nil {
@@ -37,10 +37,11 @@ func (gv *GossipValidator) ValidateAttestation(ctx context.Context, subnet uint6
 	if att.Data.Slot+ATTESTATION_PROPAGATION_SLOT_RANGE < att.Data.Slot {
 		return GossipValidatorResult{REJECT, fmt.Errorf("attestation slot overflow: %d", att.Data.Slot)}
 	}
-
+	// check minimum, with account for clock disparity
 	if minSlot := gv.SlotAfter(-MAXIMUM_GOSSIP_CLOCK_DISPARITY); att.Data.Slot+ATTESTATION_PROPAGATION_SLOT_RANGE < minSlot {
 		return GossipValidatorResult{IGNORE, fmt.Errorf("attestation slot %d is too old, minimum slot is %d", att.Data.Slot, minSlot)}
 	}
+	// check maximum, with account for clock disparity
 	if maxSlot := gv.SlotAfter(MAXIMUM_GOSSIP_CLOCK_DISPARITY); att.Data.Slot > maxSlot {
 		return GossipValidatorResult{IGNORE, fmt.Errorf("attestation slot %d is too new, maximum slot is %d", att.Data.Slot, maxSlot)}
 	}
@@ -151,7 +152,7 @@ func (gv *GossipValidator) ValidateAttestation(ctx context.Context, subnet uint6
 	if err != nil {
 		return GossipValidatorResult{REJECT, fmt.Errorf("attestation was expected to have a single voter, but failed: %w", err)}
 	}
-	seen := hasSeen(att.Data.Target.Epoch, voter)
+	seen := seenFn(att.Data.Target.Epoch, voter)
 	if seen {
 		return GossipValidatorResult{IGNORE, errors.New("attestation vote was already seen (this attestation may be slashable if signature is valid!)")}
 	}

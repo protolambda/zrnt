@@ -52,7 +52,7 @@ type GossipValidator struct {
 	SlotAfter func(delta time.Duration) beacon.Slot
 
 	// Like BeaconState.GetDomain, but assuming only one canonical fork schedule is maintained.
-	GetDomain func(dom beacon.BLSDomainType, epoch beacon.Epoch) (beacon.BLSDomain, error)
+	GetDomain beacon.BLSDomainFn
 }
 
 func (gv *GossipValidator) HeadInfo(ctx context.Context) (chain.ChainEntry, *beacon.EpochsContext, *beacon.BeaconStateView, error) {

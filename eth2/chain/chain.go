@@ -42,6 +42,7 @@ type Chain interface {
 	// First gets the closets ref from the given block root to the requested slot,
 	// then transitions empty slots to get up to the requested slot.
 	// A strict context should be provided to avoid costly long transitions.
+	// An error is also returned if the fromBlockRoot is past the requested toSlot.
 	Towards(ctx context.Context, fromBlockRoot Root, toSlot Slot) (ChainEntry, error)
 	// Returns true if the given root is something that builds (maybe indirectly)
 	// on the ofRoot on the same chain.

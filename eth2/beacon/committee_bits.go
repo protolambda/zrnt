@@ -126,6 +126,22 @@ func (cb CommitteeBits) FilterNonParticipants(committee []ValidatorIndex) []Vali
 	return out
 }
 
+// Returns true if other only has bits set to 1 that this bitfield also has set to 1
+func (cb CommitteeBits) Covers(other CommitteeBits) (bool, error) {
+	if a, b := cb.BitLen(), other.BitLen(); a != b {
+		return false, fmt.Errorf("bitfield length mismatch: %d <> %d", a, b)
+	}
+	// both bitfields have the same delimiter bit set (and same zero padding).
+	// We can ignore it, it won't change the outcome.
+	for i := 0; i < len(cb); i++ {
+		// if there are any bits set in other, that are not also set in cb, then cb does not cover.
+		if other[i]&^cb[i] != 0 {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
 func (cb CommitteeBits) OnesCount() uint64 {
 	if len(cb) == 0 {
 		return 0
@@ -163,6 +179,11 @@ func (cb CommitteeBits) SingleParticipant(committee []ValidatorIndex) (Validator
 		return 0, fmt.Errorf("found no participants")
 	}
 	return *found, nil
+}
+
+func (cb CommitteeBits) Copy() CommitteeBits {
+	// append won't find capacity, and thus put contents into new array, and then returns typed slice of it.
+	return append(CommitteeBits(nil), cb...)
 }
 
 func (c *Phase0Config) CommitteeBits() *BitListTypeDef {

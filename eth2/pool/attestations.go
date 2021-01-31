@@ -40,10 +40,21 @@ type MinAggregates struct {
 
 type AttestationPool struct {
 	sync.RWMutex
+	spec               *beacon.Spec
 	datas              map[beacon.Root]*IndexedAttData
 	individual         map[Assignment]*AttRef
 	aggregate          map[beacon.Root]*MinAggregates
 	maxExtraAggregates uint64
+}
+
+func NewAttestationPool(spec *beacon.Spec) *AttestationPool {
+	return &AttestationPool{
+		spec:               spec,
+		datas:              make(map[beacon.Root]*IndexedAttData),
+		individual:         make(map[Assignment]*AttRef),
+		aggregate:          make(map[beacon.Root]*MinAggregates),
+		maxExtraAggregates: 10, // TODO: worth tuning
+	}
 }
 
 func (ap *AttestationPool) AddAttestation(att *beacon.Attestation, committee beacon.CommitteeIndices) error {

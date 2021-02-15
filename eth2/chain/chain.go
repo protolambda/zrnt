@@ -24,22 +24,18 @@ type ChainEntry interface {
 	BlockRoot() (root Root)
 	// The parent block root. If this is an empty slot, it will just be previous block root. Can also be zeroed if unknown.
 	ParentRoot() (root Root)
-	// If this is an empty slot, i.e. no block
+	// If this is an empty slot entry, i.e. no block
 	IsEmpty() bool
-	// State root (of the post-state of this entry)
-	StateRootExclBlock() Root
-	// State root (of the post-state of this entry)
+	// State root of the post-state of this entry, with or without block, depending on IsEmpty.
 	// Should match state-root in the block at the same slot (if any)
-	StateRootInclBlock() Root
+	StateRoot() Root
 	// The context of this chain entry (shuffling, proposers, etc.)
 	EpochsContext(ctx context.Context) (*beacon.EpochsContext, error)
-	// StateExclBlock retrieves the state of this slot, after processing slots to Slot() (incl.)
-	// with ProcessSlots(slot), but without any block processing.
-	StateExclBlock(ctx context.Context) (*beacon.BeaconStateView, error)
-	// StateInclBlock retrieves the state, post-block processing (if any block).
-	// The state is a data-sharing view. The view is safe to mutate, it does not affect the chain.
-	// Equal to the StateExclBlock() if the slot has no block.
-	StateInclBlock(ctx context.Context) (*beacon.BeaconStateView, error)
+	// StateExclBlock retrieves the state of this slot.
+	// - If IsEmpty: it is the state after processing slots to Slot() (incl.),
+	//   with ProcessSlots(slot), but without any block processing.
+	// - if not IsEmpty: post-block processing (if any block), excl. latest-header update of next slot.
+	State(ctx context.Context) (*beacon.BeaconStateView, error)
 }
 
 type Chain interface {
@@ -74,20 +70,14 @@ type ChainIter interface {
 	Entry(slot Slot) (entry ChainEntry, err error)
 }
 
-type BlockSlotKey [32 + 8]byte
-
-func (key *BlockSlotKey) Slot() Slot {
-	return Slot(binary.LittleEndian.Uint64(key[32:40]))
+type BlockSlotKey struct {
+	Slot Slot
+	Root Root
 }
 
-func (key *BlockSlotKey) Root() (out Root) {
-	copy(out[:], key[0:32])
-	return
-}
-
-func NewBlockSlotKey(block Root, slot Slot) (out BlockSlotKey) {
-	copy(out[0:32], block[:])
-	binary.LittleEndian.PutUint64(out[32:40], uint64(slot))
+func (key BlockSlotKey) Bytes() (out [40]byte) {
+	copy(out[0:32], key.Root[:])
+	binary.LittleEndian.PutUint64(out[32:40], uint64(key.Slot))
 	return
 }
 

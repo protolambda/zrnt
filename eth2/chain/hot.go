@@ -12,79 +12,49 @@ import (
 )
 
 type HotEntry struct {
-	slot           Slot
-	blockRoot      Root
-	parentRoot     Root
-	epc            *beacon.EpochsContext
-	stateExclBlock *beacon.BeaconStateView
-	stateInclBlock *beacon.BeaconStateView
+	self   BlockSlotKey
+	parent Root
+	epc    *beacon.EpochsContext
+	state  *beacon.BeaconStateView
 }
 
-func NewHotEntryExclBlock(
-	slot Slot, parentRoot Root,
-	stateExclBlock *beacon.BeaconStateView,
-	epc *beacon.EpochsContext) *HotEntry {
+func NewHotEntry(self BlockSlotKey, parent Root,
+	state *beacon.BeaconStateView, epc *beacon.EpochsContext) *HotEntry {
 	return &HotEntry{
-		slot:           slot,
-		epc:            epc,
-		stateExclBlock: stateExclBlock,
-		stateInclBlock: stateExclBlock,
-		blockRoot:      parentRoot,
-		parentRoot:     parentRoot,
-	}
-}
-
-func NewHotEntryInclBlock(
-	slot Slot, blockRoot Root, parentRoot Root,
-	stateExclBlock *beacon.BeaconStateView,
-	stateInclBlock *beacon.BeaconStateView,
-	epc *beacon.EpochsContext) *HotEntry {
-	return &HotEntry{
-		slot:           slot,
-		epc:            epc,
-		stateExclBlock: stateExclBlock,
-		stateInclBlock: stateInclBlock,
-		blockRoot:      blockRoot,
-		parentRoot:     parentRoot,
+		self:   self,
+		parent: parent,
+		epc:    epc,
+		state:  state,
 	}
 }
 
 func (e *HotEntry) Slot() Slot {
-	return e.slot
+	return e.self.Slot
 }
 
 func (e *HotEntry) IsEmpty() bool {
-	return e.parentRoot == Root{}
+	return e.parent == e.self.Root
 }
 
 func (e *HotEntry) ParentRoot() (root Root) {
-	return e.parentRoot
+	return e.parent
 }
 
 func (e *HotEntry) BlockRoot() (root Root) {
-	return e.blockRoot
+	return e.self.Root
 }
 
-func (e *HotEntry) StateRootExclBlock() Root {
-	return e.stateExclBlock.HashTreeRoot(tree.GetHashFn())
-}
-
-func (e *HotEntry) StateRootInclBlock() Root {
-	return e.stateInclBlock.HashTreeRoot(tree.GetHashFn())
+func (e *HotEntry) StateRoot() Root {
+	return e.state.HashTreeRoot(tree.GetHashFn())
 }
 
 func (e *HotEntry) EpochsContext(ctx context.Context) (*beacon.EpochsContext, error) {
 	return e.epc.Clone(), nil
 }
 
-func (e *HotEntry) StateExclBlock(ctx context.Context) (*beacon.BeaconStateView, error) {
+func (e *HotEntry) State(ctx context.Context) (*beacon.BeaconStateView, error) {
 	// Return a copy of the view, the state itself may not be modified
-	return beacon.AsBeaconStateView(e.stateExclBlock.Copy())
-}
-
-func (e *HotEntry) StateInclBlock(ctx context.Context) (*beacon.BeaconStateView, error) {
-	// Return a copy of the view, the state itself may not be modified
-	return beacon.AsBeaconStateView(e.stateInclBlock.Copy())
+	return beacon.AsBeaconStateView(e.state.Copy())
 }
 
 type HotChain interface {
@@ -105,9 +75,12 @@ type UnfinalizedChain struct {
 
 	AnchorSlot Slot
 
-	// block++slot -> Entry
+	// Block root (parent if empty slot) and slot -> Entry
 	Entries map[BlockSlotKey]*HotEntry
-	// state root -> block+slot key
+	// State root -> block+slot key
+	//
+	// State roots here include the updated latest-header, and matches the state root in the block.
+	// For empty slots, they match the state root after slot processing.
 	State2Key map[Root]BlockSlotKey
 
 	// BlockSink takes pruned entries and their canon status, and processes them.
@@ -120,43 +93,49 @@ type UnfinalizedChain struct {
 	Spec *beacon.Spec
 }
 
-type HotChainIter struct {
-	// ordered from head to 0
-	entries  []*HotEntry
-	headSlot Slot
+// ordered from finalized slot to head slot
+type HotChainIter []*HotEntry
+
+func (fi HotChainIter) Start() Slot {
+	return fi[0].slot
 }
 
-func (fi *HotChainIter) Start() Slot {
-	return fi.headSlot + 1 - Slot(len(fi.entries))
+func (fi HotChainIter) End() Slot {
+	return fi[len(fi)-1].slot
 }
 
-func (fi *HotChainIter) End() Slot {
-	return fi.headSlot + 1
-}
-
-func (fi *HotChainIter) Entry(slot Slot) (entry ChainEntry, err error) {
-	if slot < fi.Start() || slot >= fi.End() {
+func (fi HotChainIter) Entry(slot Slot) (entry ChainEntry, err error) {
+	start, end := fi.Start(), fi.End()
+	if slot < start || slot >= end {
 		return nil, fmt.Errorf("out of range slot: %d, range: [%d, %d)", slot, fi.Start(), fi.End())
 	}
-	return fi.entries[slot-fi.headSlot], nil
+	return fi[slot-start], nil
 }
 
 func (uc *UnfinalizedChain) Iter() (ChainIter, error) {
-	headRef, err := uc.ForkChoice.FindHead()
+	uc.Lock()
+	defer uc.Unlock()
+	fin := uc.Finalized()
+	finSlot, _ := uc.Spec.EpochStartSlot(fin.Epoch)
+	// block nodes also have gap slots. Reduce that back to normal.
+	nodes, err := uc.ForkChoice.CanonicalChain(fin.Root, finSlot)
 	if err != nil {
 		return nil, err
 	}
-	entries := make([]*HotEntry, 0)
-	root := headRef.Root
-	for {
-		entry, err := uc.ByBlockRoot(root)
-		if err != nil {
-			break
-		}
-		entries = append(entries, entry.(*HotEntry))
-		root = entry.ParentRoot()
+	if len(nodes) == 0 {
+		return nil, errors.New("empty chain")
 	}
-	return &HotChainIter{entries, headRef.Slot}, nil
+	entries := make([]*HotEntry, 0, len(nodes))
+	for i := 0; i < len(nodes); i++ {
+		node := &nodes[i]
+		entry, ok := uc.Entries[BlockSlotKey{Root: node.Root, Slot: node.Slot}]
+		if !ok {
+			return nil, fmt.Errorf("missing hot entry for node root %s slot %d", node.Root, node.Slot)
+		}
+		entries = append(entries, entry)
+	}
+
+	return HotChainIter(entries), nil
 }
 
 type BlockSink interface {
@@ -170,8 +149,8 @@ func (fn BlockSinkFn) Sink(entry *HotEntry, canonical bool) error {
 	return fn(entry, canonical)
 }
 
-func NewUnfinalizedChain(finalizedBlock *HotEntry, sink BlockSink, spec *beacon.Spec) (*UnfinalizedChain, error) {
-	fin, err := finalizedBlock.state.FinalizedCheckpoint()
+func NewUnfinalizedChain(anchorState *beacon.BeaconStateView, sink BlockSink, spec *beacon.Spec) (*UnfinalizedChain, error) {
+	fin, err := anchorState.FinalizedCheckpoint()
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +158,7 @@ func NewUnfinalizedChain(finalizedBlock *HotEntry, sink BlockSink, spec *beacon.
 	if err != nil {
 		return nil, err
 	}
-	just, err := finalizedBlock.state.CurrentJustifiedCheckpoint()
+	just, err := anchorState.CurrentJustifiedCheckpoint()
 	if err != nil {
 		return nil, err
 	}
@@ -187,24 +166,63 @@ func NewUnfinalizedChain(finalizedBlock *HotEntry, sink BlockSink, spec *beacon.
 	if err != nil {
 		return nil, err
 	}
-	key := NewBlockSlotKey(finalizedBlock.blockRoot, finalizedBlock.slot)
+
+	latestHeader, err := anchorState.LatestBlockHeader()
+	if err != nil {
+		return nil, err
+	}
+	latestHeader, _ = beacon.AsBeaconBlockHeader(latestHeader.Copy())
+	stateRoot, err := latestHeader.StateRoot()
+	if err != nil {
+		return nil, err
+	}
+	if stateRoot == (Root{}) {
+		stateRoot = anchorState.HashTreeRoot(tree.GetHashFn())
+		if err := latestHeader.SetStateRoot(stateRoot); err != nil {
+			return nil, err
+		}
+	}
+	anchorBlockRoot := latestHeader.HashTreeRoot(tree.GetHashFn())
+
+	slot, err := anchorState.Slot()
+	if err != nil {
+		return nil, err
+	}
+	// may be equal to anchorBlockRoot if the anchor state is of a gap slot.
+	parentRoot, err := latestHeader.ParentRoot()
+	if err != nil {
+		return nil, err
+	}
+	epc, err := spec.NewEpochsContext(anchorState)
+	if err != nil {
+		return nil, err
+	}
+	anchor := BlockSlotKey{Root: anchorBlockRoot, Slot: slot}
+	anchorBlock := &HotEntry{
+		self:   anchor,
+		parent: parentRoot,
+		epc:    epc,
+		state:  anchorState,
+	}
 	uc := &UnfinalizedChain{
 		ForkChoice: nil,
-		Entries:    map[BlockSlotKey]*HotEntry{key: finalizedBlock},
-		State2Key:  map[Root]BlockSlotKey{finalizedBlock.StateRoot(): key},
+		Entries:    map[BlockSlotKey]*HotEntry{anchor: anchorBlock},
+		State2Key:  map[Root]BlockSlotKey{stateRoot: anchor},
 		BlockSink:  sink,
 		Spec:       spec,
 	}
 	uc.ForkChoice = forkchoice.NewForkChoice(
+		spec,
 		finCh,
 		justCh,
-		forkchoice.NodeRef{Root: finalizedBlock.blockRoot, Slot: finalizedBlock.slot},
-		finalizedBlock.parentRoot,
+		anchorBlockRoot, slot,
+		parentRoot,
 		forkchoice.BlockSinkFn(uc.OnPrunedNode),
 	)
 	return uc, nil
 }
 
+// TODO
 func (uc *UnfinalizedChain) OnPrunedNode(node *forkchoice.ProtoNode, canonical bool) error {
 	uc.Lock()
 	defer uc.Unlock()
@@ -294,15 +312,12 @@ func (uc *UnfinalizedChain) ByBlockRoot(root Root) (ChainEntry, error) {
 func (uc *UnfinalizedChain) Closest(fromBlockRoot Root, toSlot Slot) (ChainEntry, error) {
 	uc.RLock()
 	defer uc.RUnlock()
-	before, at, _, err := uc.ForkChoice.BlocksAroundSlot(fromBlockRoot, toSlot)
+	ref, err := uc.ForkChoice.ClosestToSlot(fromBlockRoot, toSlot)
 	if err != nil {
 		return nil, err
 	}
-	if at != (forkchoice.NodeRef{}) {
-		return uc.byBlockSlot(NewBlockSlotKey(at.Root, at.Slot))
-	}
-	if before != (forkchoice.NodeRef{}) {
-		return uc.byBlockSlot(NewBlockSlotKey(before.Root, before.Slot))
+	if ref != (forkchoice.NodeRef{}) {
+		return uc.byBlockSlot(BlockSlotKey{Root: ref.Root, Slot: ref.Slot})
 	}
 	return nil, fmt.Errorf("could not find closest hot block starting from root %s, up to slot %d", fromBlockRoot, toSlot)
 }

@@ -16,6 +16,13 @@ type Checkpoint = beacon.Checkpoint
 
 type SignedGwei = int64
 
+type ExtendedRef struct {
+	Slot Slot
+	// Block root, may be equal to parent root if empty
+	Root       Root
+	ParentRoot Root
+}
+
 type NodeRef struct {
 	Slot Slot
 	// Block root, may be equal to parent root if empty
@@ -27,8 +34,10 @@ type ProtoNodeIndex uint64
 const NONE = ^ProtoNodeIndex(0)
 
 type ProtoNode struct {
-	Ref            NodeRef
-	Parent         ProtoNodeIndex
+	Ref    NodeRef
+	Parent ProtoNodeIndex
+	// Duplicated to avoid pruning of this useful info.
+	ParentRoot     Root
 	JustifiedEpoch Epoch
 	FinalizedEpoch Epoch
 	Weight         SignedGwei
@@ -92,19 +101,19 @@ func (pr *ProtoArray) getNode(index ProtoNodeIndex) (*ProtoNode, error) {
 
 // From head back to anchor root (including the anchor itself, if present) and anchor slot.
 // Includes nodes with empty block, then followed up by a node with the block if there is any.
-func (pr *ProtoArray) CanonicalChain(anchorRoot Root, anchorSlot Slot) ([]NodeRef, error) {
+func (pr *ProtoArray) CanonicalChain(anchorRoot Root, anchorSlot Slot) ([]ExtendedRef, error) {
 	head, err := pr.FindHead(anchorRoot, anchorSlot)
 	if err != nil {
 		return nil, err
 	}
-	chain := make([]NodeRef, 0, len(pr.nodes))
+	chain := make([]ExtendedRef, 0, len(pr.nodes))
 	index := pr.indices[head]
 	for index != NONE && index >= pr.indexOffset {
 		node, err := pr.getNode(index)
 		if err != nil {
 			return nil, err
 		}
-		chain = append(chain, node.Ref)
+		chain = append(chain, ExtendedRef{node.Ref.Slot, node.Ref.Root, node.ParentRoot})
 		index = node.Parent
 	}
 	return chain, nil
@@ -153,7 +162,7 @@ func (pr *ProtoArray) ClosestToSlot(anchor Root, slot Slot) (closest NodeRef, er
 	return NodeRef{Root: anchor, Slot: anchorSlot}, nil
 }
 
-func (pr *ProtoArray) GetBlock(blockRoot Root) (NodeRef, bool) {
+func (pr *ProtoArray) GetNode(blockRoot Root) (NodeRef, bool) {
 	slot, ok := pr.blockSlots[blockRoot]
 	if !ok {
 		return NodeRef{}, false
@@ -254,6 +263,7 @@ func (pr *ProtoArray) OnSlot(parent Root, slot Slot, justifiedEpoch Epoch, final
 			pr.nodes = append(pr.nodes, ProtoNode{
 				Ref:            nodeRef,
 				Parent:         parentIndex,
+				ParentRoot:     parent,
 				JustifiedEpoch: justifiedEpoch,
 				FinalizedEpoch: finalizedEpoch,
 				Weight:         0,
@@ -270,6 +280,7 @@ func (pr *ProtoArray) OnSlot(parent Root, slot Slot, justifiedEpoch Epoch, final
 	pr.nodes = append(pr.nodes, ProtoNode{
 		Ref:            nodeRef,
 		Parent:         parentIndex,
+		ParentRoot:     parent,
 		JustifiedEpoch: justifiedEpoch,
 		FinalizedEpoch: finalizedEpoch,
 		Weight:         0,
@@ -306,6 +317,7 @@ func (pr *ProtoArray) OnBlock(parent Root, blockRoot Root, blockSlot Slot, justi
 	pr.nodes = append(pr.nodes, ProtoNode{
 		Ref:            blockRef,
 		Parent:         parentIndex,
+		ParentRoot:     parent,
 		JustifiedEpoch: justifiedEpoch,
 		FinalizedEpoch: finalizedEpoch,
 		Weight:         0,
@@ -614,6 +626,12 @@ func NewForkChoice(spec *beacon.Spec, finalized Checkpoint, justified Checkpoint
 	return fc
 }
 
+func (fc *ForkChoice) CanonicalChain(anchorRoot Root, anchorSlot Slot) ([]ExtendedRef, error) {
+	fc.Lock()
+	defer fc.Unlock()
+	return fc.CanonicalChain(anchorRoot, anchorSlot)
+}
+
 // Process an attestation. (Note that the head slot may be for a gap slot after the block root)
 func (fc *ForkChoice) ProcessAttestation(index ValidatorIndex, blockRoot Root, headSlot Slot) {
 	fc.Lock()
@@ -721,10 +739,12 @@ func (fc *ForkChoice) ClosestToSlot(anchor Root, slot Slot) (ref NodeRef, err er
 	return fc.protoArray.ClosestToSlot(anchor, slot)
 }
 
-func (fc *ForkChoice) GetBlock(root Root) (block NodeRef, ok bool) {
+// Return the latest block reference known for the node.
+// Warning: if it is a gap slot there may be earlier nodes with the same root, but pruned.
+func (fc *ForkChoice) GetNode(root Root) (ref NodeRef, ok bool) {
 	fc.RLock()
 	defer fc.RUnlock()
-	return fc.protoArray.GetBlock(root)
+	return fc.protoArray.GetNode(root)
 }
 
 func (fc *ForkChoice) FindHead() (NodeRef, error) {

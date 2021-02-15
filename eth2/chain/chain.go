@@ -19,26 +19,37 @@ type ChainEntry interface {
 	// Slot of this entry
 	Slot() Slot
 	// BlockRoot returns the last block root, replicating the previous block root if the current slot has none.
+	// There is only 1 block root, double block proposals by the same validator are accepted,
+	// only the first is incorporated into the chain.
 	BlockRoot() (root Root)
 	// The parent block root. If this is an empty slot, it will just be previous block root. Can also be zeroed if unknown.
 	ParentRoot() (root Root)
 	// If this is an empty slot, i.e. no block
 	IsEmpty() bool
-	// State root (of the post-state of this entry). Should match state-root in the block at the same slot (if any)
-	StateRoot() Root
+	// State root (of the post-state of this entry)
+	StateRootExclBlock() Root
+	// State root (of the post-state of this entry)
+	// Should match state-root in the block at the same slot (if any)
+	StateRootInclBlock() Root
 	// The context of this chain entry (shuffling, proposers, etc.)
 	EpochsContext(ctx context.Context) (*beacon.EpochsContext, error)
-	// State of the entry, a data-sharing view. Call .Copy() before modifying this to preserve validity.
-	State(ctx context.Context) (*beacon.BeaconStateView, error)
+	// StateExclBlock retrieves the state of this slot, after processing slots to Slot() (incl.)
+	// with ProcessSlots(slot), but without any block processing.
+	StateExclBlock(ctx context.Context) (*beacon.BeaconStateView, error)
+	// StateInclBlock retrieves the state, post-block processing (if any block).
+	// The state is a data-sharing view. The view is safe to mutate, it does not affect the chain.
+	// Equal to the StateExclBlock() if the slot has no block.
+	StateInclBlock(ctx context.Context) (*beacon.BeaconStateView, error)
 }
 
 type Chain interface {
+	// Get the chain entry for the given state root.
+	// The state root may be equal to ChainEntry.StateRootExclBlock or ChainEntry.StateRootInclBlock of the result.
 	ByStateRoot(root Root) (ChainEntry, error)
 	ByBlockRoot(root Root) (ChainEntry, error)
 	// Find closest ref in subtree, up to given slot (may return entry of fromBlockRoot itself).
 	// Err if none, incl. fromBlockRoot, could be found.
-	ClosestFrom(fromBlockRoot Root, toSlot Slot) (ChainEntry, error)
-	// TODO: implement this.
+	Closest(fromBlockRoot Root, toSlot Slot) (ChainEntry, error)
 	// First gets the closets ref from the given block root to the requested slot,
 	// then transitions empty slots to get up to the requested slot.
 	// A strict context should be provided to avoid costly long transitions.
@@ -140,10 +151,10 @@ func (hc *HotColdChain) ByBlockRoot(root Root) (ChainEntry, error) {
 	return hotEntry, nil
 }
 
-func (hc *HotColdChain) ClosestFrom(fromBlockRoot Root, toSlot Slot) (ChainEntry, error) {
-	hotEntry, hotErr := hc.HotChain.ClosestFrom(fromBlockRoot, toSlot)
+func (hc *HotColdChain) Closest(fromBlockRoot Root, toSlot Slot) (ChainEntry, error) {
+	hotEntry, hotErr := hc.HotChain.Closest(fromBlockRoot, toSlot)
 	if hotErr != nil {
-		coldEntry, coldErr := hc.ColdChain.ClosestFrom(fromBlockRoot, toSlot)
+		coldEntry, coldErr := hc.ColdChain.Closest(fromBlockRoot, toSlot)
 		if coldErr != nil {
 			return nil, fmt.Errorf("could not find chain entry in hot or cold chain. "+
 				"Hot: %v, Cold: %v", hotErr, coldErr)
@@ -151,6 +162,10 @@ func (hc *HotColdChain) ClosestFrom(fromBlockRoot Root, toSlot Slot) (ChainEntry
 		return coldEntry, nil
 	}
 	return hotEntry, nil
+}
+
+func (hc *HotColdChain) Towards(ctx context.Context, fromBlockRoot Root, toSlot Slot) (ChainEntry, error) {
+
 }
 
 func (hc *HotColdChain) IsAncestor(root Root, ofRoot Root) (unknown bool, isAncestor bool) {

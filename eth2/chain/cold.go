@@ -158,7 +158,7 @@ func (f *FinalizedChain) byBlockRoot(root Root) (ChainEntry, error) {
 	return f.bySlot(slot)
 }
 
-func (f *FinalizedChain) ClosestFrom(fromBlockRoot Root, toSlot Slot) (ChainEntry, error) {
+func (f *FinalizedChain) Closest(fromBlockRoot Root, toSlot Slot) (ChainEntry, error) {
 	f.RLock()
 	defer f.RUnlock()
 	if start := f.Start(); toSlot < start {
@@ -176,6 +176,11 @@ func (f *FinalizedChain) ClosestFrom(fromBlockRoot Root, toSlot Slot) (ChainEntr
 		toSlot = end - 1
 	}
 	return f.bySlot(toSlot)
+}
+
+func (f *FinalizedChain) Towards(ctx context.Context, fromBlockRoot Root, toSlot Slot) (ChainEntry, error) {
+	// TODO
+	return nil, nil
 }
 
 func (f *FinalizedChain) IsAncestor(root Root, ofRoot Root) (unknown bool, isAncestor bool) {

@@ -12,22 +12,40 @@ import (
 )
 
 type HotEntry struct {
-	slot       Slot
-	blockRoot  Root
-	parentRoot Root
-	epc        *beacon.EpochsContext
-	state      *beacon.BeaconStateView
+	slot           Slot
+	blockRoot      Root
+	parentRoot     Root
+	epc            *beacon.EpochsContext
+	stateExclBlock *beacon.BeaconStateView
+	stateInclBlock *beacon.BeaconStateView
 }
 
-func NewHotEntry(
-	slot Slot, blockRoot Root, parentRoot Root,
-	state *beacon.BeaconStateView, epc *beacon.EpochsContext) *HotEntry {
+func NewHotEntryExclBlock(
+	slot Slot, parentRoot Root,
+	stateExclBlock *beacon.BeaconStateView,
+	epc *beacon.EpochsContext) *HotEntry {
 	return &HotEntry{
-		slot:       slot,
-		epc:        epc,
-		state:      state,
-		blockRoot:  blockRoot,
-		parentRoot: parentRoot,
+		slot:           slot,
+		epc:            epc,
+		stateExclBlock: stateExclBlock,
+		stateInclBlock: stateExclBlock,
+		blockRoot:      parentRoot,
+		parentRoot:     parentRoot,
+	}
+}
+
+func NewHotEntryInclBlock(
+	slot Slot, blockRoot Root, parentRoot Root,
+	stateExclBlock *beacon.BeaconStateView,
+	stateInclBlock *beacon.BeaconStateView,
+	epc *beacon.EpochsContext) *HotEntry {
+	return &HotEntry{
+		slot:           slot,
+		epc:            epc,
+		stateExclBlock: stateExclBlock,
+		stateInclBlock: stateInclBlock,
+		blockRoot:      blockRoot,
+		parentRoot:     parentRoot,
 	}
 }
 
@@ -47,17 +65,26 @@ func (e *HotEntry) BlockRoot() (root Root) {
 	return e.blockRoot
 }
 
-func (e *HotEntry) StateRoot() Root {
-	return e.state.HashTreeRoot(tree.GetHashFn())
+func (e *HotEntry) StateRootExclBlock() Root {
+	return e.stateExclBlock.HashTreeRoot(tree.GetHashFn())
+}
+
+func (e *HotEntry) StateRootInclBlock() Root {
+	return e.stateInclBlock.HashTreeRoot(tree.GetHashFn())
 }
 
 func (e *HotEntry) EpochsContext(ctx context.Context) (*beacon.EpochsContext, error) {
 	return e.epc.Clone(), nil
 }
 
-func (e *HotEntry) State(ctx context.Context) (*beacon.BeaconStateView, error) {
+func (e *HotEntry) StateExclBlock(ctx context.Context) (*beacon.BeaconStateView, error) {
 	// Return a copy of the view, the state itself may not be modified
-	return beacon.AsBeaconStateView(e.state.Copy())
+	return beacon.AsBeaconStateView(e.stateExclBlock.Copy())
+}
+
+func (e *HotEntry) StateInclBlock(ctx context.Context) (*beacon.BeaconStateView, error) {
+	// Return a copy of the view, the state itself may not be modified
+	return beacon.AsBeaconStateView(e.stateInclBlock.Copy())
 }
 
 type HotChain interface {
@@ -171,14 +198,14 @@ func NewUnfinalizedChain(finalizedBlock *HotEntry, sink BlockSink, spec *beacon.
 	uc.ForkChoice = forkchoice.NewForkChoice(
 		finCh,
 		justCh,
-		forkchoice.BlockRef{Root: finalizedBlock.blockRoot, Slot: finalizedBlock.slot},
+		forkchoice.NodeRef{Root: finalizedBlock.blockRoot, Slot: finalizedBlock.slot},
 		finalizedBlock.parentRoot,
-		forkchoice.BlockSinkFn(uc.OnPrunedBlock),
+		forkchoice.BlockSinkFn(uc.OnPrunedNode),
 	)
 	return uc, nil
 }
 
-func (uc *UnfinalizedChain) OnPrunedBlock(node *forkchoice.ProtoNode, canonical bool) error {
+func (uc *UnfinalizedChain) OnPrunedNode(node *forkchoice.ProtoNode, canonical bool) error {
 	uc.Lock()
 	defer uc.Unlock()
 	blockRef := node.Block
@@ -264,20 +291,25 @@ func (uc *UnfinalizedChain) ByBlockRoot(root Root) (ChainEntry, error) {
 
 // Find closest block in subtree, up to given slot (may return entry of fromBlockRoot itself).
 // Err if none, incl. fromBlockRoot, could be found.
-func (uc *UnfinalizedChain) ClosestFrom(fromBlockRoot Root, toSlot Slot) (ChainEntry, error) {
+func (uc *UnfinalizedChain) Closest(fromBlockRoot Root, toSlot Slot) (ChainEntry, error) {
 	uc.RLock()
 	defer uc.RUnlock()
 	before, at, _, err := uc.ForkChoice.BlocksAroundSlot(fromBlockRoot, toSlot)
 	if err != nil {
 		return nil, err
 	}
-	if at != (forkchoice.BlockRef{}) {
+	if at != (forkchoice.NodeRef{}) {
 		return uc.byBlockSlot(NewBlockSlotKey(at.Root, at.Slot))
 	}
-	if before != (forkchoice.BlockRef{}) {
+	if before != (forkchoice.NodeRef{}) {
 		return uc.byBlockSlot(NewBlockSlotKey(before.Root, before.Slot))
 	}
 	return nil, fmt.Errorf("could not find closest hot block starting from root %s, up to slot %d", fromBlockRoot, toSlot)
+}
+
+func (uc *UnfinalizedChain) Towards(ctx context.Context, fromBlockRoot Root, toSlot Slot) (ChainEntry, error) {
+	// TODO
+	return nil, nil
 }
 
 func (uc *UnfinalizedChain) IsAncestor(root Root, ofRoot Root) (unknown bool, isAncestor bool) {
@@ -293,7 +325,7 @@ func (uc *UnfinalizedChain) BySlot(slot Slot) (ChainEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	if at == (forkchoice.BlockRef{}) {
+	if at == (forkchoice.NodeRef{}) {
 		return nil, fmt.Errorf("no hot entry known for slot %d", slot)
 	}
 	if at.Slot != slot {
@@ -322,7 +354,7 @@ func (uc *UnfinalizedChain) AddBlock(ctx context.Context, signedBlock *beacon.Si
 	block := &signedBlock.Message
 	blockRoot := block.HashTreeRoot(uc.Spec, tree.GetHashFn())
 
-	pre, err := uc.ClosestFrom(block.ParentRoot, block.Slot)
+	pre, err := uc.Closest(block.ParentRoot, block.Slot)
 	if err != nil {
 		return err
 	}
@@ -417,7 +449,7 @@ func (uc *UnfinalizedChain) AddBlock(ctx context.Context, signedBlock *beacon.Si
 		parentRoot: block.ParentRoot,
 	}
 	uc.ForkChoice.ProcessBlock(
-		forkchoice.BlockRef{Slot: block.Slot, Root: blockRoot},
+		forkchoice.NodeRef{Slot: block.Slot, Root: blockRoot},
 		block.ParentRoot, justifiedEpoch, finalizedEpoch)
 
 	if block.Slot < uc.AnchorSlot {

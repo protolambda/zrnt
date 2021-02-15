@@ -133,6 +133,10 @@ type Checkpoint struct {
 	Root  Root  `json:"root" yaml:"root"`
 }
 
+func (c *Checkpoint) String() string {
+	return c.Root.String() + ":" + c.Epoch.String()
+}
+
 func (c *Checkpoint) Deserialize(dr *codec.DecodingReader) error {
 	return dr.FixedLenContainer(&c.Epoch, &c.Root)
 }

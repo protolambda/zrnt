@@ -180,6 +180,7 @@ func (spec *Spec) ValidateVoluntaryExit(epc *EpochsContext, state *BeaconStateVi
 		signedExit.Signature) {
 		return errors.New("voluntary exit signature could not be verified")
 	}
+	return nil
 }
 
 func (spec *Spec) ProcessVoluntaryExit(epc *EpochsContext, state *BeaconStateView, signedExit *SignedVoluntaryExit) error {

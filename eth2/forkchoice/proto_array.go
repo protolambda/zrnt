@@ -156,18 +156,17 @@ func (pr *ProtoArray) ClosestToSlot(anchor Root, slot Slot) (closest NodeRef, er
 }
 
 // Returns the canonical node at the given slot.
-// If preBlock is true, a slot node is retrieved,
-// otherwise it may be a node with a block applied to its slot, if it is canonical.
+// If preBlock is true, a slot node is retrieved. If false, a block node is retrieved, or nil if the slot is empty.
 // If there is a double proposal, the canonical block (w.r.t. votes) is used.
 // If the fork-choice starts at a filled slot node, this node cannot be requested with preBlock == true,
 // as the data is already pruned.
-func (pr *ProtoArray) CanonAtSlot(anchor Root, slot Slot, preBlock bool) (closest NodeRef, err error) {
+func (pr *ProtoArray) CanonAtSlot(anchor Root, slot Slot, preBlock bool) (closest *NodeRef, err error) {
 	anchorSlot, ok := pr.blockSlots[anchor]
 	if !ok {
-		return NodeRef{}, fmt.Errorf("unknown anchor %s", anchor)
+		return nil, fmt.Errorf("unknown anchor %s", anchor)
 	}
 	if anchorSlot > slot {
-		return NodeRef{}, fmt.Errorf("cannot look for slot %d before anchor slot %d (%s)",
+		return nil, fmt.Errorf("cannot look for slot %d before anchor slot %d (%s)",
 			slot, anchorSlot, anchor)
 	}
 	// short-cut common case: the slot is the anchor itself, e.g. we're building on the current head.
@@ -181,18 +180,18 @@ func (pr *ProtoArray) CanonAtSlot(anchor Root, slot Slot, preBlock bool) (closes
 			node := &pr.nodes[i]
 			// Is the anchor a filled node?
 			if node.ParentRoot != anchor {
-				return NodeRef{}, fmt.Errorf("cannot look for slot %d at anchor, anchor is filled node", slot)
+				return nil, fmt.Errorf("cannot look for slot %d at anchor, anchor is filled node", slot)
 			}
 		}
-		return ref, nil
+		return &ref, nil
 	}
 	head, err := pr.FindHead(anchor, anchorSlot)
 	if err != nil {
-		return NodeRef{}, err
+		return nil, err
 	}
 	// The head may be the closest we have.
 	if head.Slot <= slot {
-		return head, nil
+		return &head, nil
 	}
 	// Walk back the canonical chain, and stop as soon as we find the node at slot of interest.
 	index := pr.indices[head]
@@ -200,7 +199,7 @@ func (pr *ProtoArray) CanonAtSlot(anchor Root, slot Slot, preBlock bool) (closes
 	for index != NONE && index >= pr.indexOffset {
 		node, err = pr.getNode(index)
 		if err != nil {
-			return
+			return nil, err
 		}
 		// if we are looking for the pre-block node, and the node is not empty, then skip it.
 		if preBlock && node.ParentRoot != node.Ref.Root {
@@ -208,14 +207,19 @@ func (pr *ProtoArray) CanonAtSlot(anchor Root, slot Slot, preBlock bool) (closes
 			continue
 		}
 		if node.Ref.Slot == slot {
-			return node.Ref, nil
+			if !preBlock && node.Ref.Root == node.ParentRoot {
+				// no block exists for this slot, it's empty.
+				return nil, nil
+			}
+			res := node.Ref
+			return &res, nil
 		}
 		if node.Ref.Slot < slot {
 			break // should never happen (a missing gap slot node), but handle gracefully
 		}
 		index = node.Parent
 	}
-	return NodeRef{Root: anchor, Slot: anchorSlot}, nil
+	return nil, fmt.Errorf("cannot find node at slot %d (pre block %v)", slot, preBlock)
 }
 
 func (pr *ProtoArray) GetNode(blockRoot Root) (NodeRef, bool) {
@@ -800,7 +804,7 @@ func (fc *ForkChoice) ClosestToSlot(anchor Root, slot Slot) (ref NodeRef, err er
 	return fc.protoArray.ClosestToSlot(anchor, slot)
 }
 
-func (fc *ForkChoice) CanonAtSlot(anchor Root, slot Slot, preBlock bool) (closest NodeRef, err error) {
+func (fc *ForkChoice) CanonAtSlot(anchor Root, slot Slot, preBlock bool) (closest *NodeRef, err error) {
 	fc.Lock()
 	defer fc.Unlock()
 	return fc.protoArray.CanonAtSlot(anchor, slot, preBlock)

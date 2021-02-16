@@ -52,21 +52,21 @@ type Chain interface {
 	// on the ofRoot on the same chain.
 	// If root == ofRoot, then it is NOT considered an ancestor here.
 	IsAncestor(root Root, ofRoot Root) (unknown bool, isAncestor bool)
-	// Get the canonical entry at the given slot.
-	// Before the block (if present) if preBlock is true, after the block otherwise.
+	// Get the canonical entry at the given slot. Return nil if there is no block but the slot node exists.
 	BySlot(slot Slot, preBlock bool) (ChainEntry, error)
 	Iter() (ChainIter, error)
 }
 
 type ChainIter interface {
-	// Start is the minimum slot to reach to, inclusive.
-	Start() Slot
-	// End is the maximum slot to reach to, exclusive.
-	End() Slot
+	// Start is the minimum slot to reach to, inclusive. And preBlock is whether or not it starts with a node with a block.
+	Start() (slot Slot, preBlock bool)
+	// End is the maximum slot to reach to, exclusive. And preBlock is whether or not it stops with a node with a block.
+	End() (slot Slot, preBlock bool)
 	// Entry fetches the chain entry at the given slot.
-	// If it does not exist, entry=nil, err=nil.
-	// If the request is out of bounds or fails, an error may be returned.
-	Entry(slot Slot) (entry ChainEntry, err error)
+	// If the slot has no block but preBlock is true, then entry == nil, err == nil.
+	// If the request is out of bounds or fails, an error is returned.
+	// The preBlock on Start() and End() counts as bounds too: chains may only store part of the slot.
+	Entry(slot Slot, preBlock bool) (entry ChainEntry, err error)
 }
 
 type BlockSlotKey struct {

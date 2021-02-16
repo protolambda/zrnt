@@ -111,24 +111,28 @@ func NewFinalizedChain(anchorSlot Slot, spec *beacon.Spec, stateDB states.DB) *F
 
 type ColdChainIter struct {
 	Chain              Chain
-	// Remember start and end, so that the iteration view mostly stays consistent.
-	// The iteration may still forcefully change (i.e. entry retrieval results in error) if the history is pruned.
 	StartSlot, EndSlot Slot
+	StartPreBlock, EndPreBlock bool
 }
 
-func (fi *ColdChainIter) Start() Slot {
-	return fi.StartSlot
+func (fi *ColdChainIter) Start() (slot Slot, preBlock bool) {
+	return fi.StartSlot, fi.StartPreBlock
 }
 
-func (fi *ColdChainIter) End() Slot {
-	return fi.EndSlot
+func (fi *ColdChainIter) End() (slot Slot, preBlock bool) {
+	return fi.EndSlot, fi.EndPreBlock
 }
 
-func (fi *ColdChainIter) Entry(slot Slot) (entry ChainEntry, err error) {
-	if slot < fi.StartSlot || slot >= fi.EndSlot {
-		return nil, fmt.Errorf("out of range slot: %d, range: [%d, %d)", slot, fi.StartSlot, fi.EndSlot)
+func (fi *ColdChainIter) Entry(slot Slot, preBlock bool) (entry ChainEntry, err error) {
+	start, startPreBl := fi.Start()
+	end, endPreBl := fi.End()
+	if slot < start || (slot == start && preBlock && !startPreBl) {
+		return nil, fmt.Errorf("query too low")
 	}
-	entry, err = fi.Chain.BySlot(slot)
+	if slot > end || (slot == end && !preBlock && endPreBl) {
+		return nil, fmt.Errorf("query too high")
+	}
+	entry, err = fi.Chain.BySlot(slot, preBlock)
 	return
 }
 

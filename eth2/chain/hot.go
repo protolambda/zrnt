@@ -100,23 +100,38 @@ type UnfinalizedChain struct {
 
 // Iterable over the unfinalized part of the chain (including the finalizing node at start of epoch).
 // The view stays consistent during iteration: it's a full shallow copy of the canonical branch of the tree.
-// Each slot with a block is represented as two nodes (pre and post block processing), empty slots have a single node.
+// Each slot is represented with two consecutive entry pointers.
+// First for the preBlock node (omitted if not part of the chain at the start),
+// second for the postBlock node (and is nil if it's an empty slot, omitted if not part of the chain at the end).
 type HotChainIter []*HotEntry  // Ordered from finalized slot to head slot
 
-func (fi HotChainIter) Start() Slot {
-	return fi[0].self.Slot
+func (fi HotChainIter) Start() (slot Slot, preBlock bool) {
+	node := fi[0]
+	return node.self.Slot, node.parent == node.self.Root
 }
 
-func (fi HotChainIter) End() Slot {
-	return fi[len(fi)-1].self.Slot
+func (fi HotChainIter) End() (slot Slot, preBlock bool) {
+	node := fi[len(fi)-1]
+	return node.self.Slot, node.parent == node.self.Root
 }
 
-func (fi HotChainIter) Entry(slot Slot) (entry ChainEntry, err error) {
-	start, end := fi.Start(), fi.End()
-	if slot < start || slot >= end {
-		return nil, fmt.Errorf("out of range slot: %d, range: [%d, %d)", slot, fi.Start(), fi.End())
+func (fi HotChainIter) Entry(slot Slot, preBlock bool) (entry ChainEntry, err error) {
+	start, startPreBl := fi.Start()
+	end, endPreBl := fi.End()
+	if slot < start || (slot == start && preBlock && !startPreBl) {
+		return nil, fmt.Errorf("query too low")
 	}
-	return fi[slot-start], nil
+	if slot > end || (slot == end && !preBlock && endPreBl) {
+		return nil, fmt.Errorf("query too high")
+	}
+	i := uint64(slot - start) << 1
+	if !preBlock {
+		i++
+	}
+	if !startPreBl {  // safe: either the slot offsets it, or the above i++
+		i--
+	}
+	return fi[i], nil
 }
 
 func (uc *UnfinalizedChain) Iter() (ChainIter, error) {
@@ -140,6 +155,15 @@ func (uc *UnfinalizedChain) Iter() (ChainIter, error) {
 			return nil, fmt.Errorf("missing hot entry for node root %s slot %d", node.Root, node.Slot)
 		}
 		entries = append(entries, entry)
+		// if this is the first node of the (pre, post) pair, then check for the 2nd, and add nil if there is none.
+		if node.Root == node.ParentRoot {
+			if i + 1 < len(nodes) {  // clip at the end.
+				next := nodes[i+1]
+				if next.Slot != node.Slot {
+					entries = append(entries, nil)
+				}
+			}
+		}
 	}
 
 	return HotChainIter(entries), nil
@@ -391,16 +415,16 @@ func (uc *UnfinalizedChain) IsAncestor(root Root, ofRoot Root) (unknown bool, is
 func (uc *UnfinalizedChain) BySlot(slot Slot, preBlock bool) (ChainEntry, error) {
 	uc.Lock()
 	defer uc.Unlock()
-	closest, err := uc.ForkChoice.CanonAtSlot(uc.Justified().Root, slot, preBlock)
+	ref, err := uc.ForkChoice.CanonAtSlot(uc.Justified().Root, slot, preBlock)
 	if err != nil {
 		return nil, err
 	}
-	if closest.Slot != slot {
-		return nil, fmt.Errorf("cannot find node at the given slot %d, but found to %d", slot, closest.Slot)
+	if ref == nil {
+		return nil, nil
 	}
-	entry, ok := uc.byBlockSlot(BlockSlotKey{Root: closest.Root, Slot: slot})
+	entry, ok := uc.byBlockSlot(BlockSlotKey{Root: ref.Root, Slot: slot})
 	if !ok {
-		return nil, fmt.Errorf("forkchoice found node not present in hot chain: %s:%d", closest.Root, closest.Slot)
+		return nil, fmt.Errorf("forkchoice found node not present in hot chain: %s:%d", ref.Root, slot)
 	}
 	return entry, nil
 }

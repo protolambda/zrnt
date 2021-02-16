@@ -39,12 +39,14 @@ type ChainEntry interface {
 }
 
 type Chain interface {
-	// Get the chain entry for the given state root.
-	// The state root may be equal to ChainEntry.StateRootExclBlock or ChainEntry.StateRootInclBlock of the result.
-	ByStateRoot(root Root) (ChainEntry, error)
-	ByBlockRoot(root Root) (ChainEntry, error)
-	// Find closest ref in subtree, up to given slot (may return entry of fromBlockRoot itself).
-	// Err if none, incl. fromBlockRoot, could be found.
+	// Get the chain entry for the given state root (post slot processing or post block processing)
+	ByStateRoot(root Root) (entry ChainEntry, ok bool)
+	// Get the chain entry for the given block root and slot, may be an empty slot,
+	// or may be in-between slot processing and block processing if the parent block root is requested for the slot.
+	ByBlockSlot(root Root, slot Slot) (entry ChainEntry, ok bool)
+	// Find closest ref in subtree, up to given slot (may return entry of fromBlockRoot itself),
+	// without any blocks after fromBlockRoot.
+	// Err if no entry, even not fromBlockRoot, could be found.
 	Closest(fromBlockRoot Root, toSlot Slot) (ChainEntry, error)
 	// First gets the closets ref from the given block root to the requested slot,
 	// then transitions empty slots to get up to the requested slot.

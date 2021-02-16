@@ -3,6 +3,7 @@ package beacon
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/ztyp/tree"
 )
@@ -160,13 +161,24 @@ func (spec *Spec) ProcessBlock(ctx context.Context, epc *EpochsContext, state *B
 	return nil
 }
 
-// Transition the state to the slot of the given block, then processes the block.
-// Returns an error if the slot is older than the state is already at.
+// StateTransition to the slot of the given block, then process the block.
+// Returns an error if the slot is older or equal to what the state is already at.
 // Mutates the state, does not copy.
-//
 func (spec *Spec) StateTransition(ctx context.Context, epc *EpochsContext, state *BeaconStateView, block *SignedBeaconBlock, validateResult bool) error {
 	if err := spec.ProcessSlots(ctx, epc, state, block.Message.Slot); err != nil {
 		return err
+	}
+	return spec.PostSlotTransition(ctx, epc, state, block, validateResult)
+}
+
+// PostSlotTransition finishes a state transition after applying ProcessSlots(..., block.Slot).
+func (spec *Spec) PostSlotTransition(ctx context.Context, epc *EpochsContext, state *BeaconStateView, block *SignedBeaconBlock, validateResult bool) error {
+	slot, err := state.Slot()
+	if err != nil {
+		return err
+	}
+	if slot != block.Message.Slot {
+		return fmt.Errorf("transition of block, post-slot-processing, must run on state with same slot")
 	}
 	if validateResult {
 		// Safe to ignore proposer index, it will be checked as part of the ProcessHeader call.
@@ -174,7 +186,6 @@ func (spec *Spec) StateTransition(ctx context.Context, epc *EpochsContext, state
 			return errors.New("block has invalid signature")
 		}
 	}
-
 	if err := spec.ProcessBlock(ctx, epc, state, &block.Message); err != nil {
 		return err
 	}

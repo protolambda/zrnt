@@ -119,10 +119,46 @@ func (pr *ProtoArray) CanonicalChain(anchorRoot Root, anchorSlot Slot) ([]Extend
 	return chain, nil
 }
 
-// Returns the closest node to the given slot.
+// Returns the closest empty-slot node to the given slot. Nodes with blocks after the anchor are ignored.
+func (pr *ProtoArray) ClosestToSlot(anchor Root, slot Slot) (closest NodeRef, err error) {
+	max := NodeRef{Root: anchor, Slot: slot}
+	// If it just exists already, we have nothing to do
+	if _, ok := pr.indices[max]; ok {
+		return max, nil
+	}
+
+	anchorSlot, ok := pr.blockSlots[anchor]
+	if !ok {
+		return NodeRef{}, fmt.Errorf("unknown anchor %s", anchor)
+	}
+	if anchorSlot > slot {
+		return NodeRef{}, fmt.Errorf("cannot look for slot %d before anchor slot %d (%s)",
+			slot, anchorSlot, anchor)
+	}
+	min := NodeRef{Root: anchor, Slot: anchorSlot}
+	// short-cut common case: the slot is the anchor itself, e.g. we're building on the requested node.
+	if anchorSlot == slot {
+		return min, nil
+	}
+
+	// binary search the existing nodes for the slot closest by, with the same root.
+	pivot := NodeRef{Slot: 0, Root: anchor}
+	for min.Slot+1 < max.Slot {
+		// max.Slot is always at least 2 higher, we're changing the pivot and don't get stuck.
+		pivot.Slot = min.Slot + ((max.Slot - min.Slot) / 2)
+		if _, ok := pr.indices[pivot]; ok {
+			min.Slot = pivot.Slot
+		} else {
+			max.Slot = pivot.Slot
+		}
+	}
+	return min, nil
+}
+
+// Returns the closest canonical node to the given slot.
 // The node with a block (if any) is preferred over the gap slot node.
 // If there is a double proposal, the canonical block (w.r.t. anchor) is preferred.
-func (pr *ProtoArray) ClosestToSlot(anchor Root, slot Slot) (closest NodeRef, err error) {
+func (pr *ProtoArray) CanonAtSlot(anchor Root, slot Slot) (closest NodeRef, err error) {
 	anchorSlot, ok := pr.blockSlots[anchor]
 	if !ok {
 		return NodeRef{}, fmt.Errorf("unknown anchor %s", anchor)
@@ -728,15 +764,21 @@ func (fc *ForkChoice) Finalized() Checkpoint {
 }
 
 func (fc *ForkChoice) IsAncestor(root Root, ofRoot Root) (unknown bool, isAncestor bool) {
-	fc.RLock()
-	defer fc.RUnlock()
+	fc.Lock()
+	defer fc.Unlock()
 	return fc.protoArray.IsAncestor(root, ofRoot)
 }
 
 func (fc *ForkChoice) ClosestToSlot(anchor Root, slot Slot) (ref NodeRef, err error) {
-	fc.RLock()
-	defer fc.RUnlock()
+	fc.Lock()
+	defer fc.Unlock()
 	return fc.protoArray.ClosestToSlot(anchor, slot)
+}
+
+func (fc *ForkChoice) CanonAtSlot(anchor Root, slot Slot) (closest NodeRef, err error) {
+	fc.Lock()
+	defer fc.Unlock()
+	return fc.protoArray.CanonAtSlot(anchor, slot)
 }
 
 // Return the latest block reference known for the node.

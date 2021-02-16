@@ -77,6 +77,7 @@ type UnfinalizedChain struct {
 
 	// Block root (parent if empty slot) and slot -> Entry
 	Entries map[BlockSlotKey]*HotEntry
+
 	// State root -> block+slot key
 	//
 	// State roots here include the updated latest-header, and matches the state root in the block.
@@ -273,58 +274,138 @@ func (uc *UnfinalizedChain) OnPrunedNode(node *forkchoice.ProtoNode, canonical b
 	return nil
 }
 
-func (uc *UnfinalizedChain) ByStateRoot(root Root) (ChainEntry, error) {
+func (uc *UnfinalizedChain) ByStateRoot(root Root) (entry ChainEntry, ok bool) {
 	uc.RLock()
 	defer uc.RUnlock()
 	key, ok := uc.State2Key[root]
 	if !ok {
-		return nil, fmt.Errorf("unknown state %s", root)
+		return nil, false
 	}
 	return uc.byBlockSlot(key)
 }
 
-func (uc *UnfinalizedChain) ByBlockSlot(key BlockSlotKey) (ChainEntry, error) {
+func (uc *UnfinalizedChain) byBlockSlot(key BlockSlotKey) (entry ChainEntry, ok bool) {
+	entry, ok = uc.Entries[key]
+	return entry, ok
+}
+
+func (uc *UnfinalizedChain) ByBlockSlot(root Root, slot Slot) (entry ChainEntry, ok bool) {
 	uc.RLock()
 	defer uc.RUnlock()
-	return uc.byBlockSlot(key)
+	return uc.byBlockSlot(BlockSlotKey{Slot: slot, Root: root})
 }
 
-func (uc *UnfinalizedChain) byBlockSlot(key BlockSlotKey) (ChainEntry, error) {
-	entry, ok := uc.Entries[key]
-	if !ok {
-		return nil, fmt.Errorf("unknown block slot, root: %s slot: %d", key.Root(), key.Slot())
-	}
-	return entry, nil
-}
-
-func (uc *UnfinalizedChain) ByBlockRoot(root Root) (ChainEntry, error) {
-	uc.RLock()
-	defer uc.RUnlock()
-	ref, ok := uc.ForkChoice.GetBlock(root)
-	if !ok {
-		return nil, fmt.Errorf("unknown block %s", root)
-	}
-	return uc.byBlockSlot(NewBlockSlotKey(root, ref.Slot))
-}
-
-// Find closest block in subtree, up to given slot (may return entry of fromBlockRoot itself).
-// Err if none, incl. fromBlockRoot, could be found.
 func (uc *UnfinalizedChain) Closest(fromBlockRoot Root, toSlot Slot) (ChainEntry, error) {
 	uc.RLock()
 	defer uc.RUnlock()
+	return uc.closest(fromBlockRoot, toSlot)
+}
+
+func (uc *UnfinalizedChain) closest(fromBlockRoot Root, toSlot Slot) (ChainEntry, error) {
 	ref, err := uc.ForkChoice.ClosestToSlot(fromBlockRoot, toSlot)
 	if err != nil {
 		return nil, err
 	}
 	if ref != (forkchoice.NodeRef{}) {
-		return uc.byBlockSlot(BlockSlotKey{Root: ref.Root, Slot: ref.Slot})
+		entry, ok := uc.byBlockSlot(BlockSlotKey{Root: ref.Root, Slot: ref.Slot})
+		if !ok {
+			panic("node disappeared (unreachable)")
+		}
+		return entry, nil
 	}
 	return nil, fmt.Errorf("could not find closest hot block starting from root %s, up to slot %d", fromBlockRoot, toSlot)
 }
 
+// helper function to fetch justified and finalized epoch from a beacon state
+func stateJustFin(state *beacon.BeaconStateView) (justifiedEpoch Epoch, finalizedEpoch Epoch, err error) {
+	justifiedCh, err := state.CurrentJustifiedCheckpoint()
+	if err != nil {
+		return 0, 0, err
+	}
+	justifiedEpoch, err = justifiedCh.Epoch()
+	if err != nil {
+		return 0, 0, err
+	}
+	finalizedCh, err := state.FinalizedCheckpoint()
+	if err != nil {
+		return 0, 0, err
+	}
+	finalizedEpoch, err = finalizedCh.Epoch()
+	if err != nil {
+		return 0, 0, err
+	}
+	return
+}
+
 func (uc *UnfinalizedChain) Towards(ctx context.Context, fromBlockRoot Root, toSlot Slot) (ChainEntry, error) {
-	// TODO
-	return nil, nil
+	uc.Lock()
+	defer uc.Unlock()
+	closest, err := uc.closest(fromBlockRoot, toSlot)
+	if err != nil {
+		return nil, err
+	}
+	if closest.Slot() == toSlot {
+		return closest, nil
+	}
+
+	epc, err := closest.EpochsContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	state, err := closest.State(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var last *HotEntry
+	// Process empty slots
+	for slot := closest.Slot(); slot < toSlot; {
+		if err := uc.Spec.ProcessSlot(ctx, state); err != nil {
+			return nil, err
+		}
+		// Per-epoch transition happens at the start of the first slot of every epoch.
+		// (with the slot still at the end of the last epoch)
+		isEpochEnd := uc.Spec.SlotToEpoch(slot+1) != uc.Spec.SlotToEpoch(slot)
+		if isEpochEnd {
+			if err := uc.Spec.ProcessEpoch(ctx, epc, state); err != nil {
+				return nil, err
+			}
+		}
+		slot += 1
+		if err := state.SetSlot(slot); err != nil {
+			return nil, err
+		}
+		if isEpochEnd {
+			if err := epc.RotateEpochs(state); err != nil {
+				return nil, err
+			}
+		}
+		justifiedEpoch, finalizedEpoch, err := stateJustFin(state)
+		if err != nil {
+			return nil, err
+		}
+		// Make the forkchoice aware of this new slot
+		uc.ForkChoice.ProcessSlot(fromBlockRoot, slot, justifiedEpoch, finalizedEpoch)
+
+		// Track the entry
+		key := BlockSlotKey{Root: fromBlockRoot, Slot: slot}
+		entry := &HotEntry{
+			self:   key,
+			epc:    epc,
+			state:  state,
+			parent: fromBlockRoot,
+		}
+		uc.Entries[key] = entry
+		last = entry
+
+		state, err = beacon.AsBeaconStateView(state.Copy())
+		if err != nil {
+			return nil, err
+		}
+		epc = epc.Clone()
+	}
+	return last, nil
 }
 
 func (uc *UnfinalizedChain) IsAncestor(root Root, ofRoot Root) (unknown bool, isAncestor bool) {
@@ -334,19 +415,20 @@ func (uc *UnfinalizedChain) IsAncestor(root Root, ofRoot Root) (unknown bool, is
 }
 
 func (uc *UnfinalizedChain) BySlot(slot Slot) (ChainEntry, error) {
-	uc.RLock()
-	defer uc.RUnlock()
-	_, at, _, err := uc.ForkChoice.BlocksAroundSlot(uc.Justified().Root, slot)
+	uc.Lock()
+	defer uc.Unlock()
+	closest, err := uc.ForkChoice.CanonAtSlot(uc.Justified().Root, slot)
 	if err != nil {
 		return nil, err
 	}
-	if at == (forkchoice.NodeRef{}) {
-		return nil, fmt.Errorf("no hot entry known for slot %d", slot)
+	if closest.Slot != slot {
+		return nil, fmt.Errorf("cannot find node at the given slot %d, but found to %d", slot, closest.Slot)
 	}
-	if at.Slot != slot {
-		panic("forkchoice bug, found block not actually at correct slot")
+	entry, ok := uc.byBlockSlot(BlockSlotKey{Root: closest.Root, Slot: slot})
+	if !ok {
+		return nil, fmt.Errorf("forkchoice found node not present in hot chain: %s:%d", closest.Root, closest.Slot)
 	}
-	return uc.byBlockSlot(NewBlockSlotKey(at.Root, at.Slot))
+	return entry, nil
 }
 
 func (uc *UnfinalizedChain) Justified() Checkpoint {
@@ -358,118 +440,61 @@ func (uc *UnfinalizedChain) Finalized() Checkpoint {
 }
 
 func (uc *UnfinalizedChain) Head() (ChainEntry, error) {
+	uc.Lock()
+	defer uc.Unlock()
 	ref, err := uc.ForkChoice.FindHead()
 	if err != nil {
 		return nil, err
 	}
-	return uc.ByBlockRoot(ref.Root)
+	entry, ok := uc.byBlockSlot(BlockSlotKey{Root: ref.Root, Slot: ref.Slot})
+	if !ok {
+		return nil, fmt.Errorf("forkchoice found head node not in hot chain: %s:%d", ref.Root, ref.Slot)
+	}
+	return entry, nil
 }
 
 func (uc *UnfinalizedChain) AddBlock(ctx context.Context, signedBlock *beacon.SignedBeaconBlock) error {
+	uc.Lock()
+	defer uc.Unlock()
+
 	block := &signedBlock.Message
+	pre, err := uc.Towards(ctx, block.ParentRoot, block.Slot)
+	if err != nil {
+		return fmt.Errorf("failed to prepare for block, towards-slot failed: %v", err)
+	}
+
 	blockRoot := block.HashTreeRoot(uc.Spec, tree.GetHashFn())
-
-	pre, err := uc.Closest(block.ParentRoot, block.Slot)
-	if err != nil {
-		return err
-	}
-
-	if root := pre.BlockRoot(); root != block.ParentRoot {
-		return fmt.Errorf("unknown parent root %s, found other root %s", block.ParentRoot, root)
-	}
-
-	epc, err := pre.EpochsContext(ctx)
-	if err != nil {
-		return err
-	}
 
 	state, err := pre.State(ctx)
 	if err != nil {
 		return err
 	}
-
-	// Process empty slots
-	for slot := pre.Slot(); slot+1 < block.Slot; {
-		if err := uc.Spec.ProcessSlot(ctx, state); err != nil {
-			return err
-		}
-		// Per-epoch transition happens at the start of the first slot of every epoch.
-		// (with the slot still at the end of the last epoch)
-		isEpochEnd := uc.Spec.SlotToEpoch(slot+1) != uc.Spec.SlotToEpoch(slot)
-		if isEpochEnd {
-			if err := uc.Spec.ProcessEpoch(ctx, epc, state); err != nil {
-				return err
-			}
-		}
-		slot += 1
-		if err := state.SetSlot(slot); err != nil {
-			return err
-		}
-		if isEpochEnd {
-			if err := epc.RotateEpochs(state); err != nil {
-				return err
-			}
-		}
-
-		// Add empty slot entry
-		uc.Lock()
-		uc.Entries[NewBlockSlotKey(block.ParentRoot, slot)] = &HotEntry{
-			slot:       slot,
-			epc:        epc,
-			state:      state,
-			blockRoot:  blockRoot,
-			parentRoot: Root{},
-		}
-		uc.Unlock()
-
-		state, err = beacon.AsBeaconStateView(state.Copy())
-		if err != nil {
-			return err
-		}
-		epc = epc.Clone()
-	}
-
-	// TODO: we're not storing the slot transition for the slot of the block itself (as if the slot was empty)
-	if err := uc.Spec.StateTransition(ctx, epc, state, signedBlock, true); err != nil {
+	epc, err := pre.EpochsContext(ctx)
+	if err != nil {
 		return err
 	}
 
-	var finalizedEpoch, justifiedEpoch Epoch
-	{
-		finalizedCh, err := state.FinalizedCheckpoint()
-		if err != nil {
-			return err
-		}
-		finalizedEpoch, err = finalizedCh.Epoch()
-		if err != nil {
-			return err
-		}
-		justifiedCh, err := state.CurrentJustifiedCheckpoint()
-		if err != nil {
-			return err
-		}
-		justifiedEpoch, err = justifiedCh.Epoch()
-		if err != nil {
-			return err
-		}
+	// we already processed the slots (including that of the block itself), just finish the transition.
+	if err := uc.Spec.PostSlotTransition(ctx, epc, state, signedBlock, true); err != nil {
+		return err
 	}
 
-	uc.Lock()
-	defer uc.Unlock()
-	uc.Entries[NewBlockSlotKey(blockRoot, block.Slot)] = &HotEntry{
-		slot:       block.Slot,
-		epc:        epc,
-		state:      state,
-		blockRoot:  blockRoot,
-		parentRoot: block.ParentRoot,
+	justifiedEpoch, finalizedEpoch, err := stateJustFin(state)
+	if err != nil {
+		return err
 	}
-	uc.ForkChoice.ProcessBlock(
-		forkchoice.NodeRef{Slot: block.Slot, Root: blockRoot},
-		block.ParentRoot, justifiedEpoch, finalizedEpoch)
 
-	if block.Slot < uc.AnchorSlot {
-		uc.AnchorSlot = block.Slot
+	// Make the forkchoice aware of the new block
+	uc.ForkChoice.ProcessBlock(block.ParentRoot, blockRoot, block.Slot, justifiedEpoch, finalizedEpoch)
+
+	key := BlockSlotKey{Slot: block.Slot, Root: blockRoot}
+	uc.Entries[key] = &HotEntry{
+		self:   key,
+		parent: block.ParentRoot,
+		epc:    epc,
+		state:  state,
 	}
+
 	return nil
 }
 
@@ -496,9 +521,8 @@ func (uc *UnfinalizedChain) AddAttestation(att *beacon.Attestation) error {
 	if err != nil {
 		return err
 	}
-	targetEpoch := att.Data.Target.Epoch
 	for _, index := range indexedAtt.AttestingIndices {
-		uc.ForkChoice.ProcessAttestation(index, blockRoot, targetEpoch)
+		uc.ForkChoice.ProcessAttestation(index, blockRoot, att.Data.Slot)
 	}
 	return nil
 }

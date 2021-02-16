@@ -45,14 +45,14 @@ type ProtoNode struct {
 	BestDescendant ProtoNodeIndex
 }
 
-type BlockSinkFn func(node *ProtoNode, canonical bool) error
+type BlockSinkFn func(ref NodeRef, canonical bool) error
 
-func (fn BlockSinkFn) OnPrunedNode(node *ProtoNode, canonical bool) error {
-	return fn(node, canonical)
+func (fn BlockSinkFn) OnPrunedNode(ref NodeRef, canonical bool) error {
+	return fn(ref, canonical)
 }
 
 type NodeSink interface {
-	OnPrunedNode(node *ProtoNode, canonical bool) error
+	OnPrunedNode(ref NodeRef, canonical bool) error
 }
 
 // Tracks slots and blocks as nodes.
@@ -503,7 +503,7 @@ func (pr *ProtoArray) OnPrune(anchorRoot Root, anchorSlot Slot) error {
 	pr.blockSlots[anchorRoot] = anchorSlot
 	// Send pruned nodes to the node sink (empty if no sink)
 	for _, p := range pruned {
-		if err := pr.sink.OnPrunedNode(p.node, p.canonical); err != nil {
+		if err := pr.sink.OnPrunedNode(p.node.Ref, p.canonical); err != nil {
 			return err
 		}
 	}

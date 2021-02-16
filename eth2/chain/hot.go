@@ -499,21 +499,19 @@ func (uc *UnfinalizedChain) AddBlock(ctx context.Context, signedBlock *beacon.Si
 }
 
 func (uc *UnfinalizedChain) AddAttestation(att *beacon.Attestation) error {
-	blockRoot := att.Data.BeaconBlockRoot
-	block, err := uc.ByBlockRoot(blockRoot)
+	uc.Lock()
+	defer uc.Unlock()
+
+	data := &att.Data
+	node, ok := uc.ByBlockSlot(data.BeaconBlockRoot, data.Slot)
+	if ok {
+		return fmt.Errorf("unknown block and slot pair: %s, %d", data.BeaconBlockRoot, data.Slot)
+	}
+	epc, err := node.EpochsContext(context.Background())
 	if err != nil {
 		return err
 	}
-	_, ok := block.(*HotEntry)
-	if !ok {
-		return errors.New("expected HotEntry, need epochs-context to be present")
-	}
-	// HotEntry does not use a context, epochs-context is available.
-	epc, err := block.EpochsContext(nil)
-	if err != nil {
-		return err
-	}
-	committee, err := epc.GetBeaconCommittee(att.Data.Slot, att.Data.Index)
+	committee, err := epc.GetBeaconCommittee(data.Slot, data.Index)
 	if err != nil {
 		return err
 	}
@@ -522,7 +520,7 @@ func (uc *UnfinalizedChain) AddAttestation(att *beacon.Attestation) error {
 		return err
 	}
 	for _, index := range indexedAtt.AttestingIndices {
-		uc.ForkChoice.ProcessAttestation(index, blockRoot, att.Data.Slot)
+		uc.ForkChoice.ProcessAttestation(index, data.BeaconBlockRoot, data.Slot)
 	}
 	return nil
 }

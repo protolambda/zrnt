@@ -155,10 +155,13 @@ func (pr *ProtoArray) ClosestToSlot(anchor Root, slot Slot) (closest NodeRef, er
 	return min, nil
 }
 
-// Returns the closest canonical node to the given slot.
-// The node with a block (if any) is preferred over the gap slot node.
-// If there is a double proposal, the canonical block (w.r.t. anchor) is preferred.
-func (pr *ProtoArray) CanonAtSlot(anchor Root, slot Slot) (closest NodeRef, err error) {
+// Returns the canonical node at the given slot.
+// If preBlock is true, a slot node is retrieved,
+// otherwise it may be a node with a block applied to its slot, if it is canonical.
+// If there is a double proposal, the canonical block (w.r.t. votes) is used.
+// If the fork-choice starts at a filled slot node, this node cannot be requested with preBlock == true,
+// as the data is already pruned.
+func (pr *ProtoArray) CanonAtSlot(anchor Root, slot Slot, preBlock bool) (closest NodeRef, err error) {
 	anchorSlot, ok := pr.blockSlots[anchor]
 	if !ok {
 		return NodeRef{}, fmt.Errorf("unknown anchor %s", anchor)
@@ -169,11 +172,23 @@ func (pr *ProtoArray) CanonAtSlot(anchor Root, slot Slot) (closest NodeRef, err 
 	}
 	// short-cut common case: the slot is the anchor itself, e.g. we're building on the current head.
 	if anchorSlot == slot {
-		return NodeRef{Root: anchor, Slot: slot}, nil
+		ref := NodeRef{Root: anchor, Slot: slot}
+		if preBlock {
+			i, ok := pr.indices[ref]
+			if !ok {
+				panic("anchor node is missing")
+			}
+			node := &pr.nodes[i]
+			// Is the anchor a filled node?
+			if node.ParentRoot != anchor {
+				return NodeRef{}, fmt.Errorf("cannot look for slot %d at anchor, anchor is filled node", slot)
+			}
+		}
+		return ref, nil
 	}
 	head, err := pr.FindHead(anchor, anchorSlot)
 	if err != nil {
-		return
+		return NodeRef{}, err
 	}
 	// The head may be the closest we have.
 	if head.Slot <= slot {
@@ -186,6 +201,11 @@ func (pr *ProtoArray) CanonAtSlot(anchor Root, slot Slot) (closest NodeRef, err 
 		node, err = pr.getNode(index)
 		if err != nil {
 			return
+		}
+		// if we are looking for the pre-block node, and the node is not empty, then skip it.
+		if preBlock && node.ParentRoot != node.Ref.Root {
+			index = node.Parent
+			continue
 		}
 		if node.Ref.Slot == slot {
 			return node.Ref, nil
@@ -719,6 +739,11 @@ func (fc *ForkChoice) PinAnchor(root Root, slot Slot) error {
 	return nil
 }
 
+// UpdateJustified updates what is recognized as justified and finalized checkpoint,
+// and adjusts justified balances for vote weights.
+// If the finalized checkpoint changes, it triggers pruning.
+// Note that pruning can prune the pre-block node of the start slot of the finalized epoch, if it is not a gap slot.
+// And the finalizing node with the block will remain.
 func (fc *ForkChoice) UpdateJustified(justified Checkpoint, finalized Checkpoint, justifiedStateBalances []Gwei) error {
 	fc.Lock()
 	defer fc.Unlock()
@@ -775,10 +800,10 @@ func (fc *ForkChoice) ClosestToSlot(anchor Root, slot Slot) (ref NodeRef, err er
 	return fc.protoArray.ClosestToSlot(anchor, slot)
 }
 
-func (fc *ForkChoice) CanonAtSlot(anchor Root, slot Slot) (closest NodeRef, err error) {
+func (fc *ForkChoice) CanonAtSlot(anchor Root, slot Slot, preBlock bool) (closest NodeRef, err error) {
 	fc.Lock()
 	defer fc.Unlock()
-	return fc.protoArray.CanonAtSlot(anchor, slot)
+	return fc.protoArray.CanonAtSlot(anchor, slot, preBlock)
 }
 
 // Return the latest block reference known for the node.

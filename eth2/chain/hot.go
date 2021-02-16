@@ -61,6 +61,11 @@ type HotChain interface {
 	Justified() Checkpoint
 	Finalized() Checkpoint
 	Head() (ChainEntry, error)
+	// First gets the closets ref from the given block root to the requested slot,
+	// then transitions empty slots to get up to the requested slot.
+	// A strict context should be provided to avoid costly long transitions.
+	// An error is also returned if the fromBlockRoot is past the requested toSlot.
+	Towards(ctx context.Context, fromBlockRoot Root, toSlot Slot) (ChainEntry, error)
 	// Process a block. If there is an error, the chain is not mutated, and can be continued to use.
 	AddBlock(ctx context.Context, signedBlock *beacon.SignedBeaconBlock) error
 	// Process an attestation. If there is an error, the chain is not mutated, and can be continued to use.
@@ -93,8 +98,10 @@ type UnfinalizedChain struct {
 	Spec *beacon.Spec
 }
 
-// ordered from finalized slot to head slot
-type HotChainIter []*HotEntry
+// Iterable over the unfinalized part of the chain (including the finalizing node at start of epoch).
+// The view stays consistent during iteration: it's a full shallow copy of the canonical branch of the tree.
+// Each slot with a block is represented as two nodes (pre and post block processing), empty slots have a single node.
+type HotChainIter []*HotEntry  // Ordered from finalized slot to head slot
 
 func (fi HotChainIter) Start() Slot {
 	return fi[0].self.Slot
@@ -362,6 +369,8 @@ func (uc *UnfinalizedChain) Towards(ctx context.Context, fromBlockRoot Root, toS
 			parent: fromBlockRoot,
 		}
 		uc.Entries[key] = entry
+		stateRoot := state.HashTreeRoot(tree.GetHashFn())
+		uc.State2Key[stateRoot] = key
 		last = entry
 
 		state, err = beacon.AsBeaconStateView(state.Copy())
@@ -379,10 +388,10 @@ func (uc *UnfinalizedChain) IsAncestor(root Root, ofRoot Root) (unknown bool, is
 	return uc.ForkChoice.IsAncestor(root, ofRoot)
 }
 
-func (uc *UnfinalizedChain) BySlot(slot Slot) (ChainEntry, error) {
+func (uc *UnfinalizedChain) BySlot(slot Slot, preBlock bool) (ChainEntry, error) {
 	uc.Lock()
 	defer uc.Unlock()
-	closest, err := uc.ForkChoice.CanonAtSlot(uc.Justified().Root, slot)
+	closest, err := uc.ForkChoice.CanonAtSlot(uc.Justified().Root, slot, preBlock)
 	if err != nil {
 		return nil, err
 	}
@@ -459,6 +468,7 @@ func (uc *UnfinalizedChain) AddBlock(ctx context.Context, signedBlock *beacon.Si
 		epc:    epc,
 		state:  state,
 	}
+	uc.State2Key[block.StateRoot] = key
 
 	return nil
 }

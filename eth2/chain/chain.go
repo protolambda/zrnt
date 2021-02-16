@@ -48,16 +48,13 @@ type Chain interface {
 	// without any blocks after fromBlockRoot.
 	// Err if no entry, even not fromBlockRoot, could be found.
 	Closest(fromBlockRoot Root, toSlot Slot) (ChainEntry, error)
-	// First gets the closets ref from the given block root to the requested slot,
-	// then transitions empty slots to get up to the requested slot.
-	// A strict context should be provided to avoid costly long transitions.
-	// An error is also returned if the fromBlockRoot is past the requested toSlot.
-	Towards(ctx context.Context, fromBlockRoot Root, toSlot Slot) (ChainEntry, error)
 	// Returns true if the given root is something that builds (maybe indirectly)
 	// on the ofRoot on the same chain.
 	// If root == ofRoot, then it is NOT considered an ancestor here.
 	IsAncestor(root Root, ofRoot Root) (unknown bool, isAncestor bool)
-	BySlot(slot Slot) (ChainEntry, error)
+	// Get the canonical entry at the given slot.
+	// Before the block (if present) if preBlock is true, after the block otherwise.
+	BySlot(slot Slot, preBlock bool) (ChainEntry, error)
 	Iter() (ChainIter, error)
 }
 

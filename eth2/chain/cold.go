@@ -10,8 +10,8 @@ import (
 )
 
 type ColdChain interface {
-	Start() Step
-	End() Step
+	ColdStart() Step
+	ColdEnd() Step
 	OnFinalizedEntry(ctx context.Context, entry ChainEntry) error
 	Chain
 }
@@ -26,23 +26,23 @@ func (e *FinalizedEntryView) Step() Step {
 }
 
 func (e *FinalizedEntryView) ParentRoot() (root Root) {
-	return e.finChain.ParentRoot(e.step.Slot())
+	return e.finChain.entryParentRoot(e.step.Slot())
 }
 
 func (e *FinalizedEntryView) BlockRoot() (root Root) {
-	return e.finChain.BlockRoot(e.step)
+	return e.finChain.entryBlockRoot(e.step)
 }
 
 func (e *FinalizedEntryView) StateRoot() Root {
-	return e.finChain.StateRoot(e.step)
+	return e.finChain.entryStateRoot(e.step)
 }
 
 func (e *FinalizedEntryView) EpochsContext(ctx context.Context) (*beacon.EpochsContext, error) {
-	return e.finChain.GetEpochsContext(ctx, e.step)
+	return e.finChain.entryGetEpochsContext(ctx, e.step)
 }
 
 func (e *FinalizedEntryView) State(ctx context.Context) (*beacon.BeaconStateView, error) {
-	return e.finChain.GetState(ctx, e.step)
+	return e.finChain.entryGetState(ctx, e.step)
 }
 
 // The finalized chain excludes the finalization node (i.e. node at start of finalized epoch),
@@ -128,13 +128,13 @@ func (f *FinalizedChain) Iter() (ChainIter, error) {
 	defer f.RUnlock()
 	return &ColdChainIter{
 		Chain:     f,
-		StartStep: f.Start(),
-		EndStep:   f.End(),
+		StartStep: f.ColdStart(),
+		EndStep:   f.ColdEnd(),
 	}, nil
 }
 
 // Start of the cold chain (inclusive). Also see End
-func (f *FinalizedChain) Start() Step {
+func (f *FinalizedChain) ColdStart() Step {
 	f.RLock()
 	defer f.RUnlock()
 	return f.start()
@@ -150,7 +150,7 @@ func (f *FinalizedChain) start() Step {
 // End step of the cold chain part (exclusive), should equal the epoch start slot of the finalized checkpoint,
 // with or without block (depends on if it's a gap slot or not).
 // The FinalizedChain is empty if Start() == End() == 0
-func (f *FinalizedChain) End() Step {
+func (f *FinalizedChain) ColdEnd() Step {
 	f.RLock()
 	defer f.RUnlock()
 	return f.end()
@@ -168,6 +168,16 @@ func (f *FinalizedChain) ByStateRoot(root Root) (entry ChainEntry, ok bool) {
 		return nil, false
 	}
 	return f.byCanonStep(step)
+}
+
+func (f *FinalizedChain) ByBlock(root Root) (entry ChainEntry, ok bool) {
+	f.RLock()
+	defer f.RUnlock()
+	slot, ok := f.BlockRootsMap[root]
+	if !ok {
+		return nil, false
+	}
+	return f.byBlockSlot(root, slot)
 }
 
 func (f *FinalizedChain) ByBlockSlot(root Root, slot Slot) (entry ChainEntry, ok bool) {
@@ -260,10 +270,10 @@ func (f *FinalizedChain) ByCanonStep(step Step) (entry ChainEntry, ok bool) {
 }
 
 func (f *FinalizedChain) byCanonStep(step Step) (entry ChainEntry, ok bool) {
-	if start := f.Start(); step < start {
+	if start := f.ColdStart(); step < start {
 		return nil, false
 	}
-	if end := f.End(); step >= end {
+	if end := f.ColdEnd(); step >= end {
 		return nil, false
 	}
 	return &FinalizedEntryView{
@@ -280,7 +290,7 @@ func (f *FinalizedChain) OnFinalizedEntry(ctx context.Context, entry ChainEntry)
 
 	// If the chain is not empty, we need to verify consistency with what we add.
 	if len(f.StateRoots) != 0 {
-		end := f.End()
+		end := f.ColdEnd()
 		if end > next {
 			return fmt.Errorf("received finalized entry %s at %s, but already finalized up to later step %s", blockRoot, next, end)
 		}
@@ -319,11 +329,11 @@ func (f *FinalizedChain) OnFinalizedEntry(ctx context.Context, entry ChainEntry)
 	return nil
 }
 
-func (f *FinalizedChain) ParentRoot(slot Slot) (root Root) {
-	return f.BlockRoot(AsStep(slot, false))
+func (f *FinalizedChain) entryParentRoot(slot Slot) (root Root) {
+	return f.entryBlockRoot(AsStep(slot, false))
 }
 
-func (f *FinalizedChain) BlockRoot(step Step) (root Root) {
+func (f *FinalizedChain) entryBlockRoot(step Step) (root Root) {
 	f.RLock()
 	defer f.RUnlock()
 	start := f.start()
@@ -334,7 +344,7 @@ func (f *FinalizedChain) BlockRoot(step Step) (root Root) {
 	return f.BlockRoots[step-start]
 }
 
-func (f *FinalizedChain) StateRoot(step Step) Root {
+func (f *FinalizedChain) entryStateRoot(step Step) Root {
 	f.RLock()
 	defer f.RUnlock()
 	return f.stateRoot(step)
@@ -349,7 +359,7 @@ func (f *FinalizedChain) stateRoot(step Step) Root {
 	return f.StateRoots[step-start]
 }
 
-func (f *FinalizedChain) GetEpochsContext(ctx context.Context, step Step) (*beacon.EpochsContext, error) {
+func (f *FinalizedChain) entryGetEpochsContext(ctx context.Context, step Step) (*beacon.EpochsContext, error) {
 	f.RLock()
 	defer f.RUnlock()
 	epc := &beacon.EpochsContext{
@@ -370,7 +380,7 @@ func (f *FinalizedChain) GetEpochsContext(ctx context.Context, step Step) (*beac
 	return epc, nil
 }
 
-func (f *FinalizedChain) GetState(ctx context.Context, step Step) (*beacon.BeaconStateView, error) {
+func (f *FinalizedChain) entryGetState(ctx context.Context, step Step) (*beacon.BeaconStateView, error) {
 	f.RLock()
 	defer f.RUnlock()
 	return f.getState(ctx, step)

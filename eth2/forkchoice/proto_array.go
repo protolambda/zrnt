@@ -1,6 +1,7 @@
 package forkchoice
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon"
@@ -45,14 +46,14 @@ type ProtoNode struct {
 	BestDescendant ProtoNodeIndex
 }
 
-type BlockSinkFn func(ref NodeRef, canonical bool) error
+type BlockSinkFn func(ctx context.Context, ref NodeRef, canonical bool) error
 
-func (fn BlockSinkFn) OnPrunedNode(ref NodeRef, canonical bool) error {
-	return fn(ref, canonical)
+func (fn BlockSinkFn) OnPrunedNode(ctx context.Context, ref NodeRef, canonical bool) error {
+	return fn(ctx, ref, canonical)
 }
 
 type NodeSink interface {
-	OnPrunedNode(ref NodeRef, canonical bool) error
+	OnPrunedNode(ctx context.Context, ref NodeRef, canonical bool) error
 }
 
 // Tracks slots and blocks as nodes.
@@ -485,7 +486,7 @@ type prunedNode struct {
 // The slot may point to a gap slot,
 // in which case the node with the anchor block of the anchor block-root is pruned,
 // and the next nodes, up to (and excl.) the anchorSlot.
-func (pr *ProtoArray) OnPrune(anchorRoot Root, anchorSlot Slot) error {
+func (pr *ProtoArray) OnPrune(ctx context.Context, anchorRoot Root, anchorSlot Slot) error {
 	anchorRef := NodeRef{Root: anchorRoot, Slot: anchorSlot}
 	anchorIndex, ok := pr.indices[anchorRef]
 	if !ok {
@@ -514,24 +515,28 @@ func (pr *ProtoArray) OnPrune(anchorRoot Root, anchorSlot Slot) error {
 			canonical := node.BestDescendant == headIndex
 			pruned = append(pruned, prunedNode{canonical, node})
 		}
-		// Remove one by one (oldest first), so above errors cannot mess up forkchoice state
-		delete(pr.indices, node.Ref)
-		// Remove the block-slots ref
-		delete(pr.blockSlots, node.Ref.Root)
-		// TODO: is this slicing bad for GC?
-		pr.nodes = pr.nodes[1:]
-		// update offset
-		pr.indexOffset = i
+	}
+	// Send pruned nodes to the node sink (empty if no sink). Continue until it fails.
+	// Only prune what we sucessfully sent to the sink.
+	prunedUpTo := 0
+	for _, p := range pruned {
+		if err = pr.sink.OnPrunedNode(ctx, p.node.Ref, p.canonical); err != nil {
+			break
+		}
+		prunedUpTo++
 	}
 	// adjust the slot we know for the anchor root, everything before it was pruned.
 	pr.blockSlots[anchorRoot] = anchorSlot
-	// Send pruned nodes to the node sink (empty if no sink)
-	for _, p := range pruned {
-		if err := pr.sink.OnPrunedNode(p.node.Ref, p.canonical); err != nil {
-			return err
-		}
+	for _, p := range pruned[:prunedUpTo] {
+		delete(pr.indices, p.node.Ref)
+		// Remove the block-slots ref
+		delete(pr.blockSlots, p.node.Ref.Root)
+		// TODO: is this slicing bad for GC?
+		pr.nodes = pr.nodes[1:]
+		// update offset
+		pr.indexOffset++
 	}
-	return nil
+	return err
 }
 
 // Observe the parent at `parent_index` with respect to the child at `child_index` and
@@ -748,9 +753,14 @@ func (fc *ForkChoice) PinAnchor(root Root, slot Slot) error {
 // If the finalized checkpoint changes, it triggers pruning.
 // Note that pruning can prune the pre-block node of the start slot of the finalized epoch, if it is not a gap slot.
 // And the finalizing node with the block will remain.
-func (fc *ForkChoice) UpdateJustified(justified Checkpoint, finalized Checkpoint, justifiedStateBalances []Gwei) error {
+func (fc *ForkChoice) UpdateJustified(ctx context.Context, justified Checkpoint, finalized Checkpoint,
+	justifiedStateBalances func() ([]Gwei, error)) error {
 	fc.Lock()
 	defer fc.Unlock()
+	// Old/same data? Ignore the change.
+	if fc.justified.Epoch >= justified.Epoch && fc.finalized.Epoch >= finalized.Epoch {
+		return nil
+	}
 	justifiedSlot, err := fc.spec.EpochStartSlot(justified.Epoch)
 	if err != nil {
 		return fmt.Errorf("bad justified epoch: %d", justified.Epoch)
@@ -760,7 +770,10 @@ func (fc *ForkChoice) UpdateJustified(justified Checkpoint, finalized Checkpoint
 	}
 
 	oldBals := fc.balances
-	newBals := justifiedStateBalances
+	newBals, err := justifiedStateBalances()
+	if err != nil {
+		return err
+	}
 
 	deltas := computeDeltas(fc.protoArray.indices, fc.votes, oldBals, newBals)
 
@@ -777,7 +790,7 @@ func (fc *ForkChoice) UpdateJustified(justified Checkpoint, finalized Checkpoint
 	// prune if we finalized something
 	if prevFinalized != finalized {
 		finSlot, _ := fc.spec.EpochStartSlot(finalized.Epoch)
-		if err := fc.protoArray.OnPrune(finalized.Root, finSlot); err != nil {
+		if err := fc.protoArray.OnPrune(ctx, finalized.Root, finSlot); err != nil {
 			return err
 		}
 	}

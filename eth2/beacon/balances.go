@@ -80,3 +80,23 @@ func (v *RegistryBalancesView) DecreaseBalance(index ValidatorIndex, delta Gwei)
 	}
 	return v.SetBalance(index, bal)
 }
+
+func (v *RegistryBalancesView) AllBalances() ([]Gwei, error) {
+	var out []Gwei
+	balIter := v.ReadonlyIter()
+	for i := ValidatorIndex(0); true; i++ {
+		el, ok, err := balIter.Next()
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			break
+		}
+		balance, err := AsGwei(el, nil)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, balance)
+	}
+	return out, nil
+}

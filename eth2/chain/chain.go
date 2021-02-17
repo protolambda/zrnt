@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/db/states"
+	"sync"
 )
 
 type Root = beacon.Root
@@ -68,6 +69,8 @@ type ChainEntry interface {
 type Chain interface {
 	// Get the chain entry for the given state root (post slot processing or post block processing)
 	ByStateRoot(root Root) (entry ChainEntry, ok bool)
+	// Get the chain entry for the given block root
+	ByBlock(root Root) (entry ChainEntry, ok bool)
 	// Get the chain entry for the given block root and slot, may be an empty slot,
 	// or may be in-between slot processing and block processing if the parent block root is requested for the slot.
 	ByBlockSlot(root Root, slot Slot) (entry ChainEntry, ok bool)
@@ -108,111 +111,121 @@ type FullChain interface {
 }
 
 type HotColdChain struct {
+	// sync.Mutex to control access to the hot and cold chain at the same time.
+	// The HotChain is allowed to move data to the cold chain, but not reverse.
+	// Internally it is safe to query the hot chain first, and the cold chain later.
+	// The ColdChain is only allowed to remove data.
+	sync.Mutex
 	HotChain
 	ColdChain
 	Spec *beacon.Spec
 }
 
-func NewHotColdChain(anchor *HotEntry, spec *beacon.Spec, stateDB states.DB) (*HotColdChain, error) {
-	coldCh := NewFinalizedChain(anchor.slot, spec, stateDB)
-	hotCh, err := NewUnfinalizedChain(anchor,
-		BlockSinkFn(func(entry *HotEntry, canonical bool) error {
-			if canonical {
-				return coldCh.OnFinalizedEntry(entry)
-			}
-			return nil
-			// TODO keep track of pruned non-finalized blocks?
-		}), spec)
+var _ FullChain = (*HotColdChain)(nil)
+
+func NewHotColdChain(anchorState *beacon.BeaconStateView, spec *beacon.Spec, stateDB states.DB) (*HotColdChain, error) {
+	c := &HotColdChain{
+		HotChain:  nil,
+		ColdChain: NewFinalizedChain(spec, stateDB),
+		Spec:      spec,
+	}
+	hotCh, err := NewUnfinalizedChain(anchorState, BlockSinkFn(c.hotToCold), spec)
 	if err != nil {
 		return nil, err
 	}
+	c.HotChain = hotCh
 
-	c := &HotColdChain{
-		HotChain:  hotCh,
-		ColdChain: coldCh,
-		Spec:      spec,
-	}
 	return c, nil
 }
 
-func (hc *HotColdChain) ByStateRoot(root Root) (ChainEntry, error) {
-	hotEntry, hotErr := hc.HotChain.ByStateRoot(root)
-	if hotErr != nil {
-		coldEntry, coldErr := hc.ColdChain.ByStateRoot(root)
-		if coldErr != nil {
-			return nil, fmt.Errorf("could not find chain entry in hot or cold chain. "+
-				"Hot: %v, Cold: %v", hotErr, coldErr)
-		}
-		return coldEntry, nil
+func (hc *HotColdChain) hotToCold(ctx context.Context, entry ChainEntry, canonical bool) error {
+	if canonical {
+		return hc.ColdChain.OnFinalizedEntry(ctx, entry)
 	}
-	return hotEntry, nil
+	// TODO keep track of pruned non-finalized blocks?
+	return nil
 }
 
-func (hc *HotColdChain) ByBlockRoot(root Root) (ChainEntry, error) {
-	hotEntry, hotErr := hc.HotChain.ByBlockRoot(root)
-	if hotErr != nil {
-		coldEntry, coldErr := hc.ColdChain.ByBlockRoot(root)
-		if coldErr != nil {
-			return nil, fmt.Errorf("could not find chain entry in hot or cold chain. "+
-				"Hot: %v, Cold: %v", hotErr, coldErr)
-		}
-		return coldEntry, nil
+func (hc *HotColdChain) ByStateRoot(root Root) (entry ChainEntry, ok bool) {
+	hc.Lock()
+	defer hc.Unlock()
+	entry, ok = hc.HotChain.ByStateRoot(root)
+	if ok {
+		return entry, ok
 	}
-	return hotEntry, nil
+	return hc.ColdChain.ByStateRoot(root)
 }
 
-func (hc *HotColdChain) Closest(fromBlockRoot Root, toSlot Slot) (ChainEntry, error) {
-	hotEntry, hotErr := hc.HotChain.Closest(fromBlockRoot, toSlot)
-	if hotErr != nil {
-		coldEntry, coldErr := hc.ColdChain.Closest(fromBlockRoot, toSlot)
-		if coldErr != nil {
-			return nil, fmt.Errorf("could not find chain entry in hot or cold chain. "+
-				"Hot: %v, Cold: %v", hotErr, coldErr)
-		}
-		return coldEntry, nil
+func (hc *HotColdChain) ByBlock(root Root) (entry ChainEntry, ok bool) {
+	hc.Lock()
+	defer hc.Unlock()
+	entry, ok = hc.HotChain.ByBlock(root)
+	if ok {
+		return entry, ok
 	}
-	return hotEntry, nil
+	return hc.ColdChain.ByBlock(root)
 }
 
-func (hc *HotColdChain) Towards(ctx context.Context, fromBlockRoot Root, toSlot Slot) (ChainEntry, error) {
+func (hc *HotColdChain) ByBlockSlot(root Root, slot Slot) (entry ChainEntry, ok bool) {
+	hc.Lock()
+	defer hc.Unlock()
+	entry, ok = hc.HotChain.ByBlockSlot(root, slot)
+	if ok {
+		return entry, ok
+	}
+	return hc.ColdChain.ByBlockSlot(root, slot)
+}
 
+func (hc *HotColdChain) Closest(fromBlockRoot Root, toSlot Slot) (entry ChainEntry, ok bool) {
+	hc.Lock()
+	defer hc.Unlock()
+	entry, ok = hc.HotChain.Closest(fromBlockRoot, toSlot)
+	if ok {
+		return entry, ok
+	}
+	return hc.ColdChain.Closest(fromBlockRoot, toSlot)
 }
 
 func (hc *HotColdChain) IsAncestor(root Root, ofRoot Root) (unknown bool, isAncestor bool) {
+	hc.Lock()
+	defer hc.Unlock()
+
+	// Tricky, but follow hot-to-cold to avoid missing data when it moves from hot to cold while processing.
+
 	// can't be ancestors if they are equal.
 	if root == ofRoot {
 		return false, false
 	}
-	// if the last two of the roots is known in the cold chain, just have the cold chain deal with it.
-	_, err := hc.ColdChain.ByBlockRoot(root)
-	if err == nil {
-		return hc.ColdChain.IsAncestor(root, ofRoot)
+	// if the first of the two roots is known in the hot chain, just have the hot chain deal with it.
+	unknown, isAncestor = hc.HotChain.IsAncestor(root, ofRoot)
+	if !unknown {
+		return false, isAncestor
 	}
-	// if the first of the roots is known in the cold chain, while the later one is not,
-	//  then it's an ancestor if the later one builds on the dividing node between the two chains
-	_, err = hc.ColdChain.ByBlockRoot(ofRoot)
-	if err == nil {
-		fin := hc.HotChain.Finalized()
-		return hc.HotChain.IsAncestor(root, fin.Root)
+	fin := hc.HotChain.Finalized()
+	unknown, isAncestor = hc.HotChain.IsAncestor(root, fin.Root)
+	if !unknown {
+		// The root is in the hot subtree, now make sure the other root exists in the cold chain
+		_, ok := hc.ColdChain.ByBlock(ofRoot)
+		return !ok, ok
 	}
-	// Both are not in the cold chain, have the hot chain deal with it.
-	return hc.HotChain.IsAncestor(root, ofRoot)
+
+	// Both are not in the hot chain, have the hot chain deal with it.
+	return hc.ColdChain.IsAncestor(root, ofRoot)
 }
 
-func (hc *HotColdChain) BySlot(slot Slot) (ChainEntry, error) {
-	hotEntry, hotErr := hc.HotChain.BySlot(slot)
-	if hotErr != nil {
-		coldEntry, coldErr := hc.ColdChain.BySlot(slot)
-		if coldErr != nil {
-			return nil, fmt.Errorf("could not find chain entry in hot or cold chain. "+
-				"Hot: %v, Cold: %v", hotErr, coldErr)
-		}
-		return coldEntry, nil
+func (hc *HotColdChain) ByCanonStep(step Step) (entry ChainEntry, ok bool) {
+	hc.Lock()
+	defer hc.Unlock()
+	entry, ok = hc.HotChain.ByCanonStep(step)
+	if ok {
+		return entry, ok
 	}
-	return hotEntry, nil
+	return hc.ColdChain.ByCanonStep(step)
 }
 
 func (hc *HotColdChain) Iter() (ChainIter, error) {
+	hc.Lock()
+	defer hc.Unlock()
 	hotIt, err := hc.HotChain.Iter()
 	if err != nil {
 		return nil, fmt.Errorf("cannot iter hot part: %v", err)
@@ -232,19 +245,19 @@ type FullChainIter struct {
 	ColdIter ChainIter
 }
 
-func (fi *FullChainIter) Start() Slot {
+func (fi *FullChainIter) Start() Step {
 	return fi.ColdIter.Start()
 }
 
-func (fi *FullChainIter) End() Slot {
+func (fi *FullChainIter) End() Step {
 	return fi.HotIter.End()
 }
 
-func (fi *FullChainIter) Entry(slot Slot) (entry ChainEntry, err error) {
-	if slot < fi.ColdIter.End() {
-		return fi.ColdIter.Entry(slot)
+func (fi *FullChainIter) Entry(step Step) (entry ChainEntry, err error) {
+	if step < fi.ColdIter.End() {
+		return fi.ColdIter.Entry(step)
 	} else {
-		return fi.HotIter.Entry(slot)
+		return fi.HotIter.Entry(step)
 	}
 }
 

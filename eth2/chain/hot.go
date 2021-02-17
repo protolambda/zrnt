@@ -127,7 +127,7 @@ func (fi HotChainIter) Entry(step Step) (entry ChainEntry, err error) {
 func (uc *UnfinalizedChain) Iter() (ChainIter, error) {
 	uc.Lock()
 	defer uc.Unlock()
-	fin := uc.Finalized()
+	fin := uc.ForkChoice.Finalized()
 	finSlot, _ := uc.Spec.EpochStartSlot(fin.Epoch)
 	// block nodes also have gap slots. Reduce that back to normal.
 	nodes, err := uc.ForkChoice.CanonicalChain(fin.Root, finSlot)
@@ -161,13 +161,13 @@ func (uc *UnfinalizedChain) Iter() (ChainIter, error) {
 
 type BlockSink interface {
 	// Sink handles blocks that come from the Hot part, and may be finalized or not
-	Sink(entry *HotEntry, canonical bool) error
+	Sink(ctx context.Context, entry ChainEntry, canonical bool) error
 }
 
-type BlockSinkFn func(entry *HotEntry, canonical bool) error
+type BlockSinkFn func(ctx context.Context, entry ChainEntry, canonical bool) error
 
-func (fn BlockSinkFn) Sink(entry *HotEntry, canonical bool) error {
-	return fn(entry, canonical)
+func (fn BlockSinkFn) Sink(ctx context.Context, entry ChainEntry, canonical bool) error {
+	return fn(ctx, entry, canonical)
 }
 
 func NewUnfinalizedChain(anchorState *beacon.BeaconStateView, sink BlockSink, spec *beacon.Spec) (*UnfinalizedChain, error) {
@@ -245,7 +245,7 @@ func NewUnfinalizedChain(anchorState *beacon.BeaconStateView, sink BlockSink, sp
 
 // onPrunedNode handles when nodes leave the forkchoice, and thus get removed from the hot view of the chain.
 // Includes empty slots and nodes of the slot pre-block processing (even if the block exists)
-func (uc *UnfinalizedChain) onPrunedNode(ref forkchoice.NodeRef, canonical bool) error {
+func (uc *UnfinalizedChain) onPrunedNode(ctx context.Context, ref forkchoice.NodeRef, canonical bool) error {
 	// Does not lock the hot chain again: the only caller is the forkchoice, internal to this hot chain,
 	// which is always locked when the forkchoice pruning runs.
 	key := BlockSlotKey{Slot: ref.Slot, Root: ref.Root}
@@ -257,7 +257,7 @@ func (uc *UnfinalizedChain) onPrunedNode(ref forkchoice.NodeRef, canonical bool)
 	delete(uc.Entries, key)
 	delete(uc.State2Key, entry.StateRoot())
 	// Move the node to the sink.
-	return uc.BlockSink.Sink(entry, canonical)
+	return uc.BlockSink.Sink(ctx, entry, canonical)
 }
 
 func (uc *UnfinalizedChain) ByStateRoot(root Root) (entry ChainEntry, ok bool) {
@@ -268,6 +268,16 @@ func (uc *UnfinalizedChain) ByStateRoot(root Root) (entry ChainEntry, ok bool) {
 		return nil, false
 	}
 	return uc.byBlockSlot(key)
+}
+
+func (uc *UnfinalizedChain) ByBlock(root Root) (entry ChainEntry, ok bool) {
+	uc.RLock()
+	defer uc.RUnlock()
+	ref, ok := uc.ForkChoice.GetNode(root)
+	if !ok {
+		return nil, false
+	}
+	return uc.ByBlockSlot(ref.Root, ref.Slot)
 }
 
 func (uc *UnfinalizedChain) byBlockSlot(key BlockSlotKey) (entry ChainEntry, ok bool) {
@@ -295,25 +305,25 @@ func (uc *UnfinalizedChain) closest(fromBlockRoot Root, toSlot Slot) (entry Chai
 	return uc.byBlockSlot(BlockSlotKey{Root: ref.Root, Slot: ref.Slot})
 }
 
-// helper function to fetch justified and finalized epoch from a beacon state
-func stateJustFin(state *beacon.BeaconStateView) (justifiedEpoch Epoch, finalizedEpoch Epoch, err error) {
+// helper function to fetch justified and finalized checkpoint from a beacon state
+func stateJustFin(state *beacon.BeaconStateView) (justified Checkpoint, finalized Checkpoint, err error) {
 	justifiedCh, err := state.CurrentJustifiedCheckpoint()
 	if err != nil {
-		return 0, 0, err
+		return Checkpoint{}, Checkpoint{}, err
 	}
-	justifiedEpoch, err = justifiedCh.Epoch()
+	justified, err = justifiedCh.Raw()
 	if err != nil {
-		return 0, 0, err
+		return Checkpoint{}, Checkpoint{}, err
 	}
 	finalizedCh, err := state.FinalizedCheckpoint()
 	if err != nil {
-		return 0, 0, err
+		return Checkpoint{}, Checkpoint{}, err
 	}
-	finalizedEpoch, err = finalizedCh.Epoch()
+	finalized, err = finalizedCh.Raw()
 	if err != nil {
-		return 0, 0, err
+		return Checkpoint{}, Checkpoint{}, err
 	}
-	return
+	return justified, finalized, nil
 }
 
 func (uc *UnfinalizedChain) Towards(ctx context.Context, fromBlockRoot Root, toSlot Slot) (ChainEntry, error) {
@@ -360,12 +370,22 @@ func (uc *UnfinalizedChain) Towards(ctx context.Context, fromBlockRoot Root, toS
 				return nil, err
 			}
 		}
-		justifiedEpoch, finalizedEpoch, err := stateJustFin(state)
+		justified, finalized, err := stateJustFin(state)
 		if err != nil {
 			return nil, err
 		}
+		// Make the forkchoice aware of latest justified/finalized data. Lazy-fetch the balances if necessary.
+		if err := uc.ForkChoice.UpdateJustified(ctx, justified, finalized, func() ([]forkchoice.Gwei, error) {
+			balancesView, err := state.Balances()
+			if err != nil {
+				return nil, err
+			}
+			return balancesView.AllBalances()
+		}); err != nil {
+			return nil, fmt.Errorf("failed to update forkchoice with new justification data: %v", err)
+		}
 		// Make the forkchoice aware of this new slot
-		uc.ForkChoice.ProcessSlot(fromBlockRoot, slot, justifiedEpoch, finalizedEpoch)
+		uc.ForkChoice.ProcessSlot(fromBlockRoot, slot, justified.Epoch, finalized.Epoch)
 
 		// Track the entry
 		key := BlockSlotKey{Root: fromBlockRoot, Slot: slot}
@@ -398,7 +418,7 @@ func (uc *UnfinalizedChain) IsAncestor(root Root, ofRoot Root) (unknown bool, is
 func (uc *UnfinalizedChain) ByCanonStep(step Step) (entry ChainEntry, ok bool) {
 	uc.Lock()
 	defer uc.Unlock()
-	ref, err := uc.ForkChoice.CanonAtSlot(uc.Justified().Root, step.Slot(), step.Block())
+	ref, err := uc.ForkChoice.CanonAtSlot(uc.ForkChoice.Justified().Root, step.Slot(), step.Block())
 	if err != nil {
 		return nil, false
 	}
@@ -409,10 +429,14 @@ func (uc *UnfinalizedChain) ByCanonStep(step Step) (entry ChainEntry, ok bool) {
 }
 
 func (uc *UnfinalizedChain) Justified() Checkpoint {
+	uc.RLock()
+	defer uc.RUnlock()
 	return uc.ForkChoice.Justified()
 }
 
 func (uc *UnfinalizedChain) Finalized() Checkpoint {
+	uc.RLock()
+	defer uc.RUnlock()
 	return uc.ForkChoice.Finalized()
 }
 
@@ -456,13 +480,13 @@ func (uc *UnfinalizedChain) AddBlock(ctx context.Context, signedBlock *beacon.Si
 		return err
 	}
 
-	justifiedEpoch, finalizedEpoch, err := stateJustFin(state)
+	justified, finalized, err := stateJustFin(state)
 	if err != nil {
 		return err
 	}
 
 	// Make the forkchoice aware of the new block
-	uc.ForkChoice.ProcessBlock(block.ParentRoot, blockRoot, block.Slot, justifiedEpoch, finalizedEpoch)
+	uc.ForkChoice.ProcessBlock(block.ParentRoot, blockRoot, block.Slot, justified.Epoch, finalized.Epoch)
 
 	key := BlockSlotKey{Slot: block.Slot, Root: blockRoot}
 	uc.Entries[key] = &HotEntry{

@@ -2,7 +2,6 @@ package chain
 
 import (
 	"context"
-	"encoding/binary"
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/db/states"
@@ -15,17 +14,45 @@ type ValidatorIndex = beacon.ValidatorIndex
 type Gwei = beacon.Gwei
 type Checkpoint = beacon.Checkpoint
 
+// Step combines a Slot and bool for block processing being included or not.
+type Step uint64
+
+func AsStep(slot Slot, block bool) Step {
+	if slot&(1<<63) != 0 {
+		panic("slot overflow")
+	}
+	out := Step(slot) << 1
+	if block {
+		out++
+	}
+	return out
+}
+
+func (st Step) String() string {
+	if st.Block() {
+		return fmt.Sprintf("%d:1", st.Slot())
+	} else {
+		return fmt.Sprintf("%d:0", st.Slot())
+	}
+}
+
+func (st Step) Slot() Slot {
+	return Slot(st >> 1)
+}
+
+func (st Step) Block() bool {
+	return st&1 != 0
+}
+
 type ChainEntry interface {
-	// Slot of this entry
-	Slot() Slot
+	// Step of this entry
+	Step() Step
 	// BlockRoot returns the last block root, replicating the previous block root if the current slot has none.
 	// There is only 1 block root, double block proposals by the same validator are accepted,
 	// only the first is incorporated into the chain.
 	BlockRoot() (root Root)
 	// The parent block root. If this is an empty slot, it will just be previous block root. Can also be zeroed if unknown.
 	ParentRoot() (root Root)
-	// If this is an empty slot entry, i.e. no block
-	IsEmpty() bool
 	// State root of the post-state of this entry, with or without block, depending on IsEmpty.
 	// Should match state-root in the block at the same slot (if any)
 	StateRoot() Root
@@ -47,37 +74,31 @@ type Chain interface {
 	// Find closest ref in subtree, up to given slot (may return entry of fromBlockRoot itself),
 	// without any blocks after fromBlockRoot.
 	// Err if no entry, even not fromBlockRoot, could be found.
-	Closest(fromBlockRoot Root, toSlot Slot) (ChainEntry, error)
+	Closest(fromBlockRoot Root, toSlot Slot) (entry ChainEntry, ok bool)
 	// Returns true if the given root is something that builds (maybe indirectly)
 	// on the ofRoot on the same chain.
 	// If root == ofRoot, then it is NOT considered an ancestor here.
 	IsAncestor(root Root, ofRoot Root) (unknown bool, isAncestor bool)
 	// Get the canonical entry at the given slot. Return nil if there is no block but the slot node exists.
-	BySlot(slot Slot, preBlock bool) (ChainEntry, error)
+	ByCanonStep(step Step) (entry ChainEntry, ok bool)
 	Iter() (ChainIter, error)
 }
 
 type ChainIter interface {
-	// Start is the minimum slot to reach to, inclusive. And preBlock is whether or not it starts with a node with a block.
-	Start() (slot Slot, preBlock bool)
-	// End is the maximum slot to reach to, exclusive. And preBlock is whether or not it stops with a node with a block.
-	End() (slot Slot, preBlock bool)
+	// Start is the minimum to reach to, inclusive. The step may exclude pre-block processing.
+	Start() Step
+	// End is the maximum to reach to, exclusive. The step may exclude post-block processing.
+	End() Step
 	// Entry fetches the chain entry at the given slot.
-	// If the slot has no block but preBlock is true, then entry == nil, err == nil.
+	// If the slot has no block but step.Block is true, then entry == nil, err == nil.
 	// If the request is out of bounds or fails, an error is returned.
-	// The preBlock on Start() and End() counts as bounds too: chains may only store part of the slot.
-	Entry(slot Slot, preBlock bool) (entry ChainEntry, err error)
+	// The step.Block on Start() and End() counts as bounds: chains may only store part of the slot.
+	Entry(step Step) (entry ChainEntry, err error)
 }
 
 type BlockSlotKey struct {
 	Slot Slot
 	Root Root
-}
-
-func (key BlockSlotKey) Bytes() (out [40]byte) {
-	copy(out[0:32], key.Root[:])
-	binary.LittleEndian.PutUint64(out[32:40], uint64(key.Slot))
-	return
 }
 
 type FullChain interface {

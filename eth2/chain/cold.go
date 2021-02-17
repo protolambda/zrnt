@@ -2,52 +2,47 @@ package chain
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/db/states"
-	"github.com/protolambda/ztyp/tree"
+	"sort"
 	"sync"
 )
 
 type ColdChain interface {
-	Start() Slot
-	End() Slot
-	OnFinalizedEntry(entry *HotEntry) error
+	Start() Step
+	End() Step
+	OnFinalizedEntry(ctx context.Context, entry ChainEntry) error
 	Chain
 }
 
 type FinalizedEntryView struct {
-	slot     Slot
+	step     Step
 	finChain *FinalizedChain
 }
 
-func (e *FinalizedEntryView) Slot() Slot {
-	return e.slot
-}
-
-func (e *FinalizedEntryView) IsEmpty() bool {
-	return e.ParentRoot() == e.BlockRoot()
+func (e *FinalizedEntryView) Step() Step {
+	return e.step
 }
 
 func (e *FinalizedEntryView) ParentRoot() (root Root) {
-	return e.finChain.parentRoot(e.slot)
+	return e.finChain.ParentRoot(e.step.Slot())
 }
 
 func (e *FinalizedEntryView) BlockRoot() (root Root) {
-	return e.finChain.blockRoot(e.slot)
+	return e.finChain.BlockRoot(e.step)
 }
 
 func (e *FinalizedEntryView) StateRoot() Root {
-	return e.finChain.stateRoot(e.slot)
+	return e.finChain.StateRoot(e.step)
 }
 
 func (e *FinalizedEntryView) EpochsContext(ctx context.Context) (*beacon.EpochsContext, error) {
-	return e.finChain.getEpochsContext(ctx, e.slot)
+	return e.finChain.GetEpochsContext(ctx, e.step)
 }
 
 func (e *FinalizedEntryView) State(ctx context.Context) (*beacon.BeaconStateView, error) {
-	return e.finChain.getState(ctx, e.slot)
+	return e.finChain.GetState(ctx, e.step)
 }
 
 // The finalized chain excludes the finalization node (i.e. node at start of finalized epoch),
@@ -62,28 +57,19 @@ type FinalizedChain struct {
 	// but finalized state will not be in conflict with this cache.
 	PubkeyCache *beacon.PubkeyCache
 
-	// Start of the historical data
-	AnchorSlot Slot
-
-	// Block roots, starting at AnchorSlot, indexed by slot.
-	// A blockRoot can be a copy of the previous root if slot is empty
+	// Block roots, starting at Anchor, indexed by step.
+	// A blockRoot is a copy of the previous root if a slot is empty.
+	// Every pre-block entry has a copy of the last block too.
 	BlockRoots []Root
 
-	// StatePreBlockRoots are the state roots before applying a block, starting at AnchorSlot, indexed by slot.
-	StatePreBlockRoots []Root
+	// StateRoots are the state roots before and after applying a block, starting at Anchor, indexed by step index.
+	StateRoots []Root
 
-	// StatePostBlockRoots are the state roots after applying a block, starting at AnchorSlot, indexed by slot.
-	// The root is the same as that in StatePreBlockRoots for gap slots.
-	StatePostBlockRoots []Root
-
-	// BlockRootsMap maps roots of BlockRoots back to slots
+	// BlockRootsMap maps roots of BlockRoots back to slots (the first we know of, we may have pruned earlier slots)
 	BlockRootsMap map[Root]Slot
 
-	// StatePreBlockRootsMap maps roots of StatePreBlockRoots back to slots
-	StatePreBlockRootsMap map[Root]Slot
-
-	// StatePostBlockRootsMap maps roots of StatePostBlockRoots back to slots
-	StatePostBlockRootsMap map[Root]Slot
+	// StateRootsMaps maps roots of StateRoots back to steps
+	StateRootsMap map[Root]Step
 
 	// Spec is holds configuration information for the parameters and types of the chain
 	Spec *beacon.Spec
@@ -91,120 +77,161 @@ type FinalizedChain struct {
 	StateDB states.DB
 }
 
-var _ = ColdChain((*FinalizedChain)(nil))
+var _ ColdChain = (*FinalizedChain)(nil)
 
-func NewFinalizedChain(anchorSlot Slot, spec *beacon.Spec, stateDB states.DB) *FinalizedChain {
-	initialCapacity := Slot(200)
+func NewFinalizedChain(spec *beacon.Spec, stateDB states.DB) *FinalizedChain {
+	initialCapacity := 200
 	return &FinalizedChain{
-		PubkeyCache:      beacon.EmptyPubkeyCache(),
-		AnchorSlot:       anchorSlot,
-		BlockRoots:       make([]Root, 0, initialCapacity),
-		StatePreBlockRoots:       make([]Root, 0, initialCapacity),
-		StatePostBlockRoots:       make([]Root, 0, initialCapacity),
+		PubkeyCache:   beacon.EmptyPubkeyCache(),
+		BlockRoots:    make([]Root, 0, initialCapacity),
+		StateRoots:    make([]Root, 0, initialCapacity),
 		BlockRootsMap: make(map[Root]Slot, initialCapacity),
-		StatePreBlockRootsMap: make(map[Root]Slot, initialCapacity),
-		StatePostBlockRootsMap: make(map[Root]Slot, initialCapacity),
-		Spec:             spec,
-		StateDB:          stateDB,
+		StateRootsMap: make(map[Root]Step, initialCapacity),
+		Spec:          spec,
+		StateDB:       stateDB,
 	}
 }
 
 type ColdChainIter struct {
 	Chain              Chain
-	StartSlot, EndSlot Slot
-	StartPreBlock, EndPreBlock bool
+	StartStep, EndStep Step
 }
 
-func (fi *ColdChainIter) Start() (slot Slot, preBlock bool) {
-	return fi.StartSlot, fi.StartPreBlock
+var _ ChainIter = (*ColdChainIter)(nil)
+
+func (fi *ColdChainIter) Start() Step {
+	return fi.StartStep
 }
 
-func (fi *ColdChainIter) End() (slot Slot, preBlock bool) {
-	return fi.EndSlot, fi.EndPreBlock
+func (fi *ColdChainIter) End() Step {
+	return fi.EndStep
 }
 
-func (fi *ColdChainIter) Entry(slot Slot, preBlock bool) (entry ChainEntry, err error) {
-	start, startPreBl := fi.Start()
-	end, endPreBl := fi.End()
-	if slot < start || (slot == start && preBlock && !startPreBl) {
+func (fi *ColdChainIter) Entry(step Step) (entry ChainEntry, err error) {
+	start := fi.Start()
+	if step < start {
 		return nil, fmt.Errorf("query too low")
 	}
-	if slot > end || (slot == end && !preBlock && endPreBl) {
+	end := fi.End()
+	if step >= end {
 		return nil, fmt.Errorf("query too high")
 	}
-	entry, err = fi.Chain.BySlot(slot, preBlock)
-	return
+	entry, ok := fi.Chain.ByCanonStep(step)
+	if !ok {
+		return nil, fmt.Errorf("failed to fetch %s from cold chain iter: %v", step, err)
+	}
+	return entry, nil
 }
 
 func (f *FinalizedChain) Iter() (ChainIter, error) {
-	start := f.Start()
-	end := f.End()
+	f.RLock()
+	defer f.RUnlock()
 	return &ColdChainIter{
 		Chain:     f,
-		StartSlot: start,
-		EndSlot:   end,
+		StartStep: f.Start(),
+		EndStep:   f.End(),
 	}, nil
 }
 
-// Start slot of the cold chain (inclusive)
-func (f *FinalizedChain) Start() Slot {
-	return f.AnchorSlot
+// Start of the cold chain (inclusive). Also see End
+func (f *FinalizedChain) Start() Step {
+	f.RLock()
+	defer f.RUnlock()
+	return f.start()
 }
 
-// End slot of the cold chain part (exclusive), should equal the epoch start slot of the finalized checkpoint.
-// The FinalizedChain is empty if Start() == End()
-func (f *FinalizedChain) End() Slot {
-	return f.AnchorSlot + Slot(len(f.BlockRoots))
+func (f *FinalizedChain) start() Step {
+	if len(f.StateRoots) == 0 {
+		return 0
+	}
+	return f.StateRootsMap[f.StateRoots[0]]
 }
 
-var UnknownRootErr = errors.New("unknown root")
+// End step of the cold chain part (exclusive), should equal the epoch start slot of the finalized checkpoint,
+// with or without block (depends on if it's a gap slot or not).
+// The FinalizedChain is empty if Start() == End() == 0
+func (f *FinalizedChain) End() Step {
+	f.RLock()
+	defer f.RUnlock()
+	return f.end()
+}
+
+func (f *FinalizedChain) end() Step {
+	return f.start() + Step(len(f.StateRoots))
+}
 
 func (f *FinalizedChain) ByStateRoot(root Root) (entry ChainEntry, ok bool) {
 	f.RLock()
 	defer f.RUnlock()
-	slot, ok := f.StatePreBlockRootsMap[root]
+	step, ok := f.StateRootsMap[root]
 	if !ok {
-		slot, ok = f.StatePostBlockRootsMap[root]
+		return nil, false
+	}
+	return f.byCanonStep(step)
+}
+
+func (f *FinalizedChain) ByBlockSlot(root Root, slot Slot) (entry ChainEntry, ok bool) {
+	f.RLock()
+	defer f.RUnlock()
+	return f.byBlockSlot(root, slot)
+}
+
+func (f *FinalizedChain) byBlockSlot(root Root, slot Slot) (entry ChainEntry, ok bool) {
+	start, end := f.start().Slot(), f.end().Slot()
+	if slot < start || slot > end {
+		return nil, false
+	}
+	// check if block is known
+	blockSlot, ok := f.BlockRootsMap[root]
+	if !ok {
+		return nil, false
+	}
+	// if block is older than the requested slot, we are not looking at the block itself,
+	// but some gap slot after it.
+	if blockSlot < slot {
+		res, ok := f.byCanonStep(AsStep(slot, false))
 		if !ok {
-			return nil, UnknownRootErr
+			return nil, false
 		}
-		f.BlockRoots
+		// make sure the block root matches what we expect
+		// (because checking the block root exists before the slot is not sufficient)
+		if res.BlockRoot() != root {
+			return nil, false
+		}
+		return res, true
+	} else if blockSlot > slot {
+		return nil, false
+	} else {
+		// block slot at root is same as requested, thus we are looking for a canon slot with block processed.
+		return f.byCanonStep(AsStep(slot, true))
 	}
-	return f.bySlot(slot)
 }
 
-func (f *FinalizedChain) ByBlockRoot(root Root) (entry ChainEntry, ok bool) {
+func (f *FinalizedChain) Closest(fromBlockRoot Root, toSlot Slot) (entry ChainEntry, ok bool) {
 	f.RLock()
 	defer f.RUnlock()
-	return f.byBlockRoot(root)
-}
-
-func (f *FinalizedChain) byBlockRoot(root Root) (entry ChainEntry, ok bool) {
-	slot, ok := f.SlotsByBlockRoot[root]
+	// check if block is known
+	blockSlot, ok := f.BlockRootsMap[fromBlockRoot]
 	if !ok {
-		return nil, UnknownRootErr
+		return nil, false
 	}
-	return f.bySlot(slot)
-}
-
-func (f *FinalizedChain) Closest(fromBlockRoot Root, toSlot Slot) (ChainEntry, error) {
-	f.RLock()
-	defer f.RUnlock()
-	if start := f.Start(); toSlot < start {
-		return nil, fmt.Errorf("slot %d is too early. Start is at slot %d", toSlot, start)
+	if blockSlot > toSlot {
+		return nil, false
 	}
-	// check if the root is canonical
-	_, ok := f.SlotsByStateRoot[fromBlockRoot]
-	if !ok {
-		return nil, UnknownRootErr
+	if blockSlot == toSlot {
+		return f.byCanonStep(AsStep(toSlot, true))
 	}
-	// find the slot closest to the requested slot: whatever is still within range
-	if end := f.End(); end == 0 {
-		return nil, errors.New("empty chain, no data available")
-	} else if toSlot >= end {
-		toSlot = end - 1
-	}
-	return f.bySlot(toSlot)
+	// search in range: the block (incl), upto (excl) the block (if any) at the queried slot
+	rangeStart := AsStep(blockSlot, true)
+	rangeEnd := AsStep(toSlot, true)
+	offset := int(rangeStart - f.start())
+	n := int(rangeEnd - rangeStart)
+	// find the first entry with non-equal block root (we know the first is equal)
+	i := sort.Search(n, func(i int) bool {
+		return f.BlockRoots[offset+i] != fromBlockRoot
+	})
+	foundStep := rangeStart + Step(i-1)
+	return f.byCanonStep(foundStep)
 }
 
 func (f *FinalizedChain) IsAncestor(root Root, ofRoot Root) (unknown bool, isAncestor bool) {
@@ -215,92 +242,122 @@ func (f *FinalizedChain) IsAncestor(root Root, ofRoot Root) (unknown bool, isAnc
 	if root == ofRoot {
 		return false, false
 	}
-	anchor, err := f.byBlockRoot(ofRoot)
-	if err != nil {
+	slot, ok := f.BlockRootsMap[root]
+	if !ok {
 		return true, false
 	}
-	lookup, err := f.byBlockRoot(root)
-	if err != nil {
+	ofSlot, ok := f.BlockRootsMap[ofRoot]
+	if !ok {
 		return true, false
 	}
-	// if the nodes are the other way around,
-	// they do not have the same ancestor relation, even though they are on the same chain.
-	return true, anchor.Slot() < lookup.Slot()
+	return false, ofSlot < slot
 }
 
-func (f *FinalizedChain) BySlot(slot Slot, preBlock bool) (ChainEntry, error) {
+func (f *FinalizedChain) ByCanonStep(step Step) (entry ChainEntry, ok bool) {
 	f.RLock()
 	defer f.RUnlock()
-	return f.bySlot(slot)
+	return f.byCanonStep(step)
 }
 
-func (f *FinalizedChain) bySlot(slot Slot) (ChainEntry, error) {
-	if start := f.Start(); slot < start {
-		return nil, fmt.Errorf("slot %d is too early. Chain starts at slot %d", slot, start)
+func (f *FinalizedChain) byCanonStep(step Step) (entry ChainEntry, ok bool) {
+	if start := f.Start(); step < start {
+		return nil, false
 	}
-	if end := f.End(); slot >= end {
-		return nil, fmt.Errorf("slot %d is too late. Chain ends at slot %d", slot, end)
+	if end := f.End(); step >= end {
+		return nil, false
 	}
 	return &FinalizedEntryView{
-		slot:     slot,
+		step:     step,
 		finChain: f,
-	}, nil
+	}, true
 }
 
-func (f *FinalizedChain) OnFinalizedEntry(entry *HotEntry) error {
+func (f *FinalizedChain) OnFinalizedEntry(ctx context.Context, entry ChainEntry) error {
 	f.Lock()
 	defer f.Unlock()
-	if end := f.End(); entry.slot != end {
-		return fmt.Errorf("expected next finalized entry to have slot %d, but got %d from entry with block root %s",
-			end, entry.slot, entry.blockRoot.String())
+	next := entry.Step()
+	blockRoot := entry.BlockRoot()
+
+	// If the chain is not empty, we need to verify consistency with what we add.
+	if len(f.StateRoots) != 0 {
+		end := f.End()
+		if end > next {
+			return fmt.Errorf("received finalized entry %s at %s, but already finalized up to later step %s", blockRoot, next, end)
+		}
+		// Any direct follow-up (block after slot, slot after block),
+		// or if the end is a gap slot, it may be left empty.
+		if !(end+1 == next || (!end.Block() && end+2 == next)) {
+			return fmt.Errorf("consistency issue, got %s and cannot append to %s", next, end)
+		}
+		// check parent root
+		parent := entry.ParentRoot()
+		if last := f.BlockRoots[len(f.BlockRoots)-1]; last != parent {
+			return fmt.Errorf("parent root %s in block does not match last block root %s", parent, last)
+		}
 	}
-	postStateRoot := entry.state.HashTreeRoot(tree.GetHashFn())
-	f.BlockRoots = append(f.BlockRoots, entry.blockRoot)
-	f.StateRoots = append(f.StateRoots, postStateRoot)
-	f.SlotsByStateRoot[postStateRoot] = entry.slot
-	if entry.parentRoot != entry.blockRoot {
-		// if it's not an empty slot, remember it by block root
-		f.SlotsByBlockRoot[entry.blockRoot] = entry.slot
+
+	// Before modifying the chain tracking, try to store the state, so it is safe to abort on error
+	state, err := entry.State(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve state of new finalized entry %s: %v", next, err)
 	}
+	if _, err := f.StateDB.Store(ctx, state); err != nil {
+		return fmt.Errorf("failed to store state of new finalized entry %s: %v", next, err)
+	}
+
+	// Add block (may be a repeat of last)
+	f.BlockRoots = append(f.BlockRoots, blockRoot)
+	// Track the first occurrence
+	if _, ok := f.BlockRootsMap[blockRoot]; !ok {
+		f.BlockRootsMap[blockRoot] = next.Slot()
+	}
+
+	// Add new state
+	stateRoot := entry.StateRoot()
+	f.StateRoots = append(f.StateRoots, stateRoot)
+	f.StateRootsMap[stateRoot] = next
 	return nil
 }
 
-func (f *FinalizedChain) parentRoot(slot Slot) (root Root) {
-	if slot <= f.AnchorSlot {
-		return Root{}
-	}
-	return f.BlockRoots[slot-1-f.AnchorSlot]
+func (f *FinalizedChain) ParentRoot(slot Slot) (root Root) {
+	return f.BlockRoot(AsStep(slot, false))
 }
 
-func (f *FinalizedChain) blockRoot(slot Slot) (root Root) {
-	if slot < f.AnchorSlot {
-		return Root{}
+func (f *FinalizedChain) BlockRoot(step Step) (root Root) {
+	f.RLock()
+	defer f.RUnlock()
+	start := f.start()
+	end := f.end()
+	if start < step || step >= end {
+		panic("out of bounds internal usage error")
 	}
-	i := slot - f.AnchorSlot
-	if i >= Slot(len(f.BlockRoots)) {
-		return Root{}
-	}
-	return f.BlockRoots[slot-f.AnchorSlot]
+	return f.BlockRoots[step-start]
 }
 
-func (f *FinalizedChain) stateRoot(slot Slot) Root {
-	if slot < f.AnchorSlot {
-		return Root{}
-	}
-	i := slot - f.AnchorSlot
-	if i >= Slot(len(f.StateRoots)) {
-		return Root{}
-	}
-	return f.StateRoots[i]
+func (f *FinalizedChain) StateRoot(step Step) Root {
+	f.RLock()
+	defer f.RUnlock()
+	return f.stateRoot(step)
 }
 
-func (f *FinalizedChain) getEpochsContext(ctx context.Context, slot Slot) (*beacon.EpochsContext, error) {
+func (f *FinalizedChain) stateRoot(step Step) Root {
+	start := f.start()
+	end := f.end()
+	if start < step || step >= end {
+		panic("out of bounds internal usage error")
+	}
+	return f.StateRoots[step-start]
+}
+
+func (f *FinalizedChain) GetEpochsContext(ctx context.Context, step Step) (*beacon.EpochsContext, error) {
+	f.RLock()
+	defer f.RUnlock()
 	epc := &beacon.EpochsContext{
 		PubkeyCache: f.PubkeyCache,
 	}
 	// We do not store shuffling for older epochs
 	// TODO: maybe store it after all, for archive node functionality?
-	state, err := f.getState(ctx, slot)
+	state, err := f.getState(ctx, step)
 	if err != nil {
 		return nil, err
 	}
@@ -313,17 +370,23 @@ func (f *FinalizedChain) getEpochsContext(ctx context.Context, slot Slot) (*beac
 	return epc, nil
 }
 
-func (f *FinalizedChain) getState(ctx context.Context, slot Slot) (*beacon.BeaconStateView, error) {
-	root := f.stateRoot(slot)
+func (f *FinalizedChain) GetState(ctx context.Context, step Step) (*beacon.BeaconStateView, error) {
+	f.RLock()
+	defer f.RUnlock()
+	return f.getState(ctx, step)
+}
+
+func (f *FinalizedChain) getState(ctx context.Context, step Step) (*beacon.BeaconStateView, error) {
+	root := f.stateRoot(step)
 	if root == (beacon.Root{}) {
-		return nil, fmt.Errorf("unknown state, slot out of range: %d", slot)
+		return nil, fmt.Errorf("unknown state, step out of range: %s", step)
 	}
 	state, exists, err := f.StateDB.Get(ctx, root)
 	if err != nil {
 		return nil, err
 	}
 	if !exists {
-		return nil, fmt.Errorf("state for state-root %x (slot %d) does not exist: %v", root, slot, err)
+		return nil, fmt.Errorf("state for state-root %x (step %s) does not exist: %v", root, step, err)
 	}
 	return state, nil
 }

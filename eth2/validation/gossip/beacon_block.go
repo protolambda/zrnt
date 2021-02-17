@@ -35,14 +35,14 @@ func (gv *GossipValidator) ValidateBeaconBlock(ctx context.Context, signedBlock 
 
 	// [IGNORE] The block's parent (defined by block.parent_root) has been seen
 	// (via both gossip and non-gossip sources)
-	parentRef, err := gv.Chain.ByBlockRoot(block.ParentRoot)
-	if err != nil {
-		return GossipValidatorResult{IGNORE, fmt.Errorf("block has unavailable parent block %s: %w", block.ParentRoot, err)}
+	parentRef, ok := gv.Chain.ByBlock(block.ParentRoot)
+	if !ok {
+		return GossipValidatorResult{IGNORE, fmt.Errorf("block has unavailable parent block %s", block.ParentRoot)}
 	}
 	// Sanity check, implied condition
-	if parentRef.Slot() >= block.Slot {
+	if refSlot := parentRef.Step().Slot(); refSlot >= block.Slot {
 		// It's OK to propagate, others do so and attack scope is limited, but it will not be processed later on. So just ignore it.
-		return GossipValidatorResult{IGNORE, fmt.Errorf("block slot %d not after parent %d (%s)", block.Slot, parentRef.Slot(), block.ParentRoot)}
+		return GossipValidatorResult{IGNORE, fmt.Errorf("block slot %d not after parent %d (%s)", block.Slot, refSlot, block.ParentRoot)}
 	}
 
 	// [IGNORE] The block is from a slot greater than the latest finalized slot --
@@ -87,7 +87,7 @@ func (gv *GossipValidator) ValidateBeaconBlock(ctx context.Context, signedBlock 
 	// the current shuffling (defined by parent_root/slot).
 
 	targetEpoch := gv.Spec.SlotToEpoch(block.Slot)
-	parentEpoch := gv.Spec.SlotToEpoch(parentRef.Slot())
+	parentEpoch := gv.Spec.SlotToEpoch(parentRef.Step().Slot())
 	var proposer beacon.ValidatorIndex
 	if parentEpoch == targetEpoch {
 		proposer, err = parentEpc.GetBeaconProposer(block.Slot)

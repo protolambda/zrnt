@@ -65,12 +65,12 @@ func (gv *GossipValidator) ValidateAttestation(ctx context.Context, subnet uint6
 
 	// [IGNORE] The block being voted for (attestation.data.beacon_block_root) has been seen
 	// (via both gossip and non-gossip sources) (a client MAY queue aggregates for processing once block is retrieved).
-	blockRef, err := gv.Chain.ByBlockRoot(att.Data.BeaconBlockRoot)
-	if err != nil {
+	blockRef, ok := gv.Chain.ByBlock(att.Data.BeaconBlockRoot)
+	if !ok {
 		return GossipValidatorResult{IGNORE, errors.New("attestation voted for unknown block")}
 	}
 	// TODO: this is a nice sanity check, but not strictly necessary if forkchoice handles it anyway.
-	if refSlot := blockRef.Slot(); refSlot > att.Data.Slot {
+	if refSlot := blockRef.Step().Slot(); refSlot > att.Data.Slot {
 		return GossipValidatorResult{REJECT, errors.New("attestation voted for block in the future")}
 	}
 

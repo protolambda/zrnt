@@ -72,7 +72,7 @@ type HotChain interface {
 type UnfinalizedChain struct {
 	sync.RWMutex
 
-	ForkChoice *forkchoice.ProtoForkChoice
+	ForkChoice forkchoice.Forkchoice
 
 	// Block root (parent if empty slot) and slot -> Entry
 	Entries map[BlockSlotKey]*HotEntry
@@ -233,13 +233,22 @@ func NewUnfinalizedChain(anchorState *beacon.BeaconStateView, sink BlockSink, sp
 		BlockSink:  sink,
 		Spec:       spec,
 	}
+	balancesView, err := anchorState.Balances()
+	if err != nil {
+		return nil, err
+	}
+	balances, err := balancesView.AllBalances()
+	if err != nil {
+		return nil, err
+	}
 	uc.ForkChoice = proto.NewProtoForkChoice(
 		spec,
 		finCh,
 		justCh,
 		anchorBlockRoot, slot,
 		parentRoot,
-		proto.BlockSinkFn(uc.onPrunedNode),
+		balances,
+		proto.NodeSinkFn(uc.onPrunedNode),
 	)
 	return uc, nil
 }
@@ -375,18 +384,19 @@ func (uc *UnfinalizedChain) Towards(ctx context.Context, fromBlockRoot Root, toS
 		if err != nil {
 			return nil, err
 		}
-		// Make the forkchoice aware of latest justified/finalized data. Lazy-fetch the balances if necessary.
-		if err := uc.ForkChoice.UpdateJustified(ctx, justified, finalized, func() ([]forkchoice.Gwei, error) {
-			balancesView, err := state.Balances()
-			if err != nil {
-				return nil, err
-			}
-			return balancesView.AllBalances()
-		}); err != nil {
-			return nil, fmt.Errorf("failed to update forkchoice with new justification data: %v", err)
-		}
 		// Make the forkchoice aware of this new slot
 		uc.ForkChoice.ProcessSlot(fromBlockRoot, slot, justified.Epoch, finalized.Epoch)
+		// Make the forkchoice aware of latest justified/finalized data. Lazy-fetch the balances if necessary.
+		if err := uc.ForkChoice.UpdateJustified(ctx, fromBlockRoot, finalized, justified,
+			func() ([]forkchoice.Gwei, error) {
+				balancesView, err := state.Balances()
+				if err != nil {
+					return nil, err
+				}
+				return balancesView.AllBalances()
+			}); err != nil {
+			return nil, fmt.Errorf("failed to update forkchoice with new justification data: %v", err)
+		}
 
 		// Track the entry
 		key := BlockSlotKey{Root: fromBlockRoot, Slot: slot}

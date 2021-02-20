@@ -13,11 +13,9 @@ type ProtoForkChoice struct {
 	voteStore  VoteStore
 
 	balances []Gwei
-	// The block root and slot to start forkchoice from.
-	// At genesis, explicitly set to genesis, since there is no "justified" root yet.
-	// Later updated with justified state.
-	// May be modified to pin a sub-tree for soft-fork purposes.
-	anchor    NodeRef
+	// If present, this overrules the forkchoice to start in this subtree,
+	// instead of the justified checkpoint.
+	pin       *NodeRef
 	justified Checkpoint
 	finalized Checkpoint
 	spec      *beacon.Spec
@@ -26,7 +24,8 @@ type ProtoForkChoice struct {
 var _ Forkchoice = (*ProtoForkChoice)(nil)
 
 func NewForkChoice(spec *beacon.Spec, finalized Checkpoint, justified Checkpoint,
-	anchorRoot Root, anchorSlot Slot, anchorParent Root, graph ForkchoiceGraph, votes VoteStore) *ProtoForkChoice {
+	anchorRoot Root, anchorSlot Slot, anchorParent Root, graph ForkchoiceGraph, votes VoteStore,
+	initialBalances []Gwei) Forkchoice {
 	fc := &ProtoForkChoice{
 		protoArray: graph,
 		voteStore:  votes,
@@ -36,24 +35,30 @@ func NewForkChoice(spec *beacon.Spec, finalized Checkpoint, justified Checkpoint
 		spec:       spec,
 	}
 	fc.ProcessBlock(anchorParent, anchorRoot, anchorSlot, justified.Epoch, finalized.Epoch)
-	fc.anchor = NodeRef{Root: anchorRoot, Slot: anchorSlot}
+	_ = fc.updateJustified(finalized, justified, func() ([]Gwei, error) {
+		return initialBalances, nil
+	})
 	return fc
 }
 
-func (fc *ProtoForkChoice) PinAnchor(root Root, slot Slot) error {
+func (fc *ProtoForkChoice) Pin() *NodeRef {
+	fc.mu.RLock()
+	defer fc.mu.RUnlock()
+	return fc.pin
+}
+
+func (fc *ProtoForkChoice) SetPin(root Root, slot Slot) error {
 	fc.mu.Lock()
 	defer fc.mu.Unlock()
-	if fc.anchor.Root == root {
-		return nil
+	// check if new data can be pinned: the node must exist, or we won't be able to find a head node ever again.
+	closest, err := fc.protoArray.ClosestToSlot(root, slot)
+	if err != nil {
+		return fmt.Errorf("cannot find pin: %v", err)
 	}
-	if unknown, isAncestor := fc.IsAncestor(root, fc.anchor.Root); unknown {
-		return fmt.Errorf("missing anchor data, cannot change anchor from (%s, %d) to (%s, %d)",
-			fc.anchor.Root, fc.anchor.Slot, root, slot)
-	} else if !isAncestor {
-		return fmt.Errorf("cannot pin anchor to (%s, %d) which is not in the subtree of the previous anchor (%s, %d)",
-			root, slot, fc.anchor.Root, fc.anchor.Slot)
+	if closest.Slot < slot {
+		return fmt.Errorf("found pin target, but slot is too old: %d <> %d", closest.Slot, slot)
 	}
-	fc.anchor = NodeRef{Root: root, Slot: slot}
+	fc.pin = &NodeRef{Root: root, Slot: slot}
 	return nil
 }
 
@@ -62,7 +67,8 @@ func (fc *ProtoForkChoice) PinAnchor(root Root, slot Slot) error {
 // If the finalized checkpoint changes, it triggers pruning.
 // Note that pruning can prune the pre-block node of the start slot of the finalized epoch, if it is not a gap slot.
 // And the finalizing node with the block will remain.
-func (fc *ProtoForkChoice) UpdateJustified(ctx context.Context, justified Checkpoint, finalized Checkpoint,
+// The justification/finalization trigger must be within the pinned subtree (if any).
+func (fc *ProtoForkChoice) UpdateJustified(ctx context.Context, trigger Root, justified Checkpoint, finalized Checkpoint,
 	justifiedStateBalances func() ([]Gwei, error)) error {
 	fc.mu.Lock()
 	defer fc.mu.Unlock()
@@ -70,10 +76,34 @@ func (fc *ProtoForkChoice) UpdateJustified(ctx context.Context, justified Checkp
 	if fc.justified.Epoch >= justified.Epoch && fc.finalized.Epoch >= finalized.Epoch {
 		return nil
 	}
-	justifiedSlot, err := fc.spec.EpochStartSlot(justified.Epoch)
-	if err != nil {
-		return fmt.Errorf("bad justified epoch: %d", justified.Epoch)
+	if fc.pin != nil && trigger != fc.pin.Root {
+		// check trigger against pin, to ensure no justification/finalization of data that conflicts with the pin.
+		if unknown, isAncestor := fc.IsAncestor(trigger, fc.pin.Root); unknown {
+			return fmt.Errorf("cannot justify/finalize with unknown trigger when forkchoice is pinned")
+		} else if !isAncestor {
+			return fmt.Errorf("cannot justify/finalize outside of pinned forkchoice tree")
+		}
 	}
+
+	prevFinalized := fc.finalized
+
+	if err := fc.updateJustified(justified, finalized, justifiedStateBalances); err != nil {
+		return err
+	}
+
+	// prune if we finalized something, and undo the pin.
+	if prevFinalized != finalized {
+		fc.pin = nil
+		finSlot, _ := fc.spec.EpochStartSlot(finalized.Epoch)
+		if err := fc.protoArray.OnPrune(ctx, finalized.Root, finSlot); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (fc *ProtoForkChoice) updateJustified(finalized Checkpoint, justified Checkpoint,
+	justifiedStateBalances func() ([]Gwei, error)) error {
 	if justified.Epoch < finalized.Epoch {
 		return fmt.Errorf("justified epoch %d lower than finalized epoch %d", justified.Epoch, finalized.Epoch)
 	}
@@ -110,18 +140,21 @@ func (fc *ProtoForkChoice) UpdateJustified(ctx context.Context, justified Checkp
 
 	fc.balances = newBals
 	fc.justified = justified
-	prevFinalized := fc.finalized
 	fc.finalized = finalized
-	fc.anchor = NodeRef{Root: justified.Root, Slot: justifiedSlot}
 
-	// prune if we finalized something
-	if prevFinalized != finalized {
-		finSlot, _ := fc.spec.EpochStartSlot(finalized.Epoch)
-		if err := fc.protoArray.OnPrune(ctx, finalized.Root, finSlot); err != nil {
-			return err
-		}
-	}
 	return nil
+}
+
+// TODO: skip based on time (like rate limiting) or based on amount of changes
+//  (if not bigger than previous difference between head-node contenders)
+func (fc *ProtoForkChoice) updateVotesMaybe() error {
+	if !fc.voteStore.HasChanges() {
+		return nil
+	}
+
+	deltas := fc.voteStore.ComputeDeltas(fc.protoArray.Indices(), fc.balances, fc.balances)
+
+	return fc.protoArray.ApplyScoreChanges(deltas, fc.justified.Epoch, fc.finalized.Epoch)
 }
 
 func (fc *ProtoForkChoice) Justified() Checkpoint {
@@ -187,11 +220,23 @@ func (fc *ProtoForkChoice) GetSlot(root Root) (slot Slot, ok bool) {
 func (fc *ProtoForkChoice) FindHead(anchorRoot Root, anchorSlot Slot) (NodeRef, error) {
 	fc.mu.Lock()
 	defer fc.mu.Unlock()
+	if err := fc.updateVotesMaybe(); err != nil {
+		return NodeRef{}, err
+	}
 	return fc.protoArray.FindHead(anchorRoot, anchorSlot)
 }
 
 func (fc *ProtoForkChoice) Head() (NodeRef, error) {
 	fc.mu.Lock()
 	defer fc.mu.Unlock()
-	return fc.protoArray.FindHead(fc.anchor.Root, fc.anchor.Slot)
+	if err := fc.updateVotesMaybe(); err != nil {
+		return NodeRef{}, err
+	}
+	root := fc.justified.Root
+	slot, _ := fc.spec.EpochStartSlot(fc.justified.Epoch)
+	if fc.pin != nil {
+		root = fc.pin.Root
+		slot = fc.pin.Slot
+	}
+	return fc.protoArray.FindHead(root, slot)
 }

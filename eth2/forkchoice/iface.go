@@ -44,6 +44,7 @@ type VoteInput interface {
 
 type VoteStore interface {
 	VoteInput
+	HasChanges() bool
 	ComputeDeltas(indices map[NodeRef]NodeIndex, oldBalances []Gwei, newBalances []Gwei) []SignedGwei
 }
 
@@ -51,6 +52,10 @@ type Forkchoice interface {
 	ForkchoiceView
 	ForkchoiceNodeInput
 	VoteInput
+	UpdateJustified(ctx context.Context, trigger Root, justified Checkpoint, finalized Checkpoint,
+		justifiedStateBalances func() ([]Gwei, error)) error
+	Pin() *NodeRef
+	SetPin(root Root, slot Slot) error
 	Justified() Checkpoint
 	Finalized() Checkpoint
 	Head() (NodeRef, error)

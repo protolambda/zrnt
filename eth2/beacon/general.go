@@ -1,6 +1,7 @@
 package beacon
 
 import (
+	"fmt"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
@@ -214,7 +215,15 @@ type NodeRef struct {
 	Root Root
 }
 
+func (n NodeRef) String() string {
+	return n.Root.String() + ":" + n.Slot.String()
+}
+
 type ExtendedNodeRef struct {
 	NodeRef
 	ParentRoot Root
+}
+
+func (n ExtendedNodeRef) String() string {
+	return fmt.Sprintf("%s:%d (parent %s)", n.Root, n.Slot, n.ParentRoot)
 }

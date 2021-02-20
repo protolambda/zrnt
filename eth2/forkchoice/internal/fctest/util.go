@@ -1,26 +1,31 @@
-package forkchoice
+package fctest
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/forkchoice"
+)
 
 type ForkChoiceTestTarget struct {
 	// node -> canonical. Presence = pruneable node.
 	// Test should fail if a node is pruned that is not in here.
-	Pruneable map[NodeRef]bool
+	Pruneable map[forkchoice.NodeRef]bool
 }
 
 type Operation interface {
-	Apply(ft *ForkChoiceTestTarget, fc Forkchoice) error
+	Apply(ft *ForkChoiceTestTarget, fc forkchoice.Forkchoice) error
 }
 
 type OpCanonicalChain struct {
-	AnchorRoot Root
-	AnchorSlot Slot
+	AnchorRoot forkchoice.Root
+	AnchorSlot forkchoice.Slot
 	// TODO: simplify to []Root ?
-	Expected []ExtendedNodeRef
+	Expected []forkchoice.ExtendedNodeRef
 	Ok       bool
 }
 
-func (op *OpCanonicalChain) Apply(ft *ForkChoiceTestTarget, fc Forkchoice) error {
+func (op *OpCanonicalChain) Apply(ft *ForkChoiceTestTarget, fc forkchoice.Forkchoice) error {
 	canon, err := fc.CanonicalChain(op.AnchorRoot, op.AnchorSlot)
 	if op.Ok && err != nil {
 		return fmt.Errorf("unexpected error: %v", err)
@@ -40,13 +45,13 @@ func (op *OpCanonicalChain) Apply(ft *ForkChoiceTestTarget, fc Forkchoice) error
 }
 
 type OpClosestToSlot struct {
-	Anchor  Root
-	Slot    Slot
-	Closest NodeRef
+	Anchor  forkchoice.Root
+	Slot    forkchoice.Slot
+	Closest forkchoice.NodeRef
 	Ok      bool
 }
 
-func (op *OpClosestToSlot) Apply(ft *ForkChoiceTestTarget, fc Forkchoice) error {
+func (op *OpClosestToSlot) Apply(ft *ForkChoiceTestTarget, fc forkchoice.Forkchoice) error {
 	closest, err := fc.ClosestToSlot(op.Anchor, op.Slot)
 	if op.Ok && err != nil {
 		return fmt.Errorf("unexpected error: %v", err)
@@ -62,14 +67,14 @@ func (op *OpClosestToSlot) Apply(ft *ForkChoiceTestTarget, fc Forkchoice) error 
 }
 
 type OpCanonAtSlot struct {
-	Anchor    Root
-	Slot      Slot
+	Anchor    forkchoice.Root
+	Slot      forkchoice.Slot
 	WithBlock bool
-	At        NodeRef
+	At        forkchoice.NodeRef
 	Ok        bool
 }
 
-func (op *OpCanonAtSlot) Apply(ft *ForkChoiceTestTarget, fc Forkchoice) error {
+func (op *OpCanonAtSlot) Apply(ft *ForkChoiceTestTarget, fc forkchoice.Forkchoice) error {
 	at, err := fc.CanonAtSlot(op.Anchor, op.Slot, op.WithBlock)
 	if op.Ok && err != nil {
 		return fmt.Errorf("unexpected error: %v", err)
@@ -85,12 +90,12 @@ func (op *OpCanonAtSlot) Apply(ft *ForkChoiceTestTarget, fc Forkchoice) error {
 }
 
 type OpGetSlot struct {
-	BlockRoot Root
-	Slot      Slot
+	BlockRoot forkchoice.Root
+	Slot      forkchoice.Slot
 	Ok        bool
 }
 
-func (op *OpGetSlot) Apply(ft *ForkChoiceTestTarget, fc Forkchoice) error {
+func (op *OpGetSlot) Apply(ft *ForkChoiceTestTarget, fc forkchoice.Forkchoice) error {
 	slot, ok := fc.GetSlot(op.BlockRoot)
 	if op.Ok && !ok {
 		return fmt.Errorf("unexpected fail")
@@ -105,13 +110,13 @@ func (op *OpGetSlot) Apply(ft *ForkChoiceTestTarget, fc Forkchoice) error {
 }
 
 type OpFindHead struct {
-	AnchorRoot   Root
-	AnchorSlot   Slot
-	ExpectedHead NodeRef
+	AnchorRoot   forkchoice.Root
+	AnchorSlot   forkchoice.Slot
+	ExpectedHead forkchoice.NodeRef
 	Ok           bool
 }
 
-func (op *OpFindHead) Apply(ft *ForkChoiceTestTarget, fc Forkchoice) error {
+func (op *OpFindHead) Apply(ft *ForkChoiceTestTarget, fc forkchoice.Forkchoice) error {
 	head, err := fc.FindHead(op.AnchorRoot, op.AnchorSlot)
 	if op.Ok && err != nil {
 		return fmt.Errorf("unexpected error: %v", err)
@@ -120,18 +125,18 @@ func (op *OpFindHead) Apply(ft *ForkChoiceTestTarget, fc Forkchoice) error {
 		return fmt.Errorf("unexpected no error")
 	}
 	if head != op.ExpectedHead {
-		return fmt.Errorf("different found head from anchor %s slot %d: %s <> %s",
+		return fmt.Errorf("different found head from pin %s slot %d: %s <> %s",
 			op.AnchorRoot, op.AnchorSlot, head, op.ExpectedHead)
 	}
 	return nil
 }
 
 type OpHead struct {
-	ExpectedHead NodeRef
+	ExpectedHead forkchoice.NodeRef
 	Ok           bool
 }
 
-func (op *OpHead) Apply(ft *ForkChoiceTestTarget, fc Forkchoice) error {
+func (op *OpHead) Apply(ft *ForkChoiceTestTarget, fc forkchoice.Forkchoice) error {
 	head, err := fc.Head()
 	if op.Ok && err != nil {
 		return fmt.Errorf("unexpected error: %v", err)
@@ -146,13 +151,13 @@ func (op *OpHead) Apply(ft *ForkChoiceTestTarget, fc Forkchoice) error {
 }
 
 type OpIsAncestor struct {
-	Root       Root
-	OfRoot     Root
+	Root       forkchoice.Root
+	OfRoot     forkchoice.Root
 	Unknown    bool
 	IsAncestor bool
 }
 
-func (op *OpIsAncestor) Apply(ft *ForkChoiceTestTarget, fc Forkchoice) error {
+func (op *OpIsAncestor) Apply(ft *ForkChoiceTestTarget, fc forkchoice.Forkchoice) error {
 	unknown, isAncestor := fc.IsAncestor(op.Root, op.OfRoot)
 	if unknown != op.Unknown || isAncestor != op.IsAncestor {
 		return fmt.Errorf("expected different ancestor result: unknown %v <> %v, isAncestor %v <> %v",
@@ -162,57 +167,78 @@ func (op *OpIsAncestor) Apply(ft *ForkChoiceTestTarget, fc Forkchoice) error {
 }
 
 type OpProcessSlot struct {
-	Parent         Root
-	Slot           Slot
-	JustifiedEpoch Epoch
-	FinalizedEpoch Epoch
+	Parent         forkchoice.Root
+	Slot           forkchoice.Slot
+	JustifiedEpoch forkchoice.Epoch
+	FinalizedEpoch forkchoice.Epoch
 }
 
-func (op *OpProcessSlot) Apply(ft *ForkChoiceTestTarget, fc Forkchoice) error {
+func (op *OpProcessSlot) Apply(ft *ForkChoiceTestTarget, fc forkchoice.Forkchoice) error {
 	fc.ProcessSlot(op.Parent, op.Slot, op.JustifiedEpoch, op.FinalizedEpoch)
 	return nil
 }
 
 type OpProcessBlock struct {
-	Parent         Root
-	BlockRoot      Root
-	BlockSlot      Slot
-	JustifiedEpoch Epoch
-	FinalizedEpoch Epoch
+	Parent         forkchoice.Root
+	BlockRoot      forkchoice.Root
+	BlockSlot      forkchoice.Slot
+	JustifiedEpoch forkchoice.Epoch
+	FinalizedEpoch forkchoice.Epoch
 }
 
-func (op *OpProcessBlock) Apply(ft *ForkChoiceTestTarget, fc Forkchoice) error {
+func (op *OpProcessBlock) Apply(ft *ForkChoiceTestTarget, fc forkchoice.Forkchoice) error {
 	fc.ProcessBlock(op.Parent, op.BlockRoot, op.BlockSlot, op.JustifiedEpoch, op.FinalizedEpoch)
 	return nil
 }
 
 type OpProcessAttestation struct {
-	ValidatorIndex ValidatorIndex
-	BlockRoot      Root
-	HeadSlot       Slot
+	ValidatorIndex forkchoice.ValidatorIndex
+	BlockRoot      forkchoice.Root
+	HeadSlot       forkchoice.Slot
 }
 
-func (op *OpProcessAttestation) Apply(ft *ForkChoiceTestTarget, fc Forkchoice) error {
+func (op *OpProcessAttestation) Apply(ft *ForkChoiceTestTarget, fc forkchoice.Forkchoice) error {
 	fc.ProcessAttestation(op.ValidatorIndex, op.BlockRoot, op.HeadSlot)
 	return nil
 }
 
 type OpPruneable struct {
-	Pruneable NodeRef
+	Pruneable forkchoice.NodeRef
 	Canonical bool
 }
 
-func (op *OpPruneable) Apply(ft *ForkChoiceTestTarget, fc Forkchoice) error {
+func (op *OpPruneable) Apply(ft *ForkChoiceTestTarget, fc forkchoice.Forkchoice) error {
 	ft.Pruneable[op.Pruneable] = op.Canonical
 	return nil
 }
 
+type OpUpdateJustified struct {
+	Trigger                forkchoice.Root
+	Justified              forkchoice.Checkpoint
+	Finalized              forkchoice.Checkpoint
+	JustifiedStateBalances func() ([]forkchoice.Gwei, error)
+	Ok                     bool
+}
+
+func (op *OpUpdateJustified) Apply(ft *ForkChoiceTestTarget, fc forkchoice.Forkchoice) error {
+	err := fc.UpdateJustified(context.Background(), op.Trigger, op.Finalized, op.Justified, op.JustifiedStateBalances)
+	if op.Ok && err != nil {
+		return fmt.Errorf("unexpected error: %v", err)
+	}
+	if !op.Ok && err == nil {
+		return fmt.Errorf("unexpected no error")
+	}
+	return nil
+}
+
 type ForkChoiceTestInit struct {
-	Finalized    Checkpoint
-	Justified    Checkpoint
-	AnchorRoot   Root
-	AnchorSlot   Slot
-	AnchorParent Root
+	Spec         *beacon.Spec
+	Finalized    forkchoice.Checkpoint
+	Justified    forkchoice.Checkpoint
+	AnchorRoot   forkchoice.Root
+	AnchorSlot   forkchoice.Slot
+	AnchorParent forkchoice.Root
+	Balances     []forkchoice.Gwei
 }
 
 type ForkChoiceTestDef struct {
@@ -220,9 +246,9 @@ type ForkChoiceTestDef struct {
 	Operations []Operation
 }
 
-func (fd *ForkChoiceTestDef) Run(prepare func(init *ForkChoiceTestInit, ft *ForkChoiceTestTarget) Forkchoice) error {
+func (fd *ForkChoiceTestDef) Run(prepare func(init *ForkChoiceTestInit, ft *ForkChoiceTestTarget) forkchoice.Forkchoice) error {
 	ft := &ForkChoiceTestTarget{
-		Pruneable: make(map[NodeRef]bool),
+		Pruneable: make(map[forkchoice.NodeRef]bool),
 	}
 	fc := prepare(&fd.Init, ft)
 	for i, op := range fd.Operations {

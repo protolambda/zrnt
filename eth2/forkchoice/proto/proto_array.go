@@ -22,9 +22,9 @@ type ProtoNode struct {
 	BestDescendant NodeIndex
 }
 
-type BlockSinkFn func(ctx context.Context, ref NodeRef, canonical bool) error
+type NodeSinkFn func(ctx context.Context, ref NodeRef, canonical bool) error
 
-func (fn BlockSinkFn) OnPrunedNode(ctx context.Context, ref NodeRef, canonical bool) error {
+func (fn NodeSinkFn) OnPrunedNode(ctx context.Context, ref NodeRef, canonical bool) error {
 	return fn(ctx, ref, canonical)
 }
 
@@ -52,12 +52,6 @@ type ProtoArray struct {
 
 var _ ForkchoiceGraph = (*ProtoArray)(nil)
 
-func NewProtoForkChoice(spec *beacon.Spec, finalized Checkpoint, justified Checkpoint,
-	anchorRoot Root, anchorSlot Slot, anchorParent Root, sink NodeSink) *ProtoForkChoice {
-	return NewForkChoice(spec, finalized, justified, anchorRoot, anchorSlot, anchorParent,
-		NewProtoArray(justified.Epoch, finalized.Epoch, sink), new(ProtoVoteStore))
-}
-
 func NewProtoArray(justifiedEpoch Epoch, finalizedEpoch Epoch, sink NodeSink) *ProtoArray {
 	arr := ProtoArray{
 		sink:               sink,
@@ -66,6 +60,7 @@ func NewProtoArray(justifiedEpoch Epoch, finalizedEpoch Epoch, sink NodeSink) *P
 		finalizedEpoch:     finalizedEpoch,
 		nodes:              make([]ProtoNode, 0, 100),
 		indices:            make(map[NodeRef]NodeIndex, 100),
+		blockSlots:         make(map[Root]Slot, 100),
 		updatedConnections: true,
 	}
 	return &arr
@@ -285,7 +280,8 @@ func (pr *ProtoArray) ProcessSlot(parent Root, slot Slot, justifiedEpoch Epoch, 
 	parentIndex := NONE
 	parentSlot, ok := pr.blockSlots[parent]
 	if ok {
-		for i := parentSlot; i < slot; i++ {
+		parentIndex = pr.indices[NodeRef{Root: parent, Slot: parentSlot}]
+		for i := parentSlot + 1; i < slot; i++ {
 			nodeRef := NodeRef{Root: parent, Slot: i}
 			// remember the last node before (up to and including same slot)
 			nodeIndex, ok := pr.indices[nodeRef]
@@ -343,11 +339,15 @@ func (pr *ProtoArray) ProcessBlock(parent Root, blockRoot Root, blockSlot Slot, 
 		// block is already known with different slot. Likely been pruned away, and we only know the later empty slot.
 		return
 	}
-	pr.ProcessSlot(parent, blockSlot, justifiedEpoch, finalizedEpoch)
-	exclRef := NodeRef{Slot: blockSlot, Root: parent}
-	parentIndex, ok := pr.indices[exclRef]
-	if !ok {
-		panic("OnSlot failed to add node for block slot")
+	parentIndex := NONE
+	// E.g. on genesis, slot 0, adding a zero block, which has a zero parent, we cannot add a pre-state.
+	if parent != blockRoot {
+		pr.ProcessSlot(parent, blockSlot, justifiedEpoch, finalizedEpoch)
+		exclRef := NodeRef{Slot: blockSlot, Root: parent}
+		parentIndex, ok = pr.indices[exclRef]
+		if !ok {
+			panic("OnSlot failed to add node for block slot")
+		}
 	}
 	nodeIndex := pr.indexOffset + NodeIndex(len(pr.nodes))
 	pr.blockSlots[blockRoot] = blockSlot

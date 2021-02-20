@@ -13,11 +13,16 @@ type VoteTracker struct {
 }
 
 type ProtoVoteStore struct {
-	spec  *beacon.Spec
-	votes []VoteTracker
+	spec    *beacon.Spec
+	votes   []VoteTracker
+	changed bool
 }
 
 var _ VoteStore = (*ProtoVoteStore)(nil)
+
+func NewProtoVoteStore(spec *beacon.Spec) VoteStore {
+	return &ProtoVoteStore{spec: spec, changed: true}
+}
 
 // Process an attestation. (Note that the head slot may be for a gap slot after the block root)
 func (st *ProtoVoteStore) ProcessAttestation(index ValidatorIndex, blockRoot Root, headSlot Slot) {
@@ -31,12 +36,17 @@ func (st *ProtoVoteStore) ProcessAttestation(index ValidatorIndex, blockRoot Roo
 	}
 	vote := &st.votes[index]
 	targetEpoch := st.spec.SlotToEpoch(headSlot)
-	// only update if it's a newer vote
-	if targetEpoch > vote.NextTargetEpoch {
+	// only update if it's a newer vote, or if it's genesis and no vote has happened yet.
+	if targetEpoch > vote.NextTargetEpoch || (targetEpoch == 0 && *vote == (VoteTracker{})) {
 		vote.NextTargetEpoch = targetEpoch
 		vote.Next = NodeRef{Root: blockRoot, Slot: headSlot}
+		st.changed = true
 	}
 	// TODO: maybe help detect slashable votes on the fly?
+}
+
+func (st *ProtoVoteStore) HasChanges() bool {
+	return st.changed
 }
 
 // Returns a list of `deltas`, where there is one delta for each of the ProtoArray nodes.
@@ -62,7 +72,7 @@ func (st *ProtoVoteStore) ComputeDeltas(indices map[NodeRef]NodeIndex, oldBalanc
 			newBal = newBalances[i]
 		}
 
-		if vote.CurrentTargetEpoch < vote.NextTargetEpoch || oldBal != newBal {
+		if vote.Current == (NodeRef{}) || vote.CurrentTargetEpoch < vote.NextTargetEpoch || oldBal != newBal {
 			// Ignore the current or next vote if it is not known in `indices`.
 			// We assume that it is outside of our tree (i.e., pre-finalization) and therefore not interesting.
 			if currentIndex, ok := indices[vote.Current]; ok {
@@ -75,6 +85,7 @@ func (st *ProtoVoteStore) ComputeDeltas(indices map[NodeRef]NodeIndex, oldBalanc
 			vote.CurrentTargetEpoch = vote.NextTargetEpoch
 		}
 	}
+	st.changed = false
 
 	return deltas
 }

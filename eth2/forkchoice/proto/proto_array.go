@@ -1,49 +1,25 @@
-package forkchoice
+package proto
 
 import (
 	"context"
 	"errors"
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon"
-	"sync"
+	. "github.com/protolambda/zrnt/eth2/forkchoice"
 )
 
-type Root = beacon.Root
-type Epoch = beacon.Epoch
-type Slot = beacon.Slot
-type ValidatorIndex = beacon.ValidatorIndex
-type Gwei = beacon.Gwei
-type Checkpoint = beacon.Checkpoint
-
-type SignedGwei = int64
-
-type ExtendedRef struct {
-	Slot Slot
-	// Block root, may be equal to parent root if empty
-	Root       Root
-	ParentRoot Root
-}
-
-type NodeRef struct {
-	Slot Slot
-	// Block root, may be equal to parent root if empty
-	Root Root
-}
-
-type ProtoNodeIndex uint64
-
-const NONE = ^ProtoNodeIndex(0)
+const NONE = ^NodeIndex(0)
 
 type ProtoNode struct {
 	Ref    NodeRef
-	Parent ProtoNodeIndex
+	Parent NodeIndex
 	// Duplicated to avoid pruning of this useful info.
 	ParentRoot     Root
 	JustifiedEpoch Epoch
 	FinalizedEpoch Epoch
 	Weight         SignedGwei
-	BestChild      ProtoNodeIndex
-	BestDescendant ProtoNodeIndex
+	BestChild      NodeIndex
+	BestDescendant NodeIndex
 }
 
 type BlockSinkFn func(ctx context.Context, ref NodeRef, canonical bool) error
@@ -62,16 +38,24 @@ type NodeSink interface {
 // There may be multiple nodes with the same parent but different blocks (i.e. double proposals, but slashable).
 type ProtoArray struct {
 	sink           NodeSink
-	indexOffset    ProtoNodeIndex
+	indexOffset    NodeIndex
 	justifiedEpoch Epoch
 	finalizedEpoch Epoch
 	nodes          []ProtoNode
 	// maintains only nodes that are actually part of the tree starting from finalized point.
-	indices map[NodeRef]ProtoNodeIndex
+	indices map[NodeRef]NodeIndex
 	// Tracks the first slot at or after the block root that the array knows of.
 	// The lowest slot for a block does not equal the block.slot itself, that may have been pruned.
 	blockSlots         map[Root]Slot
 	updatedConnections bool
+}
+
+var _ ForkchoiceGraph = (*ProtoArray)(nil)
+
+func NewProtoForkChoice(spec *beacon.Spec, finalized Checkpoint, justified Checkpoint,
+	anchorRoot Root, anchorSlot Slot, anchorParent Root, sink NodeSink) *ProtoForkChoice {
+	return NewForkChoice(spec, finalized, justified, anchorRoot, anchorSlot, anchorParent,
+		NewProtoArray(justified.Epoch, finalized.Epoch, sink), new(ProtoVoteStore))
 }
 
 func NewProtoArray(justifiedEpoch Epoch, finalizedEpoch Epoch, sink NodeSink) *ProtoArray {
@@ -81,7 +65,7 @@ func NewProtoArray(justifiedEpoch Epoch, finalizedEpoch Epoch, sink NodeSink) *P
 		justifiedEpoch:     justifiedEpoch,
 		finalizedEpoch:     finalizedEpoch,
 		nodes:              make([]ProtoNode, 0, 100),
-		indices:            make(map[NodeRef]ProtoNodeIndex, 100),
+		indices:            make(map[NodeRef]NodeIndex, 100),
 		updatedConnections: true,
 	}
 	return &arr
@@ -89,32 +73,36 @@ func NewProtoArray(justifiedEpoch Epoch, finalizedEpoch Epoch, sink NodeSink) *P
 
 var invalidIndexErr = errors.New("invalid index")
 
-func (pr *ProtoArray) getNode(index ProtoNodeIndex) (*ProtoNode, error) {
+func (pr *ProtoArray) getNode(index NodeIndex) (*ProtoNode, error) {
 	if index < pr.indexOffset {
 		return nil, invalidIndexErr
 	}
 	i := index - pr.indexOffset
-	if i > ProtoNodeIndex(len(pr.nodes)) {
+	if i > NodeIndex(len(pr.nodes)) {
 		return nil, invalidIndexErr
 	}
 	return &pr.nodes[i], nil
 }
 
+func (pr *ProtoArray) Indices() map[NodeRef]NodeIndex {
+	return pr.indices
+}
+
 // From head back to anchor root (including the anchor itself, if present) and anchor slot.
 // Includes nodes with empty block, then followed up by a node with the block if there is any.
-func (pr *ProtoArray) CanonicalChain(anchorRoot Root, anchorSlot Slot) ([]ExtendedRef, error) {
+func (pr *ProtoArray) CanonicalChain(anchorRoot Root, anchorSlot Slot) ([]ExtendedNodeRef, error) {
 	head, err := pr.FindHead(anchorRoot, anchorSlot)
 	if err != nil {
 		return nil, err
 	}
-	chain := make([]ExtendedRef, 0, len(pr.nodes))
+	chain := make([]ExtendedNodeRef, 0, len(pr.nodes))
 	index := pr.indices[head]
 	for index != NONE && index >= pr.indexOffset {
 		node, err := pr.getNode(index)
 		if err != nil {
 			return nil, err
 		}
-		chain = append(chain, ExtendedRef{node.Ref.Slot, node.Ref.Root, node.ParentRoot})
+		chain = append(chain, ExtendedNodeRef{NodeRef: node.Ref, ParentRoot: node.ParentRoot})
 		index = node.Parent
 	}
 	return chain, nil
@@ -161,13 +149,13 @@ func (pr *ProtoArray) ClosestToSlot(anchor Root, slot Slot) (closest NodeRef, er
 // If there is a double proposal, the canonical block (w.r.t. votes) is used.
 // If the fork-choice starts at a filled slot node, this node cannot be requested with withBlock == false,
 // as the data is already pruned.
-func (pr *ProtoArray) CanonAtSlot(anchor Root, slot Slot, withBlock bool) (closest *NodeRef, err error) {
+func (pr *ProtoArray) CanonAtSlot(anchor Root, slot Slot, withBlock bool) (at NodeRef, err error) {
 	anchorSlot, ok := pr.blockSlots[anchor]
 	if !ok {
-		return nil, fmt.Errorf("unknown anchor %s", anchor)
+		return NodeRef{}, fmt.Errorf("unknown anchor %s", anchor)
 	}
 	if anchorSlot > slot {
-		return nil, fmt.Errorf("cannot look for slot %d before anchor slot %d (%s)",
+		return NodeRef{}, fmt.Errorf("cannot look for slot %d before anchor slot %d (%s)",
 			slot, anchorSlot, anchor)
 	}
 	// short-cut common case: the slot is the anchor itself, e.g. we're building on the current head.
@@ -181,18 +169,18 @@ func (pr *ProtoArray) CanonAtSlot(anchor Root, slot Slot, withBlock bool) (close
 			node := &pr.nodes[i]
 			// Is the anchor a filled node?
 			if node.ParentRoot != anchor {
-				return nil, fmt.Errorf("cannot look for pre-block %d at anchor, anchor is post-block", slot)
+				return NodeRef{}, fmt.Errorf("cannot look for pre-block %d at anchor, anchor is post-block", slot)
 			}
 		}
-		return &ref, nil
+		return ref, nil
 	}
 	head, err := pr.FindHead(anchor, anchorSlot)
 	if err != nil {
-		return nil, err
+		return NodeRef{}, err
 	}
 	// The head may be the closest we have.
 	if head.Slot <= slot {
-		return &head, nil
+		return head, nil
 	}
 	// Walk back the canonical chain, and stop as soon as we find the node at slot of interest.
 	index := pr.indices[head]
@@ -200,7 +188,7 @@ func (pr *ProtoArray) CanonAtSlot(anchor Root, slot Slot, withBlock bool) (close
 	for index != NONE && index >= pr.indexOffset {
 		node, err = pr.getNode(index)
 		if err != nil {
-			return nil, err
+			return NodeRef{}, err
 		}
 		// if we are looking for the pre-block node, and the node is not empty, then skip it.
 		if !withBlock && node.ParentRoot != node.Ref.Root {
@@ -210,33 +198,21 @@ func (pr *ProtoArray) CanonAtSlot(anchor Root, slot Slot, withBlock bool) (close
 		if node.Ref.Slot == slot {
 			if withBlock && node.Ref.Root == node.ParentRoot {
 				// no block exists for this slot, it's empty.
-				return nil, nil
+				return NodeRef{}, nil
 			}
-			res := node.Ref
-			return &res, nil
+			return node.Ref, nil
 		}
 		if node.Ref.Slot < slot {
 			break // should never happen (a missing gap slot node), but handle gracefully
 		}
 		index = node.Parent
 	}
-	return nil, fmt.Errorf("cannot find node at slot %d (with block %v)", slot, withBlock)
+	return NodeRef{}, fmt.Errorf("cannot find node at slot %d (with block %v)", slot, withBlock)
 }
 
-func (pr *ProtoArray) GetNode(blockRoot Root) (NodeRef, bool) {
+func (pr *ProtoArray) GetSlot(blockRoot Root) (Slot, bool) {
 	slot, ok := pr.blockSlots[blockRoot]
-	if !ok {
-		return NodeRef{}, false
-	}
-	index, ok := pr.indices[NodeRef{Root: blockRoot, Slot: slot}]
-	if !ok {
-		panic("indices is inconsistent with blockSlots")
-	}
-	node, err := pr.getNode(index)
-	if err != nil {
-		panic("indices is inconsistent with getNode")
-	}
-	return node.Ref, true
+	return slot, ok
 }
 
 var lengthMismatchErr = errors.New("length mismatch")
@@ -273,7 +249,7 @@ func (pr *ProtoArray) ApplyScoreChanges(deltas []SignedGwei, justifiedEpoch Epoc
 	for i := len(pr.nodes) - 1; i >= 0; i-- {
 		node := &pr.nodes[i]
 		if node.Parent != NONE {
-			if err := pr.maybeUpdateBestChildAndDescendant(node.Parent, pr.indexOffset+ProtoNodeIndex(i)); err != nil {
+			if err := pr.maybeUpdateBestChildAndDescendant(node.Parent, pr.indexOffset+NodeIndex(i)); err != nil {
 				return err
 			}
 		}
@@ -286,7 +262,7 @@ func (pr *ProtoArray) updateConnections() error {
 	for i := len(pr.nodes) - 1; i >= 0; i-- {
 		node := &pr.nodes[i]
 		if node.Parent != NONE {
-			if err := pr.maybeUpdateBestChildAndDescendant(node.Parent, pr.indexOffset+ProtoNodeIndex(i)); err != nil {
+			if err := pr.maybeUpdateBestChildAndDescendant(node.Parent, pr.indexOffset+NodeIndex(i)); err != nil {
 				return err
 			}
 		}
@@ -299,7 +275,7 @@ func (pr *ProtoArray) updateConnections() error {
 // Any gaps between the existing graph nodes and the given slot are filled with nodes.
 // If the justifiedEpoch or finalizedEpoch changed in-between the existing graph and the new slot,
 // the call should be split with increasing slot numbers, to reflect the changes of justification and finalization.
-func (pr *ProtoArray) OnSlot(parent Root, slot Slot, justifiedEpoch Epoch, finalizedEpoch Epoch) {
+func (pr *ProtoArray) ProcessSlot(parent Root, slot Slot, justifiedEpoch Epoch, finalizedEpoch Epoch) {
 	nodeRef := NodeRef{Root: parent, Slot: slot}
 	// If the node is already known, simply ignore it.
 	_, ok := pr.indices[nodeRef]
@@ -319,7 +295,7 @@ func (pr *ProtoArray) OnSlot(parent Root, slot Slot, justifiedEpoch Epoch, final
 				continue
 			}
 			// No node to represent space between parent slot and new slot yet, so we add it.
-			nodeIndex = pr.indexOffset + ProtoNodeIndex(len(pr.nodes))
+			nodeIndex = pr.indexOffset + NodeIndex(len(pr.nodes))
 			pr.indices[nodeRef] = nodeIndex
 			pr.nodes = append(pr.nodes, ProtoNode{
 				Ref:            nodeRef,
@@ -336,7 +312,7 @@ func (pr *ProtoArray) OnSlot(parent Root, slot Slot, justifiedEpoch Epoch, final
 		}
 	}
 	// Add the node for the slot
-	nodeIndex := pr.indexOffset + ProtoNodeIndex(len(pr.nodes))
+	nodeIndex := pr.indexOffset + NodeIndex(len(pr.nodes))
 	pr.indices[nodeRef] = nodeIndex
 	pr.nodes = append(pr.nodes, ProtoNode{
 		Ref:            nodeRef,
@@ -356,7 +332,7 @@ func (pr *ProtoArray) OnSlot(parent Root, slot Slot, justifiedEpoch Epoch, final
 // If justified or finalized in-between, make sure to call OnSlot with accurate details first.
 //
 // The parent root of the genesis block should be zeroed.
-func (pr *ProtoArray) OnBlock(parent Root, blockRoot Root, blockSlot Slot, justifiedEpoch Epoch, finalizedEpoch Epoch) {
+func (pr *ProtoArray) ProcessBlock(parent Root, blockRoot Root, blockSlot Slot, justifiedEpoch Epoch, finalizedEpoch Epoch) {
 	blockRef := NodeRef{Root: blockRoot, Slot: blockSlot}
 	// If the block is already known, simply ignore it.
 	_, ok := pr.indices[blockRef]
@@ -364,15 +340,16 @@ func (pr *ProtoArray) OnBlock(parent Root, blockRoot Root, blockSlot Slot, justi
 		return
 	}
 	if _, ok := pr.blockSlots[blockRoot]; ok {
-		panic("cannot add block with same root but different slot")
+		// block is already known with different slot. Likely been pruned away, and we only know the later empty slot.
+		return
 	}
-	pr.OnSlot(parent, blockSlot, justifiedEpoch, finalizedEpoch)
+	pr.ProcessSlot(parent, blockSlot, justifiedEpoch, finalizedEpoch)
 	exclRef := NodeRef{Slot: blockSlot, Root: parent}
 	parentIndex, ok := pr.indices[exclRef]
 	if !ok {
 		panic("OnSlot failed to add node for block slot")
 	}
-	nodeIndex := pr.indexOffset + ProtoNodeIndex(len(pr.nodes))
+	nodeIndex := pr.indexOffset + NodeIndex(len(pr.nodes))
 	pr.blockSlots[blockRoot] = blockSlot
 	pr.indices[blockRef] = nodeIndex
 	pr.nodes = append(pr.nodes, ProtoNode{
@@ -548,7 +525,7 @@ func (pr *ProtoArray) OnPrune(ctx context.Context, anchorRoot Root, anchorSlot S
 // - The child is already the best child and the parent is updated with the new best-descendant.
 // - The child is not the best child but becomes the best child.
 // - The child is not the best child and does not become the best child.
-func (pr *ProtoArray) maybeUpdateBestChildAndDescendant(parentIndex ProtoNodeIndex, childIndex ProtoNodeIndex) error {
+func (pr *ProtoArray) maybeUpdateBestChildAndDescendant(parentIndex NodeIndex, childIndex NodeIndex) error {
 	child, err := pr.getNode(childIndex)
 	if err != nil {
 		return err
@@ -652,226 +629,4 @@ func (pr *ProtoArray) nodeLeadsToViableHead(node *ProtoNode) (bool, error) {
 func (pr *ProtoArray) isNodeViableForHead(node *ProtoNode) bool {
 	return (node.JustifiedEpoch == pr.justifiedEpoch || pr.justifiedEpoch == beacon.GENESIS_EPOCH) &&
 		(node.FinalizedEpoch == pr.finalizedEpoch || pr.finalizedEpoch == beacon.GENESIS_EPOCH)
-}
-
-type VoteTracker struct {
-	Current            NodeRef
-	Next               NodeRef
-	CurrentTargetEpoch Epoch
-	NextTargetEpoch    Epoch
-}
-
-type ForkChoice struct {
-	sync.RWMutex
-	protoArray *ProtoArray
-	votes      []VoteTracker
-	balances   []Gwei
-	// The block root to start forkchoice from.
-	// At genesis, explicitly set to genesis, since there is no "justified" root yet.
-	// Later updated with justified state.
-	// May be modified to pin a sub-tree for soft-fork purposes.
-	anchor    NodeRef
-	justified Checkpoint
-	finalized Checkpoint
-	spec      *beacon.Spec
-}
-
-func NewForkChoice(spec *beacon.Spec, finalized Checkpoint, justified Checkpoint,
-	anchorRoot Root, anchorSlot Slot, anchorParent Root, sink NodeSink) *ForkChoice {
-	fc := &ForkChoice{
-		protoArray: NewProtoArray(justified.Epoch, finalized.Epoch, sink),
-		votes:      nil,
-		balances:   nil,
-		justified:  justified,
-		finalized:  finalized,
-		spec:       spec,
-	}
-	fc.ProcessBlock(anchorParent, anchorRoot, anchorSlot, justified.Epoch, finalized.Epoch)
-	fc.anchor = NodeRef{Root: anchorRoot, Slot: anchorSlot}
-	return fc
-}
-
-func (fc *ForkChoice) CanonicalChain(anchorRoot Root, anchorSlot Slot) ([]ExtendedRef, error) {
-	fc.Lock()
-	defer fc.Unlock()
-	return fc.CanonicalChain(anchorRoot, anchorSlot)
-}
-
-// Process an attestation. (Note that the head slot may be for a gap slot after the block root)
-func (fc *ForkChoice) ProcessAttestation(index ValidatorIndex, blockRoot Root, headSlot Slot) {
-	fc.Lock()
-	defer fc.Unlock()
-	if index >= ValidatorIndex(len(fc.votes)) {
-		if index < ValidatorIndex(cap(fc.votes)) {
-			fc.votes = fc.votes[:index+1]
-		} else {
-			extension := make([]VoteTracker, index+1-ValidatorIndex(len(fc.votes)))
-			fc.votes = append(fc.votes, extension...)
-		}
-	}
-	vote := &fc.votes[index]
-	targetEpoch := fc.spec.SlotToEpoch(headSlot)
-	// only update if it's a newer vote
-	if targetEpoch > vote.NextTargetEpoch {
-		vote.NextTargetEpoch = targetEpoch
-		vote.Next = NodeRef{Root: blockRoot, Slot: headSlot}
-	}
-	// TODO: maybe help detect slashable votes on the fly?
-}
-
-func (fc *ForkChoice) ProcessSlot(parentRoot Root, slot Slot, justifiedEpoch Epoch, finalizedEpoch Epoch) {
-	fc.Lock()
-	defer fc.Unlock()
-	fc.protoArray.OnSlot(parentRoot, slot, justifiedEpoch, finalizedEpoch)
-}
-
-func (fc *ForkChoice) ProcessBlock(parentRoot Root, blockRoot Root, blockSlot Slot, justifiedEpoch Epoch, finalizedEpoch Epoch) {
-	fc.Lock()
-	defer fc.Unlock()
-	fc.protoArray.OnBlock(parentRoot, blockRoot, blockSlot, justifiedEpoch, finalizedEpoch)
-}
-
-func (fc *ForkChoice) PinAnchor(root Root, slot Slot) error {
-	fc.Lock()
-	defer fc.Unlock()
-	if fc.anchor.Root == root {
-		return nil
-	}
-	if unknown, isAncestor := fc.IsAncestor(root, fc.anchor.Root); unknown {
-		return fmt.Errorf("missing anchor data, cannot change anchor from (%s, %d) to (%s, %d)",
-			fc.anchor.Root, fc.anchor.Slot, root, slot)
-	} else if !isAncestor {
-		return fmt.Errorf("cannot pin anchor to (%s, %d) which is not in the subtree of the previous anchor (%s, %d)",
-			root, slot, fc.anchor.Root, fc.anchor.Slot)
-	}
-	fc.anchor = NodeRef{Root: root, Slot: slot}
-	return nil
-}
-
-// UpdateJustified updates what is recognized as justified and finalized checkpoint,
-// and adjusts justified balances for vote weights.
-// If the finalized checkpoint changes, it triggers pruning.
-// Note that pruning can prune the pre-block node of the start slot of the finalized epoch, if it is not a gap slot.
-// And the finalizing node with the block will remain.
-func (fc *ForkChoice) UpdateJustified(ctx context.Context, justified Checkpoint, finalized Checkpoint,
-	justifiedStateBalances func() ([]Gwei, error)) error {
-	fc.Lock()
-	defer fc.Unlock()
-	// Old/same data? Ignore the change.
-	if fc.justified.Epoch >= justified.Epoch && fc.finalized.Epoch >= finalized.Epoch {
-		return nil
-	}
-	justifiedSlot, err := fc.spec.EpochStartSlot(justified.Epoch)
-	if err != nil {
-		return fmt.Errorf("bad justified epoch: %d", justified.Epoch)
-	}
-	if justified.Epoch < finalized.Epoch {
-		return fmt.Errorf("justified epoch %d lower than finalized epoch %d", justified.Epoch, finalized.Epoch)
-	}
-
-	oldBals := fc.balances
-	newBals, err := justifiedStateBalances()
-	if err != nil {
-		return err
-	}
-
-	deltas := computeDeltas(fc.protoArray.indices, fc.votes, oldBals, newBals)
-
-	if err := fc.protoArray.ApplyScoreChanges(deltas, justified.Epoch, finalized.Epoch); err != nil {
-		return err
-	}
-
-	fc.balances = newBals
-	fc.justified = justified
-	prevFinalized := fc.finalized
-	fc.finalized = finalized
-	fc.anchor = NodeRef{Root: justified.Root, Slot: justifiedSlot}
-
-	// prune if we finalized something
-	if prevFinalized != finalized {
-		finSlot, _ := fc.spec.EpochStartSlot(finalized.Epoch)
-		if err := fc.protoArray.OnPrune(ctx, finalized.Root, finSlot); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (fc *ForkChoice) Justified() Checkpoint {
-	return fc.justified
-}
-
-func (fc *ForkChoice) Finalized() Checkpoint {
-	return fc.finalized
-}
-
-func (fc *ForkChoice) IsAncestor(root Root, ofRoot Root) (unknown bool, isAncestor bool) {
-	fc.Lock()
-	defer fc.Unlock()
-	return fc.protoArray.IsAncestor(root, ofRoot)
-}
-
-func (fc *ForkChoice) ClosestToSlot(anchor Root, slot Slot) (ref NodeRef, err error) {
-	fc.Lock()
-	defer fc.Unlock()
-	return fc.protoArray.ClosestToSlot(anchor, slot)
-}
-
-func (fc *ForkChoice) CanonAtSlot(anchor Root, slot Slot, withBlock bool) (closest *NodeRef, err error) {
-	fc.Lock()
-	defer fc.Unlock()
-	return fc.protoArray.CanonAtSlot(anchor, slot, withBlock)
-}
-
-// Return the latest block reference known for the node.
-// Warning: if it is a gap slot there may be earlier nodes with the same root, but pruned.
-func (fc *ForkChoice) GetNode(root Root) (ref NodeRef, ok bool) {
-	fc.RLock()
-	defer fc.RUnlock()
-	return fc.protoArray.GetNode(root)
-}
-
-func (fc *ForkChoice) FindHead() (NodeRef, error) {
-	fc.Lock()
-	defer fc.Unlock()
-	return fc.protoArray.FindHead(fc.anchor.Root, fc.anchor.Slot)
-}
-
-// Returns a list of `deltas`, where there is one delta for each of the ProtoArray nodes.
-// The deltas are calculated between `oldBalances` and `newBalances`, and/or a change of vote.
-func computeDeltas(indices map[NodeRef]ProtoNodeIndex, votes []VoteTracker, oldBalances []Gwei, newBalances []Gwei) []SignedGwei {
-	deltas := make([]SignedGwei, len(indices), len(indices))
-	for i := 0; i < len(votes); i++ {
-		vote := &votes[i]
-		// There is no need to create a score change if the validator has never voted (may not be active)
-		// or both their votes are for the zero checkpoint (alias to the genesis block).
-		if vote.Current == (NodeRef{}) && vote.Next == (NodeRef{}) {
-			continue
-		}
-
-		// Validator sets may have different sizes (but attesters are not different, activation only under finality)
-		oldBal := Gwei(0)
-		if i < len(oldBalances) {
-			oldBal = oldBalances[i]
-		}
-		newBal := Gwei(0)
-		if i < len(newBalances) {
-			newBal = newBalances[i]
-		}
-
-		if vote.CurrentTargetEpoch < vote.NextTargetEpoch || oldBal != newBal {
-			// Ignore the current or next vote if it is not known in `indices`.
-			// We assume that it is outside of our tree (i.e., pre-finalization) and therefore not interesting.
-			if currentIndex, ok := indices[vote.Current]; ok {
-				deltas[currentIndex] -= SignedGwei(oldBal)
-			}
-			if nextIndex, ok := indices[vote.Next]; ok {
-				deltas[nextIndex] += SignedGwei(newBal)
-			}
-			vote.Current = vote.Next
-			vote.CurrentTargetEpoch = vote.NextTargetEpoch
-		}
-	}
-
-	return deltas
 }

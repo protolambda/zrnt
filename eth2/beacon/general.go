@@ -207,3 +207,14 @@ func AsCheckPoint(v View, err error) (*CheckpointView, error) {
 	c, err := AsContainer(v, err)
 	return &CheckpointView{c}, err
 }
+
+type NodeRef struct {
+	Slot Slot
+	// Block root, may be equal to parent root if empty
+	Root Root
+}
+
+type ExtendedNodeRef struct {
+	NodeRef
+	ParentRoot Root
+}

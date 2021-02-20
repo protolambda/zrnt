@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/forkchoice"
+	"github.com/protolambda/zrnt/eth2/forkchoice/proto"
 	"github.com/protolambda/ztyp/tree"
 	"sync"
 )
@@ -71,7 +72,7 @@ type HotChain interface {
 type UnfinalizedChain struct {
 	sync.RWMutex
 
-	ForkChoice *forkchoice.ForkChoice
+	ForkChoice *forkchoice.ProtoForkChoice
 
 	// Block root (parent if empty slot) and slot -> Entry
 	Entries map[BlockSlotKey]*HotEntry
@@ -232,13 +233,13 @@ func NewUnfinalizedChain(anchorState *beacon.BeaconStateView, sink BlockSink, sp
 		BlockSink:  sink,
 		Spec:       spec,
 	}
-	uc.ForkChoice = forkchoice.NewForkChoice(
+	uc.ForkChoice = proto.NewProtoForkChoice(
 		spec,
 		finCh,
 		justCh,
 		anchorBlockRoot, slot,
 		parentRoot,
-		forkchoice.BlockSinkFn(uc.onPrunedNode),
+		proto.BlockSinkFn(uc.onPrunedNode),
 	)
 	return uc, nil
 }
@@ -273,11 +274,11 @@ func (uc *UnfinalizedChain) ByStateRoot(root Root) (entry ChainEntry, ok bool) {
 func (uc *UnfinalizedChain) ByBlock(root Root) (entry ChainEntry, ok bool) {
 	uc.RLock()
 	defer uc.RUnlock()
-	ref, ok := uc.ForkChoice.GetNode(root)
+	slot, ok := uc.ForkChoice.GetSlot(root)
 	if !ok {
 		return nil, false
 	}
-	return uc.ByBlockSlot(ref.Root, ref.Slot)
+	return uc.byBlockSlot(BlockSlotKey{Slot: slot, Root: root})
 }
 
 func (uc *UnfinalizedChain) byBlockSlot(key BlockSlotKey) (entry ChainEntry, ok bool) {
@@ -422,9 +423,6 @@ func (uc *UnfinalizedChain) ByCanonStep(step Step) (entry ChainEntry, ok bool) {
 	if err != nil {
 		return nil, false
 	}
-	if ref == nil {
-		return nil, false
-	}
 	return uc.byBlockSlot(BlockSlotKey{Root: ref.Root, Slot: ref.Slot})
 }
 
@@ -443,7 +441,7 @@ func (uc *UnfinalizedChain) Finalized() Checkpoint {
 func (uc *UnfinalizedChain) Head() (ChainEntry, error) {
 	uc.Lock()
 	defer uc.Unlock()
-	ref, err := uc.ForkChoice.FindHead()
+	ref, err := uc.ForkChoice.Head()
 	if err != nil {
 		return nil, err
 	}

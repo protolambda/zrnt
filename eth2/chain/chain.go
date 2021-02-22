@@ -66,6 +66,11 @@ type ChainEntry interface {
 	State(ctx context.Context) (*beacon.BeaconStateView, error)
 }
 
+type SearchEntry struct {
+	ChainEntry
+	Canonical bool
+}
+
 type Chain interface {
 	// Get the chain entry for the given state root (post slot processing or post block processing)
 	ByStateRoot(root Root) (entry ChainEntry, ok bool)
@@ -74,14 +79,17 @@ type Chain interface {
 	// Get the chain entry for the given block root and slot, may be an empty slot,
 	// or may be in-between slot processing and block processing if the parent block root is requested for the slot.
 	ByBlockSlot(root Root, slot Slot) (entry ChainEntry, ok bool)
+	// Get the blocks(s) with the given parent-root and/or slot.
+	// Return all possible heads by default (if options are nil).
+	Search(parentRoot *Root, slot *Slot) ([]SearchEntry, error)
 	// Find closest ref in subtree, up to given slot (may return entry of fromBlockRoot itself),
 	// without any blocks after fromBlockRoot.
 	// Err if no entry, even not fromBlockRoot, could be found.
 	Closest(fromBlockRoot Root, toSlot Slot) (entry ChainEntry, ok bool)
-	// Returns true if the given root is something that builds (maybe indirectly)
-	// on the ofRoot on the same chain.
-	// If root == ofRoot, then it is NOT considered an ancestor here.
-	IsAncestor(root Root, ofRoot Root) (unknown bool, isAncestor bool)
+	// Returns true if the given root is something that builds (maybe indirectly) on the anchor.
+	// I.e. if root is in the subtree of anchor.
+	// If root == anchor, then it is also considered to be in the subtree here.
+	InSubtree(anchor Root, root Root) (unknown bool, inSubtree bool)
 	// Get the canonical entry at the given slot. Return nil if there is no block but the slot node exists.
 	ByCanonStep(step Step) (entry ChainEntry, ok bool)
 	Iter() (ChainIter, error)
@@ -104,10 +112,16 @@ type BlockSlotKey struct {
 	Root Root
 }
 
+type GenesisInfo struct {
+	Time           beacon.Timestamp
+	ValidatorsRoot beacon.Root
+}
+
 type FullChain interface {
 	Chain
 	HotChain
 	ColdChain
+	Genesis() GenesisInfo
 }
 
 type HotColdChain struct {
@@ -119,15 +133,25 @@ type HotColdChain struct {
 	HotChain
 	ColdChain
 	Spec *beacon.Spec
+	GenesisInfo
 }
 
 var _ FullChain = (*HotColdChain)(nil)
 
 func NewHotColdChain(anchorState *beacon.BeaconStateView, spec *beacon.Spec, stateDB states.DB) (*HotColdChain, error) {
+	time, err := anchorState.GenesisTime()
+	if err != nil {
+		return nil, err
+	}
+	valRoot, err := anchorState.GenesisValidatorsRoot()
+	if err != nil {
+		return nil, err
+	}
 	c := &HotColdChain{
-		HotChain:  nil,
-		ColdChain: NewFinalizedChain(spec, stateDB),
-		Spec:      spec,
+		HotChain:    nil,
+		ColdChain:   NewFinalizedChain(spec, stateDB),
+		Spec:        spec,
+		GenesisInfo: GenesisInfo{ValidatorsRoot: valRoot, Time: time},
 	}
 	hotCh, err := NewUnfinalizedChain(anchorState, BlockSinkFn(c.hotToCold), spec)
 	if err != nil {
@@ -136,6 +160,10 @@ func NewHotColdChain(anchorState *beacon.BeaconStateView, spec *beacon.Spec, sta
 	c.HotChain = hotCh
 
 	return c, nil
+}
+
+func (hc *HotColdChain) Genesis() GenesisInfo {
+	return hc.GenesisInfo
 }
 
 func (hc *HotColdChain) hotToCold(ctx context.Context, entry ChainEntry, canonical bool) error {
@@ -176,6 +204,28 @@ func (hc *HotColdChain) ByBlockSlot(root Root, slot Slot) (entry ChainEntry, ok 
 	return hc.ColdChain.ByBlockSlot(root, slot)
 }
 
+func (hc *HotColdChain) Search(parentRoot *Root, slot *Slot) ([]SearchEntry, error) {
+	hc.Lock()
+	defer hc.Unlock()
+	if parentRoot == nil && slot == nil {
+		return hc.HotChain.Search(parentRoot, slot)
+	}
+	hot, err := hc.HotChain.Search(parentRoot, slot)
+	if err != nil {
+		return nil, err
+	}
+	cold, err := hc.ColdChain.Search(parentRoot, slot)
+	if err != nil {
+		return nil, err
+	}
+	// Note: there is a minor chance something moves from hot to cold chain during the search.
+	// If this happens, it will be included duplicate.
+	res := make([]SearchEntry, 0, len(hot)+len(cold))
+	res = append(res, cold...)
+	res = append(res, hot...)
+	return res, nil
+}
+
 func (hc *HotColdChain) Closest(fromBlockRoot Root, toSlot Slot) (entry ChainEntry, ok bool) {
 	hc.Lock()
 	defer hc.Unlock()
@@ -186,31 +236,27 @@ func (hc *HotColdChain) Closest(fromBlockRoot Root, toSlot Slot) (entry ChainEnt
 	return hc.ColdChain.Closest(fromBlockRoot, toSlot)
 }
 
-func (hc *HotColdChain) IsAncestor(root Root, ofRoot Root) (unknown bool, isAncestor bool) {
+func (hc *HotColdChain) InSubtree(anchor Root, root Root) (unknown bool, inSubtree bool) {
 	hc.Lock()
 	defer hc.Unlock()
 
 	// Tricky, but follow hot-to-cold to avoid missing data when it moves from hot to cold while processing.
 
-	// can't be ancestors if they are equal.
-	if root == ofRoot {
-		return false, false
-	}
 	// if the first of the two roots is known in the hot chain, just have the hot chain deal with it.
-	unknown, isAncestor = hc.HotChain.IsAncestor(root, ofRoot)
+	unknown, inSubtree = hc.HotChain.InSubtree(anchor, root)
 	if !unknown {
-		return false, isAncestor
+		return false, inSubtree
 	}
-	fin := hc.HotChain.Finalized()
-	unknown, isAncestor = hc.HotChain.IsAncestor(root, fin.Root)
+	fin := hc.HotChain.FinalizedCheckpoint()
+	unknown, inSubtree = hc.HotChain.InSubtree(fin.Root, root)
 	if !unknown {
-		// The root is in the hot subtree, now make sure the other root exists in the cold chain
-		_, ok := hc.ColdChain.ByBlock(ofRoot)
+		// The root is in the hot subtree, now make sure the anchor root exists in the cold chain
+		_, ok := hc.ColdChain.ByBlock(anchor)
 		return !ok, ok
 	}
 
 	// Both are not in the hot chain, have the hot chain deal with it.
-	return hc.ColdChain.IsAncestor(root, ofRoot)
+	return hc.ColdChain.InSubtree(anchor, root)
 }
 
 func (hc *HotColdChain) ByCanonStep(step Step) (entry ChainEntry, ok bool) {

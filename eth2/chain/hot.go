@@ -55,8 +55,10 @@ func (e *HotEntry) State(context.Context) (*beacon.BeaconStateView, error) {
 
 type HotChain interface {
 	Chain
-	Justified() Checkpoint
-	Finalized() Checkpoint
+	JustifiedCheckpoint() Checkpoint
+	FinalizedCheckpoint() Checkpoint
+	Justified() (ChainEntry, error)
+	Finalized() (ChainEntry, error)
 	Head() (ChainEntry, error)
 	// First gets the closets ref from the given block root to the requested slot,
 	// then transitions empty slots to get up to the requested slot.
@@ -301,6 +303,32 @@ func (uc *UnfinalizedChain) ByBlockSlot(root Root, slot Slot) (entry ChainEntry,
 	return uc.byBlockSlot(BlockSlotKey{Slot: slot, Root: root})
 }
 
+func (uc *UnfinalizedChain) Search(parentRoot *Root, slot *Slot) ([]SearchEntry, error) {
+	uc.Lock()
+	defer uc.Unlock()
+	finalized := uc.ForkChoice.Finalized()
+	finSlot, _ := uc.Spec.EpochStartSlot(finalized.Epoch)
+	anchor := beacon.NodeRef{Root: finalized.Root, Slot: finSlot}
+	nonCanon, canon, err := uc.ForkChoice.Search(anchor, parentRoot, slot)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]SearchEntry, 0, len(nonCanon)+len(canon))
+	for _, ref := range canon {
+		entry, ok := uc.byBlockSlot(BlockSlotKey{Root: ref.Root, Slot: ref.Slot})
+		if ok {
+			out = append(out, SearchEntry{ChainEntry: entry, Canonical: true})
+		}
+	}
+	for _, ref := range nonCanon {
+		entry, ok := uc.byBlockSlot(BlockSlotKey{Root: ref.Root, Slot: ref.Slot})
+		if ok {
+			out = append(out, SearchEntry{ChainEntry: entry, Canonical: false})
+		}
+	}
+	return out, nil
+}
+
 func (uc *UnfinalizedChain) Closest(fromBlockRoot Root, toSlot Slot) (entry ChainEntry, ok bool) {
 	uc.RLock()
 	defer uc.RUnlock()
@@ -420,10 +448,10 @@ func (uc *UnfinalizedChain) Towards(ctx context.Context, fromBlockRoot Root, toS
 	return last, nil
 }
 
-func (uc *UnfinalizedChain) IsAncestor(root Root, ofRoot Root) (unknown bool, isAncestor bool) {
+func (uc *UnfinalizedChain) InSubtree(anchor Root, root Root) (unknown bool, inSubtree bool) {
 	uc.RLock()
 	defer uc.RUnlock()
-	return uc.ForkChoice.IsAncestor(root, ofRoot)
+	return uc.ForkChoice.InSubtree(anchor, root)
 }
 
 func (uc *UnfinalizedChain) ByCanonStep(step Step) (entry ChainEntry, ok bool) {
@@ -436,16 +464,42 @@ func (uc *UnfinalizedChain) ByCanonStep(step Step) (entry ChainEntry, ok bool) {
 	return uc.byBlockSlot(BlockSlotKey{Root: ref.Root, Slot: ref.Slot})
 }
 
-func (uc *UnfinalizedChain) Justified() Checkpoint {
+func (uc *UnfinalizedChain) JustifiedCheckpoint() Checkpoint {
 	uc.RLock()
 	defer uc.RUnlock()
 	return uc.ForkChoice.Justified()
 }
 
-func (uc *UnfinalizedChain) Finalized() Checkpoint {
+func (uc *UnfinalizedChain) FinalizedCheckpoint() Checkpoint {
 	uc.RLock()
 	defer uc.RUnlock()
 	return uc.ForkChoice.Finalized()
+}
+
+func (uc *UnfinalizedChain) Justified() (ChainEntry, error) {
+	uc.RLock()
+	defer uc.RUnlock()
+	justified := uc.ForkChoice.Justified()
+	slot, _ := uc.Spec.EpochStartSlot(justified.Epoch)
+	entry, ok := uc.byBlockSlot(BlockSlotKey{Root: justified.Root, Slot: slot})
+	if !ok {
+		return nil, fmt.Errorf("forkchoice found justified node that is not in the hot chain: %s:%d",
+			justified.Root, slot)
+	}
+	return entry, nil
+}
+
+func (uc *UnfinalizedChain) Finalized() (ChainEntry, error) {
+	uc.RLock()
+	defer uc.RUnlock()
+	finalized := uc.ForkChoice.Finalized()
+	slot, _ := uc.Spec.EpochStartSlot(finalized.Epoch)
+	entry, ok := uc.byBlockSlot(BlockSlotKey{Root: finalized.Root, Slot: slot})
+	if !ok {
+		return nil, fmt.Errorf("forkchoice found finalized node that is not in the hot chain: %s:%d",
+			finalized.Root, slot)
+	}
+	return entry, nil
 }
 
 func (uc *UnfinalizedChain) Head() (ChainEntry, error) {
@@ -457,7 +511,8 @@ func (uc *UnfinalizedChain) Head() (ChainEntry, error) {
 	}
 	entry, ok := uc.byBlockSlot(BlockSlotKey{Root: ref.Root, Slot: ref.Slot})
 	if !ok {
-		return nil, fmt.Errorf("forkchoice found head node not in hot chain: %s:%d", ref.Root, ref.Slot)
+		return nil, fmt.Errorf("forkchoice found head node that is not in the hot chain: %s:%d",
+			ref.Root, ref.Slot)
 	}
 	return entry, nil
 }

@@ -210,6 +210,55 @@ func (pr *ProtoArray) GetSlot(blockRoot Root) (Slot, bool) {
 	return slot, ok
 }
 
+// Searches the available nodes for blocks with a matching parent root and/or matching slot.
+// If no options are specified, the
+func (pr *ProtoArray) Search(anchor NodeRef, parentRoot *Root, slot *Slot) (nonCanon []NodeRef, canon []NodeRef, err error) {
+	// this also checks that the anchor exists and updates the node connections.
+	head, err := pr.FindHead(anchor.Root, anchor.Slot)
+	if err != nil {
+		return nil, nil, err
+	}
+	anchorIndex := pr.indices[anchor]
+	headIndex := pr.indices[head]
+	for i := 0; i < len(pr.nodes); i++ {
+		node := &pr.nodes[i]
+		// only search for nodes that contain blocks
+		if node.Ref.Root == node.ParentRoot {
+			continue
+		}
+		// no options = search for heads.
+		if parentRoot == nil && slot == nil {
+			// if it has no child, it's a head.
+			if node.BestChild != NONE {
+				// if it has only empty slots as children, it's a head.
+				desc := &pr.nodes[node.BestDescendant]
+				if desc.Ref.Root != node.Ref.Root {
+					continue
+				}
+			}
+		} else {
+			if parentRoot != nil && node.ParentRoot != *parentRoot {
+				continue
+			}
+			if slot != nil && node.Ref.Slot != *slot {
+				continue
+			}
+		}
+		// only output nodes that are within view (slow-ish, but does not run often thanks to above filter.)
+		index := pr.indices[node.Ref]
+		if _, inSubtree := pr.inSubtree(anchorIndex, index); !inSubtree {
+			continue
+		}
+		// if it is the head, or if it has the same best descendant as the head, it's canonical.
+		if node.Ref == head || node.BestDescendant == headIndex {
+			canon = append(canon, node.Ref)
+		} else {
+			nonCanon = append(nonCanon, node.Ref)
+		}
+	}
+	return
+}
+
 var lengthMismatchErr = errors.New("length mismatch")
 
 // Iterate backwards through the array, touching all nodes and their parents and potentially
@@ -406,28 +455,25 @@ func (pr *ProtoArray) FindHead(anchorRoot Root, anchorSlot Slot) (NodeRef, error
 	return bestNode.Ref, nil
 }
 
-// IsAncestor checks if root is an ancestor of ofRoot. Equal roots do not count as ancestor.
-func (pr *ProtoArray) IsAncestor(root Root, ofRoot Root) (unknown bool, isAncestor bool) {
-	// can't be ancestors if they are equal.
-	if root == ofRoot {
-		return false, false
+// InSubtree checks if root is in the subtree of the anchor.
+// If the roots are the same, it still counts as in the subtree.
+func (pr *ProtoArray) InSubtree(anchor Root, root Root) (unknown bool, inSubtree bool) {
+	// equal roots count as in-subtree.
+	if anchor == root {
+		return false, true
 	}
 	if !pr.updatedConnections {
 		if err := pr.updateConnections(); err != nil {
 			return true, false
 		}
 	}
-	ofSlot, ok := pr.blockSlots[ofRoot]
+	anchorSlot, ok := pr.blockSlots[anchor]
 	if !ok {
 		return true, false
 	}
-	anchorRef := NodeRef{Root: ofRoot, Slot: ofSlot}
+	anchorRef := NodeRef{Root: anchor, Slot: anchorSlot}
 	anchorIndex, ok := pr.indices[anchorRef]
 	if !ok {
-		return true, false
-	}
-	anchorNode, err := pr.getNode(anchorIndex)
-	if err != nil {
 		return true, false
 	}
 	slot, ok := pr.blockSlots[root]
@@ -439,17 +485,48 @@ func (pr *ProtoArray) IsAncestor(root Root, ofRoot Root) (unknown bool, isAncest
 	if !ok {
 		return true, false
 	}
+	return pr.inSubtree(anchorIndex, lookupIndex)
+}
+
+// InSubtree checks if lookupIndex is in the subtree of the anchorIndex.
+// If the indices are the same, it still counts as in the subtree.
+func (pr *ProtoArray) inSubtree(anchorIndex NodeIndex, lookupIndex NodeIndex) (unknown bool, inSubtree bool) {
+	if anchorIndex == lookupIndex {
+		return false, true
+	}
+	anchorNode, err := pr.getNode(anchorIndex)
+	if err != nil {
+		return true, false
+	}
 	lookupNode, err := pr.getNode(lookupIndex)
 	if err != nil {
 		return true, false
 	}
-	// ofRoot is later on the same chain than the looked up root.
-	// So ofRoot may be an ancestor of root, but not vice versa.
 	if anchorNode.Ref.Slot >= lookupNode.Ref.Slot {
+		// anchor is later on the same chain than the looked up node.
+		// So anchor may be in subtree of the looked up node, but not vice versa.
 		return false, false
 	}
-	sameChain := anchorNode.BestDescendant == lookupNode.BestDescendant
-	return false, sameChain
+	if anchorIndex >= lookupIndex {
+		// anchor was inserted after looked up node.
+		// So anchor may be in subtree of the looked up node, but not vice versa.
+		return false, false
+	}
+	// shortcut: if they have the same relative head, they are on the same chain.
+	if anchorNode.BestDescendant == lookupIndex || anchorNode.BestDescendant == lookupNode.BestDescendant {
+		return false, true
+	}
+	// Root may still be on a different non-canonical branch out of the anchor.
+	for i := lookupNode.Parent; i != NONE && i >= anchorIndex; {
+		tmp := &pr.nodes[i]
+		// early exit: as soon as we find a node that has the same relative head as the anchor,
+		// we know we are in-between the anchor and the head, thus in the subtree, thus an ancestor.
+		if tmp.BestDescendant == anchorNode.BestDescendant {
+			return false, true
+		}
+		i = tmp.Parent
+	}
+	return false, false
 }
 
 var HeadUnknownErr = errors.New("array has invalid state, head has no index")

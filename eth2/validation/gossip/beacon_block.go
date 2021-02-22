@@ -47,14 +47,14 @@ func (gv *GossipValidator) ValidateBeaconBlock(ctx context.Context, signedBlock 
 
 	// [IGNORE] The block is from a slot greater than the latest finalized slot --
 	// i.e. validate that signed_beacon_block.message.slot > compute_start_slot_at_epoch(state.finalized_checkpoint.epoch)
-	fin := gv.Chain.Finalized()
+	fin := gv.Chain.FinalizedCheckpoint()
 	if finSlot, _ := gv.Spec.EpochStartSlot(fin.Epoch); block.Slot <= finSlot {
 		return GossipValidatorResult{IGNORE, fmt.Errorf("block slot %d is not after finalized slot %d", block.Slot, finSlot)}
 	}
 	// [REJECT] The current finalized_checkpoint is an ancestor of block -- i.e. get_ancestor(store, block.parent_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
-	if unknown, isAncestor := gv.Chain.IsAncestor(block.ParentRoot, fin.Root); unknown {
+	if unknown, inSubtree := gv.Chain.InSubtree(fin.Root, block.ParentRoot); unknown {
 		return GossipValidatorResult{IGNORE, fmt.Errorf("failed to determine if parent block %s is in subtree of finalized block %s", block.ParentRoot, fin.Root)}
-	} else if !isAncestor && block.ParentRoot != fin.Root { // If it builds on the finalized block itself, that is still ok.
+	} else if !inSubtree {
 		return GossipValidatorResult{REJECT, fmt.Errorf("parent block %s is not in subtree of finalized root %s", block.ParentRoot, fin.Root)}
 	}
 

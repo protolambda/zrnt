@@ -78,9 +78,9 @@ func (fc *ProtoForkChoice) UpdateJustified(ctx context.Context, trigger Root, ju
 	}
 	if fc.pin != nil && trigger != fc.pin.Root {
 		// check trigger against pin, to ensure no justification/finalization of data that conflicts with the pin.
-		if unknown, isAncestor := fc.IsAncestor(trigger, fc.pin.Root); unknown {
+		if unknown, inSubtree := fc.InSubtree(fc.pin.Root, trigger); unknown {
 			return fmt.Errorf("cannot justify/finalize with unknown trigger when forkchoice is pinned")
-		} else if !isAncestor {
+		} else if !inSubtree {
 			return fmt.Errorf("cannot justify/finalize outside of pinned forkchoice tree")
 		}
 	}
@@ -110,17 +110,17 @@ func (fc *ProtoForkChoice) updateJustified(finalized Checkpoint, justified Check
 
 	// check if new finalized checkpoint is valid
 	if fc.finalized != finalized {
-		if unknown, isAncestor := fc.IsAncestor(finalized.Root, fc.finalized.Root); unknown {
+		if unknown, inSubtree := fc.InSubtree(fc.finalized.Root, finalized.Root); unknown {
 			return fmt.Errorf("unknown finalized checkpoint: %s", finalized)
-		} else if !isAncestor || fc.finalized.Epoch > finalized.Epoch {
+		} else if !inSubtree || fc.finalized.Epoch > finalized.Epoch {
 			return fmt.Errorf("new finalized checkpoint %s is outside of finalized subtree: %s",
 				finalized, fc.finalized)
 		}
 	}
 	if fc.justified != justified {
-		if unknown, isAncestor := fc.IsAncestor(justified.Root, fc.finalized.Root); unknown {
+		if unknown, inSubtree := fc.InSubtree(fc.finalized.Root, justified.Root); unknown {
 			return fmt.Errorf("unknown justified checkpoint: %s", justified)
-		} else if !isAncestor || fc.finalized.Epoch > justified.Epoch {
+		} else if !inSubtree || fc.finalized.Epoch > justified.Epoch {
 			return fmt.Errorf("new justified checkpoint %s is outside of finalized subtree: %s",
 				justified, fc.finalized)
 		}
@@ -193,10 +193,16 @@ func (fc *ProtoForkChoice) ProcessBlock(parentRoot Root, blockRoot Root, blockSl
 	fc.protoArray.ProcessBlock(parentRoot, blockRoot, blockSlot, justifiedEpoch, finalizedEpoch)
 }
 
-func (fc *ProtoForkChoice) IsAncestor(root Root, ofRoot Root) (unknown bool, isAncestor bool) {
+func (fc *ProtoForkChoice) InSubtree(anchor Root, root Root) (unknown bool, inSubtree bool) {
 	fc.mu.Lock()
 	defer fc.mu.Unlock()
-	return fc.protoArray.IsAncestor(root, ofRoot)
+	return fc.protoArray.InSubtree(anchor, root)
+}
+
+func (fc *ProtoForkChoice) Search(anchor NodeRef, parentRoot *Root, slot *Slot) (nonCanon []NodeRef, canon []NodeRef, err error) {
+	fc.mu.Lock()
+	defer fc.mu.Unlock()
+	return fc.protoArray.Search(anchor, parentRoot, slot)
 }
 
 func (fc *ProtoForkChoice) ClosestToSlot(anchor Root, slot Slot) (ref NodeRef, err error) {

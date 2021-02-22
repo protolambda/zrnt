@@ -244,23 +244,58 @@ func (f *FinalizedChain) Closest(fromBlockRoot Root, toSlot Slot) (entry ChainEn
 	return f.byCanonStep(foundStep)
 }
 
-func (f *FinalizedChain) IsAncestor(root Root, ofRoot Root) (unknown bool, isAncestor bool) {
+func (f *FinalizedChain) Search(parentRoot *Root, slot *Slot) ([]SearchEntry, error) {
+	f.RLock()
+	defer f.RUnlock()
+	// Searching the cold chain is a lot easier: there is at most 1 entry to retrieve.
+	if slot != nil {
+		entry, ok := f.ByCanonStep(AsStep(*slot, true))
+		if !ok {
+			return nil, nil
+		}
+		if parentRoot != nil && entry.ParentRoot() != *parentRoot {
+			return nil, nil
+		}
+		return []SearchEntry{{ChainEntry: entry, Canonical: true}}, nil
+	}
+	if parentRoot != nil {
+		slot, ok := f.BlockRootsMap[*parentRoot]
+		if !ok {
+			return nil, nil
+		}
+		parentStep := AsStep(slot, true)
+		start := f.start()
+		end := f.end()
+		// steps of two, to always have a block entry, and skip over the pre-state of everything
+		for i := parentStep + 2; i < end; i += 2 {
+			// different root after the parent node? found our target then!
+			if f.BlockRoots[i-start] != *parentRoot {
+				entry, ok := f.byCanonStep(i)
+				if !ok {
+					return nil, nil
+				}
+				return []SearchEntry{{ChainEntry: entry, Canonical: true}}, nil
+			}
+		}
+		return nil, nil
+	}
+	// cold chain has no heads, nothing to default to.
+	return nil, nil
+}
+
+func (f *FinalizedChain) InSubtree(anchor Root, root Root) (unknown bool, inSubtree bool) {
 	f.RLock()
 	defer f.RUnlock()
 
-	// can't be ancestors if they are equal.
-	if root == ofRoot {
-		return false, false
-	}
 	slot, ok := f.BlockRootsMap[root]
 	if !ok {
 		return true, false
 	}
-	ofSlot, ok := f.BlockRootsMap[ofRoot]
+	anchorSlot, ok := f.BlockRootsMap[anchor]
 	if !ok {
 		return true, false
 	}
-	return false, ofSlot < slot
+	return false, anchorSlot <= slot
 }
 
 func (f *FinalizedChain) ByCanonStep(step Step) (entry ChainEntry, ok bool) {

@@ -77,26 +77,22 @@ func (gv *GossipValidator) ValidateAttestation(ctx context.Context, subnet uint6
 	// [REJECT] The attestation's target block is an ancestor of the block named in the LMD vote --
 	// i.e. get_ancestor(store, attestation.data.beacon_block_root, compute_start_slot_at_epoch(attestation.data.target.epoch))
 	//        == attestation.data.target.root
-
-	// if the roots are equal, and the attestation slot was validated, they count as ancestors
-	if att.Data.BeaconBlockRoot != att.Data.Target.Root {
-		if unknown, isAncestor := gv.Chain.IsAncestor(att.Data.BeaconBlockRoot, att.Data.Target.Root); unknown {
-			return GossipValidatorResult{IGNORE, errors.New("unknown block and/or target, cannot check if ancestor")}
-		} else if !isAncestor {
-			return GossipValidatorResult{REJECT, errors.New("block not an ancestor of target")}
-		}
+	if unknown, inSubtree := gv.Chain.InSubtree(att.Data.Target.Root, att.Data.BeaconBlockRoot); unknown {
+		return GossipValidatorResult{IGNORE, errors.New("unknown block and/or target, cannot check if in subtree")}
+	} else if !inSubtree {
+		return GossipValidatorResult{REJECT, errors.New("block not in subtree of target")}
 	}
 
 	// [REJECT] The current finalized_checkpoint is an ancestor of the block defined
 	// by attestation.data.beacon_block_root --
 	// i.e. get_ancestor(store, attestation.data.beacon_block_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch))
 	//        == store.finalized_checkpoint.root
-	fin := gv.Chain.Finalized()
+	fin := gv.Chain.FinalizedCheckpoint()
 	if att.Data.BeaconBlockRoot != fin.Root {
-		if unknown, isAncestor := gv.Chain.IsAncestor(att.Data.BeaconBlockRoot, fin.Root); unknown {
-			return GossipValidatorResult{IGNORE, errors.New("unknown block, cannot check if ancestor")}
-		} else if !isAncestor {
-			return GossipValidatorResult{REJECT, errors.New("block not an ancestor of finalized root")}
+		if unknown, inSubtree := gv.Chain.InSubtree(fin.Root, att.Data.BeaconBlockRoot); unknown {
+			return GossipValidatorResult{IGNORE, errors.New("unknown block, cannot check if in subtree")}
+		} else if !inSubtree {
+			return GossipValidatorResult{REJECT, errors.New("block not in subtree of finalized root")}
 		}
 	} else if fin.Epoch >= att.Data.Target.Epoch {
 		return GossipValidatorResult{REJECT, errors.New("cannot vote for finalized root as target")}

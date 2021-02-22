@@ -22,7 +22,8 @@ type ForkchoiceView interface {
 	CanonAtSlot(anchor Root, slot Slot, withBlock bool) (at NodeRef, err error)
 	GetSlot(blockRoot Root) (slot Slot, ok bool)
 	FindHead(anchorRoot Root, anchorSlot Slot) (NodeRef, error)
-	IsAncestor(root Root, ofRoot Root) (unknown bool, isAncestor bool)
+	InSubtree(anchor Root, root Root) (unknown bool, inSubtree bool)
+	Search(anchor NodeRef, parentRoot *Root, slot *Slot) (nonCanon []NodeRef, canon []NodeRef, err error)
 }
 
 type ForkchoiceNodeInput interface {

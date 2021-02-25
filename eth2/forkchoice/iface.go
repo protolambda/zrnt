@@ -40,7 +40,10 @@ type ForkchoiceGraph interface {
 }
 
 type VoteInput interface {
-	ProcessAttestation(index ValidatorIndex, blockRoot Root, headSlot Slot)
+	// ProcessAttestation overrides any previous vote, and applies voting weight to the new root/slot.
+	// If the root/slot combination does not exist, no changes are made, and ok=false is returned.
+	// It is up to the caller if nodes should be added, to then process the attestation.
+	ProcessAttestation(index ValidatorIndex, blockRoot Root, headSlot Slot) (ok bool)
 }
 
 type VoteStore interface {

@@ -169,10 +169,16 @@ func (fc *ProtoForkChoice) Finalized() Checkpoint {
 	return fc.finalized
 }
 
-func (fc *ProtoForkChoice) ProcessAttestation(index ValidatorIndex, blockRoot Root, headSlot Slot) {
+func (fc *ProtoForkChoice) ProcessAttestation(index ValidatorIndex, blockRoot Root, headSlot Slot) (ok bool) {
 	fc.mu.Lock()
 	fc.mu.Unlock()
+	// only add the vote if we can. Don't add if it's not within view.
+	blockSlot, ok := fc.protoArray.GetSlot(blockRoot)
+	if !ok || blockSlot < headSlot {
+		return false
+	}
 	fc.voteStore.ProcessAttestation(index, blockRoot, headSlot)
+	return true
 }
 
 func (fc *ProtoForkChoice) CanonicalChain(anchorRoot Root, anchorSlot Slot) ([]ExtendedNodeRef, error) {

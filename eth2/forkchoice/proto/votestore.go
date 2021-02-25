@@ -80,9 +80,9 @@ func (st *ProtoVoteStore) ComputeDeltas(indices map[NodeRef]NodeIndex, oldBalanc
 			}
 			if nextIndex, ok := indices[vote.Next]; ok {
 				deltas[nextIndex] += SignedGwei(newBal)
+				vote.Current = vote.Next
+				vote.CurrentTargetEpoch = vote.NextTargetEpoch
 			}
-			vote.Current = vote.Next
-			vote.CurrentTargetEpoch = vote.NextTargetEpoch
 		}
 	}
 	st.changed = false

@@ -37,3 +37,13 @@ func (asp *AttesterSlashingPool) AddAttesterSlashing(sl *beacon.AttesterSlashing
 	asp.slashings[key] = sl
 	return false
 }
+
+func (asp *AttesterSlashingPool) All() []*beacon.AttesterSlashing {
+	asp.RLock()
+	defer asp.RUnlock()
+	out := make([]*beacon.AttesterSlashing, 0, len(asp.slashings))
+	for _, a := range asp.slashings {
+		out = append(out, a)
+	}
+	return out
+}

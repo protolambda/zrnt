@@ -126,6 +126,46 @@ func (ap *AttestationPool) AddAttestation(att *beacon.Attestation, committee bea
 	}
 }
 
+type attSearch struct {
+	slot *beacon.Slot
+	comm *beacon.CommitteeIndex
+}
+
+type AttSearchOption func(a *attSearch)
+
+func WithSlot(slot beacon.Slot) AttSearchOption {
+	return func(a *attSearch) {
+		a.slot = &slot
+	}
+}
+
+func WithCommittee(index beacon.CommitteeIndex) AttSearchOption {
+	return func(a *attSearch) {
+		a.comm = &index
+	}
+}
+
+func (ap *AttestationPool) Search(opts ...AttSearchOption) (out []*beacon.Attestation) {
+	var conf attSearch
+	for _, opt := range opts {
+		opt(&conf)
+	}
+	for k, d := range ap.datas {
+		if conf.slot != nil && d.Data.Slot != *conf.slot {
+			continue
+		}
+		if conf.comm != nil && d.Data.Index != *conf.comm {
+			continue
+		}
+		agg := ap.aggregate[k]
+		for _, a := range agg.Aggregates {
+			out = append(out, &beacon.Attestation{AggregationBits: a.Participants, Data: d.Data, Signature: a.Sig})
+		}
+		// TODO: could add individual attestations
+	}
+	return out
+}
+
 func (ap *AttestationPool) Prune() {
 	// TODO
 }

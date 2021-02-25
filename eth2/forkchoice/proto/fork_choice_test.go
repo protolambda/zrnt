@@ -10,7 +10,7 @@ import (
 
 func TestProtoArray(t *testing.T) {
 	lhtest := fctest.LighthouseTestDef()
-	err := lhtest.Run(func(init *fctest.ForkChoiceTestInit, ft *fctest.ForkChoiceTestTarget) forkchoice.Forkchoice {
+	err := lhtest.Run(func(init *fctest.ForkChoiceTestInit, ft *fctest.ForkChoiceTestTarget) (forkchoice.Forkchoice, error) {
 		return NewProtoForkChoice(init.Spec, init.Finalized, init.Justified, init.AnchorRoot, init.AnchorSlot, init.AnchorParent, init.Balances,
 			NodeSinkFn(func(ctx context.Context, ref forkchoice.NodeRef, canonical bool) error {
 				// whenever something is pruned, check if it was allowed to be pruned,

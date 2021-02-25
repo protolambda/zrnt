@@ -1,6 +1,7 @@
 package proto
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -11,14 +12,20 @@ import (
 const NONE = ^NodeIndex(0)
 
 type ProtoNode struct {
-	Ref    NodeRef
-	Parent NodeIndex
+	Ref NodeRef
+	// The transition parent of a block node is the node of the same slot, without the block.
+	// The transition parent of a slot node is the slot or block before it.
+	TransitionParent NodeIndex
+	// The forkchoice parent of a node is strictly one slot lower, it cannot be the same slot.
+	ForkchoiceParent NodeIndex
 	// Duplicated to avoid pruning of this useful info.
 	ParentRoot     Root
 	JustifiedEpoch Epoch
 	FinalizedEpoch Epoch
 	Weight         SignedGwei
-	BestChild      NodeIndex
+	// Relative to ForkchoiceParent relations
+	BestChild NodeIndex
+	// Relative to ForkchoiceParent relations
 	BestDescendant NodeIndex
 }
 
@@ -52,8 +59,9 @@ type ProtoArray struct {
 
 var _ ForkchoiceGraph = (*ProtoArray)(nil)
 
-func NewProtoArray(justifiedEpoch Epoch, finalizedEpoch Epoch, sink NodeSink) *ProtoArray {
-	arr := ProtoArray{
+func NewProtoArray(parent Root, blockRoot Root, blockSlot Slot, justifiedEpoch Epoch, finalizedEpoch Epoch, sink NodeSink) *ProtoArray {
+	blockRef := NodeRef{Root: blockRoot, Slot: blockSlot}
+	pr := ProtoArray{
 		sink:               sink,
 		indexOffset:        0,
 		justifiedEpoch:     justifiedEpoch,
@@ -63,7 +71,20 @@ func NewProtoArray(justifiedEpoch Epoch, finalizedEpoch Epoch, sink NodeSink) *P
 		blockSlots:         make(map[Root]Slot, 100),
 		updatedConnections: true,
 	}
-	return &arr
+	pr.blockSlots[blockRoot] = blockSlot
+	pr.indices[blockRef] = 0
+	pr.nodes = append(pr.nodes, ProtoNode{
+		Ref:              blockRef,
+		TransitionParent: NONE,
+		ForkchoiceParent: NONE,
+		ParentRoot:       parent,
+		JustifiedEpoch:   justifiedEpoch,
+		FinalizedEpoch:   finalizedEpoch,
+		Weight:           0,
+		BestChild:        NONE,
+		BestDescendant:   NONE,
+	})
+	return &pr
 }
 
 var invalidIndexErr = errors.New("invalid index")
@@ -98,7 +119,7 @@ func (pr *ProtoArray) CanonicalChain(anchorRoot Root, anchorSlot Slot) ([]Extend
 			return nil, err
 		}
 		chain = append(chain, ExtendedNodeRef{NodeRef: node.Ref, ParentRoot: node.ParentRoot})
-		index = node.Parent
+		index = node.TransitionParent
 	}
 	return chain, nil
 }
@@ -187,7 +208,7 @@ func (pr *ProtoArray) CanonAtSlot(anchor Root, slot Slot, withBlock bool) (at No
 		}
 		// if we are looking for the pre-block node, and the node is not empty, then skip it.
 		if !withBlock && node.ParentRoot != node.Ref.Root {
-			index = node.Parent
+			index = node.TransitionParent
 			continue
 		}
 		if node.Ref.Slot == slot {
@@ -200,7 +221,7 @@ func (pr *ProtoArray) CanonAtSlot(anchor Root, slot Slot, withBlock bool) (at No
 		if node.Ref.Slot < slot {
 			break // should never happen (a missing gap slot node), but handle gracefully
 		}
-		index = node.Parent
+		index = node.TransitionParent
 	}
 	return NodeRef{}, fmt.Errorf("cannot find node at slot %d (with block %v)", slot, withBlock)
 }
@@ -286,14 +307,14 @@ func (pr *ProtoArray) ApplyScoreChanges(deltas []SignedGwei, justifiedEpoch Epoc
 		delta := deltas[i]
 		node := &pr.nodes[i]
 		node.Weight += delta
-		if node.Parent != NONE {
-			deltas[node.Parent-pr.indexOffset] += delta
+		if node.ForkchoiceParent != NONE {
+			deltas[node.ForkchoiceParent-pr.indexOffset] += delta
 		}
 	}
 	for i := len(pr.nodes) - 1; i >= 0; i-- {
 		node := &pr.nodes[i]
-		if node.Parent != NONE {
-			if err := pr.maybeUpdateBestChildAndDescendant(node.Parent, pr.indexOffset+NodeIndex(i)); err != nil {
+		if node.ForkchoiceParent != NONE {
+			if err := pr.maybeUpdateBestChildAndDescendant(node.ForkchoiceParent, pr.indexOffset+NodeIndex(i)); err != nil {
 				return err
 			}
 		}
@@ -305,8 +326,8 @@ func (pr *ProtoArray) ApplyScoreChanges(deltas []SignedGwei, justifiedEpoch Epoc
 func (pr *ProtoArray) updateConnections() error {
 	for i := len(pr.nodes) - 1; i >= 0; i-- {
 		node := &pr.nodes[i]
-		if node.Parent != NONE {
-			if err := pr.maybeUpdateBestChildAndDescendant(node.Parent, pr.indexOffset+NodeIndex(i)); err != nil {
+		if node.ForkchoiceParent != NONE {
+			if err := pr.maybeUpdateBestChildAndDescendant(node.ForkchoiceParent, pr.indexOffset+NodeIndex(i)); err != nil {
 				return err
 			}
 		}
@@ -343,14 +364,15 @@ func (pr *ProtoArray) ProcessSlot(parent Root, slot Slot, justifiedEpoch Epoch, 
 			nodeIndex = pr.indexOffset + NodeIndex(len(pr.nodes))
 			pr.indices[nodeRef] = nodeIndex
 			pr.nodes = append(pr.nodes, ProtoNode{
-				Ref:            nodeRef,
-				Parent:         parentIndex,
-				ParentRoot:     parent,
-				JustifiedEpoch: justifiedEpoch,
-				FinalizedEpoch: finalizedEpoch,
-				Weight:         0,
-				BestChild:      NONE,
-				BestDescendant: NONE,
+				Ref:              nodeRef,
+				TransitionParent: parentIndex,
+				ForkchoiceParent: parentIndex,
+				ParentRoot:       parent,
+				JustifiedEpoch:   justifiedEpoch,
+				FinalizedEpoch:   finalizedEpoch,
+				Weight:           0,
+				BestChild:        NONE,
+				BestDescendant:   NONE,
 			})
 			// remember the node as parent for the next
 			parentIndex = nodeIndex
@@ -360,14 +382,15 @@ func (pr *ProtoArray) ProcessSlot(parent Root, slot Slot, justifiedEpoch Epoch, 
 	nodeIndex := pr.indexOffset + NodeIndex(len(pr.nodes))
 	pr.indices[nodeRef] = nodeIndex
 	pr.nodes = append(pr.nodes, ProtoNode{
-		Ref:            nodeRef,
-		Parent:         parentIndex,
-		ParentRoot:     parent,
-		JustifiedEpoch: justifiedEpoch,
-		FinalizedEpoch: finalizedEpoch,
-		Weight:         0,
-		BestChild:      NONE,
-		BestDescendant: NONE,
+		Ref:              nodeRef,
+		TransitionParent: parentIndex,
+		ForkchoiceParent: parentIndex,
+		ParentRoot:       parent,
+		JustifiedEpoch:   justifiedEpoch,
+		FinalizedEpoch:   finalizedEpoch,
+		Weight:           0,
+		BestChild:        NONE,
+		BestDescendant:   NONE,
 	})
 	// Connections are out of sync, i.e. array needs work before next find-head can return the proper head.
 	pr.updatedConnections = false
@@ -377,48 +400,54 @@ func (pr *ProtoArray) ProcessSlot(parent Root, slot Slot, justifiedEpoch Epoch, 
 // If justified or finalized in-between, make sure to call OnSlot with accurate details first.
 //
 // The parent root of the genesis block should be zeroed.
-func (pr *ProtoArray) ProcessBlock(parent Root, blockRoot Root, blockSlot Slot, justifiedEpoch Epoch, finalizedEpoch Epoch) {
+func (pr *ProtoArray) ProcessBlock(parent Root, blockRoot Root, blockSlot Slot, justifiedEpoch Epoch, finalizedEpoch Epoch) (ok bool) {
 	blockRef := NodeRef{Root: blockRoot, Slot: blockSlot}
 	// If the block is already known, simply ignore it.
-	_, ok := pr.indices[blockRef]
-	if ok {
-		return
+	if _, ok := pr.indices[blockRef]; ok {
+		return true
 	}
 	if _, ok := pr.blockSlots[blockRoot]; ok {
 		// block is already known with different slot. Likely been pruned away, and we only know the later empty slot.
-		return
+		return true
 	}
-	parentIndex := NONE
-	// E.g. on genesis, slot 0, adding a zero block, which has a zero parent, we cannot add a pre-state.
-	if parent != blockRoot {
-		pr.ProcessSlot(parent, blockSlot, justifiedEpoch, finalizedEpoch)
-		exclRef := NodeRef{Slot: blockSlot, Root: parent}
-		parentIndex, ok = pr.indices[exclRef]
-		if !ok {
-			panic("OnSlot failed to add node for block slot")
-		}
+	// cannot add block if parent already exists, or parent is after the block
+	if slot, ok := pr.blockSlots[parent]; !ok || slot >= blockSlot {
+		return false
+	}
+	pr.ProcessSlot(parent, blockSlot, justifiedEpoch, finalizedEpoch)
+	// If the parent node is not known, we cannot add the block.
+	forkchoiceParentIndex, ok := pr.indices[NodeRef{Slot: blockSlot - 1, Root: parent}]
+	if !ok {
+		return false
+	}
+
+	transitionParentIndex, ok := pr.indices[NodeRef{Slot: blockSlot, Root: parent}]
+	if !ok {
+		panic("OnSlot failed to add node for block slot (transition parent)")
 	}
 	nodeIndex := pr.indexOffset + NodeIndex(len(pr.nodes))
 	pr.blockSlots[blockRoot] = blockSlot
 	pr.indices[blockRef] = nodeIndex
 	pr.nodes = append(pr.nodes, ProtoNode{
-		Ref:            blockRef,
-		Parent:         parentIndex,
-		ParentRoot:     parent,
-		JustifiedEpoch: justifiedEpoch,
-		FinalizedEpoch: finalizedEpoch,
-		Weight:         0,
-		BestChild:      NONE,
-		BestDescendant: NONE,
+		Ref:              blockRef,
+		TransitionParent: transitionParentIndex,
+		ForkchoiceParent: forkchoiceParentIndex,
+		ParentRoot:       parent,
+		JustifiedEpoch:   justifiedEpoch,
+		FinalizedEpoch:   finalizedEpoch,
+		Weight:           0,
+		BestChild:        NONE,
+		BestDescendant:   NONE,
 	})
 	// Connections are out of sync, i.e. array needs work before next find-head can return the proper head.
 	pr.updatedConnections = false
+	return true
 }
 
 var UnknownAnchorErr = errors.New("anchor unknown")
 var NoViableHeadErr = errors.New("not a viable head anymore, invalid forkchoice state")
 
-// Finds the head, starting from the anchor_root subtree. (justified_root for regular fork-choice)
+// Finds the head, starting from the anchor_root *forkchoice* subtree. (justified_root for regular fork-choice)
 //
 // Follows the best-descendant links to find the best-block (i.e., head-block).
 //
@@ -517,14 +546,14 @@ func (pr *ProtoArray) inSubtree(anchorIndex NodeIndex, lookupIndex NodeIndex) (u
 		return false, true
 	}
 	// Root may still be on a different non-canonical branch out of the anchor.
-	for i := lookupNode.Parent; i != NONE && i >= anchorIndex; {
+	for i := lookupNode.TransitionParent; i != NONE && i >= anchorIndex; {
 		tmp := &pr.nodes[i]
 		// early exit: as soon as we find a node that has the same relative head as the anchor,
 		// we know we are in-between the anchor and the head, thus in the subtree, thus an ancestor.
 		if tmp.BestDescendant == anchorNode.BestDescendant {
 			return false, true
 		}
-		i = tmp.Parent
+		i = tmp.TransitionParent
 	}
 	return false, false
 }
@@ -658,11 +687,8 @@ func (pr *ProtoArray) maybeUpdateBestChildAndDescendant(parentIndex NodeIndex, c
 				// *No change*
 			} else if child.Weight == bestChild.Weight {
 				// Tie-breaker of equal weights by root.
-				for i := 0; i < 32; i++ {
-					if child.Ref.Root[i] >= bestChild.Ref.Root[i] {
-						changeToChild()
-						break
-					}
+				if bytes.Compare(child.Ref.Root[:], bestChild.Ref.Root[:]) > 0 {
+					changeToChild()
 				}
 				// otherwise *no change*
 			} else {

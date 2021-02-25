@@ -151,17 +151,17 @@ func (op *OpHead) Apply(ft *ForkChoiceTestTarget, fc forkchoice.Forkchoice) erro
 }
 
 type OpIsAncestor struct {
-	Root       forkchoice.Root
-	OfRoot     forkchoice.Root
-	Unknown    bool
-	IsAncestor bool
+	Anchor    forkchoice.Root
+	Root      forkchoice.Root
+	Unknown   bool
+	InSubtree bool
 }
 
 func (op *OpIsAncestor) Apply(ft *ForkChoiceTestTarget, fc forkchoice.Forkchoice) error {
-	unknown, isAncestor := fc.IsAncestor(op.Root, op.OfRoot)
-	if unknown != op.Unknown || isAncestor != op.IsAncestor {
-		return fmt.Errorf("expected different ancestor result: unknown %v <> %v, isAncestor %v <> %v",
-			unknown, op.Unknown, isAncestor, op.IsAncestor)
+	unknown, inSubtree := fc.InSubtree(op.Anchor, op.Root)
+	if unknown != op.Unknown || inSubtree != op.InSubtree {
+		return fmt.Errorf("expected different in-subtree result: unknown %v <> %v, inSubtree %v <> %v",
+			unknown, op.Unknown, inSubtree, op.InSubtree)
 	}
 	return nil
 }
@@ -195,10 +195,14 @@ type OpProcessAttestation struct {
 	ValidatorIndex forkchoice.ValidatorIndex
 	BlockRoot      forkchoice.Root
 	HeadSlot       forkchoice.Slot
+	CanAdd         bool
 }
 
 func (op *OpProcessAttestation) Apply(ft *ForkChoiceTestTarget, fc forkchoice.Forkchoice) error {
-	fc.ProcessAttestation(op.ValidatorIndex, op.BlockRoot, op.HeadSlot)
+	res := fc.ProcessAttestation(op.ValidatorIndex, op.BlockRoot, op.HeadSlot)
+	if res != op.CanAdd {
+		return fmt.Errorf("processing attestation different result: canAdd %v <> %v", res, op.CanAdd)
+	}
 	return nil
 }
 
@@ -246,11 +250,14 @@ type ForkChoiceTestDef struct {
 	Operations []Operation
 }
 
-func (fd *ForkChoiceTestDef) Run(prepare func(init *ForkChoiceTestInit, ft *ForkChoiceTestTarget) forkchoice.Forkchoice) error {
+func (fd *ForkChoiceTestDef) Run(prepare func(init *ForkChoiceTestInit, ft *ForkChoiceTestTarget) (forkchoice.Forkchoice, error)) error {
 	ft := &ForkChoiceTestTarget{
 		Pruneable: make(map[forkchoice.NodeRef]bool),
 	}
-	fc := prepare(&fd.Init, ft)
+	fc, err := prepare(&fd.Init, ft)
+	if err != nil {
+		return fmt.Errorf("failed forkchoice preparation: %v", err)
+	}
 	for i, op := range fd.Operations {
 		if err := op.Apply(ft, fc); err != nil {
 			return fmt.Errorf("test failed at step %d: %v", i, err)

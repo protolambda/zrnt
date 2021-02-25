@@ -24,8 +24,8 @@ type ProtoForkChoice struct {
 var _ Forkchoice = (*ProtoForkChoice)(nil)
 
 func NewForkChoice(spec *beacon.Spec, finalized Checkpoint, justified Checkpoint,
-	anchorRoot Root, anchorSlot Slot, anchorParent Root, graph ForkchoiceGraph, votes VoteStore,
-	initialBalances []Gwei) Forkchoice {
+	anchorRoot Root, anchorSlot Slot, graph ForkchoiceGraph, votes VoteStore,
+	initialBalances []Gwei) (Forkchoice, error) {
 	fc := &ProtoForkChoice{
 		protoArray: graph,
 		voteStore:  votes,
@@ -34,11 +34,15 @@ func NewForkChoice(spec *beacon.Spec, finalized Checkpoint, justified Checkpoint
 		finalized:  finalized,
 		spec:       spec,
 	}
-	fc.ProcessBlock(anchorParent, anchorRoot, anchorSlot, justified.Epoch, finalized.Epoch)
-	_ = fc.updateJustified(finalized, justified, func() ([]Gwei, error) {
+	if err := fc.SetPin(anchorRoot, anchorSlot); err != nil {
+		return nil, err
+	}
+	if err := fc.updateJustified(finalized, justified, func() ([]Gwei, error) {
 		return initialBalances, nil
-	})
-	return fc
+	}); err != nil {
+		return nil, err
+	}
+	return fc, nil
 }
 
 func (fc *ProtoForkChoice) Pin() *NodeRef {
@@ -177,8 +181,7 @@ func (fc *ProtoForkChoice) ProcessAttestation(index ValidatorIndex, blockRoot Ro
 	if !ok || blockSlot < headSlot {
 		return false
 	}
-	fc.voteStore.ProcessAttestation(index, blockRoot, headSlot)
-	return true
+	return fc.voteStore.ProcessAttestation(index, blockRoot, headSlot)
 }
 
 func (fc *ProtoForkChoice) CanonicalChain(anchorRoot Root, anchorSlot Slot) ([]ExtendedNodeRef, error) {
@@ -193,10 +196,10 @@ func (fc *ProtoForkChoice) ProcessSlot(parentRoot Root, slot Slot, justifiedEpoc
 	fc.protoArray.ProcessSlot(parentRoot, slot, justifiedEpoch, finalizedEpoch)
 }
 
-func (fc *ProtoForkChoice) ProcessBlock(parentRoot Root, blockRoot Root, blockSlot Slot, justifiedEpoch Epoch, finalizedEpoch Epoch) {
+func (fc *ProtoForkChoice) ProcessBlock(parentRoot Root, blockRoot Root, blockSlot Slot, justifiedEpoch Epoch, finalizedEpoch Epoch) (ok bool) {
 	fc.mu.Lock()
 	defer fc.mu.Unlock()
-	fc.protoArray.ProcessBlock(parentRoot, blockRoot, blockSlot, justifiedEpoch, finalizedEpoch)
+	return fc.protoArray.ProcessBlock(parentRoot, blockRoot, blockSlot, justifiedEpoch, finalizedEpoch)
 }
 
 func (fc *ProtoForkChoice) InSubtree(anchor Root, root Root) (unknown bool, inSubtree bool) {

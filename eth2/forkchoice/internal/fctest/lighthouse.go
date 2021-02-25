@@ -39,6 +39,8 @@ func LighthouseTestDef() *ForkChoiceTestDef {
 	// Add a block with a hash of 2, at slot 2
 	//
 	//          0
+	//          |
+	//          *
 	//         /
 	//        2
 	add(&OpProcessBlock{
@@ -52,6 +54,8 @@ func LighthouseTestDef() *ForkChoiceTestDef {
 	// Ensure that the head is 2
 	//
 	//          0
+	//          |
+	//          *
 	//         /
 	// head-> 2
 	add(&OpHead{
@@ -64,7 +68,9 @@ func LighthouseTestDef() *ForkChoiceTestDef {
 	//
 	//          0
 	//         / \
-	//        2   1
+	//        *   1
+	//        |
+	//        2
 	add(&OpProcessBlock{
 		Parent:         hash(0),
 		BlockRoot:      hash(1),
@@ -73,34 +79,29 @@ func LighthouseTestDef() *ForkChoiceTestDef {
 		FinalizedEpoch: 0,
 	})
 
-	// Ensure that the head is still 2
+	// Ensure that the head changed to 1, because of bad tiebreaking based on parent-root (TODO)
 	//
 	//          0
 	//         / \
-	// head-> 2   1
+	//        *   1
+	//        |
+	//        2
 	add(&OpHead{
-		ExpectedHead: forkchoice.NodeRef{Root: hash(2), Slot: 2},
+		ExpectedHead: forkchoice.NodeRef{Root: hash(1), Slot: 1},
 		Ok:           true,
 	})
 
-	// Add a vote to block 1
-	//
-	//          0
-	//         / \
-	//        2   1 <- +vote
+	// Add a vote to block 2
 	add(&OpProcessAttestation{
 		ValidatorIndex: 0,
-		BlockRoot:      hash(1),
-		HeadSlot:       1,
+		BlockRoot:      hash(2),
+		HeadSlot:       2,
+		CanAdd:         true,
 	})
 
-	// Ensure that the head is now 1, because 1 has a vote.
-	//
-	//          0
-	//         / \
-	//        2   1 <- head
+	// Ensure that the head is now 2
 	add(&OpHead{
-		ExpectedHead: forkchoice.NodeRef{Root: hash(1), Slot: 1},
+		ExpectedHead: forkchoice.NodeRef{Root: hash(2), Slot: 2},
 		Ok:           true,
 	})
 

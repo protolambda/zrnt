@@ -25,7 +25,7 @@ func NewProtoVoteStore(spec *beacon.Spec) VoteStore {
 }
 
 // Process an attestation. (Note that the head slot may be for a gap slot after the block root)
-func (st *ProtoVoteStore) ProcessAttestation(index ValidatorIndex, blockRoot Root, headSlot Slot) {
+func (st *ProtoVoteStore) ProcessAttestation(index ValidatorIndex, blockRoot Root, headSlot Slot) (ok bool) {
 	if index >= ValidatorIndex(len(st.votes)) {
 		if index < ValidatorIndex(cap(st.votes)) {
 			st.votes = st.votes[:index+1]
@@ -43,6 +43,7 @@ func (st *ProtoVoteStore) ProcessAttestation(index ValidatorIndex, blockRoot Roo
 		st.changed = true
 	}
 	// TODO: maybe help detect slashable votes on the fly?
+	return true
 }
 
 func (st *ProtoVoteStore) HasChanges() bool {

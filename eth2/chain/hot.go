@@ -243,7 +243,7 @@ func NewUnfinalizedChain(anchorState *beacon.BeaconStateView, sink BlockSink, sp
 	if err != nil {
 		return nil, err
 	}
-	uc.ForkChoice = proto.NewProtoForkChoice(
+	fc, err := proto.NewProtoForkChoice(
 		spec,
 		finCh,
 		justCh,
@@ -252,6 +252,10 @@ func NewUnfinalizedChain(anchorState *beacon.BeaconStateView, sink BlockSink, sp
 		balances,
 		proto.NodeSinkFn(uc.onPrunedNode),
 	)
+	if err != nil {
+		return nil, err
+	}
+	uc.ForkChoice = fc
 	return uc, nil
 }
 
@@ -587,7 +591,8 @@ func (uc *UnfinalizedChain) AddAttestation(att *beacon.Attestation) error {
 		return err
 	}
 	for _, index := range indexedAtt.AttestingIndices {
-		uc.ForkChoice.ProcessAttestation(index, data.BeaconBlockRoot, data.Slot)
+		// the node should exist, unless pruned during attestation processing, fine to ignore.
+		_ = uc.ForkChoice.ProcessAttestation(index, data.BeaconBlockRoot, data.Slot)
 	}
 	return nil
 }

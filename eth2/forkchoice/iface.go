@@ -28,7 +28,7 @@ type ForkchoiceView interface {
 
 type ForkchoiceNodeInput interface {
 	ProcessSlot(parent Root, slot Slot, justifiedEpoch Epoch, finalizedEpoch Epoch)
-	ProcessBlock(parent Root, blockRoot Root, blockSlot Slot, justifiedEpoch Epoch, finalizedEpoch Epoch)
+	ProcessBlock(parent Root, blockRoot Root, blockSlot Slot, justifiedEpoch Epoch, finalizedEpoch Epoch) (ok bool)
 }
 
 type ForkchoiceGraph interface {

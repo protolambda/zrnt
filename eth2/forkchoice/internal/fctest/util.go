@@ -38,7 +38,7 @@ func (op *OpCanonicalChain) Apply(ft *ForkChoiceTestTarget, fc forkchoice.Forkch
 	}
 	for i, ref := range canon {
 		if ref != op.Expected[i] {
-			return fmt.Errorf("entry %d differs: %s <> %s", ref, op.Expected[i])
+			return fmt.Errorf("entry %d differs: %s <> %s", i, ref, op.Expected[i])
 		}
 	}
 	return nil

@@ -1,22 +1,15 @@
 # ZRNT [![Go Report Card](https://goreportcard.com/badge/github.com/protolambda/zrnt?no-cache)](https://goreportcard.com/report/github.com/protolambda/zrnt) [![CircleCI Build Status](https://circleci.com/gh/protolambda/zrnt.svg?style=shield)](https://circleci.com/gh/protolambda/zrnt) [![MIT Licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-A minimal Go implementation of the ETH 2.0 spec, by @protolambda.
+A minimal Go implementation of the Eth 2 spec, by @protolambda.
 
 The goal of this project is to have a Go version of the Python based spec,
  to enable use cases that are out of reach for unoptimized Python.
-
-Think of:
-- Realtime use in test-network monitoring, fast enough to verify full network activity.
-- A much higher fuzzing speed, to explore for new bugs.
-- Not affected nearly as much as pyspec when scaling to mainnet.
 
 ## Structure of `eth2` package
 
 ### `beacon`
 
 The beacon package covers the phase0 state transition, following the Beacon-chain spec, but optimized for performance.
-
-#### Globals
 
 Globals are split up as following:
 - `<something>Type`: a ZTYP SSZ type description, used to create typed views with. Some types can be derived from a `*Spec` only.
@@ -39,13 +32,54 @@ Since Go has no generics, ZTYP does not deserialize/get any typed views. If you 
 it will have to be wrapped with an `As<Something>` function to be fully typed. The 2nd `err` input is for convenience:
 chaining getters and `As` functions together is much easier this way. If there is any error, it is proxied.
 
-#### Importing
+### `chain`
 
-If you work with many of the types and functions, it may be handy to import with a `.` for brevity.
+The chain is split in two interfaces:
+- `ColdChain`, implemented by `FinalizedChain`: a linear series of slot and block transitions.
+- `HotChain`, implemented by `UnfinalizedChain`: a tree of slots and blocks, backed by the forkchoice graph.
 
-```go
-import . "github.com/protolambda/zrnt/eth2/beacon"
-```
+The current `UnfinalizedChain` keeps all states in memory. This seems like a lot of state, but the state data uses data-sharing to avoid any duplication.
+The result is that it merely keeps some 1 state and some diffs in memory, and this is performant when switching between many hot-states, as everything is in memory already, no disk-IO!
+However, for prolonged non-finalizing chains (e.g. no finalization for more than a day), the memory can become a problem.
+The state persistence trade-off here is being weighed against the complexity drawbacks.
+
+The `FullChain` interfaces combines the two into a usable eth2 chain, where blocks and attestations can be added to, and the canonical chain can be determined and navigated.
+
+### `configs`
+
+The common configurations are already included by default, no need to add or run anything if you just need `mainnet` or `minimal` spec.
+
+For custom configurations, simply load the `beacon.Phase0Config` and/or `beacon.Phase1Config` from YAML, and put them in the `beacon.Spec` object.
+
+BLS can be turned off on compile-time by adding the `bls_off` build tag (security warning: for testing use only!).
+
+### `db`
+
+This package offers Blocks and States DB implementations, to simply store and retrieve the common consensus data. 
+
+### `forkchoice`
+
+Forkchoice consists of 3 parts:
+- The `Forkchoice` interface, the wrapper around all internals, thread safe.
+- The `ForkchoiceGraph` interface and `ProtoArray` implementation: efficiently track and update the DAG with LMD-GHOST forkchoice rules.
+- The `VoteStore` interface and `ProtoVoteStore` implementation: track the latest votes and weight of each validator, to compute batched diffs as votes change, to then apply to the `ForkchoiceGraph`.
+
+The forkchoice implements block-slot accuracy voting. The internal representation tracks two different graphs:
+- Transition graph: slot processing and block processing are sequential
+- Forkchoice graph: slot votes and block votes are contentious (slots count as empty blocks)
+
+The transition graph is used for navigation, and allows for efficient state building (no repeated epoch transitions),
+while the forkchoice graph accurately follows voting edge cases such as for gap slot heads.
+
+The forkchoice implementation is undergoing more testing and may not be completely stable.
+
+### `pool`
+
+Implements in-memory collections for the common gossip message topics:
+- Attestations: in aggregated and individual form
+- Attester Slashings
+- Proposer Slashings
+- Voluntary Exits
 
 ### `util`
 
@@ -57,33 +91,11 @@ SSZ is provided by ZTYP, but has two forms:
 - Native Go structs, with `Deserialize`, `Serialize` and `HashTreeRoot` methods, built on the `hashing` and `codec` packages.
 - Type descriptions and Views, optimized for caching, representing data as binary trees. Primarily used for the `BeaconStateView`.
 
-### Building
+### `validation`
 
-ZRNT is a library, to use it in action, try [ZCLI](github.com/protolambda/zcli) or [Rumor](github.com/protolambda/rumor).
+This package implements message validation for the Eth2 gossip topics, and requires the chain and blocks DB interfaces to operate.
 
-#### Customizing configuration
-
-The common configurations are already included by default, no need to add or run anything if you just need `mainnet` or `minimal` spec.
-
-For custom configurations, add one or more configuration files to `./presets/configs/`.
-Then, re-generate the dynamic parts by running `go generate ./...`.
-
-#### Choosing a config
-
-By default, the `defaults.go` preset is used, which is selected if no other presets are,
-i.e. `!preset_mainnet,!preset_minimal` if `mainnet` and `minimal` are the others.
-
-To make a specific configuration effective, add a build-constraint (also known as "build tag") when building ZRNT or using it as a dependency:
-
-```shell script
-# Examples, Go commands are all consistent, something like:
-go test -tags preset_minimal ./...
-go build -tags preset_minimal ./...
-```
-
-BLS can be turned off by adding the `bls_off` build tag (security warning: for testing use only!).
-
-### Testing
+## Testing
 
 To run all tests and generate test and coverage reports: `make test`
 
@@ -92,7 +104,7 @@ The specs are tested using test-vectors shared between Eth 2.0 clients,
 Instructions on the usage of these test-vectors with ZRNT can be found in the [testing readme](./tests/spec/README.md)
  (TLDR: run `make download-tests` first).
 
-#### Coverage reports
+### Coverage reports
 
 After running `make test`, run `make open-coverage` to open a Go-test coverage report in your browser.
 

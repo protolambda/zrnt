@@ -13,18 +13,23 @@ import (
 const MAXIMUM_GOSSIP_CLOCK_DISPARITY = 500 * time.Millisecond
 const ATTESTATION_PROPAGATION_SLOT_RANGE = 32
 
-// Checks if the (target epoch, voter) pair was seen, does not do any tracking.
-type AttestationSeenFn func(targetEpoch beacon.Epoch, voter beacon.ValidatorIndex) bool
-
-// If votes for this block should be rejected.
-type IsBadBlockFn func(root beacon.Root) bool
+type AttestationValBackend interface {
+	BadBlockValidator
+	Spec
+	SlotAfter
+	Chain
+	DomainGetter
+	// Checks if the (target epoch, voter) pair was seen, does not do any tracking.
+	SeenAttestation(targetEpoch beacon.Epoch, voter beacon.ValidatorIndex) bool
+}
 
 const catchupTimeout = time.Second * 2
 
-func (gv *GossipValidator) ValidateAttestation(ctx context.Context, subnet uint64, att *beacon.Attestation,
-	seenFn AttestationSeenFn, isBadBlock IsBadBlockFn) GossipValidatorResult {
+func ValidateAttestation(ctx context.Context, subnet uint64, att *beacon.Attestation,
+	attVal AttestationValBackend) GossipValidatorResult {
+	spec := attVal.Spec()
 
-	targetSlot, err := gv.Spec.EpochStartSlot(att.Data.Target.Epoch)
+	targetSlot, err := spec.EpochStartSlot(att.Data.Target.Epoch)
 	if err != nil {
 		return GossipValidatorResult{REJECT, fmt.Errorf("cannot get start slot of attestation target epoch %d: %w", att.Data.Target.Epoch, err)}
 	}
@@ -38,17 +43,17 @@ func (gv *GossipValidator) ValidateAttestation(ctx context.Context, subnet uint6
 		return GossipValidatorResult{REJECT, fmt.Errorf("attestation slot overflow: %d", att.Data.Slot)}
 	}
 	// check minimum, with account for clock disparity
-	if minSlot := gv.SlotAfter(-MAXIMUM_GOSSIP_CLOCK_DISPARITY); att.Data.Slot+ATTESTATION_PROPAGATION_SLOT_RANGE < minSlot {
+	if minSlot := attVal.SlotAfter(-MAXIMUM_GOSSIP_CLOCK_DISPARITY); att.Data.Slot+ATTESTATION_PROPAGATION_SLOT_RANGE < minSlot {
 		return GossipValidatorResult{IGNORE, fmt.Errorf("attestation slot %d is too old, minimum slot is %d", att.Data.Slot, minSlot)}
 	}
 	// check maximum, with account for clock disparity
-	if maxSlot := gv.SlotAfter(MAXIMUM_GOSSIP_CLOCK_DISPARITY); att.Data.Slot > maxSlot {
+	if maxSlot := attVal.SlotAfter(MAXIMUM_GOSSIP_CLOCK_DISPARITY); att.Data.Slot > maxSlot {
 		return GossipValidatorResult{IGNORE, fmt.Errorf("attestation slot %d is too new, maximum slot is %d", att.Data.Slot, maxSlot)}
 	}
 
 	// [REJECT] The attestation's epoch matches its target --
 	// i.e. attestation.data.target.epoch == compute_epoch_at_slot(attestation.data.slot)
-	attEpoch := gv.Spec.SlotToEpoch(att.Data.Slot)
+	attEpoch := spec.SlotToEpoch(att.Data.Slot)
 	if att.Data.Target.Epoch != attEpoch {
 		return GossipValidatorResult{REJECT, fmt.Errorf("attestation slot %d is epoch %d and does not match target %d", att.Data.Slot, attEpoch, att.Data.Target.Epoch)}
 	}
@@ -59,13 +64,14 @@ func (gv *GossipValidator) ValidateAttestation(ctx context.Context, subnet uint6
 	}
 
 	// [REJECT] The block being voted for (attestation.data.beacon_block_root) passes validation.
-	if isBadBlock(att.Data.BeaconBlockRoot) {
+	if attVal.IsBadBlock(att.Data.BeaconBlockRoot) {
 		return GossipValidatorResult{REJECT, errors.New("attestation voted for invalid block")}
 	}
 
+	ch := attVal.Chain()
 	// [IGNORE] The block being voted for (attestation.data.beacon_block_root) has been seen
 	// (via both gossip and non-gossip sources) (a client MAY queue aggregates for processing once block is retrieved).
-	blockRef, ok := gv.Chain.ByBlock(att.Data.BeaconBlockRoot)
+	blockRef, ok := ch.ByBlock(att.Data.BeaconBlockRoot)
 	if !ok {
 		return GossipValidatorResult{IGNORE, errors.New("attestation voted for unknown block")}
 	}
@@ -77,7 +83,7 @@ func (gv *GossipValidator) ValidateAttestation(ctx context.Context, subnet uint6
 	// [REJECT] The attestation's target block is an ancestor of the block named in the LMD vote --
 	// i.e. get_ancestor(store, attestation.data.beacon_block_root, compute_start_slot_at_epoch(attestation.data.target.epoch))
 	//        == attestation.data.target.root
-	if unknown, inSubtree := gv.Chain.InSubtree(att.Data.Target.Root, att.Data.BeaconBlockRoot); unknown {
+	if unknown, inSubtree := ch.InSubtree(att.Data.Target.Root, att.Data.BeaconBlockRoot); unknown {
 		return GossipValidatorResult{IGNORE, errors.New("unknown block and/or target, cannot check if in subtree")}
 	} else if !inSubtree {
 		return GossipValidatorResult{REJECT, errors.New("block not in subtree of target")}
@@ -87,9 +93,9 @@ func (gv *GossipValidator) ValidateAttestation(ctx context.Context, subnet uint6
 	// by attestation.data.beacon_block_root --
 	// i.e. get_ancestor(store, attestation.data.beacon_block_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch))
 	//        == store.finalized_checkpoint.root
-	fin := gv.Chain.FinalizedCheckpoint()
+	fin := ch.FinalizedCheckpoint()
 	if att.Data.BeaconBlockRoot != fin.Root {
-		if unknown, inSubtree := gv.Chain.InSubtree(fin.Root, att.Data.BeaconBlockRoot); unknown {
+		if unknown, inSubtree := ch.InSubtree(fin.Root, att.Data.BeaconBlockRoot); unknown {
 			return GossipValidatorResult{IGNORE, errors.New("unknown block, cannot check if in subtree")}
 		} else if !inSubtree {
 			return GossipValidatorResult{REJECT, errors.New("block not in subtree of finalized root")}
@@ -102,7 +108,7 @@ func (gv *GossipValidator) ValidateAttestation(ctx context.Context, subnet uint6
 
 	towardsCtx, cancel := context.WithTimeout(ctx, catchupTimeout)
 	defer cancel()
-	targetRef, err := gv.Chain.Towards(towardsCtx, att.Data.Target.Root, targetSlot)
+	targetRef, err := ch.Towards(towardsCtx, att.Data.Target.Root, targetSlot)
 	if err != nil {
 		return GossipValidatorResult{IGNORE, fmt.Errorf("unknown target root %s: %w", att.Data.Target.Root, err)}
 	}
@@ -125,7 +131,7 @@ func (gv *GossipValidator) ValidateAttestation(ctx context.Context, subnet uint6
 	// [REJECT] The attestation is for the correct subnet --
 	// i.e. compute_subnet_for_attestation(committees_per_slot, attestation.data.slot, attestation.data.index)
 	//   == subnet_id, where committees_per_slot = get_committee_count_per_slot(state, attestation.data.target.epoch)
-	assignedSubnet, err := gv.Spec.ComputeSubnetForAttestation(committeeCountPerSlot, att.Data.Slot, att.Data.Index)
+	assignedSubnet, err := spec.ComputeSubnetForAttestation(committeeCountPerSlot, att.Data.Slot, att.Data.Index)
 	if err != nil {
 		return GossipValidatorResult{REJECT, fmt.Errorf("cannot get subnet for attestation (slot %d, committee index %d): %w", att.Data.Slot, att.Data.Index, err)}
 	}
@@ -148,8 +154,7 @@ func (gv *GossipValidator) ValidateAttestation(ctx context.Context, subnet uint6
 	if err != nil {
 		return GossipValidatorResult{REJECT, fmt.Errorf("attestation was expected to have a single voter, but failed: %w", err)}
 	}
-	seen := seenFn(att.Data.Target.Epoch, voter)
-	if seen {
+	if attVal.SeenAttestation(att.Data.Target.Epoch, voter) {
 		return GossipValidatorResult{IGNORE, errors.New("attestation vote was already seen (this attestation may be slashable if signature is valid!)")}
 	}
 
@@ -161,7 +166,7 @@ func (gv *GossipValidator) ValidateAttestation(ctx context.Context, subnet uint6
 	if !ok {
 		return GossipValidatorResult{IGNORE, errors.New("failed to find pubkey for voter, cache is wrong")}
 	}
-	dom, err := gv.GetDomain(gv.Spec.DOMAIN_BEACON_ATTESTER, att.Data.Target.Epoch)
+	dom, err := attVal.GetDomain(spec.DOMAIN_BEACON_ATTESTER, att.Data.Target.Epoch)
 	if err != nil {
 		return GossipValidatorResult{IGNORE, errors.New("failed to get domain info for signature check")}
 	}

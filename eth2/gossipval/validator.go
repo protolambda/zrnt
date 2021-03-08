@@ -44,19 +44,35 @@ func (gve GossipValidatorResult) Unwrap() error {
 	return gve.Err
 }
 
-type GossipValidator struct {
-	Spec  *beacon.Spec
-	Chain chain.FullChain
-
-	// Returns the slot after the given duration elapsed. The duration may be negative. It clips on genesis.
-	SlotAfter func(delta time.Duration) beacon.Slot
-
-	// Like BeaconState.GetDomain, but assuming only one canonical fork schedule is maintained.
-	GetDomain beacon.BLSDomainFn
+type Spec interface {
+	Spec() *beacon.Spec
 }
 
-func (gv *GossipValidator) HeadInfo(ctx context.Context) (chain.ChainEntry, *beacon.EpochsContext, *beacon.BeaconStateView, error) {
-	headRef, err := gv.Chain.Head()
+type SlotAfter interface {
+	// Returns the slot after the given duration elapsed. The duration may be negative. It clips on genesis.
+	SlotAfter(delta time.Duration) beacon.Slot
+}
+
+type DomainGetter interface {
+	GetDomain(typ beacon.BLSDomainType, epoch beacon.Epoch) (beacon.BLSDomain, error)
+}
+
+type BadBlockValidator interface {
+	// If votes for this block should be rejected.
+	IsBadBlock(root beacon.Root) bool
+}
+
+type HeadInfo interface {
+	HeadInfo(ctx context.Context) (chain.ChainEntry, *beacon.EpochsContext, *beacon.BeaconStateView, error)
+}
+
+type Chain interface {
+	Chain() chain.FullChain
+}
+
+// RetrieveHeadInfo is a util to implement the HeadInfo interface
+func RetrieveHeadInfo(ctx context.Context, ch chain.FullChain) (chain.ChainEntry, *beacon.EpochsContext, *beacon.BeaconStateView, error) {
+	headRef, err := ch.Head()
 	if err != nil {
 		return nil, nil, nil, errors.New("could not fetch head ref for validation")
 	}

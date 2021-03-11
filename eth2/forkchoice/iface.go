@@ -2,17 +2,17 @@ package forkchoice
 
 import (
 	"context"
-	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
 )
 
-type Root = beacon.Root
-type Epoch = beacon.Epoch
-type Slot = beacon.Slot
-type ValidatorIndex = beacon.ValidatorIndex
-type Gwei = beacon.Gwei
-type Checkpoint = beacon.Checkpoint
-type NodeRef = beacon.NodeRef
-type ExtendedNodeRef = beacon.ExtendedNodeRef
+type Root = common.Root
+type Epoch = common.Epoch
+type Slot = common.Slot
+type ValidatorIndex = common.ValidatorIndex
+type Gwei = common.Gwei
+type Checkpoint = common.Checkpoint
+type NodeRef = common.NodeRef
+type ExtendedNodeRef = common.ExtendedNodeRef
 type SignedGwei int64
 type NodeIndex uint64
 

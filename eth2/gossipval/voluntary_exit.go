@@ -3,17 +3,18 @@ package gossipval
 import (
 	"context"
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 )
 
 type VoluntaryExitValBackend interface {
 	Spec
 	HeadInfo
 	// Checks if a valid exit for the given validator has been seen before.
-	SeenExit(index beacon.ValidatorIndex) bool
+	SeenExit(index common.ValidatorIndex) bool
 }
 
-func ValidateVoluntaryExit(ctx context.Context, volExit *beacon.SignedVoluntaryExit, exitVal VoluntaryExitValBackend) GossipValidatorResult {
+func ValidateVoluntaryExit(ctx context.Context, volExit *phase0.SignedVoluntaryExit, exitVal VoluntaryExitValBackend) GossipValidatorResult {
 	// [IGNORE] The voluntary exit is the first valid voluntary exit received
 	// for the validator with index signed_voluntary_exit.message.validator_index
 	if exitVal.SeenExit(volExit.Message.ValidatorIndex) {
@@ -25,7 +26,7 @@ func ValidateVoluntaryExit(ctx context.Context, volExit *beacon.SignedVoluntaryE
 	if err != nil {
 		return GossipValidatorResult{IGNORE, err}
 	}
-	if err := exitVal.Spec().ValidateVoluntaryExit(epc, state, volExit); err != nil {
+	if err := phase0.ValidateVoluntaryExit(exitVal.Spec(), epc, state, volExit); err != nil {
 		return GossipValidatorResult{REJECT, err}
 	}
 

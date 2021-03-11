@@ -4,7 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	"io"
@@ -17,10 +18,10 @@ type MemDB struct {
 	data        sync.Map
 	removalLock sync.Mutex
 	stats       DBStats
-	spec        *beacon.Spec
+	spec        *common.Spec
 }
 
-func NewMemDB(spec *beacon.Spec) *MemDB {
+func NewMemDB(spec *common.Spec) *MemDB {
 	return &MemDB{spec: spec}
 }
 
@@ -33,7 +34,7 @@ func (db *MemDB) Store(ctx context.Context, block *BlockWithRoot) (exists bool, 
 	}
 	existing, loaded := db.data.LoadOrStore(block.Root, buf.Bytes())
 	if loaded {
-		existingBlock := existing.(*beacon.SignedBeaconBlock)
+		existingBlock := existing.(*phase0.SignedBeaconBlock)
 		sigDifference := existingBlock.Signature != block.Block.Signature
 		dbBlockPool.Put(buf) // put it back, we didn't store it
 		if sigDifference {
@@ -53,7 +54,7 @@ func (db *MemDB) Import(r io.Reader) (exists bool, err error) {
 		dbBlockPool.Put(buf) // put it back, we didn't use it
 		return false, err
 	}
-	var dest beacon.SignedBeaconBlock
+	var dest phase0.SignedBeaconBlock
 	err = dest.Deserialize(db.spec, codec.NewDecodingReader(buf, uint64(len(buf.Bytes()))))
 	if err != nil {
 		return false, fmt.Errorf("failed to decode block, nee valid block to get block root. Err: %v", err)
@@ -62,7 +63,7 @@ func (db *MemDB) Import(r io.Reader) (exists bool, err error) {
 	root := dest.Message.HashTreeRoot(db.spec, tree.GetHashFn())
 	existing, loaded := db.data.LoadOrStore(root, buf.Bytes())
 	if loaded {
-		existingBlock := existing.(*beacon.SignedBeaconBlock)
+		existingBlock := existing.(*phase0.SignedBeaconBlock)
 		sigDifference := existingBlock.Signature != dest.Signature
 		dbBlockPool.Put(buf) // put it back, we didn't store it
 		if sigDifference {
@@ -76,7 +77,7 @@ func (db *MemDB) Import(r io.Reader) (exists bool, err error) {
 	return loaded, nil
 }
 
-func (db *MemDB) Get(ctx context.Context, root beacon.Root, dest *beacon.SignedBeaconBlock) (exists bool, err error) {
+func (db *MemDB) Get(ctx context.Context, root common.Root, dest *phase0.SignedBeaconBlock) (exists bool, err error) {
 	dat, ok := db.data.Load(root)
 	if !ok {
 		return false, nil
@@ -86,7 +87,7 @@ func (db *MemDB) Get(ctx context.Context, root beacon.Root, dest *beacon.SignedB
 	return true, err
 }
 
-func (db *MemDB) Size(root beacon.Root) (size uint64, exists bool) {
+func (db *MemDB) Size(root common.Root) (size uint64, exists bool) {
 	dat, ok := db.data.Load(root)
 	if !ok {
 		return 0, false
@@ -95,7 +96,7 @@ func (db *MemDB) Size(root beacon.Root) (size uint64, exists bool) {
 	return uint64(len(buf.Bytes())), true
 }
 
-func (db *MemDB) Export(root beacon.Root, w io.Writer) (exists bool, err error) {
+func (db *MemDB) Export(root common.Root, w io.Writer) (exists bool, err error) {
 	dat, ok := db.data.Load(root)
 	if !ok {
 		return false, nil
@@ -113,7 +114,7 @@ func (n noClose) Close() error {
 	return nil
 }
 
-func (db *MemDB) Stream(root beacon.Root) (r io.ReadCloser, size uint64, exists bool, err error) {
+func (db *MemDB) Stream(root common.Root) (r io.ReadCloser, size uint64, exists bool, err error) {
 	dat, ok := db.data.Load(root)
 	if !ok {
 		return nil, 0, false, nil
@@ -122,7 +123,7 @@ func (db *MemDB) Stream(root beacon.Root) (r io.ReadCloser, size uint64, exists 
 	return noClose{buf}, uint64(buf.Len()), true, nil
 }
 
-func (db *MemDB) Remove(root beacon.Root) (exists bool, err error) {
+func (db *MemDB) Remove(root common.Root) (exists bool, err error) {
 	db.removalLock.Lock()
 	defer db.removalLock.Unlock()
 	v, ok := db.data.Load(root)
@@ -139,10 +140,10 @@ func (db *MemDB) Stats() DBStats {
 	return db.stats
 }
 
-func (db *MemDB) List() (out []beacon.Root) {
-	out = make([]beacon.Root, 0, db.stats.Count)
+func (db *MemDB) List() (out []common.Root) {
+	out = make([]common.Root, 0, db.stats.Count)
 	db.data.Range(func(key, value interface{}) bool {
-		id := key.(beacon.Root)
+		id := key.(common.Root)
 		out = append(out, id)
 		return true
 	})
@@ -153,6 +154,6 @@ func (db *MemDB) Path() string {
 	return ""
 }
 
-func (db *MemDB) Spec() *beacon.Spec {
+func (db *MemDB) Spec() *common.Spec {
 	return db.spec
 }

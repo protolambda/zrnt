@@ -5,7 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
 	. "github.com/protolambda/zrnt/eth2/forkchoice"
 )
 
@@ -730,6 +730,6 @@ func (pr *ProtoArray) nodeLeadsToViableHead(node *ProtoNode) (bool, error) {
 //
 //Any node that has a different finalized or justified epoch should not be viable for the head.
 func (pr *ProtoArray) isNodeViableForHead(node *ProtoNode) bool {
-	return (node.JustifiedEpoch == pr.justifiedEpoch || pr.justifiedEpoch == beacon.GENESIS_EPOCH) &&
-		(node.FinalizedEpoch == pr.finalizedEpoch || pr.finalizedEpoch == beacon.GENESIS_EPOCH)
+	return (node.JustifiedEpoch == pr.justifiedEpoch || pr.justifiedEpoch == common.GENESIS_EPOCH) &&
+		(node.FinalizedEpoch == pr.finalizedEpoch || pr.finalizedEpoch == common.GENESIS_EPOCH)
 }

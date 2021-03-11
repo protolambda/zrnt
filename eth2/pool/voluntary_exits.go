@@ -1,24 +1,25 @@
 package pool
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"sync"
 )
 
 type VoluntaryExitPool struct {
 	sync.RWMutex
-	spec  *beacon.Spec
-	exits map[beacon.ValidatorIndex]*beacon.SignedVoluntaryExit
+	spec  *common.Spec
+	exits map[common.ValidatorIndex]*phase0.SignedVoluntaryExit
 }
 
-func NewVoluntaryExitPool(spec *beacon.Spec) *VoluntaryExitPool {
+func NewVoluntaryExitPool(spec *common.Spec) *VoluntaryExitPool {
 	return &VoluntaryExitPool{
 		spec:  spec,
-		exits: make(map[beacon.ValidatorIndex]*beacon.SignedVoluntaryExit),
+		exits: make(map[common.ValidatorIndex]*phase0.SignedVoluntaryExit),
 	}
 }
 
-func (vep *VoluntaryExitPool) AddVoluntaryExit(exit *beacon.SignedVoluntaryExit) (exists bool) {
+func (vep *VoluntaryExitPool) AddVoluntaryExit(exit *phase0.SignedVoluntaryExit) (exists bool) {
 	vep.Lock()
 	defer vep.Unlock()
 	key := exit.Message.ValidatorIndex

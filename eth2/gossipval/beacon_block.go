@@ -4,7 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/ztyp/tree"
 )
@@ -16,16 +17,16 @@ type BeaconBlockValBackend interface {
 	DomainGetter
 
 	// Checks if the (slot, proposer) pair was seen, does not do any tracking.
-	Seen(slot beacon.Slot, proposer beacon.ValidatorIndex) bool
+	Seen(slot common.Slot, proposer common.ValidatorIndex) bool
 
 	// When the block is fully validated (except proposer index check, but incl. signature check),
 	// the combination can be marked as seen to avoid future duplicate blocks from being propagated.
 	// Must returns true if the block was previously already seen,
 	// to avoid race-conditions (two block validations may run in parallel).
-	Mark(slot beacon.Slot, proposer beacon.ValidatorIndex) bool
+	Mark(slot common.Slot, proposer common.ValidatorIndex) bool
 }
 
-func ValidateBeaconBlock(ctx context.Context, signedBlock *beacon.SignedBeaconBlock,
+func ValidateBeaconBlock(ctx context.Context, signedBlock *phase0.SignedBeaconBlock,
 	blockVal BeaconBlockValBackend) GossipValidatorResult {
 	spec := blockVal.Spec()
 	block := &signedBlock.Message
@@ -82,7 +83,7 @@ func ValidateBeaconBlock(ctx context.Context, signedBlock *beacon.SignedBeaconBl
 	if err != nil {
 		return GossipValidatorResult{IGNORE, fmt.Errorf("cannot get signature domain for block at slot %d", block.Slot)}
 	}
-	if bls.Verify(pub, beacon.ComputeSigningRoot(block.HashTreeRoot(spec, tree.GetHashFn()), domain), signedBlock.Signature) {
+	if bls.Verify(pub, common.ComputeSigningRoot(block.HashTreeRoot(spec, tree.GetHashFn()), domain), signedBlock.Signature) {
 		return GossipValidatorResult{REJECT, errors.New("invalid block signature")}
 	}
 
@@ -96,7 +97,7 @@ func ValidateBeaconBlock(ctx context.Context, signedBlock *beacon.SignedBeaconBl
 
 	targetEpoch := spec.SlotToEpoch(block.Slot)
 	parentEpoch := spec.SlotToEpoch(parentRef.Step().Slot())
-	var proposer beacon.ValidatorIndex
+	var proposer common.ValidatorIndex
 	if parentEpoch == targetEpoch {
 		proposer, err = parentEpc.GetBeaconProposer(block.Slot)
 		if err != nil {

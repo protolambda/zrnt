@@ -3,7 +3,8 @@ package blocks
 import (
 	"bytes"
 	"context"
-	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/ztyp/tree"
 	"io"
 	"sync"
@@ -11,12 +12,12 @@ import (
 
 type BlockWithRoot struct {
 	// Root of the Block.Message
-	Root beacon.Root
+	Root common.Root
 	// Block, with signature
-	Block *beacon.SignedBeaconBlock
+	Block *phase0.SignedBeaconBlock
 }
 
-func WithRoot(spec *beacon.Spec, block *beacon.SignedBeaconBlock) *BlockWithRoot {
+func WithRoot(spec *common.Spec, block *phase0.SignedBeaconBlock) *BlockWithRoot {
 	root := block.Message.HashTreeRoot(spec, tree.GetHashFn())
 	return &BlockWithRoot{
 		Root:  root,
@@ -26,7 +27,7 @@ func WithRoot(spec *beacon.Spec, block *beacon.SignedBeaconBlock) *BlockWithRoot
 
 type DBStats struct {
 	Count     int64
-	LastWrite beacon.Root
+	LastWrite common.Root
 }
 
 type DB interface {
@@ -43,26 +44,26 @@ type DB interface {
 	// Get, an efficient convenience method for getting a block through Export. The block is safe to modify.
 	// The data at the pointer is mutated to the new block.
 	// Returns exists=true if the block exists, false otherwise. If error, it may not be accurate.
-	Get(ctx context.Context, root beacon.Root, dest *beacon.SignedBeaconBlock) (exists bool, err error)
+	Get(ctx context.Context, root common.Root, dest *phase0.SignedBeaconBlock) (exists bool, err error)
 	// Size quickly checks the size of a block, without dealing with the full block.
 	// Returns exists=true if the block exists, false otherwise. If error, it may not be accurate.
-	Size(root beacon.Root) (size uint64, exists bool)
+	Size(root common.Root) (size uint64, exists bool)
 	// Export outputs the requested SignedBeaconBlock to the writer in SSZ.
 	// Returns exists=true if the block exists, false otherwise. If error, it may not be accurate.
-	Export(root beacon.Root, w io.Writer) (exists bool, err error)
+	Export(root common.Root, w io.Writer) (exists bool, err error)
 	// Stream is used to stream the contents by getting a reader and total size to read
-	Stream(root beacon.Root) (r io.ReadCloser, size uint64, exists bool, err error)
+	Stream(root common.Root) (r io.ReadCloser, size uint64, exists bool, err error)
 	// Remove removes a block from the DB. Removing a block that does not exist is safe.
 	// Returns exists=true if the block exists (previously), false otherwise. If error, it may not be accurate.
-	Remove(root beacon.Root) (exists bool, err error)
+	Remove(root common.Root) (exists bool, err error)
 	// Stats shows some database statistics such as latest write key and entry count.
 	Stats() DBStats
 	// List all known block roots
-	List() []beacon.Root
+	List() []common.Root
 	// Get Path
 	Path() string
 	// Spec of states
-	Spec() *beacon.Spec
+	Spec() *common.Spec
 }
 
 // Mainnet blocks are 157756 in v0.12.x, buffer can grow if necessary, and should be enough for most custom configs.

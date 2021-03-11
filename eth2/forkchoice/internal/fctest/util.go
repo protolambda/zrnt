@@ -3,7 +3,7 @@ package fctest
 import (
 	"context"
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/forkchoice"
 )
 
@@ -236,7 +236,7 @@ func (op *OpUpdateJustified) Apply(ft *ForkChoiceTestTarget, fc forkchoice.Forkc
 }
 
 type ForkChoiceTestInit struct {
-	Spec         *beacon.Spec
+	Spec         *common.Spec
 	Finalized    forkchoice.Checkpoint
 	Justified    forkchoice.Checkpoint
 	AnchorRoot   forkchoice.Root

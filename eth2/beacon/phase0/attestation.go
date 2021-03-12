@@ -18,16 +18,16 @@ func BlockAttestationsType(spec *common.Spec) ListTypeDef {
 
 func AttestationType(spec *common.Spec) *ContainerTypeDef {
 	return ContainerType("Attestation", []FieldDef{
-		{"aggregation_bits", spec.CommitteeBits()},
+		{"aggregation_bits", AttestationBitsType(spec)},
 		{"data", AttestationDataType},
 		{"signature", common.BLSSignatureType},
 	})
 }
 
 type Attestation struct {
-	AggregationBits common.CommitteeBits `json:"aggregation_bits" yaml:"aggregation_bits"`
-	Data            AttestationData      `json:"data" yaml:"data"`
-	Signature       common.BLSSignature  `json:"signature" yaml:"signature"`
+	AggregationBits AttestationBits     `json:"aggregation_bits" yaml:"aggregation_bits"`
+	Data            AttestationData     `json:"data" yaml:"data"`
+	Signature       common.BLSSignature `json:"signature" yaml:"signature"`
 }
 
 func (a *Attestation) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {

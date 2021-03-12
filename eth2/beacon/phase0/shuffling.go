@@ -48,7 +48,7 @@ func NewShufflingEpoch(spec *common.Spec, indicesBounded []BoundedIndex, seed co
 	common.UnshuffleList(spec.SHUFFLE_ROUND_COUNT, shep.Shuffling, seed)
 
 	validatorCount := uint64(len(shep.Shuffling))
-	committeesPerSlot := spec.CommitteeCount(validatorCount)
+	committeesPerSlot := CommitteeCount(spec, validatorCount)
 	committeeCount := committeesPerSlot * uint64(spec.SLOTS_PER_EPOCH)
 	shep.Committees = make([][][]common.ValidatorIndex, spec.SLOTS_PER_EPOCH, spec.SLOTS_PER_EPOCH)
 	for slot := uint64(0); slot < uint64(spec.SLOTS_PER_EPOCH); slot++ {

@@ -8,7 +8,7 @@ import (
 )
 
 type PendingAttestation struct {
-	AggregationBits common.CommitteeBits  `json:"aggregation_bits" yaml:"aggregation_bits"`
+	AggregationBits AttestationBits       `json:"aggregation_bits" yaml:"aggregation_bits"`
 	Data            AttestationData       `json:"data" yaml:"data"`
 	InclusionDelay  common.Slot           `json:"inclusion_delay" yaml:"inclusion_delay"`
 	ProposerIndex   common.ValidatorIndex `json:"proposer_index" yaml:"proposer_index"`
@@ -141,7 +141,7 @@ func AsAttestationData(v View, err error) (*AttestationDataView, error) {
 
 func PendingAttestationType(spec *common.Spec) *ContainerTypeDef {
 	return ContainerType("PendingAttestation", []FieldDef{
-		{"aggregation_bits", spec.CommitteeBits()},
+		{"aggregation_bits", AttestationBitsType(spec)},
 		{"data", AttestationDataType},
 		{"inclusion_delay", common.SlotType},
 		{"proposer_index", common.ValidatorIndexType},
@@ -153,7 +153,7 @@ type PendingAttestationView struct{ *ContainerView }
 func (v *PendingAttestationView) Raw() (*PendingAttestation, error) {
 	// load aggregation bits
 	fields, err := v.FieldValues()
-	bits, err := common.AsCommitteeBits(fields[0], err)
+	bits, err := AsAttestationBits(fields[0], err)
 	data, err := AsAttestationData(fields[1], err)
 	delay, err := common.AsSlot(fields[2], err)
 	proposerIndex, err := common.AsValidatorIndex(fields[3], err)

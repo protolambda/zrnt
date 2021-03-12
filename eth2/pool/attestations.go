@@ -27,14 +27,14 @@ type AttRef struct {
 }
 
 type Aggregate struct {
-	Participants common.CommitteeBits
+	Participants phase0.AttestationBits
 	Sig          common.BLSSignature
 }
 
 type MinAggregates struct {
 	Aggregates []Aggregate
 	// The OR of all bitfields contained in Aggregates list, to easily filter out subsets
-	Participants common.CommitteeBits
+	Participants phase0.AttestationBits
 	// Things already covered by the sum of the above aggregates, but maybe useful later. Keep a limited number of these.
 	Extra []Aggregate
 }

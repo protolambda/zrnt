@@ -1,14 +1,14 @@
 package operations
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"testing"
 )
 
 type ProposerSlashingTestCase struct {
 	test_util.BaseTransitionTest
-	ProposerSlashing beacon.ProposerSlashing
+	ProposerSlashing phase0.ProposerSlashing
 }
 
 func (c *ProposerSlashingTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
@@ -17,11 +17,11 @@ func (c *ProposerSlashingTestCase) Load(t *testing.T, readPart test_util.TestPar
 }
 
 func (c *ProposerSlashingTestCase) Run() error {
-	epc, err := c.Spec.NewEpochsContext(c.Pre)
+	epc, err := phase0.NewEpochsContext(c.Spec, c.Pre)
 	if err != nil {
 		return err
 	}
-	return c.Spec.ProcessProposerSlashing(epc, c.Pre, &c.ProposerSlashing)
+	return phase0.ProcessProposerSlashing(c.Spec, epc, c.Pre, &c.ProposerSlashing)
 }
 
 func TestProposerSlashing(t *testing.T) {

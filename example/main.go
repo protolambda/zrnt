@@ -3,19 +3,20 @@ package main
 import (
 	"encoding/binary"
 	"fmt"
-	. "github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/eth2/configs"
 	"github.com/protolambda/ztyp/tree"
 )
 
-func CreateTestValidators(count uint64, balance Gwei) []KickstartValidatorData {
-	out := make([]KickstartValidatorData, 0, count)
+func CreateTestValidators(count uint64, balance common.Gwei) []phase0.KickstartValidatorData {
+	out := make([]phase0.KickstartValidatorData, 0, count)
 	for i := uint64(0); i < count; i++ {
-		pubkey := BLSPubkey{0xaa}
+		pubkey := common.BLSPubkey{0xaa}
 		binary.LittleEndian.PutUint64(pubkey[1:], i)
-		withdrawalCred := Root{0xbb}
+		withdrawalCred := common.Root{0xbb}
 		binary.LittleEndian.PutUint64(withdrawalCred[1:], i)
-		out = append(out, KickstartValidatorData{
+		out = append(out, phase0.KickstartValidatorData{
 			Pubkey:                pubkey,
 			WithdrawalCredentials: withdrawalCred,
 			Balance:               balance,
@@ -24,8 +25,8 @@ func CreateTestValidators(count uint64, balance Gwei) []KickstartValidatorData {
 	return out
 }
 
-func CreateTestState(spec *Spec, validatorCount uint64, balance Gwei) (*BeaconStateView, *EpochsContext) {
-	out, epc, err := spec.KickStartState(Root{123}, 1564000000, CreateTestValidators(validatorCount, balance))
+func CreateTestState(spec *common.Spec, validatorCount uint64, balance common.Gwei) (*phase0.BeaconStateView, *phase0.EpochsContext) {
+	out, epc, err := phase0.KickStartState(spec, common.Root{123}, 1564000000, CreateTestValidators(validatorCount, balance))
 	if err != nil {
 		panic(err)
 	}
@@ -38,7 +39,7 @@ func main() {
 
 	state, epc := CreateTestState(spec, 1000, spec.MAX_EFFECTIVE_BALANCE)
 
-	for i := Slot(0); i < spec.SLOTS_PER_EPOCH*2; i++ {
+	for i := common.Slot(0); i < spec.SLOTS_PER_EPOCH*2; i++ {
 		count, err := epc.GetCommitteeCountAtSlot(i)
 		if err != nil {
 			panic(err)
@@ -46,7 +47,7 @@ func main() {
 
 		fmt.Printf("slot %d, committee count: %d\n", i, count)
 		for j := uint64(0); j < count; j++ {
-			committee, err := epc.GetBeaconCommittee(i, CommitteeIndex(j))
+			committee, err := epc.GetBeaconCommittee(i, common.CommitteeIndex(j))
 			if err != nil {
 				panic(err)
 			}

@@ -1,14 +1,15 @@
 package operations
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"testing"
 )
 
 type DepositTestCase struct {
 	test_util.BaseTransitionTest
-	Deposit beacon.Deposit
+	Deposit common.Deposit
 }
 
 func (c *DepositTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
@@ -17,11 +18,11 @@ func (c *DepositTestCase) Load(t *testing.T, readPart test_util.TestPartReader) 
 }
 
 func (c *DepositTestCase) Run() error {
-	epc, err := c.Spec.NewEpochsContext(c.Pre)
+	epc, err := phase0.NewEpochsContext(c.Spec, c.Pre)
 	if err != nil {
 		return err
 	}
-	return c.Spec.ProcessDeposit(epc, c.Pre, &c.Deposit, false)
+	return phase0.ProcessDeposit(c.Spec, epc, c.Pre, &c.Deposit, false)
 }
 
 func TestDeposit(t *testing.T) {

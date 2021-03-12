@@ -1,13 +1,12 @@
 package configs
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 )
 
 var Mainnet = &common.Spec{
 	CONFIG_NAME: "mainnet",
-	Phase0Config: beacon.Phase0Config{
+	Phase0Config: common.Phase0Config{
 		MAX_COMMITTEES_PER_SLOT:               64,
 		TARGET_COMMITTEE_SIZE:                 128,
 		MAX_VALIDATORS_PER_COMMITTEE:          2048,

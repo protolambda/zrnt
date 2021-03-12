@@ -2,7 +2,8 @@ package test_util
 
 import (
 	"github.com/protolambda/messagediff"
-	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/eth2/configs"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
@@ -10,22 +11,22 @@ import (
 )
 
 type BaseTransitionTest struct {
-	Spec *beacon.Spec
-	Pre  *beacon.BeaconStateView
-	Post *beacon.BeaconStateView
+	Spec *common.Spec
+	Pre  *phase0.BeaconStateView
+	Post *phase0.BeaconStateView
 }
 
 func (c *BaseTransitionTest) ExpectingFailure() bool {
 	return c.Post == nil
 }
 
-func LoadState(t *testing.T, name string, readPart TestPartReader) *beacon.BeaconStateView {
+func LoadState(t *testing.T, name string, readPart TestPartReader) *phase0.BeaconStateView {
 	p := readPart.Part(name + ".ssz")
 	spec := readPart.Spec()
 	if p.Exists() {
 		size, err := p.Size()
 		Check(t, err)
-		state, err := beacon.AsBeaconStateView(spec.BeaconState().Deserialize(codec.NewDecodingReader(p, size)))
+		state, err := phase0.AsBeaconStateView(phase0.BeaconStateType(spec).Deserialize(codec.NewDecodingReader(p, size)))
 		Check(t, err)
 		Check(t, p.Close())
 		return state
@@ -61,7 +62,7 @@ func (c *BaseTransitionTest) Check(t *testing.T) {
 	}
 }
 
-func CompareStates(spec *beacon.Spec, a *beacon.BeaconStateView, b *beacon.BeaconStateView) (diff string, err error) {
+func CompareStates(spec *common.Spec, a *phase0.BeaconStateView, b *phase0.BeaconStateView) (diff string, err error) {
 	hFn := tree.GetHashFn()
 	preRoot := a.HashTreeRoot(hFn)
 	postRoot := b.HashTreeRoot(hFn)

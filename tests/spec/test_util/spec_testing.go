@@ -1,7 +1,7 @@
 package test_util
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/codec"
 	"io"
 	"io/ioutil"
@@ -20,7 +20,7 @@ type TestPart interface {
 
 type TestPartReader interface {
 	Part(name string) TestPart
-	Spec() *beacon.Spec
+	Spec() *common.Spec
 }
 
 // Runs a test case
@@ -51,18 +51,18 @@ func (p *testPartFile) Exists() bool {
 
 type partAndSpec struct {
 	readPart func(name string) TestPart
-	spec     *beacon.Spec
+	spec     *common.Spec
 }
 
 func (s *partAndSpec) Part(name string) TestPart {
 	return s.readPart(name)
 }
 
-func (s *partAndSpec) Spec() *beacon.Spec {
+func (s *partAndSpec) Spec() *common.Spec {
 	return s.spec
 }
 
-func RunHandler(t *testing.T, handlerPath string, caseRunner CaseRunner, spec *beacon.Spec) {
+func RunHandler(t *testing.T, handlerPath string, caseRunner CaseRunner, spec *common.Spec) {
 	// get the current path, go to the root, and get the tests path
 	_, filename, _, _ := runtime.Caller(0)
 	basepath := filepath.Dir(filepath.Dir(filename))
@@ -112,7 +112,7 @@ func RunHandler(t *testing.T, handlerPath string, caseRunner CaseRunner, spec *b
 	})
 }
 
-func LoadSpecObj(t *testing.T, name string, dst beacon.SpecObj, readPart TestPartReader) bool {
+func LoadSpecObj(t *testing.T, name string, dst common.SpecObj, readPart TestPartReader) bool {
 	p := readPart.Part(name + ".ssz")
 	if p.Exists() {
 		size, err := p.Size()

@@ -1,7 +1,6 @@
 package configs
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
@@ -19,7 +18,7 @@ func mustLoad(name string, phase string) []byte {
 }
 
 func TestYamlDecodingMainnetPhase0(t *testing.T) {
-	var conf beacon.Phase0Config
+	var conf common.Phase0Config
 	if err := yaml.Unmarshal(mustLoad("mainnet", "phase0"), &conf); err != nil {
 		t.Fatal(err)
 	}
@@ -39,7 +38,7 @@ func TestYamlDecodingMainnetPhase1(t *testing.T) {
 }
 
 func TestYamlDecodingMinimalPhase0(t *testing.T) {
-	var conf beacon.Phase0Config
+	var conf common.Phase0Config
 	if err := yaml.Unmarshal(mustLoad("minimal", "phase0"), &conf); err != nil {
 		t.Fatal(err)
 	}

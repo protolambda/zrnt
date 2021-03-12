@@ -1,13 +1,12 @@
 package configs
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 )
 
 var Minimal = &common.Spec{
 	CONFIG_NAME: "minimal",
-	Phase0Config: beacon.Phase0Config{
+	Phase0Config: common.Phase0Config{
 		MAX_COMMITTEES_PER_SLOT:               4,
 		TARGET_COMMITTEE_SIZE:                 4,
 		MAX_VALIDATORS_PER_COMMITTEE:          2048,

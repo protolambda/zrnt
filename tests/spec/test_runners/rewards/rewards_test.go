@@ -3,17 +3,18 @@ package epoch_processing
 import (
 	"context"
 	"fmt"
-	. "github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"strings"
 	"testing"
 )
 
 type RewardsTest struct {
-	Spec   *Spec
-	Pre    *BeaconStateView
-	Input  *RewardsAndPenalties
-	Output *RewardsAndPenalties
+	Spec   *common.Spec
+	Pre    *phase0.BeaconStateView
+	Input  *phase0.RewardsAndPenalties
+	Output *phase0.RewardsAndPenalties
 }
 
 func (c *RewardsTest) ExpectingFailure() bool {
@@ -25,32 +26,32 @@ func (c *RewardsTest) Load(t *testing.T, readPart test_util.TestPartReader) {
 
 	c.Pre = test_util.LoadState(t, "pre", readPart)
 
-	c.Input = &RewardsAndPenalties{}
-	sourceDeltas := new(Deltas)
+	c.Input = &phase0.RewardsAndPenalties{}
+	sourceDeltas := new(common.Deltas)
 	if test_util.LoadSpecObj(t, "source_deltas", sourceDeltas, readPart) {
 		c.Input.Source = sourceDeltas
 	} else {
 		t.Fatalf("failed to load source_deltas")
 	}
-	targetDeltas := new(Deltas)
+	targetDeltas := new(common.Deltas)
 	if test_util.LoadSpecObj(t, "target_deltas", targetDeltas, readPart) {
 		c.Input.Target = targetDeltas
 	} else {
 		t.Fatalf("failed to load target_deltas")
 	}
-	headDeltas := new(Deltas)
+	headDeltas := new(common.Deltas)
 	if test_util.LoadSpecObj(t, "head_deltas", headDeltas, readPart) {
 		c.Input.Head = headDeltas
 	} else {
 		t.Fatalf("failed to load head_deltas")
 	}
-	inclusionDelayDeltas := new(Deltas)
+	inclusionDelayDeltas := new(common.Deltas)
 	if test_util.LoadSpecObj(t, "inclusion_delay_deltas", inclusionDelayDeltas, readPart) {
 		c.Input.InclusionDelay = inclusionDelayDeltas
 	} else {
 		t.Fatalf("failed to load inclusion_delay_deltas")
 	}
-	inactivityPenaltyDeltas := new(Deltas)
+	inactivityPenaltyDeltas := new(common.Deltas)
 	if test_util.LoadSpecObj(t, "inactivity_penalty_deltas", inactivityPenaltyDeltas, readPart) {
 		c.Input.Inactivity = inactivityPenaltyDeltas
 	} else {
@@ -60,7 +61,7 @@ func (c *RewardsTest) Load(t *testing.T, readPart test_util.TestPartReader) {
 
 func (c *RewardsTest) Check(t *testing.T) {
 	count := uint64(len(c.Input.Source.Rewards))
-	diffDeltas := func(name string, computed *Deltas, expected *Deltas) {
+	diffDeltas := func(name string, computed *common.Deltas, expected *common.Deltas) {
 		t.Run(name, func(t *testing.T) {
 			var failed bool
 			var buf strings.Builder
@@ -89,15 +90,15 @@ func (c *RewardsTest) Check(t *testing.T) {
 }
 
 func (c *RewardsTest) Run() error {
-	epc, err := c.Spec.NewEpochsContext(c.Pre)
+	epc, err := phase0.NewEpochsContext(c.Spec, c.Pre)
 	if err != nil {
 		return err
 	}
-	process, err := c.Spec.PrepareEpochProcess(context.Background(), epc, c.Pre)
+	process, err := phase0.PrepareEpochProcess(context.Background(), c.Spec, epc, c.Pre)
 	if err != nil {
 		return err
 	}
-	c.Output, err = c.Spec.AttestationRewardsAndPenalties(context.Background(), epc, process, c.Pre)
+	c.Output, err = phase0.AttestationRewardsAndPenalties(context.Background(), c.Spec, epc, process, c.Pre)
 	return err
 }
 

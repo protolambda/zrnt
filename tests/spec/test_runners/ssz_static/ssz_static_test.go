@@ -3,7 +3,8 @@ package ssz_static
 import (
 	"bytes"
 	"encoding/hex"
-	. "github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/eth2/configs"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"github.com/protolambda/ztyp/codec"
@@ -14,18 +15,18 @@ import (
 
 type SSZStaticTestCase struct {
 	TypeName   string
-	Spec       *Spec
+	Spec       *common.Spec
 	Value      interface{}
 	Serialized []byte
 
-	Root Root
+	Root common.Root
 }
 
 func (testCase *SSZStaticTestCase) Run(t *testing.T) {
 	// deserialization is the pre-requisite
 	{
 		r := bytes.NewReader(testCase.Serialized)
-		if obj, ok := testCase.Value.(SpecObj); ok {
+		if obj, ok := testCase.Value.(common.SpecObj); ok {
 			if err := obj.Deserialize(testCase.Spec, codec.NewDecodingReader(r, uint64(len(testCase.Serialized)))); err != nil {
 				t.Fatal(err)
 			}
@@ -42,7 +43,7 @@ func (testCase *SSZStaticTestCase) Run(t *testing.T) {
 		var data []byte
 		{
 			var buf bytes.Buffer
-			if obj, ok := testCase.Value.(SpecObj); ok {
+			if obj, ok := testCase.Value.(common.SpecObj); ok {
 				if err := obj.Serialize(testCase.Spec, codec.NewEncodingWriter(&buf)); err != nil {
 					t.Fatal(err)
 				}
@@ -71,8 +72,8 @@ func (testCase *SSZStaticTestCase) Run(t *testing.T) {
 	t.Run("hash_tree_root", func(t *testing.T) {
 		hfn := tree.GetHashFn()
 
-		var root Root
-		if obj, ok := testCase.Value.(SpecObj); ok {
+		var root common.Root
+		if obj, ok := testCase.Value.(common.SpecObj); ok {
 			root = obj.HashTreeRoot(testCase.Spec, hfn)
 		} else if v, ok := testCase.Value.(tree.HTR); ok {
 			root = v.HashTreeRoot(hfn)
@@ -94,30 +95,30 @@ type ObjData struct {
 }
 
 var objs = []*ObjData{
-	{TypeName: "Fork", Alloc: func() interface{} { return new(Fork) }},
-	{TypeName: "Eth1Data", Alloc: func() interface{} { return new(Eth1Data) }},
-	{TypeName: "AttestationData", Alloc: func() interface{} { return new(AttestationData) }},
-	{TypeName: "IndexedAttestation", Alloc: func() interface{} { return new(IndexedAttestation) }},
-	{TypeName: "DepositData", Alloc: func() interface{} { return new(DepositData) }},
-	{TypeName: "BeaconBlockHeader", Alloc: func() interface{} { return new(BeaconBlockHeader) }},
-	{TypeName: "Validator", Alloc: func() interface{} { return new(Validator) }},
-	{TypeName: "PendingAttestation", Alloc: func() interface{} { return new(PendingAttestation) }},
-	{TypeName: "HistoricalBatch", Alloc: func() interface{} { return new(HistoricalBatch) }},
-	{TypeName: "ProposerSlashing", Alloc: func() interface{} { return new(ProposerSlashing) }},
-	{TypeName: "AttesterSlashing", Alloc: func() interface{} { return new(AttesterSlashing) }},
-	{TypeName: "Attestation", Alloc: func() interface{} { return new(Attestation) }},
-	{TypeName: "Deposit", Alloc: func() interface{} { return new(Deposit) }},
-	{TypeName: "VoluntaryExit", Alloc: func() interface{} { return new(VoluntaryExit) }},
-	{TypeName: "BeaconBlockBody", Alloc: func() interface{} { return new(BeaconBlockBody) }},
-	{TypeName: "BeaconBlock", Alloc: func() interface{} { return new(BeaconBlock) }},
-	{TypeName: "BeaconState", Alloc: func() interface{} { return new(BeaconState) }},
+	{TypeName: "Fork", Alloc: func() interface{} { return new(common.Fork) }},
+	{TypeName: "Eth1Data", Alloc: func() interface{} { return new(common.Eth1Data) }},
+	{TypeName: "AttestationData", Alloc: func() interface{} { return new(phase0.AttestationData) }},
+	{TypeName: "IndexedAttestation", Alloc: func() interface{} { return new(phase0.IndexedAttestation) }},
+	{TypeName: "DepositData", Alloc: func() interface{} { return new(common.DepositData) }},
+	{TypeName: "BeaconBlockHeader", Alloc: func() interface{} { return new(phase0.BeaconBlockHeader) }},
+	{TypeName: "Validator", Alloc: func() interface{} { return new(phase0.Validator) }},
+	{TypeName: "PendingAttestation", Alloc: func() interface{} { return new(phase0.PendingAttestation) }},
+	{TypeName: "HistoricalBatch", Alloc: func() interface{} { return new(phase0.HistoricalBatch) }},
+	{TypeName: "ProposerSlashing", Alloc: func() interface{} { return new(phase0.ProposerSlashing) }},
+	{TypeName: "AttesterSlashing", Alloc: func() interface{} { return new(phase0.AttesterSlashing) }},
+	{TypeName: "Attestation", Alloc: func() interface{} { return new(phase0.Attestation) }},
+	{TypeName: "Deposit", Alloc: func() interface{} { return new(common.Deposit) }},
+	{TypeName: "VoluntaryExit", Alloc: func() interface{} { return new(phase0.VoluntaryExit) }},
+	{TypeName: "BeaconBlockBody", Alloc: func() interface{} { return new(phase0.BeaconBlockBody) }},
+	{TypeName: "BeaconBlock", Alloc: func() interface{} { return new(phase0.BeaconBlock) }},
+	{TypeName: "BeaconState", Alloc: func() interface{} { return new(phase0.BeaconState) }},
 }
 
 type RootsYAML struct {
 	Root string `yaml:"root"`
 }
 
-func (obj *ObjData) runSSZStaticTest(spec *Spec) func(t *testing.T) {
+func (obj *ObjData) runSSZStaticTest(spec *common.Spec) func(t *testing.T) {
 	return func(t *testing.T) {
 
 		test_util.RunHandler(t, "ssz_static/"+obj.TypeName, func(t *testing.T, readPart test_util.TestPartReader) {

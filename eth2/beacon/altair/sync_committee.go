@@ -86,3 +86,45 @@ func (v *SyncCommitteeBitsView) Raw(spec *common.Spec) (SyncCommitteeBits, error
 func SyncCommitteeBitsType(spec *common.Spec) *BitVectorTypeDef {
 	return BitVectorType(spec.SYNC_COMMITTEE_SIZE)
 }
+
+func SyncCommitteePubkeysType(spec *common.Spec) VectorTypeDef {
+	return VectorType(common.BLSPubkeyType, spec.SYNC_COMMITTEE_SIZE)
+}
+
+type SyncCommitteePubkeysView struct {
+	*ComplexVectorView
+}
+
+func AsSyncCommitteePubkeys(v View, err error) (*SyncCommitteePubkeysView, error) {
+	c, err := AsComplexVector(v, err)
+	return &SyncCommitteePubkeysView{c}, err
+}
+
+func SyncCommitteePubkeyAggregatesType(spec *common.Spec) *ComplexVectorTypeDef {
+	return ComplexVectorType(common.BLSPubkeyType, spec.SYNC_COMMITTEE_SIZE/spec.SYNC_SUBCOMMITTEE_SIZE)
+}
+
+type SyncCommitteePubkeyAggregatesView struct {
+	*ComplexVectorView
+}
+
+func AsSyncCommitteePubkeyAggregates(v View, err error) (*SyncCommitteePubkeyAggregatesView, error) {
+	c, err := AsComplexVector(v, err)
+	return &SyncCommitteePubkeyAggregatesView{c}, err
+}
+
+func SyncCommitteeType(spec *common.Spec) *ContainerTypeDef {
+	return ContainerType("SyncCommittee", []FieldDef{
+		{"pubkeys", SyncCommitteePubkeysType(spec)},
+		{"pubkey_aggregates", SyncCommitteePubkeyAggregatesType(spec)},
+	})
+}
+
+type SyncCommitteeView struct {
+	*ContainerView
+}
+
+func AsSyncCommittee(v View, err error) (*SyncCommitteeView, error) {
+	c, err := AsContainer(v, err)
+	return &SyncCommitteeView{c}, err
+}

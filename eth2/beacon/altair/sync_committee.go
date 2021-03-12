@@ -91,6 +91,35 @@ func SyncCommitteePubkeysType(spec *common.Spec) VectorTypeDef {
 	return VectorType(common.BLSPubkeyType, spec.SYNC_COMMITTEE_SIZE)
 }
 
+type SyncCommitteePubkeys []common.BLSPubkey
+
+func (li *SyncCommitteePubkeys) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
+	*li = make([]common.BLSPubkey, spec.SYNC_COMMITTEE_SIZE, spec.SYNC_COMMITTEE_SIZE)
+	return dr.Vector(func(i uint64) codec.Deserializable {
+		return &(*li)[i]
+	}, common.BLSPubkeyType.Size, spec.SYNC_COMMITTEE_SIZE)
+}
+
+func (a SyncCommitteePubkeys) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
+	return w.Vector(func(i uint64) codec.Serializable {
+		return &a[i]
+	}, common.BLSPubkeyType.Size, spec.SYNC_COMMITTEE_SIZE)
+}
+
+func (a SyncCommitteePubkeys) ByteLength(spec *common.Spec) uint64 {
+	return spec.SYNC_COMMITTEE_SIZE * common.BLSPubkeyType.Size
+}
+
+func (a *SyncCommitteePubkeys) FixedLength(spec *common.Spec) uint64 {
+	return spec.SYNC_COMMITTEE_SIZE * common.BLSPubkeyType.Size
+}
+
+func (li SyncCommitteePubkeys) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
+	return hFn.ComplexVectorHTR(func(i uint64) tree.HTR {
+		return &li[i]
+	}, spec.SYNC_COMMITTEE_SIZE)
+}
+
 type SyncCommitteePubkeysView struct {
 	*ComplexVectorView
 }
@@ -102,6 +131,36 @@ func AsSyncCommitteePubkeys(v View, err error) (*SyncCommitteePubkeysView, error
 
 func SyncCommitteePubkeyAggregatesType(spec *common.Spec) *ComplexVectorTypeDef {
 	return ComplexVectorType(common.BLSPubkeyType, spec.SYNC_COMMITTEE_SIZE/spec.SYNC_SUBCOMMITTEE_SIZE)
+}
+
+type SyncCommitteePubkeyAggregates []common.BLSPubkey
+
+func (li *SyncCommitteePubkeyAggregates) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
+	s := spec.SYNC_COMMITTEE_SIZE/spec.SYNC_SUBCOMMITTEE_SIZE
+	*li = make([]common.BLSPubkey, s, s)
+	return dr.Vector(func(i uint64) codec.Deserializable {
+		return &(*li)[i]
+	}, common.BLSPubkeyType.Size, s)
+}
+
+func (a SyncCommitteePubkeyAggregates) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
+	return w.Vector(func(i uint64) codec.Serializable {
+		return &a[i]
+	}, common.BLSPubkeyType.Size, spec.SYNC_COMMITTEE_SIZE/spec.SYNC_SUBCOMMITTEE_SIZE)
+}
+
+func (a SyncCommitteePubkeyAggregates) ByteLength(spec *common.Spec) uint64 {
+	return spec.SYNC_COMMITTEE_SIZE/spec.SYNC_SUBCOMMITTEE_SIZE * common.BLSPubkeyType.Size
+}
+
+func (a *SyncCommitteePubkeyAggregates) FixedLength(spec *common.Spec) uint64 {
+	return spec.SYNC_COMMITTEE_SIZE/spec.SYNC_SUBCOMMITTEE_SIZE * common.BLSPubkeyType.Size
+}
+
+func (li SyncCommitteePubkeyAggregates) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
+	return hFn.ComplexVectorHTR(func(i uint64) tree.HTR {
+		return &li[i]
+	}, spec.SYNC_COMMITTEE_SIZE/spec.SYNC_SUBCOMMITTEE_SIZE)
 }
 
 type SyncCommitteePubkeyAggregatesView struct {
@@ -118,6 +177,31 @@ func SyncCommitteeType(spec *common.Spec) *ContainerTypeDef {
 		{"pubkeys", SyncCommitteePubkeysType(spec)},
 		{"pubkey_aggregates", SyncCommitteePubkeyAggregatesType(spec)},
 	})
+}
+
+type SyncCommittee struct {
+	CommitteePubkeys SyncCommitteePubkeys
+	PubkeyAggregates SyncCommitteePubkeyAggregates
+}
+
+func (a *SyncCommittee) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
+	return dr.FixedLenContainer(spec.Wrap(&a.CommitteePubkeys), spec.Wrap(&a.PubkeyAggregates))
+}
+
+func (a *SyncCommittee) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
+	return w.FixedLenContainer(spec.Wrap(&a.CommitteePubkeys), spec.Wrap(&a.PubkeyAggregates))
+}
+
+func (a *SyncCommittee) ByteLength(spec *common.Spec) uint64 {
+	return (spec.SYNC_COMMITTEE_SIZE + spec.SYNC_COMMITTEE_SIZE/spec.SYNC_SUBCOMMITTEE_SIZE) * common.BLSPubkeyType.Size
+}
+
+func (*SyncCommittee) FixedLength(spec *common.Spec) uint64 {
+	return (spec.SYNC_COMMITTEE_SIZE + spec.SYNC_COMMITTEE_SIZE/spec.SYNC_SUBCOMMITTEE_SIZE) * common.BLSPubkeyType.Size
+}
+
+func (p *SyncCommittee) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
+	return hFn.HashTreeRoot(spec.Wrap(&p.CommitteePubkeys), spec.Wrap(&p.PubkeyAggregates))
 }
 
 type SyncCommitteeView struct {

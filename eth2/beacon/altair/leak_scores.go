@@ -52,7 +52,7 @@ func AsLeakScores(v View, err error) (*LeakScoresView, error) {
 }
 
 func (v *LeakScoresView) GetScore(index common.ValidatorIndex) (Uint64View, error) {
-	return v.Get(uint64(index))
+	return AsUint64(v.Get(uint64(index)))
 }
 
 func (v *LeakScoresView) SetScore(index common.ValidatorIndex, score Uint64View) error {

@@ -30,8 +30,8 @@ type BeaconState struct {
 	RandaoMixes phase0.RandaoMixes       `json:"randao_mixes" yaml:"randao_mixes"`
 	Slashings   phase0.SlashingsHistory  `json:"slashings" yaml:"slashings"`
 	// Participation
-	PreviousEpochParticipation struct{} `json:"previous_epoch_participation" yaml:"previous_epoch_participation"`
-	CurrentEpochParticipation  struct{} `json:"current_epoch_participation" yaml:"current_epoch_participation"`
+	PreviousEpochParticipation ParticipationRegistry `json:"previous_epoch_participation" yaml:"previous_epoch_participation"`
+	CurrentEpochParticipation  ParticipationRegistry `json:"current_epoch_participation" yaml:"current_epoch_participation"`
 	// Finality
 	JustificationBits           phase0.JustificationBits `json:"justification_bits" yaml:"justification_bits"`
 	PreviousJustifiedCheckpoint common.Checkpoint        `json:"previous_justified_checkpoint" yaml:"previous_justified_checkpoint"`
@@ -161,8 +161,8 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 		// Slashings
 		{"slashings", phase0.SlashingsType(spec)},
 		// Participation
-		{"previous_epoch_participation", nil}, // TODO
-		{"current_epoch_participation", nil},  // TODO
+		{"previous_epoch_participation", ParticipationRegistryType(spec)},
+		{"current_epoch_participation", ParticipationRegistryType(spec)},
 		// Finality
 		{"justification_bits", phase0.JustificationBitsType},
 		{"previous_justified_checkpoint", common.CheckpointType},
@@ -288,12 +288,12 @@ func (state *BeaconStateView) Slashings() (*phase0.SlashingsView, error) {
 	return phase0.AsSlashings(state.Get(_stateSlashings))
 }
 
-func (state *BeaconStateView) PreviousEpochParticipation() (interface{}, error) {
-	return nil, nil // TODO
+func (state *BeaconStateView) PreviousEpochParticipation() (*ParticipationRegistryView, error) {
+	return AsParticipationRegistry(state.Get(_statePreviousEpochParticipation))
 }
 
-func (state *BeaconStateView) CurrentEpochParticipation() (interface{}, error) {
-	return nil, nil // TODO
+func (state *BeaconStateView) CurrentEpochParticipation() (*ParticipationRegistryView, error) {
+	return AsParticipationRegistry(state.Get(_stateCurrentEpochParticipation))
 }
 
 func (state *BeaconStateView) JustificationBits() (*phase0.JustificationBitsView, error) {

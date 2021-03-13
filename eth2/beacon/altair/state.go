@@ -21,9 +21,9 @@ type BeaconState struct {
 	StateRoots        phase0.HistoricalBatchRoots `json:"state_roots" yaml:"state_roots"`
 	HistoricalRoots   phase0.HistoricalRoots      `json:"historical_roots" yaml:"historical_roots"`
 	// Eth1
-	Eth1Data      common.Eth1Data     `json:"eth1_data" yaml:"eth1_data"`
-	Eth1DataVotes phase0.Eth1DataVotes       `json:"eth1_data_votes" yaml:"eth1_data_votes"`
-	DepositIndex  common.DepositIndex `json:"eth1_deposit_index" yaml:"eth1_deposit_index"`
+	Eth1Data      common.Eth1Data      `json:"eth1_data" yaml:"eth1_data"`
+	Eth1DataVotes phase0.Eth1DataVotes `json:"eth1_data_votes" yaml:"eth1_data_votes"`
+	DepositIndex  common.DepositIndex  `json:"eth1_deposit_index" yaml:"eth1_deposit_index"`
 	// Registry
 	Validators  phase0.ValidatorRegistry `json:"validators" yaml:"validators"`
 	Balances    phase0.Balances          `json:"balances" yaml:"balances"`
@@ -31,17 +31,17 @@ type BeaconState struct {
 	Slashings   phase0.SlashingsHistory  `json:"slashings" yaml:"slashings"`
 	// Participation
 	PreviousEpochParticipation struct{} `json:"previous_epoch_participation" yaml:"previous_epoch_participation"`
-	CurrentEpochParticipation struct{} `json:"current_epoch_participation" yaml:"current_epoch_participation"`
+	CurrentEpochParticipation  struct{} `json:"current_epoch_participation" yaml:"current_epoch_participation"`
 	// Finality
 	JustificationBits           phase0.JustificationBits `json:"justification_bits" yaml:"justification_bits"`
-	PreviousJustifiedCheckpoint common.Checkpoint `json:"previous_justified_checkpoint" yaml:"previous_justified_checkpoint"`
-	CurrentJustifiedCheckpoint  common.Checkpoint `json:"current_justified_checkpoint" yaml:"current_justified_checkpoint"`
-	FinalizedCheckpoint         common.Checkpoint `json:"finalized_checkpoint" yaml:"finalized_checkpoint"`
+	PreviousJustifiedCheckpoint common.Checkpoint        `json:"previous_justified_checkpoint" yaml:"previous_justified_checkpoint"`
+	CurrentJustifiedCheckpoint  common.Checkpoint        `json:"current_justified_checkpoint" yaml:"current_justified_checkpoint"`
+	FinalizedCheckpoint         common.Checkpoint        `json:"finalized_checkpoint" yaml:"finalized_checkpoint"`
 	// Light client sync committees
 	CurrentSyncCommittee SyncCommittee `json:"current_sync_committee" yaml:"current_sync_committee"`
-	NextSyncCommittee SyncCommittee `json:"next_sync_committee" yaml:"next_sync_committee"`
+	NextSyncCommittee    SyncCommittee `json:"next_sync_committee" yaml:"next_sync_committee"`
 	// Leak
-	LeakScores struct{} `json:"leak_scores" yaml:"leak_scores"`
+	LeakScores LeakScores `json:"leak_scores" yaml:"leak_scores"`
 }
 
 func (v *BeaconState) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
@@ -56,7 +56,7 @@ func (v *BeaconState) Deserialize(spec *common.Spec, dr *codec.DecodingReader) e
 		&v.PreviousJustifiedCheckpoint, &v.CurrentJustifiedCheckpoint,
 		&v.FinalizedCheckpoint,
 		spec.Wrap(&v.CurrentSyncCommittee), spec.Wrap(&v.NextSyncCommittee),
-		&v.LeakScores)
+		spec.Wrap(&v.LeakScores))
 }
 
 func (v *BeaconState) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
@@ -71,7 +71,7 @@ func (v *BeaconState) Serialize(spec *common.Spec, w *codec.EncodingWriter) erro
 		&v.PreviousJustifiedCheckpoint, &v.CurrentJustifiedCheckpoint,
 		&v.FinalizedCheckpoint,
 		spec.Wrap(&v.CurrentSyncCommittee), spec.Wrap(&v.NextSyncCommittee),
-		&v.LeakScores)
+		spec.Wrap(&v.LeakScores))
 }
 
 func (v *BeaconState) ByteLength(spec *common.Spec) uint64 {
@@ -86,7 +86,7 @@ func (v *BeaconState) ByteLength(spec *common.Spec) uint64 {
 		&v.PreviousJustifiedCheckpoint, &v.CurrentJustifiedCheckpoint,
 		&v.FinalizedCheckpoint,
 		spec.Wrap(&v.CurrentSyncCommittee), spec.Wrap(&v.NextSyncCommittee),
-		&v.LeakScores)
+		spec.Wrap(&v.LeakScores))
 }
 
 func (*BeaconState) FixedLength(*common.Spec) uint64 {
@@ -105,7 +105,7 @@ func (v *BeaconState) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Ro
 		&v.PreviousJustifiedCheckpoint, &v.CurrentJustifiedCheckpoint,
 		&v.FinalizedCheckpoint,
 		spec.Wrap(&v.CurrentSyncCommittee), spec.Wrap(&v.NextSyncCommittee),
-		&v.LeakScores)
+		spec.Wrap(&v.LeakScores))
 }
 
 // Hack to make state fields consistent and verifiable without using many hardcoded indices
@@ -162,7 +162,7 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 		{"slashings", phase0.SlashingsType(spec)},
 		// Participation
 		{"previous_epoch_participation", nil}, // TODO
-		{"current_epoch_participation", nil}, // TODO
+		{"current_epoch_participation", nil},  // TODO
 		// Finality
 		{"justification_bits", phase0.JustificationBitsType},
 		{"previous_justified_checkpoint", common.CheckpointType},
@@ -171,7 +171,7 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 		// Light client sync committees
 		{"current_sync_committee", SyncCommitteeType(spec)},
 		{"next_sync_committee", SyncCommitteeType(spec)},
-		{"leak_scores", nil}, // TODO
+		{"leak_scores", LeakScoresType(spec)},
 	})
 }
 
@@ -320,9 +320,8 @@ func (state *BeaconStateView) NextSyncCommittee() (*SyncCommitteeView, error) {
 	return AsSyncCommittee(state.Get(_nextSyncCommittee))
 }
 
-func (state *BeaconStateView) LeakScores() (interface{}, error) {
-	// TODO
-	return nil, nil
+func (state *BeaconStateView) LeakScores() (*LeakScoresView, error) {
+	return AsLeakScores(state.Get(_leakScores))
 }
 
 func (state *BeaconStateView) IsValidIndex(index common.ValidatorIndex) (bool, error) {

@@ -136,7 +136,7 @@ func SyncCommitteePubkeyAggregatesType(spec *common.Spec) *ComplexVectorTypeDef 
 type SyncCommitteePubkeyAggregates []common.BLSPubkey
 
 func (li *SyncCommitteePubkeyAggregates) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
-	s := spec.SYNC_COMMITTEE_SIZE/spec.SYNC_SUBCOMMITTEE_SIZE
+	s := spec.SYNC_COMMITTEE_SIZE / spec.SYNC_SUBCOMMITTEE_SIZE
 	*li = make([]common.BLSPubkey, s, s)
 	return dr.Vector(func(i uint64) codec.Deserializable {
 		return &(*li)[i]
@@ -150,11 +150,11 @@ func (a SyncCommitteePubkeyAggregates) Serialize(spec *common.Spec, w *codec.Enc
 }
 
 func (a SyncCommitteePubkeyAggregates) ByteLength(spec *common.Spec) uint64 {
-	return spec.SYNC_COMMITTEE_SIZE/spec.SYNC_SUBCOMMITTEE_SIZE * common.BLSPubkeyType.Size
+	return spec.SYNC_COMMITTEE_SIZE / spec.SYNC_SUBCOMMITTEE_SIZE * common.BLSPubkeyType.Size
 }
 
 func (a *SyncCommitteePubkeyAggregates) FixedLength(spec *common.Spec) uint64 {
-	return spec.SYNC_COMMITTEE_SIZE/spec.SYNC_SUBCOMMITTEE_SIZE * common.BLSPubkeyType.Size
+	return spec.SYNC_COMMITTEE_SIZE / spec.SYNC_SUBCOMMITTEE_SIZE * common.BLSPubkeyType.Size
 }
 
 func (li SyncCommitteePubkeyAggregates) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {

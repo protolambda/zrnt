@@ -212,3 +212,14 @@ func AsSyncCommittee(v View, err error) (*SyncCommitteeView, error) {
 	c, err := AsContainer(v, err)
 	return &SyncCommitteeView{c}, err
 }
+
+func SyncCommitteeIndices(state *BeaconStateView, epoch common.Epoch) []common.ValidatorIndex {
+	// TODO
+	return nil
+}
+
+func ComputeSyncCommittee(state *BeaconStateView, epoch common.Epoch) *SyncCommittee {
+	// TODO
+	return nil
+}
+

@@ -56,24 +56,20 @@ func (state *BeaconStateView) loadIndicesBounded() ([]BoundedIndex, error) {
 	if err != nil {
 		return nil, err
 	}
-	valCount, err := validators.Length()
+	valCount, err := validators.ValidatorCount()
 	if err != nil {
 		return nil, err
 	}
 	indicesBounded := make([]BoundedIndex, valCount, valCount)
-	valIter := validators.ReadonlyIter()
+	valIterNext := validators.Iter()
 	i := common.ValidatorIndex(0)
 	for {
-		valContainer, ok, err := valIter.Next()
+		val, ok, err := valIterNext()
 		if err != nil {
 			return nil, err
 		}
 		if !ok {
 			break
-		}
-		val, err := AsValidator(valContainer, nil)
-		if err != nil {
-			return nil, err
 		}
 		actiEp, err := val.ActivationEpoch()
 		if err != nil {
@@ -110,7 +106,7 @@ func NewPubkeyCache(state *BeaconStateView) (*PubkeyCache, error) {
 	if err != nil {
 		return nil, err
 	}
-	valCount, err := vals.Length()
+	valCount, err := vals.ValidatorCount()
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +118,8 @@ func NewPubkeyCache(state *BeaconStateView) (*PubkeyCache, error) {
 	}
 	currentCount := uint64(len(pc.idx2pub))
 	for i := currentCount; i < valCount; i++ {
-		v, err := AsValidator(vals.Get(i))
+		idx := common.ValidatorIndex(i)
+		v, err := vals.Validator(idx)
 		if err != nil {
 			return nil, err
 		}
@@ -130,7 +127,6 @@ func NewPubkeyCache(state *BeaconStateView) (*PubkeyCache, error) {
 		if err != nil {
 			return nil, err
 		}
-		idx := common.ValidatorIndex(i)
 		pc.pub2idx[pub] = idx
 		pc.idx2pub = append(pc.idx2pub, common.CachedPubkey{Compressed: pub})
 	}
@@ -329,7 +325,7 @@ func (epc *EpochsContext) resetProposers(state *BeaconStateView) error {
 	if err != nil {
 		return err
 	}
-	epochSeed, err := mixes.GetSeed(epc.Spec, epc.CurrentEpoch.Epoch, epc.Spec.DOMAIN_BEACON_PROPOSER)
+	epochSeed, err := common.GetSeed(epc.Spec, mixes, epc.CurrentEpoch.Epoch, epc.Spec.DOMAIN_BEACON_PROPOSER)
 	if err != nil {
 		return err
 	}

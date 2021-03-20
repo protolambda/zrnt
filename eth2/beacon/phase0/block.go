@@ -33,8 +33,8 @@ func (b *SignedBeaconBlock) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) com
 	return hFn.HashTreeRoot(spec.Wrap(&b.Message), b.Signature)
 }
 
-func (block *SignedBeaconBlock) SignedHeader(spec *common.Spec) *SignedBeaconBlockHeader {
-	return &SignedBeaconBlockHeader{
+func (block *SignedBeaconBlock) SignedHeader(spec *common.Spec) *common.SignedBeaconBlockHeader {
+	return &common.SignedBeaconBlockHeader{
 		Message:   *block.Message.Header(spec),
 		Signature: block.Signature,
 	}
@@ -85,8 +85,8 @@ func SignedBeaconBlockType(spec *common.Spec) *ContainerTypeDef {
 	})
 }
 
-func (block *BeaconBlock) Header(spec *common.Spec) *BeaconBlockHeader {
-	return &BeaconBlockHeader{
+func (block *BeaconBlock) Header(spec *common.Spec) *common.BeaconBlockHeader {
+	return &common.BeaconBlockHeader{
 		Slot:          block.Slot,
 		ProposerIndex: block.ProposerIndex,
 		ParentRoot:    block.ParentRoot,

@@ -37,7 +37,7 @@ func (v *FlatValidator) IsActive(epoch common.Epoch) bool {
 	return v.ActivationEpoch <= epoch && epoch < v.ExitEpoch
 }
 
-func ToFlatValidator(v *ValidatorView) (*FlatValidator, error) {
+func ToFlatValidator(v common.Validator) (*FlatValidator, error) {
 	/*
 	   pubkey: BLSPubkey
 	   withdrawal_credentials: Bytes32

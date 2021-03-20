@@ -54,15 +54,6 @@ type RandaoMixes interface {
 	SetRandomMix(epoch Epoch, mix Root) error
 }
 
-// Prepare the randao mix for the given epoch by copying over the mix from the previous epoch.
-func PrepareRandao(mixes RandaoMixes, epoch Epoch) error {
-	prev, err := mixes.GetRandomMix(epoch.Previous())
-	if err != nil {
-		return err
-	}
-	return mixes.SetRandomMix(epoch, prev)
-}
-
 type Slashings interface {
 	GetSlashingsValue(epoch Epoch) (Gwei, error)
 	ResetSlashings(epoch Epoch) error

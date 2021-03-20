@@ -44,7 +44,7 @@ func PrepareEpochProcess(ctx context.Context, spec *common.Spec, epc *EpochsCont
 	if err != nil {
 		return nil, err
 	}
-	count, err := validators.Length()
+	count, err := validators.ValidatorCount()
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func PrepareEpochProcess(ctx context.Context, spec *common.Spec, epc *EpochsCont
 	exitQueueEnd := spec.ComputeActivationExitEpoch(currentEpoch)
 
 	activeCount := uint64(0)
-	valIter := validators.ReadonlyIter()
+	valIterNext := validators.Iter()
 	for i := common.ValidatorIndex(0); true; i++ {
 		// every 1024 validators, check if the context is done.
 		if i&((1<<10)-1) == 0 {
@@ -73,16 +73,12 @@ func PrepareEpochProcess(ctx context.Context, spec *common.Spec, epc *EpochsCont
 				break
 			}
 		}
-		valContainer, ok, err := valIter.Next()
+		val, ok, err := valIterNext()
 		if err != nil {
 			return nil, err
 		}
 		if !ok {
 			break
-		}
-		val, err := AsValidator(valContainer, nil)
-		if err != nil {
-			return nil, err
 		}
 		flat, err := ToFlatValidator(val)
 		if err != nil {
@@ -161,7 +157,7 @@ func PrepareEpochProcess(ctx context.Context, spec *common.Spec, epc *EpochsCont
 		if err != nil {
 			return err
 		}
-		actualTargetBlockRoot, err := GetBlockRootAtSlot(spec, state, startSlot)
+		actualTargetBlockRoot, err := common.GetBlockRootAtSlot(spec, state, startSlot)
 		if err != nil {
 			return err
 		}
@@ -194,7 +190,7 @@ func PrepareEpochProcess(ctx context.Context, spec *common.Spec, epc *EpochsCont
 				return err
 			}
 
-			attBlockRoot, err := GetBlockRootAtSlot(spec, state, att.Data.Slot)
+			attBlockRoot, err := common.GetBlockRootAtSlot(spec, state, att.Data.Slot)
 			if err != nil {
 				return err
 			}

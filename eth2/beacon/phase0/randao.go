@@ -2,7 +2,6 @@ package phase0
 
 import (
 	"context"
-	"encoding/binary"
 	"errors"
 
 	"github.com/protolambda/zrnt/eth2/beacon/common"
@@ -66,25 +65,6 @@ func (mixes *RandaoMixesView) SetRandomMix(epoch common.Epoch, mix common.Root) 
 	i := uint64(epoch) % mixes.VectorLength
 	r := RootView(mix)
 	return mixes.Set(i, &r)
-}
-
-func (mixes *RandaoMixesView) GetSeed(spec *common.Spec, epoch common.Epoch, domainType common.BLSDomainType) (common.Root, error) {
-	buf := make([]byte, 4+8+32)
-
-	// domain type
-	copy(buf[0:4], domainType[:])
-
-	// epoch
-	binary.LittleEndian.PutUint64(buf[4:4+8], uint64(epoch))
-
-	// Avoid underflow
-	mix, err := mixes.GetRandomMix(epoch + spec.EPOCHS_PER_HISTORICAL_VECTOR - spec.MIN_SEED_LOOKAHEAD - 1)
-	if err != nil {
-		return common.Root{}, err
-	}
-	copy(buf[4+8:], mix[:])
-
-	return Hash(buf), nil
 }
 
 func SeedRandao(spec *common.Spec, seed common.Root) (*RandaoMixesView, error) {

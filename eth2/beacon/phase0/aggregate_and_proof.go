@@ -32,7 +32,11 @@ func AggregateSelectionProofSigningRoot(spec *common.Spec, domainFn common.BLSDo
 func ValidateAggregateSelectionProof(spec *common.Spec, epc *EpochsContext, state *BeaconStateView,
 	slot common.Slot, commIndex common.CommitteeIndex, aggregator common.ValidatorIndex, selectionProof common.BLSSignature) (bool, error) {
 	// check if the aggregator even exists
-	if valid, err := state.IsValidIndex(aggregator); err != nil {
+	vals, err := state.Validators()
+	if err != nil {
+		return false, err
+	}
+	if valid, err := vals.IsValidIndex(aggregator); err != nil {
 		return false, err
 	} else if !valid {
 		return false, nil
@@ -59,7 +63,10 @@ func ValidateAggregateSelectionProof(spec *common.Spec, epc *EpochsContext, stat
 		return false, nil
 	}
 	// check the selection proof
-	sigRoot, err := AggregateSelectionProofSigningRoot(spec, state.GetDomain, slot)
+	sigRoot, err := AggregateSelectionProofSigningRoot(spec,
+		func(typ common.BLSDomainType, epoch common.Epoch) (common.BLSDomain, error) {
+			return common.GetDomain(state, typ, epoch)
+		}, slot)
 	if err != nil {
 		return false, err
 	}

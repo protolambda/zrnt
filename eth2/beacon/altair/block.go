@@ -34,8 +34,8 @@ func (b *SignedBeaconBlock) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) com
 	return hFn.HashTreeRoot(spec.Wrap(&b.Message), b.Signature)
 }
 
-func (block *SignedBeaconBlock) SignedHeader(spec *common.Spec) *phase0.SignedBeaconBlockHeader {
-	return &phase0.SignedBeaconBlockHeader{
+func (block *SignedBeaconBlock) SignedHeader(spec *common.Spec) *common.SignedBeaconBlockHeader {
+	return &common.SignedBeaconBlockHeader{
 		Message:   *block.Message.Header(spec),
 		Signature: block.Signature,
 	}
@@ -86,8 +86,8 @@ func SignedBeaconBlockType(spec *common.Spec) *ContainerTypeDef {
 	})
 }
 
-func (block *BeaconBlock) Header(spec *common.Spec) *phase0.BeaconBlockHeader {
-	return &phase0.BeaconBlockHeader{
+func (block *BeaconBlock) Header(spec *common.Spec) *common.BeaconBlockHeader {
+	return &common.BeaconBlockHeader{
 		Slot:          block.Slot,
 		ProposerIndex: block.ProposerIndex,
 		ParentRoot:    block.ParentRoot,
@@ -107,8 +107,7 @@ type BeaconBlockBody struct {
 	Deposits          phase0.Deposits          `json:"deposits" yaml:"deposits"`
 	VoluntaryExits    phase0.VoluntaryExits    `json:"voluntary_exits" yaml:"voluntary_exits"`
 
-	SyncCommitteeBits      SyncCommitteeBits   `json:"sync_committee_bits" yaml:"sync_committee_bits"`
-	SyncCommitteeSignature common.BLSSignature `json:"sync_committee_signature" yaml:"sync_committee_signature"`
+	SyncAggregate SyncAggregate `json:"sync_aggregate" yaml:"sync_aggregate"`
 }
 
 func (b *BeaconBlockBody) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
@@ -117,7 +116,7 @@ func (b *BeaconBlockBody) Deserialize(spec *common.Spec, dr *codec.DecodingReade
 		&b.Graffiti, spec.Wrap(&b.ProposerSlashings),
 		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
-		spec.Wrap(&b.SyncCommitteeBits), &b.SyncCommitteeSignature,
+		spec.Wrap(&b.SyncAggregate),
 	)
 }
 
@@ -127,7 +126,7 @@ func (b *BeaconBlockBody) Serialize(spec *common.Spec, w *codec.EncodingWriter) 
 		&b.Graffiti, spec.Wrap(&b.ProposerSlashings),
 		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
-		spec.Wrap(&b.SyncCommitteeBits), &b.SyncCommitteeSignature,
+		spec.Wrap(&b.SyncAggregate),
 	)
 }
 
@@ -137,7 +136,7 @@ func (b *BeaconBlockBody) ByteLength(spec *common.Spec) uint64 {
 		&b.Graffiti, spec.Wrap(&b.ProposerSlashings),
 		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
-		spec.Wrap(&b.SyncCommitteeBits), &b.SyncCommitteeSignature,
+		spec.Wrap(&b.SyncAggregate),
 	)
 }
 
@@ -151,7 +150,7 @@ func (b *BeaconBlockBody) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) commo
 		b.Graffiti, spec.Wrap(&b.ProposerSlashings),
 		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
-		spec.Wrap(&b.SyncCommitteeBits), &b.SyncCommitteeSignature,
+		spec.Wrap(&b.SyncAggregate),
 	)
 }
 
@@ -185,7 +184,6 @@ func BeaconBlockBodyType(spec *common.Spec) *ContainerTypeDef {
 		{"attestations", phase0.BlockAttestationsType(spec)},
 		{"deposits", phase0.BlockDepositsType(spec)},
 		{"voluntary_exits", phase0.BlockVoluntaryExitsType(spec)},
-		{"sync_committee_bits", SyncCommitteeBitsType(spec)},
-		{"sync_committee_signature", common.BLSSignatureType},
+		{"sync_aggregate", SyncAggregateType(spec)},
 	})
 }

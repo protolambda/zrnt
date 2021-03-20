@@ -2,6 +2,7 @@ package altair
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/bitfields"
@@ -219,6 +220,69 @@ func SyncCommitteeIndices(state *BeaconStateView, epoch common.Epoch) []common.V
 }
 
 func ComputeSyncCommittee(state *BeaconStateView, epoch common.Epoch) *SyncCommittee {
+	// TODO
+	return nil
+}
+
+func SyncAggregateType(spec *common.Spec) *ContainerTypeDef {
+	return ContainerType("SyncAggregate", []FieldDef{
+		{"sync_committee_bits", SyncCommitteeBitsType(spec)},
+		{"sync_committee_signature", common.BLSSignatureType},
+	})
+}
+
+type SyncAggregate struct {
+	SyncCommitteeBits      SyncCommitteeBits   `json:"sync_committee_bits" yaml:"sync_committee_bits"`
+	SyncCommitteeSignature common.BLSSignature `json:"sync_committee_signature" yaml:"sync_committee_signature"`
+}
+
+func (agg *SyncAggregate) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
+	return dr.Container(
+		spec.Wrap(&agg.SyncCommitteeBits),
+		&agg.SyncCommitteeSignature,
+	)
+}
+
+func (agg *SyncAggregate) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
+	return w.Container(
+		spec.Wrap(&agg.SyncCommitteeBits),
+		&agg.SyncCommitteeSignature,
+	)
+}
+
+func (agg *SyncAggregate) ByteLength(spec *common.Spec) uint64 {
+	return codec.ContainerLength(
+		spec.Wrap(&agg.SyncCommitteeBits),
+		&agg.SyncCommitteeSignature,
+	)
+}
+
+func (agg *SyncAggregate) FixedLength(*common.Spec) uint64 {
+	return 0
+}
+
+func (agg *SyncAggregate) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
+	return hFn.HashTreeRoot(
+		spec.Wrap(&agg.SyncCommitteeBits),
+		&agg.SyncCommitteeSignature,
+	)
+}
+
+type SyncAggregateView struct {
+	*ContainerView
+}
+
+func AsSyncAggregate(v View, err error) (*SyncAggregateView, error) {
+	c, err := AsContainer(v, err)
+	return &SyncAggregateView{c}, err
+}
+
+func ProcessSyncCommittee(ctx context.Context, spec *common.Spec, state *BeaconStateView, agg *SyncAggregate) error {
+	// TODO
+	return nil
+}
+
+func ProcessSyncCommitteeUpdates(ctx context.Context, spec *common.Spec, state common.BeaconState) error {
 	// TODO
 	return nil
 }

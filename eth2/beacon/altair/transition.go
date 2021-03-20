@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
-	"github.com/protolambda/ztyp/tree"
 )
 
 func ProcessEpoch(ctx context.Context, spec *common.Spec, epc *phase0.EpochsContext, state *BeaconStateView) error {
@@ -24,16 +23,25 @@ func ProcessEpoch(ctx context.Context, spec *common.Spec, epc *phase0.EpochsCont
 	if err := phase0.ProcessEpochSlashings(ctx, spec, epc, process, state); err != nil {
 		return err
 	}
-	if err := phase0.ProcessEffectiveBalanceUpdates(ctx, spec, epc, process, state); err != nil {
+	if err := phase0.ProcessEth1DataReset(ctx, spec, epc, process, state); err != nil {
 		return err
 	}
-	if err := phase0.ProcessEth1DataReset(ctx, spec, epc, process, state); err != nil {
+	if err := phase0.ProcessEffectiveBalanceUpdates(ctx, spec, epc, process, state); err != nil {
 		return err
 	}
 	if err := phase0.ProcessSlashingsReset(ctx, spec, epc, process, state); err != nil {
 		return err
 	}
 	if err := phase0.ProcessRandaoMixesReset(ctx, spec, epc, process, state); err != nil {
+		return err
+	}
+	if err := phase0.ProcessHistoricalRootsUpdate(ctx, spec, epc, process, state); err != nil {
+		return err
+	}
+	if err := ProcessParticipationFlagUpdates(ctx, spec, state); err != nil {
+		return err
+	}
+	if err := ProcessSyncCommitteeUpdates(ctx, spec, state); err != nil {
 		return err
 	}
 	return nil
@@ -64,13 +72,15 @@ func ProcessBlock(ctx context.Context, spec *common.Spec, state *BeaconStateView
 	if err := phase0.ProcessAttestations(ctx, spec, epc, state, body.Attestations); err != nil {
 		return err
 	}
-	// TODO new deposit processing
+	// Note: state.AddValidator changed in Altair, but the deposit processing itself stayed the same.
 	if err := phase0.ProcessDeposits(ctx, spec, epc, state, body.Deposits); err != nil {
 		return err
 	}
 	if err := phase0.ProcessVoluntaryExits(ctx, spec, epc, state, body.VoluntaryExits); err != nil {
 		return err
 	}
-	ProcessSyncCommittee(ctx, spec, body.Sync)
+	if err := ProcessSyncCommittee(ctx, spec, state, &body.SyncAggregate); err != nil {
+		return err
+	}
 	return nil
 }

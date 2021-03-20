@@ -1,6 +1,7 @@
 package altair
 
 import (
+	"context"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
@@ -104,4 +105,9 @@ func (v *ParticipationRegistryView) GetScore(index common.ValidatorIndex) (Parti
 
 func (v *ParticipationRegistryView) SetScore(index common.ValidatorIndex, score ParticipationFlags) error {
 	return v.Set(uint64(index), Uint8View(score))
+}
+
+func ProcessParticipationFlagUpdates(ctx context.Context, spec *common.Spec, state common.BeaconState) error {
+	// TODO
+	return nil
 }

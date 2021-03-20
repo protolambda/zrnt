@@ -7,9 +7,9 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
-type LeakScores []Uint64View
+type InactivityScores []Uint64View
 
-func (a *LeakScores) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
+func (a *InactivityScores) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
 	return dr.List(func() codec.Deserializable {
 		i := len(*a)
 		*a = append(*a, Uint64View(0))
@@ -17,44 +17,44 @@ func (a *LeakScores) Deserialize(spec *common.Spec, dr *codec.DecodingReader) er
 	}, Uint64Type.TypeByteLength(), spec.VALIDATOR_REGISTRY_LIMIT)
 }
 
-func (a LeakScores) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
+func (a InactivityScores) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
 	return w.List(func(i uint64) codec.Serializable {
 		return &a[i]
 	}, Uint64Type.TypeByteLength(), uint64(len(a)))
 }
 
-func (a LeakScores) ByteLength(spec *common.Spec) (out uint64) {
+func (a InactivityScores) ByteLength(spec *common.Spec) (out uint64) {
 	return uint64(len(a)) * Uint64Type.TypeByteLength()
 }
 
-func (a *LeakScores) FixedLength(spec *common.Spec) uint64 {
+func (a *InactivityScores) FixedLength(spec *common.Spec) uint64 {
 	return 0 // it's a list, no fixed length
 }
 
-func (li LeakScores) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
+func (li InactivityScores) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
 	length := uint64(len(li))
 	return hFn.Uint64ListHTR(func(i uint64) uint64 {
 		return uint64(li[i])
 	}, length, spec.VALIDATOR_REGISTRY_LIMIT)
 }
 
-func LeakScoresType(spec *common.Spec) *BasicListTypeDef {
+func InactivityScoresType(spec *common.Spec) *BasicListTypeDef {
 	return BasicListType(Uint64Type, spec.VALIDATOR_REGISTRY_LIMIT)
 }
 
-type LeakScoresView struct {
+type InactivityScoresView struct {
 	*BasicListView
 }
 
-func AsLeakScores(v View, err error) (*LeakScoresView, error) {
+func AsInactivityScores(v View, err error) (*InactivityScoresView, error) {
 	c, err := AsBasicList(v, err)
-	return &LeakScoresView{c}, err
+	return &InactivityScoresView{c}, err
 }
 
-func (v *LeakScoresView) GetScore(index common.ValidatorIndex) (Uint64View, error) {
+func (v *InactivityScoresView) GetScore(index common.ValidatorIndex) (Uint64View, error) {
 	return AsUint64(v.Get(uint64(index)))
 }
 
-func (v *LeakScoresView) SetScore(index common.ValidatorIndex, score Uint64View) error {
+func (v *InactivityScoresView) SetScore(index common.ValidatorIndex, score Uint64View) error {
 	return v.Set(uint64(index), score)
 }

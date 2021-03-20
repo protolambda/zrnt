@@ -39,22 +39,19 @@ func GenesisFromEth1(spec *common.Spec, eth1BlockHash common.Root, time common.T
 		DepositCount: common.DepositIndex(len(deps)),
 		BlockHash:    eth1BlockHash,
 	}
-	if err := state.SetEth1Data(eth1Dat.View()); err != nil {
+	if err := state.SetEth1Data(eth1Dat); err != nil {
 		return nil, nil, err
 	}
 	emptyBody := BeaconBlockBody{}
-	latestHeader := BeaconBlockHeader{
+	latestHeader := &common.BeaconBlockHeader{
 		BodyRoot: emptyBody.HashTreeRoot(spec, tree.GetHashFn()),
 	}
-	if err := state.SetLatestBlockHeader(latestHeader.View()); err != nil {
+	if err := state.SetLatestBlockHeader(latestHeader); err != nil {
 		return nil, nil, err
 	}
 	// Seed RANDAO with Eth1 entropy
-	randaoMixes, err := SeedRandao(spec, eth1BlockHash)
+	err := state.SeedRandao(spec, eth1BlockHash)
 	if err != nil {
-		return nil, nil, err
-	}
-	if err := state.SetRandaoMixes(randaoMixes); err != nil {
 		return nil, nil, err
 	}
 
@@ -72,12 +69,12 @@ func GenesisFromEth1(spec *common.Spec, eth1BlockHash common.Root, time common.T
 
 	hFn := tree.GetHashFn()
 	updateDepTreeRoot := func() error {
-		eth1DatView, err := state.Eth1Data()
+		eth1Dat, err := state.Eth1Data()
 		if err != nil {
 			return err
 		}
-		depTreeRoot := depRootsView.HashTreeRoot(hFn)
-		return eth1DatView.SetDepositRoot(depTreeRoot)
+		eth1Dat.DepositRoot = depRootsView.HashTreeRoot(hFn)
+		return state.SetEth1Data(eth1Dat)
 	}
 	// Process deposits
 	for i := range deps {
@@ -96,11 +93,12 @@ func GenesisFromEth1(spec *common.Spec, eth1BlockHash common.Root, time common.T
 	if err := updateDepTreeRoot(); err != nil {
 		return nil, nil, err
 	}
-	vals, err := state.Validators()
+	valsIfc, err := state.Validators()
 	if err != nil {
 		return nil, nil, err
 	}
-	valCount, err := vals.Length()
+	vals := valsIfc.(*ValidatorsRegistryView)
+	valCount, err := vals.ValidatorCount()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -163,20 +161,16 @@ func IsValidGenesisState(spec *common.Spec, state *BeaconStateView) (bool, error
 		if err != nil {
 			return false, err
 		}
-		valIter := validators.ReadonlyIter()
+		valIterNext := validators.Iter()
 		for {
-			valContainer, ok, err := valIter.Next()
+			val, ok, err := valIterNext()
 			if err != nil {
 				return false, err
 			}
 			if !ok {
 				break
 			}
-			val, err := AsValidator(valContainer, nil)
-			if err != nil {
-				return false, err
-			}
-			if active, err := val.IsActive(spec, common.GENESIS_EPOCH); err != nil {
+			if active, err := IsActive(val, common.GENESIS_EPOCH); err != nil {
 				return false, err
 			} else if active {
 				activeCount += 1

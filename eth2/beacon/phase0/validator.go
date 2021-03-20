@@ -85,6 +85,8 @@ type ValidatorView struct {
 	*ContainerView
 }
 
+var _ common.Validator = (*ValidatorView)(nil)
+
 func NewValidatorView() *ValidatorView {
 	return &ValidatorView{ContainerView: ValidatorType.New()}
 }
@@ -106,9 +108,12 @@ func (v *ValidatorView) EffectiveBalance() (common.Gwei, error) {
 func (v *ValidatorView) SetEffectiveBalance(b common.Gwei) error {
 	return v.Set(_validatorEffectiveBalance, Uint64View(b))
 }
-func (v *ValidatorView) Slashed() (BoolView, error) {
-	return AsBool(v.Get(_validatorSlashed))
+
+func (v *ValidatorView) Slashed() (bool, error) {
+	b, err := AsBool(v.Get(_validatorSlashed))
+	return bool(b), err
 }
+
 func (v *ValidatorView) MakeSlashed() error {
 	return v.Set(_validatorSlashed, BoolView(true))
 }
@@ -137,7 +142,7 @@ func (v *ValidatorView) SetWithdrawableEpoch(epoch common.Epoch) error {
 	return v.Set(_validatorWithdrawableEpoch, Uint64View(epoch))
 }
 
-func (v *ValidatorView) IsActive(spec *common.Spec, epoch common.Epoch) (bool, error) {
+func IsActive(v common.Validator, epoch common.Epoch) (bool, error) {
 	activationEpoch, err := v.ActivationEpoch()
 	if err != nil {
 		return false, err
@@ -153,7 +158,7 @@ func (v *ValidatorView) IsActive(spec *common.Spec, epoch common.Epoch) (bool, e
 	return true, nil
 }
 
-func (v *ValidatorView) IsSlashable(spec *common.Spec, epoch common.Epoch) (bool, error) {
+func IsSlashable(v common.Validator, epoch common.Epoch) (bool, error) {
 	slashed, err := v.Slashed()
 	if err != nil {
 		return false, err
@@ -175,7 +180,7 @@ func (v *ValidatorView) IsSlashable(spec *common.Spec, epoch common.Epoch) (bool
 	return true, nil
 }
 
-func (v *ValidatorView) IsEligibleForActivationQueue(spec *common.Spec) (bool, error) {
+func IsEligibleForActivationQueue(v common.Validator, spec *common.Spec) (bool, error) {
 	actEligEpoch, err := v.ActivationEligibilityEpoch()
 	if err != nil {
 		return false, err
@@ -187,7 +192,7 @@ func (v *ValidatorView) IsEligibleForActivationQueue(spec *common.Spec) (bool, e
 	return actEligEpoch == common.FAR_FUTURE_EPOCH && effBalance == spec.MAX_EFFECTIVE_BALANCE, nil
 }
 
-func (v *ValidatorView) IsEligibleForActivation(spec *common.Spec, finalizedEpoch common.Epoch) (bool, error) {
+func IsEligibleForActivation(v common.Validator, finalizedEpoch common.Epoch) (bool, error) {
 	actEligEpoch, err := v.ActivationEligibilityEpoch()
 	if err != nil {
 		return false, err

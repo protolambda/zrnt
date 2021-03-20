@@ -52,13 +52,9 @@ func (li Deposits) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root 
 }
 
 // Verify that outstanding deposits are processed up to the maximum number of deposits, then process all in order.
-func ProcessDeposits(ctx context.Context, spec *common.Spec, epc *EpochsContext, state *BeaconStateView, ops []common.Deposit) error {
+func ProcessDeposits(ctx context.Context, spec *common.Spec, epc *EpochsContext, state common.BeaconState, ops []common.Deposit) error {
 	inputCount := uint64(len(ops))
 	eth1Data, err := state.Eth1Data()
-	if err != nil {
-		return err
-	}
-	depCount, err := eth1Data.DepositCount()
 	if err != nil {
 		return err
 	}
@@ -67,7 +63,7 @@ func ProcessDeposits(ctx context.Context, spec *common.Spec, epc *EpochsContext,
 		return err
 	}
 	// state deposit count and deposit index are trusted not to underflow
-	expectedInputCount := uint64(depCount - depIndex)
+	expectedInputCount := uint64(eth1Data.DepositCount - depIndex)
 	if expectedInputCount > spec.MAX_DEPOSITS {
 		expectedInputCount = spec.MAX_DEPOSITS
 	}
@@ -90,16 +86,12 @@ func ProcessDeposits(ctx context.Context, spec *common.Spec, epc *EpochsContext,
 }
 
 // Process an Eth1 deposit, registering a validator or increasing its balance.
-func ProcessDeposit(spec *common.Spec, epc *EpochsContext, state *BeaconStateView, dep *common.Deposit, ignoreSignatureAndProof bool) error {
+func ProcessDeposit(spec *common.Spec, epc *EpochsContext, state common.BeaconState, dep *common.Deposit, ignoreSignatureAndProof bool) error {
 	depositIndex, err := state.DepositIndex()
 	if err != nil {
 		return err
 	}
 	eth1Data, err := state.Eth1Data()
-	if err != nil {
-		return err
-	}
-	depositsRoot, err := eth1Data.DepositRoot()
 	if err != nil {
 		return err
 	}
@@ -110,7 +102,7 @@ func ProcessDeposit(spec *common.Spec, epc *EpochsContext, state *BeaconStateVie
 		dep.Proof[:],
 		common.DEPOSIT_CONTRACT_TREE_DEPTH+1, // Add 1 for the `List` length mix-in
 		uint64(depositIndex),
-		depositsRoot) {
+		eth1Data.DepositRoot) {
 		return fmt.Errorf("deposit %d merkle proof failed to be verified", depositIndex)
 	}
 
@@ -127,7 +119,7 @@ func ProcessDeposit(spec *common.Spec, epc *EpochsContext, state *BeaconStateVie
 		return err
 	}
 
-	valCount, err := validators.Length()
+	valCount, err := validators.ValidatorCount()
 	if err != nil {
 		return err
 	}
@@ -158,28 +150,7 @@ func ProcessDeposit(spec *common.Spec, epc *EpochsContext, state *BeaconStateVie
 		balance := dep.Data.Amount
 		withdrawalCreds := dep.Data.WithdrawalCredentials
 		pubkey := dep.Data.Pubkey
-		effBalance := balance - (balance % spec.EFFECTIVE_BALANCE_INCREMENT)
-		if effBalance > spec.MAX_EFFECTIVE_BALANCE {
-			effBalance = spec.MAX_EFFECTIVE_BALANCE
-		}
-		validatorRaw := Validator{
-			Pubkey:                     pubkey,
-			WithdrawalCredentials:      withdrawalCreds,
-			ActivationEligibilityEpoch: common.FAR_FUTURE_EPOCH,
-			ActivationEpoch:            common.FAR_FUTURE_EPOCH,
-			ExitEpoch:                  common.FAR_FUTURE_EPOCH,
-			WithdrawableEpoch:          common.FAR_FUTURE_EPOCH,
-			EffectiveBalance:           effBalance,
-		}
-		validator := validatorRaw.View()
-		if err := validators.Append(validator); err != nil {
-			return err
-		}
-		bals, err := state.Balances()
-		if err != nil {
-			return err
-		}
-		if err := bals.Append(Uint64View(balance)); err != nil {
+		if err := state.AddValidator(spec, pubkey, withdrawalCreds, balance); err != nil {
 			return err
 		}
 		if pc, err := epc.PubkeyCache.AddValidator(valIndex, pubkey); err != nil {
@@ -193,7 +164,7 @@ func ProcessDeposit(spec *common.Spec, epc *EpochsContext, state *BeaconStateVie
 		if err != nil {
 			return err
 		}
-		if err := bals.IncreaseBalance(valIndex, dep.Data.Amount); err != nil {
+		if err := common.IncreaseBalance(bals, valIndex, dep.Data.Amount); err != nil {
 			return err
 		}
 	}

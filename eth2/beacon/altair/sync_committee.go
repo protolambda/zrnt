@@ -222,4 +222,3 @@ func ComputeSyncCommittee(state *BeaconStateView, epoch common.Epoch) *SyncCommi
 	// TODO
 	return nil
 }
-

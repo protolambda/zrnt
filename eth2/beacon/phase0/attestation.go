@@ -144,11 +144,7 @@ func ProcessAttestation(spec *common.Spec, epc *EpochsContext, state *BeaconStat
 		if err != nil {
 			return err
 		}
-		currJustRaw, err := currentJustified.Raw()
-		if err != nil {
-			return err
-		}
-		if data.Source != currJustRaw {
+		if data.Source != currentJustified {
 			return errors.New("attestation source does not match current justified checkpoint")
 		}
 	} else {
@@ -156,11 +152,7 @@ func ProcessAttestation(spec *common.Spec, epc *EpochsContext, state *BeaconStat
 		if err != nil {
 			return err
 		}
-		prevJustRaw, err := previousJustified.Raw()
-		if err != nil {
-			return err
-		}
-		if data.Source != prevJustRaw {
+		if data.Source != previousJustified {
 			return errors.New("attestation source does not match previous justified checkpoint")
 		}
 	}

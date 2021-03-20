@@ -2,16 +2,10 @@ package phase0
 
 import (
 	"context"
-	"fmt"
-
 	"github.com/protolambda/zrnt/eth2/beacon/common"
-	"github.com/protolambda/ztyp/codec"
-	"github.com/protolambda/ztyp/conv"
-	"github.com/protolambda/ztyp/tree"
-	. "github.com/protolambda/ztyp/view"
 )
 
-func ProcessEpochJustification(ctx context.Context, spec *common.Spec, epc *EpochsContext, process *EpochProcess, state *BeaconStateView) error {
+func ProcessEpochJustification(ctx context.Context, spec *common.Spec, epc *EpochsContext, process *EpochProcess, state common.BeaconState) error {
 	select {
 	case <-ctx.Done():
 		return common.TransitionCancelErr
@@ -26,34 +20,22 @@ func ProcessEpochJustification(ctx context.Context, spec *common.Spec, epc *Epoc
 		return nil
 	}
 
-	prJustCh, err := state.PreviousJustifiedCheckpoint()
+	oldPreviousJustified, err := state.PreviousJustifiedCheckpoint()
 	if err != nil {
 		return err
 	}
-	oldPreviousJustified, err := prJustCh.Raw()
-	if err != nil {
-		return err
-	}
-	cuJustCh, err := state.CurrentJustifiedCheckpoint()
-	if err != nil {
-		return err
-	}
-	oldCurrentJustified, err := cuJustCh.Raw()
+	oldCurrentJustified, err := state.CurrentJustifiedCheckpoint()
 	if err != nil {
 		return err
 	}
 
-	bitsView, err := state.JustificationBits()
-	if err != nil {
-		return err
-	}
-	bits, err := bitsView.Raw()
+	bits, err := state.JustificationBits()
 	if err != nil {
 		return err
 	}
 
 	// Rotate (a copy of) current into previous
-	if err := prJustCh.Set(&oldCurrentJustified); err != nil {
+	if err := state.SetPreviousJustifiedCheckpoint(oldCurrentJustified); err != nil {
 		return err
 	}
 
@@ -65,7 +47,7 @@ func ProcessEpochJustification(ctx context.Context, spec *common.Spec, epc *Epoc
 	var newJustifiedCheckpoint *common.Checkpoint
 	// > Justification
 	if process.PrevEpochUnslashedStake.TargetStake*3 >= totalStake*2 {
-		root, err := GetBlockRoot(spec, state, previousEpoch)
+		root, err := common.GetBlockRoot(spec, state, previousEpoch)
 		if err != nil {
 			return err
 		}
@@ -76,7 +58,7 @@ func ProcessEpochJustification(ctx context.Context, spec *common.Spec, epc *Epoc
 		bits[0] |= 1 << 1
 	}
 	if process.CurrEpochUnslashedTargetStake*3 >= totalStake*2 {
-		root, err := GetBlockRoot(spec, state, currentEpoch)
+		root, err := common.GetBlockRoot(spec, state, currentEpoch)
 		if err != nil {
 			return err
 		}
@@ -87,7 +69,7 @@ func ProcessEpochJustification(ctx context.Context, spec *common.Spec, epc *Epoc
 		bits[0] |= 1 << 0
 	}
 	if newJustifiedCheckpoint != nil {
-		if err := cuJustCh.Set(newJustifiedCheckpoint); err != nil {
+		if err := state.SetCurrentJustifiedCheckpoint(*newJustifiedCheckpoint); err != nil {
 			return err
 		}
 	}
@@ -111,102 +93,12 @@ func ProcessEpochJustification(ctx context.Context, spec *common.Spec, epc *Epoc
 		toFinalize = &oldCurrentJustified
 	}
 	if toFinalize != nil {
-		finCh, err := state.FinalizedCheckpoint()
-		if err != nil {
-			return err
-		}
-		if err := finCh.Set(toFinalize); err != nil {
+		if err := state.SetFinalizedCheckpoint(*toFinalize); err != nil {
 			return err
 		}
 	}
-	if err := bitsView.Set(bits); err != nil {
+	if err := state.SetJustificationBits(bits); err != nil {
 		return err
 	}
 	return nil
-}
-
-type JustificationBits [1]byte
-
-func (b *JustificationBits) Deserialize(dr *codec.DecodingReader) error {
-	v, err := dr.ReadByte()
-	if err != nil {
-		return err
-	}
-	b[0] = v
-	return nil
-}
-
-func (a JustificationBits) Serialize(w *codec.EncodingWriter) error {
-	return w.WriteByte(a[0])
-}
-
-func (jb JustificationBits) FixedLength() uint64 {
-	return 1
-}
-
-func (jb JustificationBits) ByteLength() uint64 {
-	return 1
-}
-
-func (jb JustificationBits) HashTreeRoot(hFn tree.HashFn) common.Root {
-	return common.Root{0: jb[0]}
-}
-
-func (jb *JustificationBits) BitLen() uint64 {
-	return common.JUSTIFICATION_BITS_LENGTH
-}
-
-// Prepare bitfield for next epoch by shifting previous bits (truncating to bitfield length)
-func (jb *JustificationBits) NextEpoch() {
-	// shift and mask
-	jb[0] = (jb[0] << 1) & 0x0f
-}
-
-func (jb *JustificationBits) IsJustified(epochsAgo ...common.Epoch) bool {
-	for _, t := range epochsAgo {
-		if jb[0]&(1<<t) == 0 {
-			return false
-		}
-	}
-	return true
-}
-
-func (jb JustificationBits) MarshalText() ([]byte, error) {
-	return conv.BytesMarshalText(jb[:])
-}
-
-func (jb *JustificationBits) UnmarshalText(text []byte) error {
-	return conv.FixedBytesUnmarshalText(jb[:], text)
-}
-
-func (jb *JustificationBits) String() string {
-	return conv.BytesString(jb[:])
-}
-
-var JustificationBitsType = BitVectorType(common.JUSTIFICATION_BITS_LENGTH)
-
-type JustificationBitsView struct {
-	*BitVectorView
-}
-
-func (v *JustificationBitsView) Raw() (JustificationBits, error) {
-	b, err := v.SubtreeView.GetNode(0)
-	if err != nil {
-		return JustificationBits{}, err
-	}
-	r, ok := b.(*common.Root)
-	if !ok {
-		return JustificationBits{}, fmt.Errorf("justification bitvector bottom node is not a root, cannot get bits")
-	}
-	return JustificationBits{r[0]}, nil
-}
-
-func (v *JustificationBitsView) Set(bits JustificationBits) error {
-	root := common.Root{0: bits[0]}
-	return v.SetBacking(&root)
-}
-
-func AsJustificationBits(v View, err error) (*JustificationBitsView, error) {
-	c, err := AsBitVector(v, err)
-	return &JustificationBitsView{c}, err
 }

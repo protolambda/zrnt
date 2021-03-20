@@ -48,7 +48,7 @@ func (li VoluntaryExits) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common
 	}, length, spec.MAX_VOLUNTARY_EXITS)
 }
 
-func ProcessVoluntaryExits(ctx context.Context, spec *common.Spec, epc *EpochsContext, state *BeaconStateView, ops []SignedVoluntaryExit) error {
+func ProcessVoluntaryExits(ctx context.Context, spec *common.Spec, epc *EpochsContext, state common.BeaconState, ops []SignedVoluntaryExit) error {
 	for i := range ops {
 		select {
 		case <-ctx.Done():
@@ -124,24 +124,24 @@ var SignedVoluntaryExitType = ContainerType("SignedVoluntaryExit", []FieldDef{
 	{"signature", common.BLSSignatureType},
 })
 
-func ValidateVoluntaryExit(spec *common.Spec, epc *EpochsContext, state *BeaconStateView, signedExit *SignedVoluntaryExit) error {
+func ValidateVoluntaryExit(spec *common.Spec, epc *EpochsContext, state common.BeaconState, signedExit *SignedVoluntaryExit) error {
 	exit := &signedExit.Message
 	currentEpoch := epc.CurrentEpoch.Epoch
-	if valid, err := state.IsValidIndex(exit.ValidatorIndex); err != nil {
-		return err
-	} else if !valid {
-		return errors.New("invalid exit validator index")
-	}
 	vals, err := state.Validators()
 	if err != nil {
 		return err
+	}
+	if valid, err := vals.IsValidIndex(exit.ValidatorIndex); err != nil {
+		return err
+	} else if !valid {
+		return errors.New("invalid exit validator index")
 	}
 	validator, err := vals.Validator(exit.ValidatorIndex)
 	if err != nil {
 		return err
 	}
 	// Verify that the validator is active
-	if isActive, err := validator.IsActive(spec, currentEpoch); err != nil {
+	if isActive, err := IsActive(validator, currentEpoch); err != nil {
 		return err
 	} else if !isActive {
 		return errors.New("validator must be active to be able to voluntarily exit")
@@ -170,7 +170,7 @@ func ValidateVoluntaryExit(spec *common.Spec, epc *EpochsContext, state *BeaconS
 	if !ok {
 		return errors.New("could not find index of exiting validator")
 	}
-	domain, err := state.GetDomain(spec.DOMAIN_VOLUNTARY_EXIT, exit.Epoch)
+	domain, err := common.GetDomain(state, spec.DOMAIN_VOLUNTARY_EXIT, exit.Epoch)
 	if err != nil {
 		return err
 	}
@@ -184,7 +184,7 @@ func ValidateVoluntaryExit(spec *common.Spec, epc *EpochsContext, state *BeaconS
 	return nil
 }
 
-func ProcessVoluntaryExit(spec *common.Spec, epc *EpochsContext, state *BeaconStateView, signedExit *SignedVoluntaryExit) error {
+func ProcessVoluntaryExit(spec *common.Spec, epc *EpochsContext, state common.BeaconState, signedExit *SignedVoluntaryExit) error {
 	if err := ValidateVoluntaryExit(spec, epc, state, signedExit); err != nil {
 		return err
 	}
@@ -192,7 +192,7 @@ func ProcessVoluntaryExit(spec *common.Spec, epc *EpochsContext, state *BeaconSt
 }
 
 // Initiate the exit of the validator of the given index
-func InitiateValidatorExit(spec *common.Spec, epc *EpochsContext, state *BeaconStateView, index common.ValidatorIndex) error {
+func InitiateValidatorExit(spec *common.Spec, epc *EpochsContext, state common.BeaconState, index common.ValidatorIndex) error {
 	validators, err := state.Validators()
 	if err != nil {
 		return err
@@ -212,21 +212,17 @@ func InitiateValidatorExit(spec *common.Spec, epc *EpochsContext, state *BeaconS
 	currentEpoch := epc.CurrentEpoch.Epoch
 
 	// Set validator exit epoch and withdrawable epoch
-	valIter := validators.ReadonlyIter()
+	valIterNext := validators.Iter()
 
 	exitQueueEnd := spec.ComputeActivationExitEpoch(currentEpoch)
 	exitQueueEndChurn := uint64(0)
 	for {
-		valContainer, ok, err := valIter.Next()
+		val, ok, err := valIterNext()
 		if err != nil {
 			return err
 		}
 		if !ok {
 			break
-		}
-		val, err := AsValidator(valContainer, nil)
-		if err != nil {
-			return err
 		}
 		valExit, err := val.ExitEpoch()
 		if err != nil {

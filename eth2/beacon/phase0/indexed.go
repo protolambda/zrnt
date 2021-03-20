@@ -73,7 +73,7 @@ func ValidateIndexedAttestationIndicesSet(spec *common.Spec, indexedAttestation 
 	return indices, nil
 }
 
-func ValidateIndexedAttestationNoSignature(spec *common.Spec, state *BeaconStateView, indexedAttestation *IndexedAttestation) error {
+func ValidateIndexedAttestationNoSignature(spec *common.Spec, state common.BeaconState, indexedAttestation *IndexedAttestation) error {
 	indices, err := ValidateIndexedAttestationIndicesSet(spec, indexedAttestation)
 	if err != nil {
 		return err
@@ -81,7 +81,11 @@ func ValidateIndexedAttestationNoSignature(spec *common.Spec, state *BeaconState
 
 	// Check the last item of the sorted list to be a valid index,
 	// if this one is valid, the others are as well, since they are lower.
-	valid, err := state.IsValidIndex(indices[len(indices)-1])
+	vals, err := state.Validators()
+	if err != nil {
+		return err
+	}
+	valid, err := vals.IsValidIndex(indices[len(indices)-1])
 	if err != nil {
 		return err
 	}
@@ -115,11 +119,11 @@ func ValidateIndexedAttestationSignature(spec *common.Spec, dom common.BLSDomain
 }
 
 // Verify validity of slashable_attestation fields.
-func ValidateIndexedAttestation(spec *common.Spec, epc *EpochsContext, state *BeaconStateView, indexedAttestation *IndexedAttestation) error {
+func ValidateIndexedAttestation(spec *common.Spec, epc *EpochsContext, state common.BeaconState, indexedAttestation *IndexedAttestation) error {
 	if err := ValidateIndexedAttestationNoSignature(spec, state, indexedAttestation); err != nil {
 		return err
 	}
-	dom, err := state.GetDomain(spec.DOMAIN_BEACON_ATTESTER, indexedAttestation.Data.Target.Epoch)
+	dom, err := common.GetDomain(state, spec.DOMAIN_BEACON_ATTESTER, indexedAttestation.Data.Target.Epoch)
 	if err != nil {
 		return err
 	}

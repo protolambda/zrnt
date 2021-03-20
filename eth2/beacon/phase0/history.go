@@ -85,28 +85,6 @@ func AsBatchRoots(v View, err error) (*BatchRootsView, error) {
 	return &BatchRootsView{c}, err
 }
 
-// Return the block root at a recent slot. Only valid to SLOTS_PER_HISTORICAL_ROOT slots ago.
-func GetBlockRootAtSlot(spec *common.Spec, state *BeaconStateView, slot common.Slot) (common.Root, error) {
-	blockRoots, err := state.BlockRoots()
-	if err != nil {
-		return common.Root{}, err
-	}
-	return blockRoots.GetRoot(slot)
-}
-
-// Return the block root at a recent epoch. Only valid to SLOTS_PER_HISTORICAL_ROOT slots ago.
-func GetBlockRoot(spec *common.Spec, state *BeaconStateView, epoch common.Epoch) (common.Root, error) {
-	blockRoots, err := state.BlockRoots()
-	if err != nil {
-		return common.Root{}, err
-	}
-	startSlot, err := spec.EpochStartSlot(epoch)
-	if err != nil {
-		return common.Root{}, err
-	}
-	return blockRoots.GetRoot(startSlot)
-}
-
 func HistoricalBatchType(spec *common.Spec) *ContainerTypeDef {
 	return ContainerType("HistoricalBatch", []FieldDef{
 		{"block_roots", BatchRootsType(spec)},
@@ -168,4 +146,9 @@ type HistoricalRootsView struct{ *ComplexListView }
 func AsHistoricalRoots(v View, err error) (*HistoricalRootsView, error) {
 	c, err := AsComplexList(v, err)
 	return &HistoricalRootsView{c}, err
+}
+
+func (h *HistoricalRootsView) Append(root common.Root) error {
+	v := RootView(root)
+	return h.ComplexListView.Append(&v)
 }

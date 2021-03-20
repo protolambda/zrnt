@@ -50,21 +50,47 @@ func Eth1DataVotesType(spec *common.Spec) ListTypeDef {
 
 type Eth1DataVotesView struct{ *ComplexListView }
 
+var _ common.Eth1DataVotes = (*Eth1DataVotesView)(nil)
+
 func AsEth1DataVotes(v View, err error) (*Eth1DataVotesView, error) {
 	c, err := AsComplexList(v, err)
 	return &Eth1DataVotesView{c}, err
 }
 
 // Done at the end of every voting period
-func (state *BeaconStateView) ResetEth1Votes(spec *common.Spec) error {
-	votes, err := state.Eth1DataVotes()
-	if err != nil {
-		return err
-	}
-	return votes.SetBacking(Eth1DataVotesType(spec).DefaultNode())
+func (v *Eth1DataVotesView) Reset() error {
+	return v.SetBacking(v.Type().DefaultNode())
 }
 
-func ProcessEth1Vote(ctx context.Context, spec *common.Spec, epc *EpochsContext, state *BeaconStateView, data common.Eth1Data) error {
+func (v *Eth1DataVotesView) Length() (uint64, error) {
+	return v.ComplexListView.Length()
+}
+
+func (v *Eth1DataVotesView) Count(dat common.Eth1Data) (uint64, error) {
+	count := uint64(0)
+	iter := v.ReadonlyIter()
+	hFn := tree.GetHashFn()
+	voteRoot := dat.HashTreeRoot(hFn)
+	for {
+		existingVote, ok, err := iter.Next()
+		if err != nil {
+			return 0, err
+		}
+		if !ok {
+			break
+		}
+		if existingVote.HashTreeRoot(hFn) == voteRoot {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func (v *Eth1DataVotesView) Append(dat common.Eth1Data) error {
+	return v.ComplexListView.Append(dat.View())
+}
+
+func ProcessEth1Vote(ctx context.Context, spec *common.Spec, epc *EpochsContext, state common.BeaconState, data common.Eth1Data) error {
 	select {
 	case <-ctx.Done():
 		return common.TransitionCancelErr
@@ -83,31 +109,18 @@ func ProcessEth1Vote(ctx context.Context, spec *common.Spec, epc *EpochsContext,
 	if voteCount >= period {
 		return errors.New("cannot process Eth1 vote, already voted maximum times")
 	}
-	vote := data.View()
-	if err := votes.Append(vote); err != nil {
+	if err := votes.Append(data); err != nil {
 		return err
 	}
 	voteCount += 1
 	// only do costly counting if we have enough votes yet.
 	if voteCount<<1 > period {
-		count := uint64(0)
-		iter := votes.ReadonlyIter()
-		hFn := tree.GetHashFn()
-		voteRoot := vote.HashTreeRoot(hFn)
-		for {
-			existingVote, ok, err := iter.Next()
-			if err != nil {
-				return err
-			}
-			if !ok {
-				break
-			}
-			if existingVote.HashTreeRoot(hFn) == voteRoot {
-				count++
-			}
+		count, err := votes.Count(data)
+		if err != nil {
+			return err
 		}
 		if (count << 1) > period {
-			return state.SetEth1Data(vote)
+			return state.SetEth1Data(data)
 		}
 	}
 	return nil

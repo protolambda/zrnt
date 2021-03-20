@@ -46,6 +46,8 @@ type RegistryBalancesView struct {
 	*BasicListView
 }
 
+var _ common.Balances = (*RegistryBalancesView)(nil)
+
 func AsRegistryBalances(v View, err error) (*RegistryBalancesView, error) {
 	c, err := AsBasicList(v, err)
 	return &RegistryBalancesView{c}, err
@@ -57,29 +59,6 @@ func (v *RegistryBalancesView) GetBalance(index common.ValidatorIndex) (common.G
 
 func (v *RegistryBalancesView) SetBalance(index common.ValidatorIndex, bal common.Gwei) error {
 	return v.Set(uint64(index), Uint64View(bal))
-}
-
-func (v *RegistryBalancesView) IncreaseBalance(index common.ValidatorIndex, delta common.Gwei) error {
-	bal, err := v.GetBalance(index)
-	if err != nil {
-		return err
-	}
-	bal += delta
-	return v.SetBalance(index, bal)
-}
-
-func (v *RegistryBalancesView) DecreaseBalance(index common.ValidatorIndex, delta common.Gwei) error {
-	bal, err := v.GetBalance(index)
-	if err != nil {
-		return err
-	}
-	// prevent underflow, clip to 0
-	if bal >= delta {
-		bal -= delta
-	} else {
-		bal = 0
-	}
-	return v.SetBalance(index, bal)
 }
 
 func (v *RegistryBalancesView) AllBalances() ([]common.Gwei, error) {
@@ -100,4 +79,16 @@ func (v *RegistryBalancesView) AllBalances() ([]common.Gwei, error) {
 		out = append(out, balance)
 	}
 	return out, nil
+}
+
+func (v *RegistryBalancesView) Iter() (next func() (bal common.Gwei, ok bool, err error)) {
+	iter := v.ReadonlyIter()
+	return func() (bal common.Gwei, ok bool, err error) {
+		el, ok, err := iter.Next()
+		if err != nil || !ok {
+			return 0, ok, err
+		}
+		v, err := common.AsGwei(el, err)
+		return v, true, err
+	}
 }

@@ -1,22 +1,21 @@
-package phase0
+package common
 
 import (
 	"context"
 	"errors"
 	"fmt"
 
-	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
 
 type BeaconBlockHeader struct {
-	Slot          common.Slot           `json:"slot" yaml:"slot"`
-	ProposerIndex common.ValidatorIndex `json:"proposer_index" yaml:"proposer_index"`
-	ParentRoot    common.Root           `json:"parent_root" yaml:"parent_root"`
-	StateRoot     common.Root           `json:"state_root" yaml:"state_root"`
-	BodyRoot      common.Root           `json:"body_root" yaml:"body_root"`
+	Slot          Slot           `json:"slot" yaml:"slot"`
+	ProposerIndex ValidatorIndex `json:"proposer_index" yaml:"proposer_index"`
+	ParentRoot    Root           `json:"parent_root" yaml:"parent_root"`
+	StateRoot     Root           `json:"state_root" yaml:"state_root"`
+	BodyRoot      Root           `json:"body_root" yaml:"body_root"`
 }
 
 func (h *BeaconBlockHeader) View() *BeaconBlockHeaderView {
@@ -49,13 +48,13 @@ func (b *BeaconBlockHeader) FixedLength() uint64 {
 	return BeaconBlockHeaderType.TypeByteLength()
 }
 
-func (b *BeaconBlockHeader) HashTreeRoot(hFn tree.HashFn) common.Root {
+func (b *BeaconBlockHeader) HashTreeRoot(hFn tree.HashFn) Root {
 	return hFn.HashTreeRoot(b.Slot, b.ProposerIndex, b.ParentRoot, b.StateRoot, b.BodyRoot)
 }
 
 type SignedBeaconBlockHeader struct {
-	Message   BeaconBlockHeader   `json:"message" yaml:"message"`
-	Signature common.BLSSignature `json:"signature" yaml:"signature"`
+	Message   BeaconBlockHeader `json:"message" yaml:"message"`
+	Signature BLSSignature      `json:"signature" yaml:"signature"`
 }
 
 func (s *SignedBeaconBlockHeader) Deserialize(dr *codec.DecodingReader) error {
@@ -74,18 +73,18 @@ func (b *SignedBeaconBlockHeader) FixedLength() uint64 {
 	return SignedBeaconBlockHeaderType.TypeByteLength()
 }
 
-func (s *SignedBeaconBlockHeader) HashTreeRoot(hFn tree.HashFn) common.Root {
+func (s *SignedBeaconBlockHeader) HashTreeRoot(hFn tree.HashFn) Root {
 	return hFn.HashTreeRoot(&s.Message, s.Signature)
 }
 
 var SignedBeaconBlockHeaderType = ContainerType("SignedBeaconBlockHeader", []FieldDef{
 	{"message", BeaconBlockHeaderType},
-	{"signature", common.BLSSignatureType},
+	{"signature", BLSSignatureType},
 })
 
 var BeaconBlockHeaderType = ContainerType("BeaconBlockHeader", []FieldDef{
-	{"slot", common.SlotType},
-	{"proposer_index", common.ValidatorIndexType},
+	{"slot", SlotType},
+	{"proposer_index", ValidatorIndexType},
 	{"parent_root", RootType},
 	{"state_root", RootType},
 	{"body_root", RootType},
@@ -100,28 +99,28 @@ func AsBeaconBlockHeader(v View, err error) (*BeaconBlockHeaderView, error) {
 	return &BeaconBlockHeaderView{c}, err
 }
 
-func (v *BeaconBlockHeaderView) Slot() (common.Slot, error) {
-	return common.AsSlot(v.Get(0))
+func (v *BeaconBlockHeaderView) Slot() (Slot, error) {
+	return AsSlot(v.Get(0))
 }
 
-func (v *BeaconBlockHeaderView) ProposerIndex() (common.ValidatorIndex, error) {
-	return common.AsValidatorIndex(v.Get(1))
+func (v *BeaconBlockHeaderView) ProposerIndex() (ValidatorIndex, error) {
+	return AsValidatorIndex(v.Get(1))
 }
 
-func (v *BeaconBlockHeaderView) ParentRoot() (common.Root, error) {
+func (v *BeaconBlockHeaderView) ParentRoot() (Root, error) {
 	return AsRoot(v.Get(2))
 }
 
-func (v *BeaconBlockHeaderView) StateRoot() (common.Root, error) {
+func (v *BeaconBlockHeaderView) StateRoot() (Root, error) {
 	return AsRoot(v.Get(3))
 }
 
-func (v *BeaconBlockHeaderView) SetStateRoot(root common.Root) error {
+func (v *BeaconBlockHeaderView) SetStateRoot(root Root) error {
 	rv := RootView(root)
 	return v.Set(3, &rv)
 }
 
-func (v *BeaconBlockHeaderView) BodyRoot() (common.Root, error) {
+func (v *BeaconBlockHeaderView) BodyRoot() (Root, error) {
 	return AsRoot(v.Get(4))
 }
 
@@ -150,10 +149,10 @@ func (v *BeaconBlockHeaderView) Raw() (*BeaconBlockHeader, error) {
 	}, nil
 }
 
-func ProcessHeader(ctx context.Context, spec *common.Spec, epc *EpochsContext, state *BeaconStateView, header *BeaconBlock) error {
+func ProcessHeader(ctx context.Context, spec *Spec, state BeaconState, header *BeaconBlockHeader, expectedProposer ValidatorIndex) error {
 	select {
 	case <-ctx.Done():
-		return common.TransitionCancelErr
+		return TransitionCancelErr
 	default: // Don't block.
 		break
 	}
@@ -169,24 +168,20 @@ func ProcessHeader(ctx context.Context, spec *common.Spec, epc *EpochsContext, s
 	if err != nil {
 		return err
 	}
-	latestSlot, err := latestHeader.Slot()
+	if header.Slot <= latestHeader.Slot {
+		return errors.New("bad block header")
+	}
+	vals, err := state.Validators()
 	if err != nil {
 		return err
 	}
-	if header.Slot <= latestSlot {
-		return errors.New("bad block header")
-	}
-	if isValid, err := state.IsValidIndex(header.ProposerIndex); err != nil {
+	if isValid, err := vals.IsValidIndex(header.ProposerIndex); err != nil {
 		return err
 	} else if !isValid {
 		return fmt.Errorf("beacon block header proposer index is out of range: %d", header.ProposerIndex)
 	}
-	proposerIndex, err := epc.GetBeaconProposer(currentSlot)
-	if err != nil {
-		return err
-	}
-	if header.ProposerIndex != proposerIndex {
-		return fmt.Errorf("beacon block header proposer index does not match expected index: got: %d, expected: %d", header.ProposerIndex, proposerIndex)
+	if header.ProposerIndex != expectedProposer {
+		return fmt.Errorf("beacon block header proposer index does not match expected index: got: %d, expected: %d", header.ProposerIndex, expectedProposer)
 	}
 	// Verify that the parent matches
 	latestRoot := latestHeader.HashTreeRoot(tree.GetHashFn())
@@ -197,7 +192,7 @@ func ProcessHeader(ctx context.Context, spec *common.Spec, epc *EpochsContext, s
 	if err != nil {
 		return err
 	}
-	validator, err := validators.Validator(proposerIndex)
+	validator, err := validators.Validator(header.ProposerIndex)
 	if err != nil {
 		return err
 	}
@@ -209,14 +204,14 @@ func ProcessHeader(ctx context.Context, spec *common.Spec, epc *EpochsContext, s
 	}
 
 	// Store as the new latest block
-	headerRaw := BeaconBlockHeader{
+	headerRaw := &BeaconBlockHeader{
 		Slot:          header.Slot,
 		ProposerIndex: header.ProposerIndex,
 		ParentRoot:    header.ParentRoot,
 		// state_root is zeroed and overwritten in the next `process_slot` call.
 		// with BlockHeaderState.UpdateStateRoot(), once the post state is available.
-		StateRoot: common.Root{},
-		BodyRoot:  header.Body.HashTreeRoot(spec, tree.GetHashFn()),
+		StateRoot: Root{},
+		BodyRoot:  header.BodyRoot,
 	}
-	return state.SetLatestBlockHeader(headerRaw.View())
+	return state.SetLatestBlockHeader(headerRaw)
 }

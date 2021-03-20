@@ -11,7 +11,7 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
-func ProcessAttesterSlashings(ctx context.Context, spec *common.Spec, epc *EpochsContext, state *BeaconStateView, ops []AttesterSlashing) error {
+func ProcessAttesterSlashings(ctx context.Context, spec *common.Spec, epc *EpochsContext, state common.BeaconState, ops []AttesterSlashing) error {
 	for i := range ops {
 		select {
 		case <-ctx.Done():
@@ -99,7 +99,7 @@ func (li AttesterSlashings) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) com
 	}, length, spec.MAX_ATTESTER_SLASHINGS)
 }
 
-func ProcessAttesterSlashing(spec *common.Spec, epc *EpochsContext, state *BeaconStateView, attesterSlashing *AttesterSlashing) error {
+func ProcessAttesterSlashing(spec *common.Spec, epc *EpochsContext, state common.BeaconState, attesterSlashing *AttesterSlashing) error {
 	sa1 := &attesterSlashing.Attestation1
 	sa2 := &attesterSlashing.Attestation2
 
@@ -135,7 +135,7 @@ func ProcessAttesterSlashing(spec *common.Spec, epc *EpochsContext, state *Beaco
 			errorAny = err
 			return
 		}
-		if slashable, err := validator.IsSlashable(spec, currentEpoch); err != nil {
+		if slashable, err := IsSlashable(validator, currentEpoch); err != nil {
 			errorAny = err
 		} else if slashable {
 			if err := SlashValidator(spec, epc, state, i, nil); err != nil {

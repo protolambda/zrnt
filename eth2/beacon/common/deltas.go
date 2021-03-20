@@ -76,3 +76,26 @@ func (deltas *Deltas) Add(other *Deltas) {
 		deltas.Penalties[i] += other.Penalties[i]
 	}
 }
+
+func IncreaseBalance(v Balances, index ValidatorIndex, delta Gwei) error {
+	bal, err := v.GetBalance(index)
+	if err != nil {
+		return err
+	}
+	bal += delta
+	return v.SetBalance(index, bal)
+}
+
+func DecreaseBalance(v Balances, index ValidatorIndex, delta Gwei) error {
+	bal, err := v.GetBalance(index)
+	if err != nil {
+		return err
+	}
+	// prevent underflow, clip to 0
+	if bal >= delta {
+		bal -= delta
+	} else {
+		bal = 0
+	}
+	return v.SetBalance(index, bal)
+}

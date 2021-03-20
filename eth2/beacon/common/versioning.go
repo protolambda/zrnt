@@ -227,20 +227,20 @@ func (f *ForkView) Epoch() (Epoch, error) {
 	return AsEpoch(f.Get(2))
 }
 
-func (f *ForkView) Raw() (*Fork, error) {
+func (f *ForkView) Raw() (Fork, error) {
 	prev, err := f.PreviousVersion()
 	if err != nil {
-		return nil, err
+		return Fork{}, err
 	}
 	curr, err := f.CurrentVersion()
 	if err != nil {
-		return nil, err
+		return Fork{}, err
 	}
 	ep, err := f.Epoch()
 	if err != nil {
-		return nil, err
+		return Fork{}, err
 	}
-	return &Fork{
+	return Fork{
 		PreviousVersion: prev,
 		CurrentVersion:  curr,
 		Epoch:           ep,
@@ -250,4 +250,17 @@ func (f *ForkView) Raw() (*Fork, error) {
 func AsFork(v View, err error) (*ForkView, error) {
 	c, err := AsContainer(v, err)
 	return &ForkView{c}, err
+}
+
+// Return the signature domain (fork version concatenated with domain type) of a message.
+func GetDomain(state BeaconState, dom BLSDomainType, messageEpoch Epoch) (BLSDomain, error) {
+	fork, err := state.Fork()
+	if err != nil {
+		return BLSDomain{}, err
+	}
+	genesisValRoot, err := state.GenesisValidatorsRoot()
+	if err != nil {
+		return BLSDomain{}, err
+	}
+	return fork.GetDomain(dom, genesisValRoot, messageEpoch)
 }

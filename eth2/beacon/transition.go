@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
-	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/ztyp/tree"
 )
 
@@ -29,7 +28,7 @@ func ProcessSlots(ctx context.Context, spec *common.Spec, epc *phase0.EpochsCont
 		default:
 			break // Continue slot processing, don't block.
 		}
-		if err := phase0.ProcessSlot(ctx, spec, state); err != nil {
+		if err := common.ProcessSlot(ctx, spec, state); err != nil {
 			return err
 		}
 		// Per-epoch transition happens at the start of the first slot of every epoch.
@@ -74,7 +73,7 @@ func PostSlotTransition(ctx context.Context, spec *common.Spec, epc *phase0.Epoc
 	}
 	if validateResult {
 		// Safe to ignore proposer index, it will be checked as part of the ProcessHeader call.
-		if !VerifyBlockSignature(spec, epc, state, block, false) {
+		if !phase0.VerifyBlockSignature(spec, epc, state, block, false) {
 			return errors.New("block has invalid signature")
 		}
 	}
@@ -87,26 +86,4 @@ func PostSlotTransition(ctx context.Context, spec *common.Spec, epc *phase0.Epoc
 		return errors.New("block has invalid state root")
 	}
 	return nil
-}
-
-// Assuming the slot is valid, and optionally assume the proposer index is valid, check if the signature is valid
-func VerifyBlockSignature(spec *common.Spec, epc *phase0.EpochsContext, state *phase0.BeaconStateView, block *phase0.SignedBeaconBlock, validateProposerIndex bool) bool {
-	if validateProposerIndex {
-		proposerIndex, err := epc.GetBeaconProposer(block.Message.Slot)
-		if err != nil {
-			return false
-		}
-		if proposerIndex != block.Message.ProposerIndex {
-			return false
-		}
-	}
-	pub, ok := epc.PubkeyCache.Pubkey(block.Message.ProposerIndex)
-	if !ok {
-		return false
-	}
-	domain, err := state.GetDomain(spec.DOMAIN_BEACON_PROPOSER, spec.SlotToEpoch(block.Message.Slot))
-	if err != nil {
-		return false
-	}
-	return bls.Verify(pub, common.ComputeSigningRoot(block.Message.HashTreeRoot(spec, tree.GetHashFn()), domain), block.Signature)
 }

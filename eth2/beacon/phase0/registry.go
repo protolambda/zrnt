@@ -88,11 +88,31 @@ func (registry *ValidatorsRegistryView) ValidatorCount() (uint64, error) {
 	return registry.Length()
 }
 
-func (registry *ValidatorsRegistryView) Validator(index common.ValidatorIndex) (*ValidatorView, error) {
+func (registry *ValidatorsRegistryView) Validator(index common.ValidatorIndex) (common.Validator, error) {
 	return AsValidator(registry.Get(uint64(index)))
 }
 
-func ProcessEpochRegistryUpdates(ctx context.Context, spec *common.Spec, epc *EpochsContext, process *EpochProcess, state *BeaconStateView) error {
+func (registry *ValidatorsRegistryView) Iter() (next func() (val common.Validator, ok bool, err error)) {
+	iter := registry.ReadonlyIter()
+	return func() (val common.Validator, ok bool, err error) {
+		elem, ok, err := iter.Next()
+		if err != nil || !ok {
+			return nil, ok, err
+		}
+		v, err := AsValidator(elem, nil)
+		return v, true, err
+	}
+}
+
+func (registry *ValidatorsRegistryView) IsValidIndex(index common.ValidatorIndex) (valid bool, err error) {
+	count, err := registry.Length()
+	if err != nil {
+		return false, err
+	}
+	return uint64(index) < count, nil
+}
+
+func ProcessEpochRegistryUpdates(ctx context.Context, spec *common.Spec, epc *EpochsContext, process *EpochProcess, state common.BeaconState) error {
 	select {
 	case <-ctx.Done():
 		return common.TransitionCancelErr
@@ -145,17 +165,13 @@ func ProcessEpochRegistryUpdates(ctx context.Context, spec *common.Spec, epc *Ep
 		if err != nil {
 			return err
 		}
-		finalizedEpoch, err := finality.Epoch()
-		if err != nil {
-			return err
-		}
 		dequeued := process.IndicesToMaybeActivate
 		if uint64(len(dequeued)) > process.ChurnLimit {
 			dequeued = dequeued[:process.ChurnLimit]
 		}
 		activationEpoch := spec.ComputeActivationExitEpoch(epc.CurrentEpoch.Epoch)
 		for _, index := range dequeued {
-			if process.Statuses[index].Validator.ActivationEligibilityEpoch > finalizedEpoch {
+			if process.Statuses[index].Validator.ActivationEligibilityEpoch > finality.Epoch {
 				// remaining validators all have an activation_eligibility_epoch that is higher anyway, break early
 				// The tie-breaks were already sorted correctly in the IndicesToMaybeActivate queue.
 				break

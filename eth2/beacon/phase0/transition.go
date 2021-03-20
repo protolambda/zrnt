@@ -3,59 +3,9 @@ package phase0
 import (
 	"context"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/ztyp/tree"
 )
-
-func ProcessSlot(ctx context.Context, spec *common.Spec, state *BeaconStateView) error {
-	select {
-	case <-ctx.Done():
-		return common.TransitionCancelErr
-	default:
-		break // Continue slot processing, don't block.
-	}
-	// The state root could take long, but absolute worst case is around a 1.5 seconds.
-	// With any caching, this is more like < 50 ms. So no context use.
-	// Cache state root
-	previousStateRoot := state.HashTreeRoot(tree.GetHashFn())
-
-	stateRootsBatch, err := state.StateRoots()
-	if err != nil {
-		return err
-	}
-	slot, err := state.Slot()
-	if err != nil {
-		return err
-	}
-	if err := stateRootsBatch.SetRoot(slot, previousStateRoot); err != nil {
-		return err
-	}
-
-	latestHeader, err := state.LatestBlockHeader()
-	if err != nil {
-		return err
-	}
-	stateRoot, err := latestHeader.StateRoot()
-	if err != nil {
-		return err
-	}
-	if stateRoot == (common.Root{}) {
-		if err := latestHeader.SetStateRoot(previousStateRoot); err != nil {
-			return err
-		}
-	}
-	previousBlockRoot := latestHeader.HashTreeRoot(tree.GetHashFn())
-
-	// Cache latest known block and state root
-	blockRootsBatch, err := state.BlockRoots()
-	if err != nil {
-		return err
-	}
-	if err := blockRootsBatch.SetRoot(slot, previousBlockRoot); err != nil {
-		return err
-	}
-
-	return nil
-}
 
 func ProcessEpoch(ctx context.Context, spec *common.Spec, epc *EpochsContext, state *BeaconStateView) error {
 	process, err := PrepareEpochProcess(ctx, spec, epc, state)
@@ -74,14 +24,34 @@ func ProcessEpoch(ctx context.Context, spec *common.Spec, epc *EpochsContext, st
 	if err := ProcessEpochSlashings(ctx, spec, epc, process, state); err != nil {
 		return err
 	}
-	if err := ProcessEpochFinalUpdates(ctx, spec, epc, process, state); err != nil {
+	if err := ProcessEffectiveBalanceUpdates(ctx, spec, epc, process, state); err != nil {
+		return err
+	}
+	if err := ProcessEth1DataReset(ctx, spec, epc, process, state); err != nil {
+		return err
+	}
+	if err := ProcessSlashingsReset(ctx, spec, epc, process, state); err != nil {
+		return err
+	}
+	if err := ProcessRandaoMixesReset(ctx, spec, epc, process, state); err != nil {
+		return err
+	}
+	if err := ProcessParticipationRecordUpdates(ctx, spec, epc, process, state); err != nil {
 		return err
 	}
 	return nil
 }
 
 func ProcessBlock(ctx context.Context, spec *common.Spec, epc *EpochsContext, state *BeaconStateView, block *BeaconBlock) error {
-	if err := ProcessHeader(ctx, spec, epc, state, block); err != nil {
+	slot, err := state.Slot()
+	if err != nil {
+		return err
+	}
+	proposerIndex, err := epc.GetBeaconProposer(slot)
+	if err != nil {
+		return err
+	}
+	if err := common.ProcessHeader(ctx, spec, state, block.Header(spec), proposerIndex); err != nil {
 		return err
 	}
 	body := &block.Body
@@ -112,4 +82,26 @@ func ProcessBlock(ctx context.Context, spec *common.Spec, epc *EpochsContext, st
 		return err
 	}
 	return nil
+}
+
+// Assuming the slot is valid, and optionally assume the proposer index is valid, check if the signature is valid
+func VerifyBlockSignature(spec *common.Spec, epc *EpochsContext, state common.BeaconState, block *SignedBeaconBlock, validateProposerIndex bool) bool {
+	if validateProposerIndex {
+		proposerIndex, err := epc.GetBeaconProposer(block.Message.Slot)
+		if err != nil {
+			return false
+		}
+		if proposerIndex != block.Message.ProposerIndex {
+			return false
+		}
+	}
+	pub, ok := epc.PubkeyCache.Pubkey(block.Message.ProposerIndex)
+	if !ok {
+		return false
+	}
+	domain, err := common.GetDomain(state, spec.DOMAIN_BEACON_PROPOSER, spec.SlotToEpoch(block.Message.Slot))
+	if err != nil {
+		return false
+	}
+	return bls.Verify(pub, common.ComputeSigningRoot(block.Message.HashTreeRoot(spec, tree.GetHashFn()), domain), block.Signature)
 }

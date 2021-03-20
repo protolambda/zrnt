@@ -49,6 +49,8 @@ func RandaoMixesType(spec *common.Spec) VectorTypeDef {
 // Randomness and committees
 type RandaoMixesView struct{ *ComplexVectorView }
 
+var _ common.RandaoMixes = (*RandaoMixesView)(nil)
+
 func AsRandaoMixes(v View, err error) (*RandaoMixesView, error) {
 	c, err := AsComplexVector(v, err)
 	return &RandaoMixesView{c}, nil
@@ -64,15 +66,6 @@ func (mixes *RandaoMixesView) SetRandomMix(epoch common.Epoch, mix common.Root) 
 	i := uint64(epoch) % mixes.VectorLength
 	r := RootView(mix)
 	return mixes.Set(i, &r)
-}
-
-// Prepare the randao mix for the given epoch by copying over the mix from the previous epoch.
-func (mixes *RandaoMixesView) PrepareRandao(epoch common.Epoch) error {
-	prev, err := mixes.GetRandomMix(epoch.Previous())
-	if err != nil {
-		return err
-	}
-	return mixes.SetRandomMix(epoch, prev)
 }
 
 func (mixes *RandaoMixesView) GetSeed(spec *common.Spec, epoch common.Epoch, domainType common.BLSDomainType) (common.Root, error) {
@@ -112,7 +105,7 @@ func SeedRandao(spec *common.Spec, seed common.Root) (*RandaoMixesView, error) {
 	return &RandaoMixesView{ComplexVectorView: vecView}, nil
 }
 
-func ProcessRandaoReveal(ctx context.Context, spec *common.Spec, epc *EpochsContext, state *BeaconStateView, reveal common.BLSSignature) error {
+func ProcessRandaoReveal(ctx context.Context, spec *common.Spec, epc *EpochsContext, state common.BeaconState, reveal common.BLSSignature) error {
 	select {
 	case <-ctx.Done():
 		return common.TransitionCancelErr
@@ -132,7 +125,7 @@ func ProcessRandaoReveal(ctx context.Context, spec *common.Spec, epc *EpochsCont
 		return errors.New("could not find pubkey of proposer")
 	}
 	epoch := spec.SlotToEpoch(slot)
-	domain, err := state.GetDomain(spec.DOMAIN_RANDAO, epoch)
+	domain, err := common.GetDomain(state, spec.DOMAIN_RANDAO, epoch)
 	if err != nil {
 		return err
 	}

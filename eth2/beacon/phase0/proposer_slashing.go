@@ -14,8 +14,8 @@ import (
 )
 
 type ProposerSlashing struct {
-	SignedHeader1 SignedBeaconBlockHeader `json:"signed_header_1" yaml:"signed_header_1"`
-	SignedHeader2 SignedBeaconBlockHeader `json:"signed_header_2" yaml:"signed_header_2"`
+	SignedHeader1 common.SignedBeaconBlockHeader `json:"signed_header_1" yaml:"signed_header_1"`
+	SignedHeader2 common.SignedBeaconBlockHeader `json:"signed_header_2" yaml:"signed_header_2"`
 }
 
 func (a *ProposerSlashing) Deserialize(dr *codec.DecodingReader) error {
@@ -27,11 +27,11 @@ func (a *ProposerSlashing) Serialize(w *codec.EncodingWriter) error {
 }
 
 func (a *ProposerSlashing) ByteLength() uint64 {
-	return SignedBeaconBlockHeaderType.TypeByteLength() * 2
+	return common.SignedBeaconBlockHeaderType.TypeByteLength() * 2
 }
 
 func (*ProposerSlashing) FixedLength() uint64 {
-	return SignedBeaconBlockHeaderType.TypeByteLength() * 2
+	return common.SignedBeaconBlockHeaderType.TypeByteLength() * 2
 }
 
 func (p *ProposerSlashing) HashTreeRoot(hFn tree.HashFn) common.Root {
@@ -39,8 +39,8 @@ func (p *ProposerSlashing) HashTreeRoot(hFn tree.HashFn) common.Root {
 }
 
 var ProposerSlashingType = ContainerType("ProposerSlashing", []FieldDef{
-	{"header_1", SignedBeaconBlockHeaderType},
-	{"header_2", SignedBeaconBlockHeaderType},
+	{"header_1", common.SignedBeaconBlockHeaderType},
+	{"header_2", common.SignedBeaconBlockHeaderType},
 })
 
 func BlockProposerSlashingsType(spec *common.Spec) ListTypeDef {
@@ -81,7 +81,7 @@ func (li ProposerSlashings) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) com
 	}, length, spec.MAX_PROPOSER_SLASHINGS)
 }
 
-func ProcessProposerSlashings(ctx context.Context, spec *common.Spec, epc *EpochsContext, state *BeaconStateView, ops []ProposerSlashing) error {
+func ProcessProposerSlashings(ctx context.Context, spec *common.Spec, epc *EpochsContext, state common.BeaconState, ops []ProposerSlashing) error {
 	for i := range ops {
 		select {
 		case <-ctx.Done():
@@ -112,13 +112,17 @@ func ValidateProposerSlashingNoSignature(spec *common.Spec, ps *ProposerSlashing
 	return nil
 }
 
-func ValidateProposerSlashing(spec *common.Spec, epc *EpochsContext, state *BeaconStateView, ps *ProposerSlashing) error {
+func ValidateProposerSlashing(spec *common.Spec, epc *EpochsContext, state common.BeaconState, ps *ProposerSlashing) error {
 	if err := ValidateProposerSlashingNoSignature(spec, ps); err != nil {
 		return err
 	}
 	proposerIndex := ps.SignedHeader1.Message.ProposerIndex
 	// Verify header proposer index is valid
-	if valid, err := state.IsValidIndex(proposerIndex); err != nil {
+	vals, err := state.Validators()
+	if err != nil {
+		return err
+	}
+	if valid, err := vals.IsValidIndex(proposerIndex); err != nil {
 		return err
 	} else if !valid {
 		return errors.New("invalid proposer index")
@@ -133,12 +137,12 @@ func ValidateProposerSlashing(spec *common.Spec, epc *EpochsContext, state *Beac
 	if err != nil {
 		return err
 	}
-	if slashable, err := validator.IsSlashable(spec, currentEpoch); err != nil {
+	if slashable, err := IsSlashable(validator, currentEpoch); err != nil {
 		return err
 	} else if !slashable {
 		return errors.New("proposer slashing requires proposer to be slashable")
 	}
-	domain, err := state.GetDomain(spec.DOMAIN_BEACON_PROPOSER, spec.SlotToEpoch(ps.SignedHeader1.Message.Slot))
+	domain, err := common.GetDomain(state, spec.DOMAIN_BEACON_PROPOSER, spec.SlotToEpoch(ps.SignedHeader1.Message.Slot))
 	if err != nil {
 		return err
 	}
@@ -162,7 +166,7 @@ func ValidateProposerSlashing(spec *common.Spec, epc *EpochsContext, state *Beac
 	return nil
 }
 
-func ProcessProposerSlashing(spec *common.Spec, epc *EpochsContext, state *BeaconStateView, ps *ProposerSlashing) error {
+func ProcessProposerSlashing(spec *common.Spec, epc *EpochsContext, state common.BeaconState, ps *ProposerSlashing) error {
 	if err := ValidateProposerSlashing(spec, epc, state, ps); err != nil {
 		return err
 	}

@@ -48,11 +48,7 @@ func AttestationRewardsAndPenalties(ctx context.Context, spec *common.Spec,
 	if err != nil {
 		return nil, err
 	}
-	finalizedEpoch, err := finalized.Epoch()
-	if err != nil {
-		return nil, err
-	}
-	finalityDelay := previousEpoch - finalizedEpoch
+	finalityDelay := previousEpoch - finalized.Epoch
 
 	// All summed effective balances are normalized to effective-balance increments, to avoid overflows.
 	totalBalance /= spec.EFFECTIVE_BALANCE_INCREMENT
@@ -172,27 +168,19 @@ func ProcessEpochRewardsAndPenalties(ctx context.Context, spec *common.Spec, epc
 	if err != nil {
 		return err
 	}
-	balLen, err := balances.Length()
-	if err != nil {
-		return err
-	}
-	if uint64(len(sum.Penalties)) != balLen || uint64(len(sum.Rewards)) != balLen {
+	if uint64(len(sum.Penalties)) != valCount || uint64(len(sum.Rewards)) != valCount {
 		return errors.New("cannot apply deltas to balances list with different length")
 	}
-	balancesElements := make([]BasicView, 0, balLen)
-	balIter := balances.ReadonlyIter()
+	balancesElements := make([]BasicView, 0, valCount)
+	balIterNext := balances.Iter()
 	i := common.ValidatorIndex(0)
 	for {
-		el, ok, err := balIter.Next()
+		bal, ok, err := balIterNext()
 		if err != nil {
 			return err
 		}
 		if !ok {
 			break
-		}
-		bal, err := common.AsGwei(el, err)
-		if err != nil {
-			return err
 		}
 		bal += sum.Rewards[i]
 		if penalty := sum.Penalties[i]; bal >= penalty {
@@ -203,10 +191,5 @@ func ProcessEpochRewardsAndPenalties(ctx context.Context, spec *common.Spec, epc
 		balancesElements = append(balancesElements, Uint64View(bal))
 		i++
 	}
-
-	newBalancesTree, err := RegistryBalancesType(spec).FromElements(balancesElements...)
-	if err != nil {
-		return err
-	}
-	return balances.SetBacking(newBalancesTree.Backing())
+	return state.setBalances(spec, balancesElements)
 }

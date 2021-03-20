@@ -53,6 +53,8 @@ func SlashingsType(spec *common.Spec) VectorTypeDef {
 
 type SlashingsView struct{ *BasicVectorView }
 
+var _ common.Slashings = (*SlashingsView)(nil)
+
 func AsSlashings(v View, err error) (*SlashingsView, error) {
 	c, err := AsBasicVector(v, err)
 	return &SlashingsView{c}, nil
@@ -97,7 +99,9 @@ func (sl *SlashingsView) Total() (sum common.Gwei, err error) {
 }
 
 // Slash the validator with the given index.
-func SlashValidator(spec *common.Spec, epc *EpochsContext, state *BeaconStateView, slashedIndex common.ValidatorIndex, whistleblowerIndex *common.ValidatorIndex) error {
+func SlashValidator(spec *common.Spec, epc *EpochsContext, state common.BeaconState,
+	slashedIndex common.ValidatorIndex, whistleblowerIndex *common.ValidatorIndex) error {
+
 	currentEpoch := epc.CurrentEpoch.Epoch
 	if err := InitiateValidatorExit(spec, epc, state, slashedIndex); err != nil {
 		return err
@@ -141,7 +145,7 @@ func SlashValidator(spec *common.Spec, epc *EpochsContext, state *BeaconStateVie
 	if err != nil {
 		return err
 	}
-	if err := bals.DecreaseBalance(slashedIndex, effectiveBalance/common.Gwei(spec.MIN_SLASHING_PENALTY_QUOTIENT)); err != nil {
+	if err := common.DecreaseBalance(bals, slashedIndex, effectiveBalance/common.Gwei(spec.MIN_SLASHING_PENALTY_QUOTIENT)); err != nil {
 		return err
 	}
 
@@ -158,16 +162,16 @@ func SlashValidator(spec *common.Spec, epc *EpochsContext, state *BeaconStateVie
 	}
 	whistleblowerReward := effectiveBalance / common.Gwei(spec.WHISTLEBLOWER_REWARD_QUOTIENT)
 	proposerReward := whistleblowerReward / common.Gwei(spec.PROPOSER_REWARD_QUOTIENT)
-	if err := bals.IncreaseBalance(propIndex, proposerReward); err != nil {
+	if err := common.IncreaseBalance(bals, propIndex, proposerReward); err != nil {
 		return err
 	}
-	if err := bals.IncreaseBalance(*whistleblowerIndex, whistleblowerReward-proposerReward); err != nil {
+	if err := common.IncreaseBalance(bals, *whistleblowerIndex, whistleblowerReward-proposerReward); err != nil {
 		return err
 	}
 	return nil
 }
 
-func ProcessEpochSlashings(ctx context.Context, spec *common.Spec, epc *EpochsContext, process *EpochProcess, state *BeaconStateView) error {
+func ProcessEpochSlashings(ctx context.Context, spec *common.Spec, epc *EpochsContext, process *EpochProcess, state common.BeaconState) error {
 	select {
 	case <-ctx.Done():
 		return common.TransitionCancelErr
@@ -204,7 +208,7 @@ func ProcessEpochSlashings(ctx context.Context, spec *common.Spec, epc *EpochsCo
 		penaltyNumerator *= adjustedTotalSlashingBalance
 		penalty := penaltyNumerator / totalBalance * spec.EFFECTIVE_BALANCE_INCREMENT
 
-		if err := bals.DecreaseBalance(index, penalty); err != nil {
+		if err := common.DecreaseBalance(bals, index, penalty); err != nil {
 			return err
 		}
 	}

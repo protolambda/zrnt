@@ -93,6 +93,26 @@ func (v *Eth1DataView) DepositCount() (DepositIndex, error) {
 	return AsDepositIndex(v.Get(1))
 }
 
-func (v *Eth1DataView) DepositIndex() (DepositIndex, error) {
-	return AsDepositIndex(v.Get(2))
+func (v *Eth1DataView) BlockHash() (Root, error) {
+	return AsRoot(v.Get(2))
+}
+
+func (v *Eth1DataView) Raw() (Eth1Data, error) {
+	depRoot, err := v.DepositRoot()
+	if err != nil {
+		return Eth1Data{}, err
+	}
+	depCount, err := v.DepositCount()
+	if err != nil {
+		return Eth1Data{}, err
+	}
+	blockHash, err := v.BlockHash()
+	if err != nil {
+		return Eth1Data{}, err
+	}
+	return Eth1Data{
+		DepositRoot:  depRoot,
+		DepositCount: depCount,
+		BlockHash:    blockHash,
+	}, nil
 }

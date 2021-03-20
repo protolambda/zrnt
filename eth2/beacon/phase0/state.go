@@ -15,10 +15,10 @@ type BeaconState struct {
 	Slot                  common.Slot      `json:"slot" yaml:"slot"`
 	Fork                  common.Fork      `json:"fork" yaml:"fork"`
 	// History
-	LatestBlockHeader BeaconBlockHeader    `json:"latest_block_header" yaml:"latest_block_header"`
-	BlockRoots        HistoricalBatchRoots `json:"block_roots" yaml:"block_roots"`
-	StateRoots        HistoricalBatchRoots `json:"state_roots" yaml:"state_roots"`
-	HistoricalRoots   HistoricalRoots      `json:"historical_roots" yaml:"historical_roots"`
+	LatestBlockHeader common.BeaconBlockHeader `json:"latest_block_header" yaml:"latest_block_header"`
+	BlockRoots        HistoricalBatchRoots     `json:"block_roots" yaml:"block_roots"`
+	StateRoots        HistoricalBatchRoots     `json:"state_roots" yaml:"state_roots"`
+	HistoricalRoots   HistoricalRoots          `json:"historical_roots" yaml:"historical_roots"`
 	// Eth1
 	Eth1Data      common.Eth1Data     `json:"eth1_data" yaml:"eth1_data"`
 	Eth1DataVotes Eth1DataVotes       `json:"eth1_data_votes" yaml:"eth1_data_votes"`
@@ -32,10 +32,10 @@ type BeaconState struct {
 	PreviousEpochAttestations PendingAttestations `json:"previous_epoch_attestations" yaml:"previous_epoch_attestations"`
 	CurrentEpochAttestations  PendingAttestations `json:"current_epoch_attestations" yaml:"current_epoch_attestations"`
 	// Finality
-	JustificationBits           JustificationBits `json:"justification_bits" yaml:"justification_bits"`
-	PreviousJustifiedCheckpoint common.Checkpoint `json:"previous_justified_checkpoint" yaml:"previous_justified_checkpoint"`
-	CurrentJustifiedCheckpoint  common.Checkpoint `json:"current_justified_checkpoint" yaml:"current_justified_checkpoint"`
-	FinalizedCheckpoint         common.Checkpoint `json:"finalized_checkpoint" yaml:"finalized_checkpoint"`
+	JustificationBits           common.JustificationBits `json:"justification_bits" yaml:"justification_bits"`
+	PreviousJustifiedCheckpoint common.Checkpoint        `json:"previous_justified_checkpoint" yaml:"previous_justified_checkpoint"`
+	CurrentJustifiedCheckpoint  common.Checkpoint        `json:"current_justified_checkpoint" yaml:"current_justified_checkpoint"`
+	FinalizedCheckpoint         common.Checkpoint        `json:"finalized_checkpoint" yaml:"finalized_checkpoint"`
 }
 
 func (v *BeaconState) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
@@ -128,7 +128,7 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 		{"slot", common.SlotType},
 		{"fork", common.ForkType},
 		// History
-		{"latest_block_header", BeaconBlockHeaderType},
+		{"latest_block_header", common.BeaconBlockHeaderType},
 		{"block_roots", BatchRootsType(spec)},
 		{"state_roots", BatchRootsType(spec)},
 		{"historical_roots", HistoricalRootsType(spec)},
@@ -147,7 +147,7 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 		{"previous_epoch_attestations", PendingAttestationsType(spec)},
 		{"current_epoch_attestations", PendingAttestationsType(spec)},
 		// Finality
-		{"justification_bits", JustificationBitsType},            // Bit set for every recent justified epoch
+		{"justification_bits", common.JustificationBitsType},     // Bit set for every recent justified epoch
 		{"previous_justified_checkpoint", common.CheckpointType}, // Previous epoch snapshot
 		{"current_justified_checkpoint", common.CheckpointType},
 		{"finalized_checkpoint", common.CheckpointType},
@@ -165,6 +165,8 @@ func AsBeaconStateView(v View, err error) (*BeaconStateView, error) {
 type BeaconStateView struct {
 	*ContainerView
 }
+
+var _ common.BeaconState = (*BeaconStateView)(nil)
 
 func NewBeaconStateView(spec *common.Spec) *BeaconStateView {
 	return &BeaconStateView{ContainerView: BeaconStateType(spec).New()}
@@ -195,43 +197,55 @@ func (state *BeaconStateView) SetSlot(slot common.Slot) error {
 	return state.Set(_stateSlot, Uint64View(slot))
 }
 
-func (state *BeaconStateView) Fork() (*common.ForkView, error) {
-	return common.AsFork(state.Get(_stateFork))
+func (state *BeaconStateView) Fork() (common.Fork, error) {
+	fv, err := common.AsFork(state.Get(_stateFork))
+	if err != nil {
+		return common.Fork{}, err
+	}
+	return fv.Raw()
 }
 
 func (state *BeaconStateView) SetFork(f common.Fork) error {
 	return state.Set(_stateFork, f.View())
 }
 
-func (state *BeaconStateView) LatestBlockHeader() (*BeaconBlockHeaderView, error) {
-	return AsBeaconBlockHeader(state.Get(_stateLatestBlockHeader))
+func (state *BeaconStateView) LatestBlockHeader() (*common.BeaconBlockHeader, error) {
+	h, err := common.AsBeaconBlockHeader(state.Get(_stateLatestBlockHeader))
+	if err != nil {
+		return nil, err
+	}
+	return h.Raw()
 }
 
-func (state *BeaconStateView) SetLatestBlockHeader(v *BeaconBlockHeaderView) error {
-	return state.Set(_stateLatestBlockHeader, v)
+func (state *BeaconStateView) SetLatestBlockHeader(v *common.BeaconBlockHeader) error {
+	return state.Set(_stateLatestBlockHeader, v.View())
 }
 
-func (state *BeaconStateView) BlockRoots() (*BatchRootsView, error) {
+func (state *BeaconStateView) BlockRoots() (common.BatchRoots, error) {
 	return AsBatchRoots(state.Get(_stateBlockRoots))
 }
 
-func (state *BeaconStateView) StateRoots() (*BatchRootsView, error) {
+func (state *BeaconStateView) StateRoots() (common.BatchRoots, error) {
 	return AsBatchRoots(state.Get(_stateStateRoots))
 }
 
-func (state *BeaconStateView) HistoricalRoots() (*HistoricalRootsView, error) {
+func (state *BeaconStateView) HistoricalRoots() (common.HistoricalRoots, error) {
 	return AsHistoricalRoots(state.Get(_stateHistoricalRoots))
 }
 
-func (state *BeaconStateView) Eth1Data() (*common.Eth1DataView, error) {
-	return common.AsEth1Data(state.Get(_stateEth1Data))
+func (state *BeaconStateView) Eth1Data() (common.Eth1Data, error) {
+	dat, err := common.AsEth1Data(state.Get(_stateEth1Data))
+	if err != nil {
+		return common.Eth1Data{}, err
+	}
+	return dat.Raw()
 }
 
-func (state *BeaconStateView) SetEth1Data(v *common.Eth1DataView) error {
-	return state.Set(_stateEth1Data, v)
+func (state *BeaconStateView) SetEth1Data(v common.Eth1Data) error {
+	return state.Set(_stateEth1Data, v.View())
 }
 
-func (state *BeaconStateView) Eth1DataVotes() (*Eth1DataVotesView, error) {
+func (state *BeaconStateView) Eth1DataVotes() (common.Eth1DataVotes, error) {
 	return AsEth1DataVotes(state.Get(_stateEth1DataVotes))
 }
 
@@ -247,23 +261,66 @@ func (state *BeaconStateView) IncrementDepositIndex() error {
 	return state.Set(_stateDepositIndex, Uint64View(depIndex+1))
 }
 
-func (state *BeaconStateView) Validators() (*ValidatorsRegistryView, error) {
+func (state *BeaconStateView) Validators() (common.ValidatorRegistry, error) {
 	return AsValidatorsRegistry(state.Get(_stateValidators))
 }
 
-func (state *BeaconStateView) Balances() (*RegistryBalancesView, error) {
+func (state *BeaconStateView) Balances() (common.Balances, error) {
 	return AsRegistryBalances(state.Get(_stateBalances))
 }
 
-func (state *BeaconStateView) RandaoMixes() (*RandaoMixesView, error) {
+func (state *BeaconStateView) setBalances(spec *common.Spec, bals []BasicView) error {
+	newBalancesTree, err := RegistryBalancesType(spec).FromElements(bals...)
+	if err != nil {
+		return err
+	}
+	return state.Set(_stateBalances, newBalancesTree)
+}
+
+func (state *BeaconStateView) AddValidator(spec *common.Spec, pub common.BLSPubkey, withdrawalCreds common.Root, balance common.Gwei) error {
+	effBalance := balance - (balance % spec.EFFECTIVE_BALANCE_INCREMENT)
+	if effBalance > spec.MAX_EFFECTIVE_BALANCE {
+		effBalance = spec.MAX_EFFECTIVE_BALANCE
+	}
+	validatorRaw := Validator{
+		Pubkey:                     pub,
+		WithdrawalCredentials:      withdrawalCreds,
+		ActivationEligibilityEpoch: common.FAR_FUTURE_EPOCH,
+		ActivationEpoch:            common.FAR_FUTURE_EPOCH,
+		ExitEpoch:                  common.FAR_FUTURE_EPOCH,
+		WithdrawableEpoch:          common.FAR_FUTURE_EPOCH,
+		EffectiveBalance:           effBalance,
+	}
+	validators, err := AsValidatorsRegistry(state.Get(_stateValidators))
+	if err != nil {
+		return err
+	}
+	if err := validators.Append(validatorRaw.View()); err != nil {
+		return err
+	}
+	bals, err := AsRegistryBalances(state.Get(_stateBalances))
+	if err != nil {
+		return err
+	}
+	if err := bals.Append(Uint64View(balance)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (state *BeaconStateView) RandaoMixes() (common.RandaoMixes, error) {
 	return AsRandaoMixes(state.Get(_stateRandaoMixes))
 }
 
-func (state *BeaconStateView) SetRandaoMixes(v *RandaoMixesView) error {
+func (state *BeaconStateView) SeedRandao(spec *common.Spec, seed common.Root) error {
+	v, err := SeedRandao(spec, seed)
+	if err != nil {
+		return err
+	}
 	return state.Set(_stateRandaoMixes, v)
 }
 
-func (state *BeaconStateView) Slashings() (*SlashingsView, error) {
+func (state *BeaconStateView) Slashings() (common.Slashings, error) {
 	return AsSlashings(state.Get(_stateSlashings))
 }
 
@@ -275,32 +332,68 @@ func (state *BeaconStateView) CurrentEpochAttestations() (*PendingAttestationsVi
 	return AsPendingAttestations(state.Get(_stateCurrentEpochAttestations))
 }
 
-func (state *BeaconStateView) JustificationBits() (*JustificationBitsView, error) {
-	return AsJustificationBits(state.Get(_stateJustificationBits))
-}
-
-func (state *BeaconStateView) PreviousJustifiedCheckpoint() (*common.CheckpointView, error) {
-	return common.AsCheckPoint(state.Get(_statePreviousJustifiedCheckpoint))
-}
-
-func (state *BeaconStateView) CurrentJustifiedCheckpoint() (*common.CheckpointView, error) {
-	return common.AsCheckPoint(state.Get(_stateCurrentJustifiedCheckpoint))
-}
-
-func (state *BeaconStateView) FinalizedCheckpoint() (*common.CheckpointView, error) {
-	return common.AsCheckPoint(state.Get(_stateFinalizedCheckpoint))
-}
-
-func (state *BeaconStateView) IsValidIndex(index common.ValidatorIndex) (bool, error) {
-	vals, err := state.Validators()
+func (state *BeaconStateView) JustificationBits() (common.JustificationBits, error) {
+	b, err := common.AsJustificationBits(state.Get(_stateJustificationBits))
 	if err != nil {
-		return false, err
+		return common.JustificationBits{}, err
 	}
-	count, err := vals.Length()
+	return b.Raw()
+}
+
+func (state *BeaconStateView) SetJustificationBits(bits common.JustificationBits) error {
+	b, err := common.AsJustificationBits(state.Get(_stateJustificationBits))
 	if err != nil {
-		return false, err
+		return err
 	}
-	return uint64(index) < count, nil
+	return b.Set(bits)
+}
+
+func (state *BeaconStateView) PreviousJustifiedCheckpoint() (common.Checkpoint, error) {
+	c, err := common.AsCheckPoint(state.Get(_statePreviousJustifiedCheckpoint))
+	if err != nil {
+		return common.Checkpoint{}, err
+	}
+	return c.Raw()
+}
+
+func (state *BeaconStateView) SetPreviousJustifiedCheckpoint(c common.Checkpoint) error {
+	v, err := common.AsCheckPoint(state.Get(_statePreviousJustifiedCheckpoint))
+	if err != nil {
+		return err
+	}
+	return v.Set(&c)
+}
+
+func (state *BeaconStateView) CurrentJustifiedCheckpoint() (common.Checkpoint, error) {
+	c, err := common.AsCheckPoint(state.Get(_stateCurrentJustifiedCheckpoint))
+	if err != nil {
+		return common.Checkpoint{}, err
+	}
+	return c.Raw()
+}
+
+func (state *BeaconStateView) SetCurrentJustifiedCheckpoint(c common.Checkpoint) error {
+	v, err := common.AsCheckPoint(state.Get(_stateCurrentJustifiedCheckpoint))
+	if err != nil {
+		return err
+	}
+	return v.Set(&c)
+}
+
+func (state *BeaconStateView) FinalizedCheckpoint() (common.Checkpoint, error) {
+	c, err := common.AsCheckPoint(state.Get(_stateFinalizedCheckpoint))
+	if err != nil {
+		return common.Checkpoint{}, err
+	}
+	return c.Raw()
+}
+
+func (state *BeaconStateView) SetFinalizedCheckpoint(c common.Checkpoint) error {
+	v, err := common.AsCheckPoint(state.Get(_stateFinalizedCheckpoint))
+	if err != nil {
+		return err
+	}
+	return v.Set(&c)
 }
 
 // Raw converts the tree-structured state into a flattened native Go structure.
@@ -315,58 +408,4 @@ func (state *BeaconStateView) Raw(spec *common.Spec) (*BeaconState, error) {
 		return nil, err
 	}
 	return &raw, nil
-}
-
-func (state *BeaconStateView) SetRecentRoots(slot common.Slot, blockRoot common.Root, stateRoot common.Root) error {
-	blockRootsBatch, err := state.BlockRoots()
-	if err != nil {
-		return err
-	}
-	stateRootsBatch, err := state.StateRoots()
-	if err != nil {
-		return err
-	}
-	if err := blockRootsBatch.SetRoot(slot%common.Slot(blockRootsBatch.VectorLength), blockRoot); err != nil {
-		return err
-	}
-	if err := stateRootsBatch.SetRoot(slot%common.Slot(stateRootsBatch.VectorLength), stateRoot); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (state *BeaconStateView) UpdateHistoricalRoots() error {
-	histRoots, err := state.HistoricalRoots()
-	if err != nil {
-		return err
-	}
-	blockRoots, err := state.BlockRoots()
-	if err != nil {
-		return err
-	}
-	stateRoots, err := state.StateRoots()
-	if err != nil {
-		return err
-	}
-	// emulating HistoricalBatch here
-	hFn := tree.GetHashFn()
-	newHistoricalRoot := RootView(tree.Hash(blockRoots.HashTreeRoot(hFn), stateRoots.HashTreeRoot(hFn)))
-	return histRoots.Append(&newHistoricalRoot)
-}
-
-// Return the signature domain (fork version concatenated with domain type) of a message.
-func (state *BeaconStateView) GetDomain(dom common.BLSDomainType, messageEpoch common.Epoch) (common.BLSDomain, error) {
-	forkView, err := state.Fork()
-	if err != nil {
-		return common.BLSDomain{}, err
-	}
-	fork, err := forkView.Raw()
-	if err != nil {
-		return common.BLSDomain{}, err
-	}
-	genesisValRoot, err := state.GenesisValidatorsRoot()
-	if err != nil {
-		return common.BLSDomain{}, err
-	}
-	return fork.GetDomain(dom, genesisValRoot, messageEpoch)
 }

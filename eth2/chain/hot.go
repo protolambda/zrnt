@@ -16,12 +16,12 @@ import (
 type HotEntry struct {
 	self   BlockSlotKey
 	parent Root
-	epc    *phase0.EpochsContext
-	state  *phase0.BeaconStateView
+	epc    *common.EpochsContext
+	state  common.BeaconState
 }
 
 func NewHotEntry(self BlockSlotKey, parent Root,
-	state *phase0.BeaconStateView, epc *phase0.EpochsContext) *HotEntry {
+	state common.BeaconState, epc *common.EpochsContext) *HotEntry {
 	return &HotEntry{
 		self:   self,
 		parent: parent,
@@ -46,13 +46,13 @@ func (e *HotEntry) StateRoot() Root {
 	return e.state.HashTreeRoot(tree.GetHashFn())
 }
 
-func (e *HotEntry) EpochsContext(context.Context) (*phase0.EpochsContext, error) {
+func (e *HotEntry) EpochsContext(context.Context) (*common.EpochsContext, error) {
 	return e.epc.Clone(), nil
 }
 
-func (e *HotEntry) State(context.Context) (*phase0.BeaconStateView, error) {
+func (e *HotEntry) State(context.Context) (common.BeaconState, error) {
 	// Return a copy of the view, the state itself may not be modified
-	return phase0.AsBeaconStateView(e.state.Copy())
+	return e.state.Copy()
 }
 
 type HotChain interface {
@@ -180,15 +180,7 @@ func NewUnfinalizedChain(anchorState *phase0.BeaconStateView, sink BlockSink, sp
 	if err != nil {
 		return nil, err
 	}
-	finCh, err := fin.Raw()
-	if err != nil {
-		return nil, err
-	}
 	just, err := anchorState.CurrentJustifiedCheckpoint()
-	if err != nil {
-		return nil, err
-	}
-	justCh, err := just.Raw()
 	if err != nil {
 		return nil, err
 	}
@@ -197,16 +189,8 @@ func NewUnfinalizedChain(anchorState *phase0.BeaconStateView, sink BlockSink, sp
 	if err != nil {
 		return nil, err
 	}
-	latestHeader, _ = phase0.AsBeaconBlockHeader(latestHeader.Copy())
-	stateRoot, err := latestHeader.StateRoot()
-	if err != nil {
-		return nil, err
-	}
-	if stateRoot == (Root{}) {
-		stateRoot = anchorState.HashTreeRoot(tree.GetHashFn())
-		if err := latestHeader.SetStateRoot(stateRoot); err != nil {
-			return nil, err
-		}
+	if latestHeader.StateRoot == (Root{}) {
+		latestHeader.StateRoot = anchorState.HashTreeRoot(tree.GetHashFn())
 	}
 	anchorBlockRoot := latestHeader.HashTreeRoot(tree.GetHashFn())
 
@@ -214,26 +198,22 @@ func NewUnfinalizedChain(anchorState *phase0.BeaconStateView, sink BlockSink, sp
 	if err != nil {
 		return nil, err
 	}
-	// may be equal to anchorBlockRoot if the anchor state is of a gap slot.
-	parentRoot, err := latestHeader.ParentRoot()
-	if err != nil {
-		return nil, err
-	}
-	epc, err := phase0.NewEpochsContext(spec, anchorState)
+	epc, err := common.NewEpochsContext(spec, anchorState)
 	if err != nil {
 		return nil, err
 	}
 	anchor := BlockSlotKey{Root: anchorBlockRoot, Slot: slot}
 	anchorBlock := &HotEntry{
-		self:   anchor,
-		parent: parentRoot,
+		self: anchor,
+		// parent root may be equal to anchorBlockRoot if the anchor state is of a gap slot.
+		parent: latestHeader.ParentRoot,
 		epc:    epc,
 		state:  anchorState,
 	}
 	uc := &UnfinalizedChain{
 		ForkChoice: nil,
 		Entries:    map[BlockSlotKey]*HotEntry{anchor: anchorBlock},
-		State2Key:  map[Root]BlockSlotKey{stateRoot: anchor},
+		State2Key:  map[Root]BlockSlotKey{latestHeader.StateRoot: anchor},
 		BlockSink:  sink,
 		Spec:       spec,
 	}
@@ -247,10 +227,10 @@ func NewUnfinalizedChain(anchorState *phase0.BeaconStateView, sink BlockSink, sp
 	}
 	fc, err := proto.NewProtoForkChoice(
 		spec,
-		finCh,
-		justCh,
+		fin,
+		just,
 		anchorBlockRoot, slot,
-		parentRoot,
+		latestHeader.ParentRoot,
 		balances,
 		proto.NodeSinkFn(uc.onPrunedNode),
 	)
@@ -355,19 +335,11 @@ func stateJustFin(state *phase0.BeaconStateView) (justified Checkpoint, finalize
 	if err != nil {
 		return Checkpoint{}, Checkpoint{}, err
 	}
-	justified, err = justifiedCh.Raw()
-	if err != nil {
-		return Checkpoint{}, Checkpoint{}, err
-	}
 	finalizedCh, err := state.FinalizedCheckpoint()
 	if err != nil {
 		return Checkpoint{}, Checkpoint{}, err
 	}
-	finalized, err = finalizedCh.Raw()
-	if err != nil {
-		return Checkpoint{}, Checkpoint{}, err
-	}
-	return justified, finalized, nil
+	return justifiedCh, finalizedCh, nil
 }
 
 func (uc *UnfinalizedChain) Towards(ctx context.Context, fromBlockRoot Root, toSlot Slot) (ChainEntry, error) {

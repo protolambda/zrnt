@@ -11,7 +11,7 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
-func ProcessAttesterSlashings(ctx context.Context, spec *common.Spec, epc *EpochsContext, state common.BeaconState, ops []AttesterSlashing) error {
+func ProcessAttesterSlashings(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, ops []AttesterSlashing) error {
 	for i := range ops {
 		select {
 		case <-ctx.Done():
@@ -99,7 +99,7 @@ func (li AttesterSlashings) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) com
 	}, length, spec.MAX_ATTESTER_SLASHINGS)
 }
 
-func ProcessAttesterSlashing(spec *common.Spec, epc *EpochsContext, state common.BeaconState, attesterSlashing *AttesterSlashing) error {
+func ProcessAttesterSlashing(spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, attesterSlashing *AttesterSlashing) error {
 	sa1 := &attesterSlashing.Attestation1
 	sa2 := &attesterSlashing.Attestation2
 

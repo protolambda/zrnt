@@ -87,7 +87,7 @@ func (li Attestations) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.R
 	}, length, spec.MAX_ATTESTATIONS)
 }
 
-func ProcessAttestations(ctx context.Context, spec *common.Spec, epc *EpochsContext, state *BeaconStateView, ops []Attestation) error {
+func ProcessAttestations(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView, ops []Attestation) error {
 	for i := range ops {
 		select {
 		case <-ctx.Done():
@@ -102,7 +102,7 @@ func ProcessAttestations(ctx context.Context, spec *common.Spec, epc *EpochsCont
 	return nil
 }
 
-func ProcessAttestation(spec *common.Spec, epc *EpochsContext, state *BeaconStateView, attestation *Attestation) error {
+func ProcessAttestation(spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView, attestation *Attestation) error {
 	data := &attestation.Data
 
 	// Check slot

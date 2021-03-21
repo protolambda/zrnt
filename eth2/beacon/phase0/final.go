@@ -5,7 +5,7 @@ import (
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 )
 
-func ProcessEffectiveBalanceUpdates(ctx context.Context, spec *common.Spec, epc *EpochsContext, process *EpochProcess, state common.BeaconState) error {
+func ProcessEffectiveBalanceUpdates(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, flats []common.FlatValidator, state common.BeaconState) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -30,7 +30,7 @@ func ProcessEffectiveBalanceUpdates(ctx context.Context, spec *common.Spec, epc 
 		if !ok {
 			break
 		}
-		effBalance := process.Statuses[i].Validator.EffectiveBalance
+		effBalance := flats[i].EffectiveBalance
 		if balance+DOWNWARD_THRESHOLD < effBalance || effBalance+UPWARD_THRESHOLD < balance {
 			effBalance = balance - (balance % spec.EFFECTIVE_BALANCE_INCREMENT)
 			if spec.MAX_EFFECTIVE_BALANCE < effBalance {
@@ -48,7 +48,7 @@ func ProcessEffectiveBalanceUpdates(ctx context.Context, spec *common.Spec, epc 
 	return nil
 }
 
-func ProcessEth1DataReset(ctx context.Context, spec *common.Spec, epc *EpochsContext, process *EpochProcess, state common.BeaconState) error {
+func ProcessEth1DataReset(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state common.BeaconState) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func ProcessEth1DataReset(ctx context.Context, spec *common.Spec, epc *EpochsCon
 	return nil
 }
 
-func ProcessSlashingsReset(ctx context.Context, spec *common.Spec, epc *EpochsContext, process *EpochProcess, state common.BeaconState) error {
+func ProcessSlashingsReset(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state common.BeaconState) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -76,7 +76,7 @@ func ProcessSlashingsReset(ctx context.Context, spec *common.Spec, epc *EpochsCo
 	return slashings.ResetSlashings(epc.NextEpoch.Epoch)
 }
 
-func ProcessRandaoMixesReset(ctx context.Context, spec *common.Spec, epc *EpochsContext, process *EpochProcess, state common.BeaconState) error {
+func ProcessRandaoMixesReset(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state common.BeaconState) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func ProcessRandaoMixesReset(ctx context.Context, spec *common.Spec, epc *Epochs
 	return common.PrepareRandao(mixes, epc.NextEpoch.Epoch)
 }
 
-func ProcessHistoricalRootsUpdate(ctx context.Context, spec *common.Spec, epc *EpochsContext, process *EpochProcess, state common.BeaconState) error {
+func ProcessHistoricalRootsUpdate(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state common.BeaconState) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -100,7 +100,10 @@ func ProcessHistoricalRootsUpdate(ctx context.Context, spec *common.Spec, epc *E
 	return nil
 }
 
-func ProcessParticipationRecordUpdates(ctx context.Context, spec *common.Spec, epc *EpochsContext, process *EpochProcess, state *BeaconStateView) error {
+func ProcessParticipationRecordUpdates(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	// Rotate current/previous epoch attestations
 	prevAtts, err := state.PreviousEpochAttestations()
 	if err != nil {

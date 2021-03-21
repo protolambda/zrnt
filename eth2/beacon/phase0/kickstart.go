@@ -13,7 +13,7 @@ type KickstartValidatorData struct {
 }
 
 // To build a genesis state without Eth 1.0 deposits, i.e. directly from a sequence of minimal validator data.
-func KickStartState(spec *common.Spec, eth1BlockHash common.Root, time common.Timestamp, validators []KickstartValidatorData) (*BeaconStateView, *EpochsContext, error) {
+func KickStartState(spec *common.Spec, eth1BlockHash common.Root, time common.Timestamp, validators []KickstartValidatorData) (*BeaconStateView, *common.EpochsContext, error) {
 	deps := make([]common.Deposit, len(validators), len(validators))
 
 	for i := range validators {
@@ -38,7 +38,7 @@ func KickStartState(spec *common.Spec, eth1BlockHash common.Root, time common.Ti
 }
 
 // To build a genesis state without Eth 1.0 deposits, i.e. directly from a sequence of minimal validator data.
-func KickStartStateWithSignatures(spec *common.Spec, eth1BlockHash common.Root, time common.Timestamp, validators []KickstartValidatorData, keys [][32]byte) (*BeaconStateView, *EpochsContext, error) {
+func KickStartStateWithSignatures(spec *common.Spec, eth1BlockHash common.Root, time common.Timestamp, validators []KickstartValidatorData, keys [][32]byte) (*BeaconStateView, *common.EpochsContext, error) {
 	deps := make([]common.Deposit, len(validators), len(validators))
 
 	for i := range validators {

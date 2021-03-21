@@ -81,7 +81,7 @@ func (li ProposerSlashings) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) com
 	}, length, spec.MAX_PROPOSER_SLASHINGS)
 }
 
-func ProcessProposerSlashings(ctx context.Context, spec *common.Spec, epc *EpochsContext, state common.BeaconState, ops []ProposerSlashing) error {
+func ProcessProposerSlashings(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, ops []ProposerSlashing) error {
 	for i := range ops {
 		select {
 		case <-ctx.Done():
@@ -112,7 +112,7 @@ func ValidateProposerSlashingNoSignature(spec *common.Spec, ps *ProposerSlashing
 	return nil
 }
 
-func ValidateProposerSlashing(spec *common.Spec, epc *EpochsContext, state common.BeaconState, ps *ProposerSlashing) error {
+func ValidateProposerSlashing(spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, ps *ProposerSlashing) error {
 	if err := ValidateProposerSlashingNoSignature(spec, ps); err != nil {
 		return err
 	}
@@ -166,7 +166,7 @@ func ValidateProposerSlashing(spec *common.Spec, epc *EpochsContext, state commo
 	return nil
 }
 
-func ProcessProposerSlashing(spec *common.Spec, epc *EpochsContext, state common.BeaconState, ps *ProposerSlashing) error {
+func ProcessProposerSlashing(spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, ps *ProposerSlashing) error {
 	if err := ValidateProposerSlashing(spec, epc, state, ps); err != nil {
 		return err
 	}

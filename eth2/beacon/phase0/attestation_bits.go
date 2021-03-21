@@ -174,15 +174,3 @@ func (v *AttestationBitsView) Raw() (AttestationBits, error) {
 	}
 	return out, nil
 }
-
-func CommitteeCount(spec *common.Spec, activeValidators uint64) uint64 {
-	validatorsPerSlot := activeValidators / uint64(spec.SLOTS_PER_EPOCH)
-	committeesPerSlot := validatorsPerSlot / spec.TARGET_COMMITTEE_SIZE
-	if spec.MAX_COMMITTEES_PER_SLOT < committeesPerSlot {
-		committeesPerSlot = spec.MAX_COMMITTEES_PER_SLOT
-	}
-	if committeesPerSlot == 0 {
-		committeesPerSlot = 1
-	}
-	return committeesPerSlot
-}

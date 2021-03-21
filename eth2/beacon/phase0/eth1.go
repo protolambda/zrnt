@@ -90,7 +90,7 @@ func (v *Eth1DataVotesView) Append(dat common.Eth1Data) error {
 	return v.ComplexListView.Append(dat.View())
 }
 
-func ProcessEth1Vote(ctx context.Context, spec *common.Spec, epc *EpochsContext, state common.BeaconState, data common.Eth1Data) error {
+func ProcessEth1Vote(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, data common.Eth1Data) error {
 	select {
 	case <-ctx.Done():
 		return common.TransitionCancelErr

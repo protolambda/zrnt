@@ -94,7 +94,7 @@ func (c *RewardsTest) Run() error {
 	if err != nil {
 		return err
 	}
-	process, err := phase0.PrepareEpochProcess(context.Background(), c.Spec, epc, c.Pre)
+	process, err := phase0.ComputeEpochAttesterData(context.Background(), c.Spec, epc, c.Pre)
 	if err != nil {
 		return err
 	}

@@ -29,7 +29,7 @@ func AggregateSelectionProofSigningRoot(spec *common.Spec, domainFn common.BLSDo
 	return common.ComputeSigningRoot(slot.HashTreeRoot(tree.GetHashFn()), domain), nil
 }
 
-func ValidateAggregateSelectionProof(spec *common.Spec, epc *EpochsContext, state *BeaconStateView,
+func ValidateAggregateSelectionProof(spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView,
 	slot common.Slot, commIndex common.CommitteeIndex, aggregator common.ValidatorIndex, selectionProof common.BLSSignature) (bool, error) {
 	// check if the aggregator even exists
 	vals, err := state.Validators()

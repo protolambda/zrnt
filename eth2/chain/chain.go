@@ -59,12 +59,12 @@ type ChainEntry interface {
 	// Should match state-root in the block at the same slot (if any)
 	StateRoot() Root
 	// The context of this chain entry (shuffling, proposers, etc.)
-	EpochsContext(ctx context.Context) (*phase0.EpochsContext, error)
+	EpochsContext(ctx context.Context) (*common.EpochsContext, error)
 	// StateExclBlock retrieves the state of this slot.
 	// - If IsEmpty: it is the state after processing slots to Slot() (incl.),
 	//   with ProcessSlots(slot), but without any block processing.
 	// - if not IsEmpty: post-block processing (if any block), excl. latest-header update of next slot.
-	State(ctx context.Context) (*phase0.BeaconStateView, error)
+	State(ctx context.Context) (common.BeaconState, error)
 }
 
 type SearchEntry struct {

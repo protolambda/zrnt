@@ -1,6 +1,7 @@
 package phase0
 
 import (
+	"errors"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
@@ -140,6 +141,24 @@ func (v *ValidatorView) WithdrawableEpoch() (common.Epoch, error) {
 }
 func (v *ValidatorView) SetWithdrawableEpoch(epoch common.Epoch) error {
 	return v.Set(_validatorWithdrawableEpoch, Uint64View(epoch))
+}
+
+func (v *ValidatorView) Flatten(dst *common.FlatValidator) error {
+	if dst == nil {
+		return errors.New("nil FlatValidator dst")
+	}
+	fields, err := v.FieldValues()
+	dst.EffectiveBalance, err = common.AsGwei(fields[2], err)
+	slashed, err := AsBool(fields[3], err)
+	dst.Slashed = bool(slashed)
+	dst.ActivationEligibilityEpoch, err = common.AsEpoch(fields[4], err)
+	dst.ActivationEpoch, err = common.AsEpoch(fields[5], err)
+	dst.ExitEpoch, err = common.AsEpoch(fields[6], err)
+	dst.WithdrawableEpoch, err = common.AsEpoch(fields[7], err)
+	if err != nil {
+		return errors.New("failed to flatten validator")
+	}
+	return nil
 }
 
 func IsActive(v common.Validator, epoch common.Epoch) (bool, error) {

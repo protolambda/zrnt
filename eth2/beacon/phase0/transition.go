@@ -7,42 +7,56 @@ import (
 	"github.com/protolambda/ztyp/tree"
 )
 
-func ProcessEpoch(ctx context.Context, spec *common.Spec, epc *EpochsContext, state *BeaconStateView) error {
-	process, err := PrepareEpochProcess(ctx, spec, epc, state)
+func ProcessEpoch(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView) error {
+	vals, err := state.Validators()
 	if err != nil {
 		return err
 	}
-	if err := ProcessEpochJustification(ctx, spec, epc, process, state); err != nil {
+	flats, err := common.FlattenValidators(vals)
+	if err != nil {
 		return err
 	}
-	if err := ProcessEpochRewardsAndPenalties(ctx, spec, epc, process, state); err != nil {
+	attesterData, err := ComputeEpochAttesterData(ctx, spec, epc, flats, state)
+	if err != nil {
 		return err
 	}
-	if err := ProcessEpochRegistryUpdates(ctx, spec, epc, process, state); err != nil {
+	just := JustificationStakeData{
+		CurrentEpoch:                  epc.CurrentEpoch.Epoch,
+		TotalActiveStake:              attesterData.TotalActiveStake,
+		PrevEpochUnslashedTargetStake: attesterData.PrevEpochUnslashedStake.TargetStake,
+		CurrEpochUnslashedTargetStake: attesterData.CurrEpochUnslashedTargetStake,
+	}
+	if err := ProcessEpochJustification(ctx, spec, &just, state); err != nil {
 		return err
 	}
-	if err := ProcessEpochSlashings(ctx, spec, epc, process, state); err != nil {
+	if err := ProcessEpochRewardsAndPenalties(ctx, spec, epc, attesterData, state); err != nil {
 		return err
 	}
-	if err := ProcessEffectiveBalanceUpdates(ctx, spec, epc, process, state); err != nil {
+	if err := ProcessEpochRegistryUpdates(ctx, spec, epc, flats, state); err != nil {
 		return err
 	}
-	if err := ProcessEth1DataReset(ctx, spec, epc, process, state); err != nil {
+	if err := ProcessEpochSlashings(ctx, spec, epc, flats, state); err != nil {
 		return err
 	}
-	if err := ProcessSlashingsReset(ctx, spec, epc, process, state); err != nil {
+	if err := ProcessEffectiveBalanceUpdates(ctx, spec, epc, flats, state); err != nil {
 		return err
 	}
-	if err := ProcessRandaoMixesReset(ctx, spec, epc, process, state); err != nil {
+	if err := ProcessEth1DataReset(ctx, spec, epc, state); err != nil {
 		return err
 	}
-	if err := ProcessParticipationRecordUpdates(ctx, spec, epc, process, state); err != nil {
+	if err := ProcessSlashingsReset(ctx, spec, epc, state); err != nil {
+		return err
+	}
+	if err := ProcessRandaoMixesReset(ctx, spec, epc, state); err != nil {
+		return err
+	}
+	if err := ProcessParticipationRecordUpdates(ctx, spec, epc, state); err != nil {
 		return err
 	}
 	return nil
 }
 
-func ProcessBlock(ctx context.Context, spec *common.Spec, epc *EpochsContext, state *BeaconStateView, block *BeaconBlock) error {
+func ProcessBlock(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView, block *BeaconBlock) error {
 	slot, err := state.Slot()
 	if err != nil {
 		return err
@@ -85,7 +99,7 @@ func ProcessBlock(ctx context.Context, spec *common.Spec, epc *EpochsContext, st
 }
 
 // Assuming the slot is valid, and optionally assume the proposer index is valid, check if the signature is valid
-func VerifyBlockSignature(spec *common.Spec, epc *EpochsContext, state common.BeaconState, block *SignedBeaconBlock, validateProposerIndex bool) bool {
+func VerifyBlockSignature(spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, block *SignedBeaconBlock, validateProposerIndex bool) bool {
 	if validateProposerIndex {
 		proposerIndex, err := epc.GetBeaconProposer(block.Message.Slot)
 		if err != nil {

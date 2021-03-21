@@ -22,7 +22,7 @@ func NewDepositRootsView() *DepositRootsView {
 	return &DepositRootsView{DepositRootsType.New()}
 }
 
-func GenesisFromEth1(spec *common.Spec, eth1BlockHash common.Root, time common.Timestamp, deps []common.Deposit, ignoreSignaturesAndProofs bool) (*BeaconStateView, *EpochsContext, error) {
+func GenesisFromEth1(spec *common.Spec, eth1BlockHash common.Root, time common.Timestamp, deps []common.Deposit, ignoreSignaturesAndProofs bool) (*BeaconStateView, *common.EpochsContext, error) {
 	state := NewBeaconStateView(spec)
 	if err := state.SetGenesisTime(time + spec.GENESIS_DELAY); err != nil {
 		return nil, nil, err
@@ -55,12 +55,16 @@ func GenesisFromEth1(spec *common.Spec, eth1BlockHash common.Root, time common.T
 		return nil, nil, err
 	}
 
-	pc, err := NewPubkeyCache(state)
+	vals, err := state.Validators()
+	if err != nil {
+		return nil, nil, err
+	}
+	pc, err := common.NewPubkeyCache(vals)
 	if err != nil {
 		return nil, nil, err
 	}
 	// Create mostly empty epochs context. Just need the pubkey cache first
-	epc := &EpochsContext{
+	epc := &common.EpochsContext{
 		Spec:        spec,
 		PubkeyCache: pc,
 	}
@@ -93,11 +97,6 @@ func GenesisFromEth1(spec *common.Spec, eth1BlockHash common.Root, time common.T
 	if err := updateDepTreeRoot(); err != nil {
 		return nil, nil, err
 	}
-	valsIfc, err := state.Validators()
-	if err != nil {
-		return nil, nil, err
-	}
-	vals := valsIfc.(*ValidatorsRegistryView)
 	valCount, err := vals.ValidatorCount()
 	if err != nil {
 		return nil, nil, err
@@ -111,7 +110,7 @@ func GenesisFromEth1(spec *common.Spec, eth1BlockHash common.Root, time common.T
 	}
 	// Process activations
 	for i := uint64(0); i < valCount; i++ {
-		val, err := AsValidator(vals.Get(i))
+		val, err := vals.Validator(common.ValidatorIndex(i))
 		if err != nil {
 			return nil, nil, err
 		}

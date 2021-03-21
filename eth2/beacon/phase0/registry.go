@@ -2,6 +2,7 @@ package phase0
 
 import (
 	"context"
+	"sort"
 
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/codec"
@@ -112,7 +113,78 @@ func (registry *ValidatorsRegistryView) IsValidIndex(index common.ValidatorIndex
 	return uint64(index) < count, nil
 }
 
-func ProcessEpochRegistryUpdates(ctx context.Context, spec *common.Spec, epc *EpochsContext, process *EpochProcess, state common.BeaconState) error {
+type RegistryProcessData struct {
+	IndicesToSetActivationEligibility []common.ValidatorIndex
+	// Ignores churn. Apply churn-limit manually.
+	// Maybe, because finality affects it still.
+	IndicesToMaybeActivate []common.ValidatorIndex
+
+	IndicesToEject []common.ValidatorIndex
+
+	ExitQueueEnd      common.Epoch
+	ExitQueueEndChurn uint64
+	ChurnLimit        uint64
+}
+
+func ComputeRegistryProcessData(spec *common.Spec, flats []common.FlatValidator, currentEpoch common.Epoch) *RegistryProcessData {
+	var out RegistryProcessData
+
+	count := common.ValidatorIndex(len(flats))
+
+	// Thanks to exit delay, this does not change within the epoch processing.
+	activeCount := uint64(0)
+
+	for i := common.ValidatorIndex(0); i < count; i++ {
+		flat := &flats[i]
+		active := flat.IsActive(currentEpoch)
+		if active {
+			activeCount++
+		}
+		if flat.ActivationEligibilityEpoch == common.FAR_FUTURE_EPOCH && flat.EffectiveBalance == spec.MAX_EFFECTIVE_BALANCE {
+			out.IndicesToSetActivationEligibility = append(out.IndicesToSetActivationEligibility, i)
+		}
+
+		if flat.ActivationEpoch == common.FAR_FUTURE_EPOCH && flat.ActivationEligibilityEpoch <= currentEpoch {
+			out.IndicesToMaybeActivate = append(out.IndicesToMaybeActivate, i)
+		}
+
+		if active && flat.EffectiveBalance <= spec.EJECTION_BALANCE && flat.ExitEpoch == common.FAR_FUTURE_EPOCH {
+			out.IndicesToEject = append(out.IndicesToEject, i)
+		}
+	}
+
+	// Order by the sequence of activation_eligibility_epoch setting and then index
+	sort.Slice(out.IndicesToMaybeActivate, func(i int, j int) bool {
+		valIndexA := out.IndicesToMaybeActivate[i]
+		valIndexB := out.IndicesToMaybeActivate[j]
+		a := flats[valIndexA].ActivationEligibilityEpoch
+		b := flats[valIndexB].ActivationEligibilityEpoch
+		if a == b { // Order by the sequence of activation_eligibility_epoch setting and then index
+			return valIndexA < valIndexB
+		}
+		return a < b
+	})
+
+	exitQueueEnd := spec.ComputeActivationExitEpoch(currentEpoch)
+	exitQueueEndChurn := uint64(0)
+	for i := common.ValidatorIndex(0); i < count; i++ {
+		if flats[i].ExitEpoch == exitQueueEnd {
+			exitQueueEndChurn++
+		}
+	}
+	churnLimit := spec.GetChurnLimit(activeCount)
+	if exitQueueEndChurn >= churnLimit {
+		exitQueueEnd++
+		exitQueueEndChurn = 0
+	}
+	out.ExitQueueEndChurn = exitQueueEndChurn
+	out.ExitQueueEnd = exitQueueEnd
+	out.ChurnLimit = churnLimit
+
+	return &out
+}
+
+func ProcessEpochRegistryUpdates(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, flats []common.FlatValidator, state common.BeaconState) error {
 	select {
 	case <-ctx.Done():
 		return common.TransitionCancelErr
@@ -123,11 +195,14 @@ func ProcessEpochRegistryUpdates(ctx context.Context, spec *common.Spec, epc *Ep
 	if err != nil {
 		return err
 	}
+
+	registerData := ComputeRegistryProcessData(spec, flats, epc.CurrentEpoch.Epoch)
+
 	// process ejections
 	{
-		exitEnd := process.ExitQueueEnd
-		endChurn := process.ExitQueueEndChurn
-		for _, index := range process.IndicesToEject {
+		exitEnd := registerData.ExitQueueEnd
+		endChurn := registerData.ExitQueueEndChurn
+		for _, index := range registerData.IndicesToEject {
 			val, err := vals.Validator(index)
 			if err != nil {
 				return err
@@ -139,7 +214,7 @@ func ProcessEpochRegistryUpdates(ctx context.Context, spec *common.Spec, epc *Ep
 				return err
 			}
 			endChurn += 1
-			if endChurn >= process.ChurnLimit {
+			if endChurn >= registerData.ChurnLimit {
 				endChurn = 0
 				exitEnd += 1
 			}
@@ -149,7 +224,7 @@ func ProcessEpochRegistryUpdates(ctx context.Context, spec *common.Spec, epc *Ep
 	// Process activation eligibility
 	{
 		eligibilityEpoch := epc.CurrentEpoch.Epoch + 1
-		for _, index := range process.IndicesToSetActivationEligibility {
+		for _, index := range registerData.IndicesToSetActivationEligibility {
 			val, err := vals.Validator(index)
 			if err != nil {
 				return err
@@ -159,19 +234,20 @@ func ProcessEpochRegistryUpdates(ctx context.Context, spec *common.Spec, epc *Ep
 			}
 		}
 	}
+
 	// Process activations
 	{
 		finality, err := state.FinalizedCheckpoint()
 		if err != nil {
 			return err
 		}
-		dequeued := process.IndicesToMaybeActivate
-		if uint64(len(dequeued)) > process.ChurnLimit {
-			dequeued = dequeued[:process.ChurnLimit]
+		dequeued := registerData.IndicesToMaybeActivate
+		if uint64(len(dequeued)) > registerData.ChurnLimit {
+			dequeued = dequeued[:registerData.ChurnLimit]
 		}
 		activationEpoch := spec.ComputeActivationExitEpoch(epc.CurrentEpoch.Epoch)
 		for _, index := range dequeued {
-			if process.Statuses[index].Validator.ActivationEligibilityEpoch > finality.Epoch {
+			if flats[index].ActivationEligibilityEpoch > finality.Epoch {
 				// remaining validators all have an activation_eligibility_epoch that is higher anyway, break early
 				// The tie-breaks were already sorted correctly in the IndicesToMaybeActivate queue.
 				break

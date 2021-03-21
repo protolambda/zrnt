@@ -27,18 +27,18 @@ func NewRewardsAndPenalties(validatorCount uint64) *RewardsAndPenalties {
 }
 
 func AttestationRewardsAndPenalties(ctx context.Context, spec *common.Spec,
-	epc *EpochsContext, process *EpochProcess, state *BeaconStateView) (*RewardsAndPenalties, error) {
+	epc *common.EpochsContext, attesterData *EpochAttesterData, state *BeaconStateView) (*RewardsAndPenalties, error) {
 
-	validatorCount := common.ValidatorIndex(uint64(len(process.Statuses)))
+	validatorCount := common.ValidatorIndex(uint64(len(attesterData.Statuses)))
 	res := NewRewardsAndPenalties(uint64(validatorCount))
 
 	previousEpoch := epc.PreviousEpoch.Epoch
 
-	attesterStatuses := process.Statuses
+	attesterStatuses := attesterData.Statuses
 
-	totalBalance := process.TotalActiveStake
+	totalBalance := attesterData.TotalActiveStake
 
-	prevEpochStake := &process.PrevEpochUnslashedStake
+	prevEpochStake := &attesterData.PrevEpochUnslashedStake
 	prevEpochSourceStake := prevEpochStake.SourceStake
 	prevEpochTargetStake := prevEpochStake.TargetStake
 	prevEpochHeadStake := prevEpochStake.HeadStake
@@ -68,9 +68,8 @@ func AttestationRewardsAndPenalties(ctx context.Context, spec *common.Spec,
 				break
 			}
 		}
-		status := attesterStatuses[i]
-
-		effBalance := status.Validator.EffectiveBalance
+		status := &attesterStatuses[i]
+		effBalance := attesterData.Flats[i].EffectiveBalance
 		baseReward := effBalance * common.Gwei(spec.BASE_REWARD_FACTOR) /
 			balanceSqRoot / common.BASE_REWARDS_PER_EPOCH
 
@@ -141,7 +140,8 @@ func AttestationRewardsAndPenalties(ctx context.Context, spec *common.Spec,
 	return res, nil
 }
 
-func ProcessEpochRewardsAndPenalties(ctx context.Context, spec *common.Spec, epc *EpochsContext, process *EpochProcess, state *BeaconStateView) error {
+func ProcessEpochRewardsAndPenalties(ctx context.Context, spec *common.Spec, epc *common.EpochsContext,
+	attesterData *EpochAttesterData, state *BeaconStateView) error {
 	select {
 	case <-ctx.Done():
 		return common.TransitionCancelErr
@@ -152,9 +152,9 @@ func ProcessEpochRewardsAndPenalties(ctx context.Context, spec *common.Spec, epc
 	if currentEpoch == common.GENESIS_EPOCH {
 		return nil
 	}
-	valCount := uint64(len(process.Statuses))
+	valCount := uint64(len(attesterData.Statuses))
 	sum := common.NewDeltas(valCount)
-	rewAndPenalties, err := AttestationRewardsAndPenalties(ctx, spec, epc, process, state)
+	rewAndPenalties, err := AttestationRewardsAndPenalties(ctx, spec, epc, attesterData, state)
 	if err != nil {
 		return err
 	}

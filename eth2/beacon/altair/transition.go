@@ -6,36 +6,47 @@ import (
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 )
 
-func ProcessEpoch(ctx context.Context, spec *common.Spec, epc *phase0.EpochsContext, state *BeaconStateView) error {
-	process, err := phase0.PrepareEpochProcess(ctx, spec, epc, state)
+func ProcessEpoch(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView) error {
+	vals, err := state.Validators()
 	if err != nil {
 		return err
 	}
-	if err := phase0.ProcessEpochJustification(ctx, spec, epc, process, state); err != nil {
+	flats, err := common.FlattenValidators(vals)
+	if err != nil {
 		return err
 	}
-	if err := phase0.ProcessEpochRewardsAndPenalties(ctx, spec, epc, process, state); err != nil {
+	just := phase0.JustificationStakeData{
+		CurrentEpoch: epc.CurrentEpoch.Epoch,
+		// TODO
+		TotalActiveStake:              0,
+		PrevEpochUnslashedTargetStake: 0, // Now with TIMELY_TARGET_FLAG_INDEX participation
+		CurrEpochUnslashedTargetStake: 0, // ditto
+	}
+	if err := phase0.ProcessEpochJustification(ctx, spec, &just, state); err != nil {
 		return err
 	}
-	if err := phase0.ProcessEpochRegistryUpdates(ctx, spec, epc, process, state); err != nil {
+	if err := ProcessEpochRewardsAndPenalties(ctx, spec, epc, state); err != nil {
 		return err
 	}
-	if err := phase0.ProcessEpochSlashings(ctx, spec, epc, process, state); err != nil {
+	if err := phase0.ProcessEpochRegistryUpdates(ctx, spec, epc, flats, state); err != nil {
 		return err
 	}
-	if err := phase0.ProcessEth1DataReset(ctx, spec, epc, process, state); err != nil {
+	if err := phase0.ProcessEpochSlashings(ctx, spec, epc, flats, state); err != nil {
 		return err
 	}
-	if err := phase0.ProcessEffectiveBalanceUpdates(ctx, spec, epc, process, state); err != nil {
+	if err := phase0.ProcessEth1DataReset(ctx, spec, epc, state); err != nil {
 		return err
 	}
-	if err := phase0.ProcessSlashingsReset(ctx, spec, epc, process, state); err != nil {
+	if err := phase0.ProcessEffectiveBalanceUpdates(ctx, spec, epc, flats, state); err != nil {
 		return err
 	}
-	if err := phase0.ProcessRandaoMixesReset(ctx, spec, epc, process, state); err != nil {
+	if err := phase0.ProcessSlashingsReset(ctx, spec, epc, state); err != nil {
 		return err
 	}
-	if err := phase0.ProcessHistoricalRootsUpdate(ctx, spec, epc, process, state); err != nil {
+	if err := phase0.ProcessRandaoMixesReset(ctx, spec, epc, state); err != nil {
+		return err
+	}
+	if err := phase0.ProcessHistoricalRootsUpdate(ctx, spec, epc, state); err != nil {
 		return err
 	}
 	if err := ProcessParticipationFlagUpdates(ctx, spec, state); err != nil {
@@ -47,8 +58,13 @@ func ProcessEpoch(ctx context.Context, spec *common.Spec, epc *phase0.EpochsCont
 	return nil
 }
 
-func ProcessBlock(ctx context.Context, spec *common.Spec, state *BeaconStateView, block *BeaconBlock) error {
-	if err := common.ProcessHeader(ctx, spec, epc, state, block); err != nil {
+func ProcessBlock(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView, block *BeaconBlock) error {
+	header := block.Header(spec)
+	expectedProposer, err := epc.GetBeaconProposer(block.Slot)
+	if err != nil {
+		return err
+	}
+	if err := common.ProcessHeader(ctx, spec, state, header, expectedProposer); err != nil {
 		return err
 	}
 	body := &block.Body

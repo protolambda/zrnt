@@ -5,15 +5,25 @@ import (
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 )
 
-func ProcessEpochJustification(ctx context.Context, spec *common.Spec, epc *EpochsContext, process *EpochProcess, state common.BeaconState) error {
+type JustificationStakeData struct {
+	CurrentEpoch common.Epoch
+	// Minimum 1 effective balance increment. May include balance of recently slashed validators.
+	TotalActiveStake common.Gwei
+	// Minimum 1 effective balance increment
+	PrevEpochUnslashedTargetStake common.Gwei
+	// Minimum 1 effective balance increment
+	CurrEpochUnslashedTargetStake common.Gwei
+}
+
+func ProcessEpochJustification(ctx context.Context, spec *common.Spec, data *JustificationStakeData, state common.BeaconState) error {
 	select {
 	case <-ctx.Done():
 		return common.TransitionCancelErr
 	default: // Don't block.
 		break
 	}
-	previousEpoch := process.PrevEpoch
-	currentEpoch := process.CurrEpoch
+	currentEpoch := data.CurrentEpoch
+	previousEpoch := currentEpoch.Previous()
 
 	// skip if genesis.
 	if currentEpoch <= common.GENESIS_EPOCH+1 {
@@ -42,11 +52,11 @@ func ProcessEpochJustification(ctx context.Context, spec *common.Spec, epc *Epoc
 	bits.NextEpoch()
 
 	// Get the total current stake
-	totalStake := process.TotalActiveStake
+	totalStake := data.TotalActiveStake
 
 	var newJustifiedCheckpoint *common.Checkpoint
 	// > Justification
-	if process.PrevEpochUnslashedStake.TargetStake*3 >= totalStake*2 {
+	if data.PrevEpochUnslashedTargetStake*3 >= totalStake*2 {
 		root, err := common.GetBlockRoot(spec, state, previousEpoch)
 		if err != nil {
 			return err
@@ -57,7 +67,7 @@ func ProcessEpochJustification(ctx context.Context, spec *common.Spec, epc *Epoc
 		}
 		bits[0] |= 1 << 1
 	}
-	if process.CurrEpochUnslashedTargetStake*3 >= totalStake*2 {
+	if data.CurrEpochUnslashedTargetStake*3 >= totalStake*2 {
 		root, err := common.GetBlockRoot(spec, state, currentEpoch)
 		if err != nil {
 			return err

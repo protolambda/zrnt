@@ -95,7 +95,7 @@ func ValidateIndexedAttestationNoSignature(spec *common.Spec, state common.Beaco
 	return nil
 }
 
-func ValidateIndexedAttestationSignature(spec *common.Spec, dom common.BLSDomain, pubCache *PubkeyCache, indexedAttestation *IndexedAttestation) error {
+func ValidateIndexedAttestationSignature(spec *common.Spec, dom common.BLSDomain, pubCache *common.PubkeyCache, indexedAttestation *IndexedAttestation) error {
 	pubkeys := make([]*common.CachedPubkey, 0, len(indexedAttestation.AttestingIndices))
 	for _, i := range indexedAttestation.AttestingIndices {
 		pub, ok := pubCache.Pubkey(i)
@@ -119,7 +119,7 @@ func ValidateIndexedAttestationSignature(spec *common.Spec, dom common.BLSDomain
 }
 
 // Verify validity of slashable_attestation fields.
-func ValidateIndexedAttestation(spec *common.Spec, epc *EpochsContext, state common.BeaconState, indexedAttestation *IndexedAttestation) error {
+func ValidateIndexedAttestation(spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, indexedAttestation *IndexedAttestation) error {
 	if err := ValidateIndexedAttestationNoSignature(spec, state, indexedAttestation); err != nil {
 		return err
 	}

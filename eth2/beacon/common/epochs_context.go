@@ -1,0 +1,155 @@
+package common
+
+import (
+	"fmt"
+)
+
+type EpochsContext struct {
+	Spec *Spec
+
+	// PubkeyCache may be replaced when a new forked-out cache takes over to process an alternative Eth1 deposit chain.
+	PubkeyCache *PubkeyCache
+	Proposers   *ProposersEpoch
+
+	PreviousEpoch *ShufflingEpoch
+	CurrentEpoch  *ShufflingEpoch
+	NextEpoch     *ShufflingEpoch
+}
+
+// NewEpochsContext constructs a new context for the processing of the current epoch.
+func NewEpochsContext(spec *Spec, state BeaconState) (*EpochsContext, error) {
+	vals, err := state.Validators()
+	if err != nil {
+		return nil, err
+	}
+	pc, err := NewPubkeyCache(vals)
+	if err != nil {
+		return nil, err
+	}
+	epc := &EpochsContext{
+		Spec:        spec,
+		PubkeyCache: pc,
+	}
+	if err := epc.LoadShuffling(state); err != nil {
+		return nil, err
+	}
+	if err := epc.LoadProposers(state); err != nil {
+		return nil, err
+	}
+	return epc, nil
+}
+
+func (epc *EpochsContext) LoadShuffling(state BeaconState) error {
+	vals, err := state.Validators()
+	if err != nil {
+		return err
+	}
+	indicesBounded, err := LoadBoundedIndices(vals)
+	if err != nil {
+		return err
+	}
+	slot, err := state.Slot()
+	if err != nil {
+		return err
+	}
+	currentEpoch := epc.Spec.SlotToEpoch(slot)
+	epc.CurrentEpoch, err = ComputeShufflingEpoch(epc.Spec, state, indicesBounded, currentEpoch)
+	if err != nil {
+		return err
+	}
+	prevEpoch := currentEpoch.Previous()
+	if prevEpoch == currentEpoch { // in case of genesis
+		epc.PreviousEpoch = epc.CurrentEpoch
+	} else {
+		epc.PreviousEpoch, err = ComputeShufflingEpoch(epc.Spec, state, indicesBounded, prevEpoch)
+		if err != nil {
+			return err
+		}
+	}
+	epc.NextEpoch, err = ComputeShufflingEpoch(epc.Spec, state, indicesBounded, currentEpoch+1)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (epc *EpochsContext) LoadProposers(state BeaconState) error {
+	// prerequisite to load shuffling: the list of active indices, same as in the shuffling. So load the shuffling first.
+	if epc.CurrentEpoch == nil {
+		if err := epc.LoadShuffling(state); err != nil {
+			return err
+		}
+	}
+	props, err := ComputeProposers(epc.Spec, state, epc.CurrentEpoch.Epoch, epc.CurrentEpoch.ActiveIndices)
+	if err != nil {
+		return err
+	}
+	epc.Proposers = props
+	return nil
+}
+
+func (epc *EpochsContext) Clone() *EpochsContext {
+	// All fields can be reused, just need a fresh shallow copy of the outer container
+	epcClone := *epc
+	return &epcClone
+}
+
+func (epc *EpochsContext) RotateEpochs(state BeaconState) error {
+	epc.PreviousEpoch = epc.CurrentEpoch
+	epc.CurrentEpoch = epc.NextEpoch
+	nextEpoch := epc.CurrentEpoch.Epoch + 1
+	vals, err := state.Validators()
+	if err != nil {
+		return err
+	}
+	// TODO: could use epoch-transition processing validator data to not read state here
+	indicesBounded, err := LoadBoundedIndices(vals)
+	if err != nil {
+		return err
+	}
+	epc.NextEpoch, err = ComputeShufflingEpoch(epc.Spec, state, indicesBounded, nextEpoch)
+	if err != nil {
+		return err
+	}
+	return epc.LoadProposers(state)
+}
+
+func (epc *EpochsContext) getSlotComms(slot Slot) ([][]ValidatorIndex, error) {
+	epoch := epc.Spec.SlotToEpoch(slot)
+	epochSlot := slot % epc.Spec.SLOTS_PER_EPOCH
+	if epoch == epc.PreviousEpoch.Epoch {
+		return epc.PreviousEpoch.Committees[epochSlot], nil
+	} else if epoch == epc.CurrentEpoch.Epoch {
+		return epc.CurrentEpoch.Committees[epochSlot], nil
+	} else if epoch == epc.NextEpoch.Epoch {
+		return epc.NextEpoch.Committees[epochSlot], nil
+	} else {
+		return nil, fmt.Errorf("beacon committee retrieval: out of range epoch: %d", epoch)
+	}
+}
+
+// Return the beacon committee at slot for index.
+func (epc *EpochsContext) GetBeaconCommittee(slot Slot, index CommitteeIndex) ([]ValidatorIndex, error) {
+	if index >= CommitteeIndex(epc.Spec.MAX_COMMITTEES_PER_SLOT) {
+		return nil, fmt.Errorf("beacon committee retrieval: out of range committee index: %d", index)
+	}
+
+	slotComms, err := epc.getSlotComms(slot)
+	if err != nil {
+		return nil, err
+	}
+
+	if index >= CommitteeIndex(len(slotComms)) {
+		return nil, fmt.Errorf("beacon committee retrieval: out of range committee index: %d", index)
+	}
+	return slotComms[index], nil
+}
+
+func (epc *EpochsContext) GetCommitteeCountAtSlot(slot Slot) (uint64, error) {
+	slotComms, err := epc.getSlotComms(slot)
+	return uint64(len(slotComms)), err
+}
+
+func (epc *EpochsContext) GetBeaconProposer(slot Slot) (ValidatorIndex, error) {
+	return epc.Proposers.GetBeaconProposer(slot)
+}

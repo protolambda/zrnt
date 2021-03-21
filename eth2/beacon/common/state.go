@@ -34,6 +34,10 @@ type Validator interface {
 	SetExitEpoch(ep Epoch) error
 	WithdrawableEpoch() (Epoch, error)
 	SetWithdrawableEpoch(epoch Epoch) error
+	// Flatten the validator data into destination struct
+	// For intensive validator registry work, it is more efficient to iterate the registry once,
+	// unpack validators into a flat structure, and work with the flattened data.
+	Flatten(dst *FlatValidator) error
 }
 
 type ValidatorRegistry interface {
@@ -41,12 +45,14 @@ type ValidatorRegistry interface {
 	Validator(index ValidatorIndex) (Validator, error)
 	Iter() (next func() (val Validator, ok bool, err error))
 	IsValidIndex(index ValidatorIndex) (valid bool, err error)
+	HashTreeRoot(fn tree.HashFn) Root
 }
 
 type Balances interface {
 	GetBalance(index ValidatorIndex) (Gwei, error)
 	SetBalance(index ValidatorIndex, bal Gwei) error
 	Iter() (next func() (bal Gwei, ok bool, err error))
+	AllBalances() ([]Gwei, error)
 }
 
 type RandaoMixes interface {
@@ -71,6 +77,7 @@ type BeaconState interface {
 	SetSlot(slot Slot) error
 	Fork() (Fork, error)
 	SetFork(f Fork) error
+	// Returns a copy of the latest header in the state
 	LatestBlockHeader() (*BeaconBlockHeader, error)
 	SetLatestBlockHeader(v *BeaconBlockHeader) error
 	BlockRoots() (BatchRoots, error)
@@ -103,4 +110,5 @@ type BeaconState interface {
 	SetFinalizedCheckpoint(c Checkpoint) error
 
 	HashTreeRoot(fn tree.HashFn) Root
+	Copy() (BeaconState, error)
 }

@@ -99,7 +99,7 @@ func (sl *SlashingsView) Total() (sum common.Gwei, err error) {
 }
 
 // Slash the validator with the given index.
-func SlashValidator(spec *common.Spec, epc *EpochsContext, state common.BeaconState,
+func SlashValidator(spec *common.Spec, epc *common.EpochsContext, state common.BeaconState,
 	slashedIndex common.ValidatorIndex, whistleblowerIndex *common.ValidatorIndex) error {
 
 	currentEpoch := epc.CurrentEpoch.Epoch
@@ -171,14 +171,21 @@ func SlashValidator(spec *common.Spec, epc *EpochsContext, state common.BeaconSt
 	return nil
 }
 
-func ProcessEpochSlashings(ctx context.Context, spec *common.Spec, epc *EpochsContext, process *EpochProcess, state common.BeaconState) error {
+func ProcessEpochSlashings(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, flats []common.FlatValidator, state common.BeaconState) error {
 	select {
 	case <-ctx.Done():
 		return common.TransitionCancelErr
 	default: // Don't block.
 		break
 	}
-	totalBalance := process.TotalActiveStake
+
+	totalActiveStake := common.Gwei(0)
+	for _, v := range epc.CurrentEpoch.ActiveIndices {
+		totalActiveStake += flats[v].EffectiveBalance
+	}
+	if totalActiveStake < spec.EFFECTIVE_BALANCE_INCREMENT {
+		totalActiveStake = spec.EFFECTIVE_BALANCE_INCREMENT
+	}
 
 	slashings, err := state.Slashings()
 	if err != nil {
@@ -191,8 +198,8 @@ func ProcessEpochSlashings(ctx context.Context, spec *common.Spec, epc *EpochsCo
 	}
 	slashingsWeight := slashingsSum * common.Gwei(spec.PROPORTIONAL_SLASHING_MULTIPLIER)
 	var adjustedTotalSlashingBalance common.Gwei
-	if totalBalance < slashingsWeight {
-		adjustedTotalSlashingBalance = totalBalance
+	if totalActiveStake < slashingsWeight {
+		adjustedTotalSlashingBalance = totalActiveStake
 	} else {
 		adjustedTotalSlashingBalance = slashingsWeight
 	}
@@ -201,15 +208,20 @@ func ProcessEpochSlashings(ctx context.Context, spec *common.Spec, epc *EpochsCo
 	if err != nil {
 		return err
 	}
-	for _, index := range process.IndicesToSlash {
-		// Factored out from penalty numerator to avoid uint64 overflow
-		slashedEffectiveBal := process.Statuses[index].Validator.EffectiveBalance
-		penaltyNumerator := slashedEffectiveBal / spec.EFFECTIVE_BALANCE_INCREMENT
-		penaltyNumerator *= adjustedTotalSlashingBalance
-		penalty := penaltyNumerator / totalBalance * spec.EFFECTIVE_BALANCE_INCREMENT
 
-		if err := common.DecreaseBalance(bals, index, penalty); err != nil {
-			return err
+	slashingsEpoch := epc.CurrentEpoch.Epoch + (spec.EPOCHS_PER_SLASHINGS_VECTOR / 2)
+	for i := 0; i < len(flats); i++ {
+		flat := &flats[i]
+		if flat.Slashed && slashingsEpoch == flat.WithdrawableEpoch {
+			// Factored out from penalty numerator to avoid uint64 overflow
+			slashedEffectiveBal := flat.EffectiveBalance
+			penaltyNumerator := slashedEffectiveBal / spec.EFFECTIVE_BALANCE_INCREMENT
+			penaltyNumerator *= adjustedTotalSlashingBalance
+			penalty := penaltyNumerator / totalActiveStake * spec.EFFECTIVE_BALANCE_INCREMENT
+
+			if err := common.DecreaseBalance(bals, common.ValidatorIndex(i), penalty); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

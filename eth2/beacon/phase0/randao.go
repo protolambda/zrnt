@@ -85,7 +85,7 @@ func SeedRandao(spec *common.Spec, seed common.Root) (*RandaoMixesView, error) {
 	return &RandaoMixesView{ComplexVectorView: vecView}, nil
 }
 
-func ProcessRandaoReveal(ctx context.Context, spec *common.Spec, epc *EpochsContext, state common.BeaconState, reveal common.BLSSignature) error {
+func ProcessRandaoReveal(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, reveal common.BLSSignature) error {
 	select {
 	case <-ctx.Done():
 		return common.TransitionCancelErr

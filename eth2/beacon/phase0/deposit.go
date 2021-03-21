@@ -52,7 +52,7 @@ func (li Deposits) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root 
 }
 
 // Verify that outstanding deposits are processed up to the maximum number of deposits, then process all in order.
-func ProcessDeposits(ctx context.Context, spec *common.Spec, epc *EpochsContext, state common.BeaconState, ops []common.Deposit) error {
+func ProcessDeposits(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, ops []common.Deposit) error {
 	inputCount := uint64(len(ops))
 	eth1Data, err := state.Eth1Data()
 	if err != nil {
@@ -86,7 +86,7 @@ func ProcessDeposits(ctx context.Context, spec *common.Spec, epc *EpochsContext,
 }
 
 // Process an Eth1 deposit, registering a validator or increasing its balance.
-func ProcessDeposit(spec *common.Spec, epc *EpochsContext, state common.BeaconState, dep *common.Deposit, ignoreSignatureAndProof bool) error {
+func ProcessDeposit(spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, dep *common.Deposit, ignoreSignatureAndProof bool) error {
 	depositIndex, err := state.DepositIndex()
 	if err != nil {
 		return err

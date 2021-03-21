@@ -48,7 +48,7 @@ func (li VoluntaryExits) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common
 	}, length, spec.MAX_VOLUNTARY_EXITS)
 }
 
-func ProcessVoluntaryExits(ctx context.Context, spec *common.Spec, epc *EpochsContext, state common.BeaconState, ops []SignedVoluntaryExit) error {
+func ProcessVoluntaryExits(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, ops []SignedVoluntaryExit) error {
 	for i := range ops {
 		select {
 		case <-ctx.Done():
@@ -124,7 +124,7 @@ var SignedVoluntaryExitType = ContainerType("SignedVoluntaryExit", []FieldDef{
 	{"signature", common.BLSSignatureType},
 })
 
-func ValidateVoluntaryExit(spec *common.Spec, epc *EpochsContext, state common.BeaconState, signedExit *SignedVoluntaryExit) error {
+func ValidateVoluntaryExit(spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, signedExit *SignedVoluntaryExit) error {
 	exit := &signedExit.Message
 	currentEpoch := epc.CurrentEpoch.Epoch
 	vals, err := state.Validators()
@@ -184,7 +184,7 @@ func ValidateVoluntaryExit(spec *common.Spec, epc *EpochsContext, state common.B
 	return nil
 }
 
-func ProcessVoluntaryExit(spec *common.Spec, epc *EpochsContext, state common.BeaconState, signedExit *SignedVoluntaryExit) error {
+func ProcessVoluntaryExit(spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, signedExit *SignedVoluntaryExit) error {
 	if err := ValidateVoluntaryExit(spec, epc, state, signedExit); err != nil {
 		return err
 	}
@@ -192,7 +192,7 @@ func ProcessVoluntaryExit(spec *common.Spec, epc *EpochsContext, state common.Be
 }
 
 // Initiate the exit of the validator of the given index
-func InitiateValidatorExit(spec *common.Spec, epc *EpochsContext, state common.BeaconState, index common.ValidatorIndex) error {
+func InitiateValidatorExit(spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, index common.ValidatorIndex) error {
 	validators, err := state.Validators()
 	if err != nil {
 		return err

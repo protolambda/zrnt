@@ -64,7 +64,7 @@ func ValidateAttesterSlashing(ctx context.Context, attSl *phase0.AttesterSlashin
 			return false, err
 		}
 		// only retain the slashable indices
-		return validator.IsSlashable(spec, epc.CurrentEpoch.Epoch)
+		return phase0.IsSlashable(validator, epc.CurrentEpoch.Epoch)
 	})
 	if err != nil {
 		return GossipValidatorResult{REJECT, fmt.Errorf("cannot access validator data: %v", err)}

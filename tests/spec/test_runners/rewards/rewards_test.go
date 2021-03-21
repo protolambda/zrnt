@@ -90,15 +90,23 @@ func (c *RewardsTest) Check(t *testing.T) {
 }
 
 func (c *RewardsTest) Run() error {
-	epc, err := phase0.NewEpochsContext(c.Spec, c.Pre)
+	epc, err := common.NewEpochsContext(c.Spec, c.Pre)
 	if err != nil {
 		return err
 	}
-	process, err := phase0.ComputeEpochAttesterData(context.Background(), c.Spec, epc, c.Pre)
+	vals, err := c.Pre.Validators()
 	if err != nil {
 		return err
 	}
-	c.Output, err = phase0.AttestationRewardsAndPenalties(context.Background(), c.Spec, epc, process, c.Pre)
+	flats, err := common.FlattenValidators(vals)
+	if err != nil {
+		return err
+	}
+	attesterData, err := phase0.ComputeEpochAttesterData(context.Background(), c.Spec, epc, flats, c.Pre)
+	if err != nil {
+		return err
+	}
+	c.Output, err = phase0.AttestationRewardsAndPenalties(context.Background(), c.Spec, epc, attesterData, c.Pre)
 	return err
 }
 

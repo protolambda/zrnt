@@ -1,6 +1,7 @@
 package operations
 
 import (
+	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"testing"
@@ -17,7 +18,7 @@ func (c *VoluntaryExitTestCase) Load(t *testing.T, readPart test_util.TestPartRe
 }
 
 func (c *VoluntaryExitTestCase) Run() error {
-	epc, err := phase0.NewEpochsContext(c.Spec, c.Pre)
+	epc, err := common.NewEpochsContext(c.Spec, c.Pre)
 	if err != nil {
 		return err
 	}

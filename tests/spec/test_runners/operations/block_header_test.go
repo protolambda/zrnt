@@ -2,6 +2,7 @@ package operations
 
 import (
 	"context"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"testing"
@@ -18,11 +19,15 @@ func (c *BlockHeaderTestCase) Load(t *testing.T, readPart test_util.TestPartRead
 }
 
 func (c *BlockHeaderTestCase) Run() error {
-	epc, err := phase0.NewEpochsContext(c.Spec, c.Pre)
+	epc, err := common.NewEpochsContext(c.Spec, c.Pre)
 	if err != nil {
 		return err
 	}
-	return phase0.ProcessHeader(context.Background(), c.Spec, epc, c.Pre, &c.Block)
+	proposer, err := epc.GetBeaconProposer(c.Block.Slot)
+	if err != nil {
+		return err
+	}
+	return common.ProcessHeader(context.Background(), c.Spec, c.Pre, c.Block.Header(c.Spec), proposer)
 }
 
 func TestBlockHeader(t *testing.T) {

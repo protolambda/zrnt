@@ -100,7 +100,7 @@ var objs = []*ObjData{
 	{TypeName: "AttestationData", Alloc: func() interface{} { return new(phase0.AttestationData) }},
 	{TypeName: "IndexedAttestation", Alloc: func() interface{} { return new(phase0.IndexedAttestation) }},
 	{TypeName: "DepositData", Alloc: func() interface{} { return new(common.DepositData) }},
-	{TypeName: "BeaconBlockHeader", Alloc: func() interface{} { return new(phase0.BeaconBlockHeader) }},
+	{TypeName: "BeaconBlockHeader", Alloc: func() interface{} { return new(common.BeaconBlockHeader) }},
 	{TypeName: "Validator", Alloc: func() interface{} { return new(phase0.Validator) }},
 	{TypeName: "PendingAttestation", Alloc: func() interface{} { return new(phase0.PendingAttestation) }},
 	{TypeName: "HistoricalBatch", Alloc: func() interface{} { return new(phase0.HistoricalBatch) }},

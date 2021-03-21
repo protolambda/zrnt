@@ -18,7 +18,7 @@ func (c *DepositTestCase) Load(t *testing.T, readPart test_util.TestPartReader) 
 }
 
 func (c *DepositTestCase) Run() error {
-	epc, err := phase0.NewEpochsContext(c.Spec, c.Pre)
+	epc, err := common.NewEpochsContext(c.Spec, c.Pre)
 	if err != nil {
 		return err
 	}

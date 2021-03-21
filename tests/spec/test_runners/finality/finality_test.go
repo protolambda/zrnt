@@ -3,7 +3,7 @@ package finality
 import (
 	"context"
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"gopkg.in/yaml.v3"
@@ -37,13 +37,19 @@ func (c *FinalityTestCase) Load(t *testing.T, readPart test_util.TestPartReader)
 }
 
 func (c *FinalityTestCase) Run() error {
-	epc, err := phase0.NewEpochsContext(c.Spec, c.Pre)
+	epc, err := common.NewEpochsContext(c.Spec, c.Pre)
 	if err != nil {
 		return err
 	}
 	state := c.Pre
+	valRoot, err := state.GenesisValidatorsRoot()
+	if err != nil {
+		return err
+	}
+	digest := common.ComputeForkDigest(c.Spec.GENESIS_FORK_VERSION, valRoot)
 	for _, b := range c.Blocks {
-		if err := beacon.StateTransition(context.Background(), c.Spec, epc, state, b, true); err != nil {
+		benv := b.Envelope(c.Spec, digest)
+		if err := common.StateTransition(context.Background(), c.Spec, epc, state, benv, true); err != nil {
 			return err
 		}
 	}

@@ -2,9 +2,7 @@ package sanity
 
 import (
 	"context"
-	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
-	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"gopkg.in/yaml.v3"
 	"testing"
@@ -24,7 +22,7 @@ func (c *SlotsTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
 }
 
 func (c *SlotsTestCase) Run() error {
-	epc, err := phase0.NewEpochsContext(c.Spec, c.Pre)
+	epc, err := common.NewEpochsContext(c.Spec, c.Pre)
 	if err != nil {
 		return err
 	}
@@ -32,7 +30,7 @@ func (c *SlotsTestCase) Run() error {
 	if err != nil {
 		return err
 	}
-	return beacon.ProcessSlots(context.Background(), c.Spec, epc, c.Pre, slot+c.Slots)
+	return common.ProcessSlots(context.Background(), c.Spec, epc, c.Pre, slot+c.Slots)
 }
 
 func TestSlots(t *testing.T) {

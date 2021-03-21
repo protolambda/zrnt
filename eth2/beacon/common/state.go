@@ -1,6 +1,9 @@
 package common
 
-import "github.com/protolambda/ztyp/tree"
+import (
+	"context"
+	"github.com/protolambda/ztyp/tree"
+)
 
 type BatchRoots interface {
 	GetRoot(slot Slot) (Root, error)
@@ -121,4 +124,10 @@ type BeaconState interface {
 	Copy() (BeaconState, error)
 
 	ForkSettings(spec *Spec) *ForkSettings
+
+	// ProcessEpoch applies an epoch-transition to the state.
+	ProcessEpoch(ctx context.Context, spec *Spec, epc *EpochsContext) error
+	// ProcessBlock applies a block to the state.
+	// Excludes slot processing and signature validation. Just applies the block as-is. Error if mismatching slot.
+	ProcessBlock(ctx context.Context, spec *Spec, epc *EpochsContext, block SignedBeaconBlock) error
 }

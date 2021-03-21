@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/eth2/forkchoice"
@@ -68,7 +67,7 @@ type HotChain interface {
 	// An error is also returned if the fromBlockRoot is past the requested toSlot.
 	Towards(ctx context.Context, fromBlockRoot Root, toSlot Slot) (ChainEntry, error)
 	// Process a block. If there is an error, the chain is not mutated, and can be continued to use.
-	AddBlock(ctx context.Context, signedBlock *phase0.SignedBeaconBlock) error
+	AddBlock(ctx context.Context, signedBlock common.SignedBeaconBlock) error
 	// Process an attestation. If there is an error, the chain is not mutated, and can be continued to use.
 	AddAttestation(att *phase0.Attestation) error
 }
@@ -330,7 +329,7 @@ func (uc *UnfinalizedChain) closest(fromBlockRoot Root, toSlot Slot) (entry Chai
 }
 
 // helper function to fetch justified and finalized checkpoint from a beacon state
-func stateJustFin(state *phase0.BeaconStateView) (justified Checkpoint, finalized Checkpoint, err error) {
+func stateJustFin(state common.BeaconState) (justified Checkpoint, finalized Checkpoint, err error) {
 	justifiedCh, err := state.CurrentJustifiedCheckpoint()
 	if err != nil {
 		return Checkpoint{}, Checkpoint{}, err
@@ -366,14 +365,14 @@ func (uc *UnfinalizedChain) Towards(ctx context.Context, fromBlockRoot Root, toS
 	var last *HotEntry
 	// Process empty slots
 	for slot := closest.Step().Slot(); slot < toSlot; {
-		if err := phase0.ProcessSlot(ctx, uc.Spec, state); err != nil {
+		if err := common.ProcessSlot(ctx, uc.Spec, state); err != nil {
 			return nil, err
 		}
 		// Per-epoch transition happens at the start of the first slot of every epoch.
 		// (with the slot still at the end of the last epoch)
 		isEpochEnd := uc.Spec.SlotToEpoch(slot+1) != uc.Spec.SlotToEpoch(slot)
 		if isEpochEnd {
-			if err := phase0.ProcessEpoch(ctx, uc.Spec, epc, state); err != nil {
+			if err := state.ProcessEpoch(ctx, uc.Spec, epc); err != nil {
 				return nil, err
 			}
 		}
@@ -381,6 +380,7 @@ func (uc *UnfinalizedChain) Towards(ctx context.Context, fromBlockRoot Root, toS
 		if err := state.SetSlot(slot); err != nil {
 			return nil, err
 		}
+		// TODO: check for fork boundary, and execute state upgrade if necessary.
 		if isEpochEnd {
 			if err := epc.RotateEpochs(state); err != nil {
 				return nil, err
@@ -417,7 +417,7 @@ func (uc *UnfinalizedChain) Towards(ctx context.Context, fromBlockRoot Root, toS
 		uc.State2Key[stateRoot] = key
 		last = entry
 
-		state, err = phase0.AsBeaconStateView(state.Copy())
+		state, err = state.Copy()
 		if err != nil {
 			return nil, err
 		}
@@ -495,12 +495,13 @@ func (uc *UnfinalizedChain) Head() (ChainEntry, error) {
 	return entry, nil
 }
 
-func (uc *UnfinalizedChain) AddBlock(ctx context.Context, signedBlock *phase0.SignedBeaconBlock) error {
+func (uc *UnfinalizedChain) AddBlock(ctx context.Context, signedBlock common.SignedBeaconBlock) error {
 	uc.Lock()
 	defer uc.Unlock()
 
-	block := &signedBlock.Message
-	pre, err := uc.Towards(ctx, block.ParentRoot, block.Slot)
+	block := signedBlock.BlockMessage()
+	parentRoot, slot := block.BlockParentRoot(), block.BlockSlot()
+	pre, err := uc.Towards(ctx, parentRoot, slot)
 	if err != nil {
 		return fmt.Errorf("failed to prepare for block, towards-slot failed: %v", err)
 	}
@@ -517,7 +518,7 @@ func (uc *UnfinalizedChain) AddBlock(ctx context.Context, signedBlock *phase0.Si
 	}
 
 	// we already processed the slots (including that of the block itself), just finish the transition.
-	if err := beacon.PostSlotTransition(ctx, uc.Spec, epc, state, signedBlock, true); err != nil {
+	if err := common.PostSlotTransition(ctx, uc.Spec, epc, state, signedBlock, true); err != nil {
 		return err
 	}
 
@@ -527,16 +528,16 @@ func (uc *UnfinalizedChain) AddBlock(ctx context.Context, signedBlock *phase0.Si
 	}
 
 	// Make the forkchoice aware of the new block
-	uc.ForkChoice.ProcessBlock(block.ParentRoot, blockRoot, block.Slot, justified.Epoch, finalized.Epoch)
+	uc.ForkChoice.ProcessBlock(parentRoot, blockRoot, slot, justified.Epoch, finalized.Epoch)
 
-	key := BlockSlotKey{Slot: block.Slot, Root: blockRoot}
+	key := BlockSlotKey{Slot: slot, Root: blockRoot}
 	uc.Entries[key] = &HotEntry{
 		self:   key,
-		parent: block.ParentRoot,
+		parent: parentRoot,
 		epc:    epc,
 		state:  state,
 	}
-	uc.State2Key[block.StateRoot] = key
+	uc.State2Key[block.BlockStateRoot()] = key
 
 	return nil
 }

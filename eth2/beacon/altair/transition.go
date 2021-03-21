@@ -2,11 +2,12 @@ package altair
 
 import (
 	"context"
+	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 )
 
-func ProcessEpoch(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView) error {
+func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spec, epc *common.EpochsContext) error {
 	vals, err := state.Validators()
 	if err != nil {
 		return err
@@ -58,7 +59,12 @@ func ProcessEpoch(ctx context.Context, spec *common.Spec, epc *common.EpochsCont
 	return nil
 }
 
-func ProcessBlock(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView, block *BeaconBlock) error {
+func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, blockIfc common.SignedBeaconBlock) error {
+	signedBlock, ok := blockIfc.(*SignedBeaconBlock)
+	if !ok {
+		return fmt.Errorf("unexpected block type %T in Altair ProcessBlock", blockIfc)
+	}
+	block := &signedBlock.Message
 	header := block.Header(spec)
 	expectedProposer, err := epc.GetBeaconProposer(block.Slot)
 	if err != nil {

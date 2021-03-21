@@ -2,12 +2,11 @@ package phase0
 
 import (
 	"context"
+	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
-	"github.com/protolambda/zrnt/eth2/util/bls"
-	"github.com/protolambda/ztyp/tree"
 )
 
-func ProcessEpoch(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView) error {
+func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spec, epc *common.EpochsContext) error {
 	vals, err := state.Validators()
 	if err != nil {
 		return err
@@ -56,7 +55,12 @@ func ProcessEpoch(ctx context.Context, spec *common.Spec, epc *common.EpochsCont
 	return nil
 }
 
-func ProcessBlock(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView, block *BeaconBlock) error {
+func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, blockIfc common.SignedBeaconBlock) error {
+	signedBlock, ok := blockIfc.(*SignedBeaconBlock)
+	if !ok {
+		return fmt.Errorf("unexpected block type %T in phase0 ProcessBlock", blockIfc)
+	}
+	block := &signedBlock.Message
 	slot, err := state.Slot()
 	if err != nil {
 		return err
@@ -96,26 +100,4 @@ func ProcessBlock(ctx context.Context, spec *common.Spec, epc *common.EpochsCont
 		return err
 	}
 	return nil
-}
-
-// Assuming the slot is valid, and optionally assume the proposer index is valid, check if the signature is valid
-func VerifyBlockSignature(spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, block *SignedBeaconBlock, validateProposerIndex bool) bool {
-	if validateProposerIndex {
-		proposerIndex, err := epc.GetBeaconProposer(block.Message.Slot)
-		if err != nil {
-			return false
-		}
-		if proposerIndex != block.Message.ProposerIndex {
-			return false
-		}
-	}
-	pub, ok := epc.PubkeyCache.Pubkey(block.Message.ProposerIndex)
-	if !ok {
-		return false
-	}
-	domain, err := common.GetDomain(state, spec.DOMAIN_BEACON_PROPOSER, spec.SlotToEpoch(block.Message.Slot))
-	if err != nil {
-		return false
-	}
-	return bls.Verify(pub, common.ComputeSigningRoot(block.Message.HashTreeRoot(spec, tree.GetHashFn()), domain), block.Signature)
 }

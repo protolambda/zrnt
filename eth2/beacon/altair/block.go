@@ -14,6 +14,16 @@ type SignedBeaconBlock struct {
 	Signature common.BLSSignature `json:"signature" yaml:"signature"`
 }
 
+var _ common.SignedBeaconBlock = (*SignedBeaconBlock)(nil)
+
+func (b *SignedBeaconBlock) BlockMessage() common.BeaconBlock {
+	return &b.Message
+}
+
+func (b *SignedBeaconBlock) BlockSignature() common.BLSSignature {
+	return b.Signature
+}
+
 func (b *SignedBeaconBlock) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
 	return dr.Container(spec.Wrap(&b.Message), &b.Signature)
 }
@@ -47,6 +57,21 @@ type BeaconBlock struct {
 	ParentRoot    common.Root           `json:"parent_root" yaml:"parent_root"`
 	StateRoot     common.Root           `json:"state_root" yaml:"state_root"`
 	Body          BeaconBlockBody       `json:"body" yaml:"body"`
+}
+
+var _ common.BeaconBlock = (*BeaconBlock)(nil)
+
+func (b *BeaconBlock) BlockSlot() common.Slot {
+	return b.Slot
+}
+func (b *BeaconBlock) BlockProposerIndex() common.ValidatorIndex {
+	return b.ProposerIndex
+}
+func (b *BeaconBlock) BlockParentRoot() common.Root {
+	return b.ParentRoot
+}
+func (b *BeaconBlock) BlockStateRoot() common.Root {
+	return b.StateRoot
 }
 
 func (b *BeaconBlock) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {

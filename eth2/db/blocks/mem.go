@@ -35,11 +35,11 @@ func (db *MemDB) Store(ctx context.Context, block *BlockWithRoot) (exists bool, 
 	existing, loaded := db.data.LoadOrStore(block.Root, buf.Bytes())
 	if loaded {
 		existingBlock := existing.(*phase0.SignedBeaconBlock)
-		sigDifference := existingBlock.Signature != block.Block.Signature
+		sigDifference := existingBlock.Signature != block.Block.BlockSignature()
 		dbBlockPool.Put(buf) // put it back, we didn't store it
 		if sigDifference {
 			return true, fmt.Errorf("block %s already exists, but its signature %x does not match new signature %s",
-				block.Root, existingBlock.Signature, block.Block.Signature)
+				block.Root, existingBlock.Signature, block.Block.BlockSignature())
 		}
 	} else {
 		atomic.AddInt64(&db.stats.Count, 1)
@@ -77,7 +77,8 @@ func (db *MemDB) Import(r io.Reader) (exists bool, err error) {
 	return loaded, nil
 }
 
-func (db *MemDB) Get(ctx context.Context, root common.Root, dest *phase0.SignedBeaconBlock) (exists bool, err error) {
+func (db *MemDB) Get(ctx context.Context, root common.Root, dest common.SpecObj) (exists bool, err error) {
+	// TODO: store version and ensure version matches with dest.
 	dat, ok := db.data.Load(root)
 	if !ok {
 		return false, nil

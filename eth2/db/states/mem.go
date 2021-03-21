@@ -3,7 +3,6 @@ package states
 import (
 	"context"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
-	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/ztyp/tree"
 	"sync"
 	"sync/atomic"
@@ -21,11 +20,10 @@ func NewMemDB(spec *common.Spec) *MemDB {
 	return &MemDB{spec: spec}
 }
 
-func (db *MemDB) Store(ctx context.Context, state *phase0.BeaconStateView) (exists bool, err error) {
+func (db *MemDB) Store(ctx context.Context, state common.BeaconState) (exists bool, err error) {
 	// Released when the block is removed from the DB
 	root := state.HashTreeRoot(tree.GetHashFn())
-	backing := state.Backing()
-	_, loaded := db.data.LoadOrStore(root, backing)
+	_, loaded := db.data.LoadOrStore(root, state)
 	if !loaded {
 		atomic.AddInt64(&db.stats.Count, 1)
 		db.stats.LastWrite = root
@@ -33,14 +31,16 @@ func (db *MemDB) Store(ctx context.Context, state *phase0.BeaconStateView) (exis
 	return loaded, nil
 }
 
-func (db *MemDB) Get(ctx context.Context, root common.Root) (state *phase0.BeaconStateView, exists bool, err error) {
+func (db *MemDB) Get(ctx context.Context, root common.Root) (state common.BeaconState, exists bool, err error) {
 	dat, ok := db.data.Load(root)
 	if !ok {
 		return nil, false, nil
 	}
 	exists = true
-	v, vErr := phase0.BeaconStateType(db.spec).ViewFromBacking(dat.(tree.Node), nil)
-	state, err = phase0.AsBeaconStateView(v, vErr)
+	state, ok = dat.(common.BeaconState)
+	if !ok {
+		panic("in-memory db was corrupted with unexpected state type")
+	}
 	return
 }
 

@@ -25,7 +25,7 @@ func CreateTestValidators(count uint64, balance common.Gwei) []phase0.KickstartV
 	return out
 }
 
-func CreateTestState(spec *common.Spec, validatorCount uint64, balance common.Gwei) (*phase0.BeaconStateView, *phase0.EpochsContext) {
+func CreateTestState(spec *common.Spec, validatorCount uint64, balance common.Gwei) (*phase0.BeaconStateView, *common.EpochsContext) {
 	out, epc, err := phase0.KickStartState(spec, common.Root{123}, 1564000000, CreateTestValidators(validatorCount, balance))
 	if err != nil {
 		panic(err)

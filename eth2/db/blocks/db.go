@@ -14,7 +14,7 @@ type BlockWithRoot struct {
 	// Root of the Block.Message
 	Root common.Root
 	// Block, with signature
-	Block *phase0.SignedBeaconBlock
+	Block common.SignedBeaconBlock
 }
 
 func WithRoot(spec *common.Spec, block *phase0.SignedBeaconBlock) *BlockWithRoot {
@@ -44,7 +44,7 @@ type DB interface {
 	// Get, an efficient convenience method for getting a block through Export. The block is safe to modify.
 	// The data at the pointer is mutated to the new block.
 	// Returns exists=true if the block exists, false otherwise. If error, it may not be accurate.
-	Get(ctx context.Context, root common.Root, dest *phase0.SignedBeaconBlock) (exists bool, err error)
+	Get(ctx context.Context, root common.Root, dest common.SpecObj) (exists bool, err error)
 	// Size quickly checks the size of a block, without dealing with the full block.
 	// Returns exists=true if the block exists, false otherwise. If error, it may not be accurate.
 	Size(root common.Root) (size uint64, exists bool)

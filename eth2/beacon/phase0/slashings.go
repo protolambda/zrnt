@@ -141,11 +141,12 @@ func SlashValidator(spec *common.Spec, epc *common.EpochsContext, state common.B
 		return err
 	}
 
+	settings := state.ForkSettings(spec)
 	bals, err := state.Balances()
 	if err != nil {
 		return err
 	}
-	if err := common.DecreaseBalance(bals, slashedIndex, effectiveBalance/common.Gwei(spec.MIN_SLASHING_PENALTY_QUOTIENT)); err != nil {
+	if err := common.DecreaseBalance(bals, slashedIndex, effectiveBalance/common.Gwei(settings.MinSlashingPenaltyQuotient)); err != nil {
 		return err
 	}
 
@@ -187,6 +188,8 @@ func ProcessEpochSlashings(ctx context.Context, spec *common.Spec, epc *common.E
 		totalActiveStake = spec.EFFECTIVE_BALANCE_INCREMENT
 	}
 
+	settings := state.ForkSettings(spec)
+
 	slashings, err := state.Slashings()
 	if err != nil {
 		return err
@@ -196,7 +199,7 @@ func ProcessEpochSlashings(ctx context.Context, spec *common.Spec, epc *common.E
 	if err != nil {
 		return err
 	}
-	slashingsWeight := slashingsSum * common.Gwei(spec.PROPORTIONAL_SLASHING_MULTIPLIER)
+	slashingsWeight := slashingsSum * common.Gwei(settings.ProportionalSlashingMultiplier)
 	var adjustedTotalSlashingBalance common.Gwei
 	if totalActiveStake < slashingsWeight {
 		adjustedTotalSlashingBalance = totalActiveStake

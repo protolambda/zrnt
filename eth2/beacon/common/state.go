@@ -67,6 +67,14 @@ type Slashings interface {
 	Total() (sum Gwei, err error)
 }
 
+// ForkSettings are values that changed throughout forks, without change in surrounding logic.
+// To select the right settings based on configuration, ForkSettings(spec) is called on
+// the fork-specific implementation of the BeaconState interface.
+type ForkSettings struct {
+	MinSlashingPenaltyQuotient     uint64
+	ProportionalSlashingMultiplier uint64
+}
+
 type BeaconState interface {
 	GenesisTime() (Timestamp, error)
 	SetGenesisTime(t Timestamp) error
@@ -111,4 +119,6 @@ type BeaconState interface {
 
 	HashTreeRoot(fn tree.HashFn) Root
 	Copy() (BeaconState, error)
+
+	ForkSettings(spec *Spec) *ForkSettings
 }

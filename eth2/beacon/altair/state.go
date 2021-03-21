@@ -442,6 +442,13 @@ func (state *BeaconStateView) NextSyncCommittee() (*SyncCommitteeView, error) {
 	return AsSyncCommittee(state.Get(_nextSyncCommittee))
 }
 
+func (state *BeaconStateView) ForkSettings(spec *common.Spec) *common.ForkSettings {
+	return &common.ForkSettings{
+		MinSlashingPenaltyQuotient:     spec.ALTAIR_MIN_SLASHING_PENALTY_QUOTIENT,
+		ProportionalSlashingMultiplier: spec.ALTAIR_PROPORTIONAL_SLASHING_MULTIPLIER,
+	}
+}
+
 // Raw converts the tree-structured state into a flattened native Go structure.
 func (state *BeaconStateView) Raw(spec *common.Spec) (*BeaconState, error) {
 	var buf bytes.Buffer

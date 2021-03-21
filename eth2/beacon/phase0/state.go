@@ -396,6 +396,13 @@ func (state *BeaconStateView) SetFinalizedCheckpoint(c common.Checkpoint) error 
 	return v.Set(&c)
 }
 
+func (state *BeaconStateView) ForkSettings(spec *common.Spec) *common.ForkSettings {
+	return &common.ForkSettings{
+		MinSlashingPenaltyQuotient:     spec.MIN_SLASHING_PENALTY_QUOTIENT,
+		ProportionalSlashingMultiplier: spec.PROPORTIONAL_SLASHING_MULTIPLIER,
+	}
+}
+
 // Raw converts the tree-structured state into a flattened native Go structure.
 func (state *BeaconStateView) Raw(spec *common.Spec) (*BeaconState, error) {
 	var buf bytes.Buffer

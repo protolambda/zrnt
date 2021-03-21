@@ -1,13 +1,16 @@
 package sanity
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
+	"github.com/golang/snappy"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"github.com/protolambda/ztyp/codec"
 	"gopkg.in/yaml.v3"
+	"io/ioutil"
 	"testing"
 )
 
@@ -27,12 +30,16 @@ type DepositsCountMeta struct {
 func (c *InitializationTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
 	c.Spec = readPart.Spec()
 	{
-		p := readPart.Part("state.ssz")
+		p := readPart.Part("state.ssz_snappy")
 		if p.Exists() {
-			stateSize, err := p.Size()
+			data, err := ioutil.ReadAll(p)
+			test_util.Check(t, err)
+			test_util.Check(t, p.Close())
+			uncompressed, err := snappy.Decode(nil, data)
 			test_util.Check(t, err)
 			state, err := phase0.AsBeaconStateView(
-				phase0.BeaconStateType(c.Spec).Deserialize(codec.NewDecodingReader(p, stateSize)))
+				phase0.BeaconStateType(c.Spec).Deserialize(
+					codec.NewDecodingReader(bytes.NewReader(uncompressed), uint64(len(uncompressed)))))
 			test_util.Check(t, err)
 			c.ExpectedState = state
 		} else {

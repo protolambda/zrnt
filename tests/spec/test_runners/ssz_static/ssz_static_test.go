@@ -3,6 +3,7 @@ package ssz_static
 import (
 	"bytes"
 	"encoding/hex"
+	"github.com/golang/snappy"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/eth2/configs"
@@ -10,6 +11,7 @@ import (
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	"gopkg.in/yaml.v3"
+	"io/ioutil"
 	"testing"
 )
 
@@ -132,17 +134,14 @@ func (obj *ObjData) runSSZStaticTest(spec *common.Spec) func(t *testing.T) {
 
 			// Load the SSZ encoded data as a bytes array. The test will serialize it both ways.
 			{
-				p := readPart.Part("serialized.ssz")
-				size, err := p.Size()
+				p := readPart.Part("serialized.ssz_snappy")
+				data, err := ioutil.ReadAll(p)
 				test_util.Check(t, err)
-				buf := new(bytes.Buffer)
-				n, err := buf.ReadFrom(p)
+				uncompressed, err := snappy.Decode(nil, data)
 				test_util.Check(t, err)
 				test_util.Check(t, p.Close())
-				if uint64(n) != size {
-					t.Errorf("could not read full serialized data")
-				}
-				c.Serialized = buf.Bytes()
+				test_util.Check(t, err)
+				c.Serialized = uncompressed
 			}
 
 			{

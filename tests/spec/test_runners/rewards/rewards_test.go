@@ -110,8 +110,20 @@ func (c *RewardsTest) Run() error {
 	return err
 }
 
-func TestAllDeltas(t *testing.T) {
-	test_util.RunTransitionTest(t, "rewards", "core", func() test_util.TransitionTest {
+func TestBasic(t *testing.T) {
+	test_util.RunTransitionTest(t, "rewards", "basic", func() test_util.TransitionTest {
+		return &RewardsTest{}
+	})
+}
+
+func TestLeak(t *testing.T) {
+	test_util.RunTransitionTest(t, "rewards", "leak", func() test_util.TransitionTest {
+		return &RewardsTest{}
+	})
+}
+
+func TestRandom(t *testing.T) {
+	test_util.RunTransitionTest(t, "rewards", "random", func() test_util.TransitionTest {
 		return &RewardsTest{}
 	})
 }

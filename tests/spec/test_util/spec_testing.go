@@ -1,6 +1,8 @@
 package test_util
 
 import (
+	"bytes"
+	"github.com/golang/snappy"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/codec"
 	"io"
@@ -14,7 +16,6 @@ import (
 type TestPart interface {
 	io.Reader
 	io.Closer
-	Size() (uint64, error)
 	Exists() bool
 }
 
@@ -113,13 +114,15 @@ func RunHandler(t *testing.T, handlerPath string, caseRunner CaseRunner, spec *c
 }
 
 func LoadSpecObj(t *testing.T, name string, dst common.SpecObj, readPart TestPartReader) bool {
-	p := readPart.Part(name + ".ssz")
+	p := readPart.Part(name + ".ssz_snappy")
 	if p.Exists() {
-		size, err := p.Size()
+		data, err := ioutil.ReadAll(p)
+		Check(t, err)
+		Check(t, p.Close())
+		uncompressed, err := snappy.Decode(nil, data)
 		Check(t, err)
 		spec := readPart.Spec()
-		Check(t, dst.Deserialize(spec, codec.NewDecodingReader(p, size)))
-		Check(t, p.Close())
+		Check(t, dst.Deserialize(spec, codec.NewDecodingReader(bytes.NewReader(uncompressed), uint64(len(uncompressed)))))
 		return true
 	} else {
 		return false
@@ -127,12 +130,14 @@ func LoadSpecObj(t *testing.T, name string, dst common.SpecObj, readPart TestPar
 }
 
 func LoadSSZ(t *testing.T, name string, dst codec.Deserializable, readPart TestPartReader) bool {
-	p := readPart.Part(name + ".ssz")
+	p := readPart.Part(name + ".ssz_snappy")
 	if p.Exists() {
-		size, err := p.Size()
+		data, err := ioutil.ReadAll(p)
 		Check(t, err)
-		Check(t, dst.Deserialize(codec.NewDecodingReader(p, size)))
 		Check(t, p.Close())
+		uncompressed, err := snappy.Decode(nil, data)
+		Check(t, err)
+		Check(t, dst.Deserialize(codec.NewDecodingReader(bytes.NewReader(uncompressed), uint64(len(uncompressed)))))
 		return true
 	} else {
 		return false

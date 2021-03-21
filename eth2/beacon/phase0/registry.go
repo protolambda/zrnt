@@ -185,11 +185,8 @@ func ComputeRegistryProcessData(spec *common.Spec, flats []common.FlatValidator,
 }
 
 func ProcessEpochRegistryUpdates(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, flats []common.FlatValidator, state common.BeaconState) error {
-	select {
-	case <-ctx.Done():
-		return common.TransitionCancelErr
-	default: // Don't block.
-		break
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 	vals, err := state.Validators()
 	if err != nil {

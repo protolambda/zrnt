@@ -22,11 +22,8 @@ func ProcessSlots(ctx context.Context, spec *common.Spec, epc *common.EpochsCont
 		return errors.New("cannot transition from pre-state with higher or equal slot than transition target")
 	}
 	for currentSlot < slot {
-		select {
-		case <-ctx.Done():
-			return common.TransitionCancelErr
-		default:
-			break // Continue slot processing, don't block.
+		if err := ctx.Err(); err != nil {
+			return err
 		}
 		if err := common.ProcessSlot(ctx, spec, state); err != nil {
 			return err

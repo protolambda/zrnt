@@ -173,11 +173,8 @@ func SlashValidator(spec *common.Spec, epc *common.EpochsContext, state common.B
 }
 
 func ProcessEpochSlashings(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, flats []common.FlatValidator, state common.BeaconState) error {
-	select {
-	case <-ctx.Done():
-		return common.TransitionCancelErr
-	default: // Don't block.
-		break
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 
 	totalActiveStake := common.Gwei(0)

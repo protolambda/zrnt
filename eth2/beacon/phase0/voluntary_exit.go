@@ -50,11 +50,8 @@ func (li VoluntaryExits) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common
 
 func ProcessVoluntaryExits(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, ops []SignedVoluntaryExit) error {
 	for i := range ops {
-		select {
-		case <-ctx.Done():
-			return common.TransitionCancelErr
-		default: // Don't block.
-			break
+		if err := ctx.Err(); err != nil {
+			return err
 		}
 		if err := ProcessVoluntaryExit(spec, epc, state, &ops[i]); err != nil {
 			return err

@@ -83,11 +83,8 @@ func (li ProposerSlashings) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) com
 
 func ProcessProposerSlashings(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, ops []ProposerSlashing) error {
 	for i := range ops {
-		select {
-		case <-ctx.Done():
-			return common.TransitionCancelErr
-		default: // Don't block.
-			break
+		if err := ctx.Err(); err != nil {
+			return err
 		}
 		if err := ProcessProposerSlashing(spec, epc, state, &ops[i]); err != nil {
 			return err

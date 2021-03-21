@@ -91,11 +91,8 @@ func (v *Eth1DataVotesView) Append(dat common.Eth1Data) error {
 }
 
 func ProcessEth1Vote(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, data common.Eth1Data) error {
-	select {
-	case <-ctx.Done():
-		return common.TransitionCancelErr
-	default: // Don't block.
-		break
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 	votes, err := state.Eth1DataVotes()
 	if err != nil {

@@ -89,11 +89,8 @@ func (li Attestations) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.R
 
 func ProcessAttestations(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView, ops []Attestation) error {
 	for i := range ops {
-		select {
-		case <-ctx.Done():
-			return common.TransitionCancelErr
-		default: // Don't block.
-			break
+		if err := ctx.Err(); err != nil {
+			return err
 		}
 		if err := ProcessAttestation(spec, epc, state, &ops[i]); err != nil {
 			return err

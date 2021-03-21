@@ -86,11 +86,8 @@ func SeedRandao(spec *common.Spec, seed common.Root) (*RandaoMixesView, error) {
 }
 
 func ProcessRandaoReveal(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, reveal common.BLSSignature) error {
-	select {
-	case <-ctx.Done():
-		return common.TransitionCancelErr
-	default: // Don't block.
-		break
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 	slot, err := state.Slot()
 	if err != nil {

@@ -72,11 +72,8 @@ func ProcessDeposits(ctx context.Context, spec *common.Spec, epc *common.EpochsC
 	}
 
 	for i := range ops {
-		select {
-		case <-ctx.Done():
-			return common.TransitionCancelErr
-		default: // Don't block.
-			break
+		if err := ctx.Err(); err != nil {
+			return err
 		}
 		if err := ProcessDeposit(spec, epc, state, &ops[i], false); err != nil {
 			return err

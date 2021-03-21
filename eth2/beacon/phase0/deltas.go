@@ -61,11 +61,8 @@ func AttestationRewardsAndPenalties(ctx context.Context, spec *common.Spec,
 	for i := common.ValidatorIndex(0); i < validatorCount; i++ {
 		// every 1024 validators, check if the context is done.
 		if i&((1<<10)-1) == 0 {
-			select {
-			case <-ctx.Done():
-				return nil, common.TransitionCancelErr
-			default: // Don't block.
-				break
+			if err := ctx.Err(); err != nil {
+				return nil, err
 			}
 		}
 		status := &attesterStatuses[i]
@@ -142,11 +139,8 @@ func AttestationRewardsAndPenalties(ctx context.Context, spec *common.Spec,
 
 func ProcessEpochRewardsAndPenalties(ctx context.Context, spec *common.Spec, epc *common.EpochsContext,
 	attesterData *EpochAttesterData, state *BeaconStateView) error {
-	select {
-	case <-ctx.Done():
-		return common.TransitionCancelErr
-	default: // Don't block.
-		break
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 	currentEpoch := epc.CurrentEpoch.Epoch
 	if currentEpoch == common.GENESIS_EPOCH {

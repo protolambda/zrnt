@@ -13,11 +13,8 @@ import (
 
 func ProcessAttesterSlashings(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, ops []AttesterSlashing) error {
 	for i := range ops {
-		select {
-		case <-ctx.Done():
-			return common.TransitionCancelErr
-		default: // Don't block.
-			break
+		if err := ctx.Err(); err != nil {
+			return err
 		}
 		if err := ProcessAttesterSlashing(spec, epc, state, &ops[i]); err != nil {
 			return err

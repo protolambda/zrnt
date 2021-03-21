@@ -150,11 +150,8 @@ func (v *BeaconBlockHeaderView) Raw() (*BeaconBlockHeader, error) {
 }
 
 func ProcessHeader(ctx context.Context, spec *Spec, state BeaconState, header *BeaconBlockHeader, expectedProposer ValidatorIndex) error {
-	select {
-	case <-ctx.Done():
-		return TransitionCancelErr
-	default: // Don't block.
-		break
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 	currentSlot, err := state.Slot()
 	if err != nil {

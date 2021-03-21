@@ -16,11 +16,8 @@ type JustificationStakeData struct {
 }
 
 func ProcessEpochJustification(ctx context.Context, spec *common.Spec, data *JustificationStakeData, state common.BeaconState) error {
-	select {
-	case <-ctx.Done():
-		return common.TransitionCancelErr
-	default: // Don't block.
-		break
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 	currentEpoch := data.CurrentEpoch
 	previousEpoch := currentEpoch.Previous()

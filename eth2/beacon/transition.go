@@ -12,7 +12,7 @@ import (
 // Process the state to the given slot.
 // Returns an error if the slot is older than the state is already at.
 // Mutates the state, does not copy.
-func ProcessSlots(ctx context.Context, spec *common.Spec, epc *phase0.EpochsContext, state *phase0.BeaconStateView, slot common.Slot) error {
+func ProcessSlots(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state *phase0.BeaconStateView, slot common.Slot) error {
 	// happens at the start of every CurrentSlot
 	currentSlot, err := state.Slot()
 	if err != nil {
@@ -55,7 +55,7 @@ func ProcessSlots(ctx context.Context, spec *common.Spec, epc *phase0.EpochsCont
 // StateTransition to the slot of the given block, then process the block.
 // Returns an error if the slot is older or equal to what the state is already at.
 // Mutates the state, does not copy.
-func StateTransition(ctx context.Context, spec *common.Spec, epc *phase0.EpochsContext, state *phase0.BeaconStateView, block *phase0.SignedBeaconBlock, validateResult bool) error {
+func StateTransition(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state *phase0.BeaconStateView, block *phase0.SignedBeaconBlock, validateResult bool) error {
 	if err := ProcessSlots(ctx, spec, epc, state, block.Message.Slot); err != nil {
 		return err
 	}
@@ -63,7 +63,7 @@ func StateTransition(ctx context.Context, spec *common.Spec, epc *phase0.EpochsC
 }
 
 // PostSlotTransition finishes a state transition after applying ProcessSlots(..., block.Slot).
-func PostSlotTransition(ctx context.Context, spec *common.Spec, epc *phase0.EpochsContext, state *phase0.BeaconStateView, block *phase0.SignedBeaconBlock, validateResult bool) error {
+func PostSlotTransition(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state *phase0.BeaconStateView, block *phase0.SignedBeaconBlock, validateResult bool) error {
 	slot, err := state.Slot()
 	if err != nil {
 		return err

@@ -48,12 +48,19 @@ const (
 	TIMELY_TARGET_FLAG_INDEX uint8 = 2
 )
 
+const (
+	TIMELY_HEAD_FLAG   ParticipationFlags = 1 << TIMELY_HEAD_FLAG_INDEX
+	TIMELY_SOURCE_FLAG ParticipationFlags = 1 << TIMELY_SOURCE_FLAG_INDEX
+	TIMELY_TARGET_FLAG ParticipationFlags = 1 << TIMELY_TARGET_FLAG_INDEX
+)
+
 // Participation flag fractions
 const (
-	TIMELY_HEAD_FLAG_NUMERATOR   uint64 = 12
-	TIMELY_SOURCE_FLAG_NUMERATOR uint64 = 12
-	TIMELY_TARGET_FLAG_NUMERATOR uint64 = 32
-	FLAG_DENOMINATOR             uint64 = 64
+	TIMELY_HEAD_WEIGHT   uint64 = 12
+	TIMELY_SOURCE_WEIGHT uint64 = 12
+	TIMELY_TARGET_WEIGHT uint64 = 32
+	SYNC_REWARD_WEIGHT   uint64 = 8
+	WEIGHT_DENOMINATOR   uint64 = 64
 )
 
 type ParticipationRegistry []ParticipationFlags
@@ -99,11 +106,11 @@ func AsParticipationRegistry(v View, err error) (*ParticipationRegistryView, err
 	return &ParticipationRegistryView{c}, err
 }
 
-func (v *ParticipationRegistryView) GetScore(index common.ValidatorIndex) (ParticipationFlags, error) {
+func (v *ParticipationRegistryView) GetFlags(index common.ValidatorIndex) (ParticipationFlags, error) {
 	return AsParticipationFlags(v.Get(uint64(index)))
 }
 
-func (v *ParticipationRegistryView) SetScore(index common.ValidatorIndex, score ParticipationFlags) error {
+func (v *ParticipationRegistryView) SetFlags(index common.ValidatorIndex, score ParticipationFlags) error {
 	return v.Set(uint64(index), Uint8View(score))
 }
 

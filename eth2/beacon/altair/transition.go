@@ -25,7 +25,7 @@ func ProcessEpoch(ctx context.Context, spec *common.Spec, epc *common.EpochsCont
 	if err := phase0.ProcessEpochJustification(ctx, spec, &just, state); err != nil {
 		return err
 	}
-	if err := ProcessEpochRewardsAndPenalties(ctx, spec, epc, state); err != nil {
+	if err := ProcessEpochRewardsAndPenalties(ctx, spec, epc, flats, state); err != nil {
 		return err
 	}
 	if err := phase0.ProcessEpochRegistryUpdates(ctx, spec, epc, flats, state); err != nil {
@@ -85,7 +85,7 @@ func ProcessBlock(ctx context.Context, spec *common.Spec, epc *common.EpochsCont
 	if err := phase0.ProcessAttesterSlashings(ctx, spec, epc, state, body.AttesterSlashings); err != nil {
 		return err
 	}
-	if err := phase0.ProcessAttestations(ctx, spec, epc, state, body.Attestations); err != nil {
+	if err := ProcessAttestations(ctx, spec, epc, state, body.Attestations); err != nil {
 		return err
 	}
 	// Note: state.AddValidator changed in Altair, but the deposit processing itself stayed the same.

@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"github.com/protolambda/zrnt/eth2/util/math"
 )
 
 type EpochsContext struct {
@@ -14,6 +15,15 @@ type EpochsContext struct {
 	PreviousEpoch *ShufflingEpoch
 	CurrentEpoch  *ShufflingEpoch
 	NextEpoch     *ShufflingEpoch
+
+	// TODO: track active effective balances
+	// TODO: track total active stake
+	// Effective balances of all validators at the start of the epoch.
+	EffectiveBalances []Gwei
+	// Total effective balance of the active validators at the start of the epoch.
+	TotalActiveStake Gwei
+	// cached integer square root of TotalActiveStake
+	TotalActiveStakeSqRoot Gwei
 }
 
 // NewEpochsContext constructs a new context for the processing of the current epoch.
@@ -57,6 +67,26 @@ func (epc *EpochsContext) LoadShuffling(state BeaconState) error {
 	if err != nil {
 		return err
 	}
+
+	epc.EffectiveBalances = make([]Gwei, len(indicesBounded), len(indicesBounded))
+	epc.TotalActiveStake = 0
+	for i, v := range indicesBounded {
+		// TODO: optimize effective balance retrieval
+		val, err := vals.Validator(ValidatorIndex(i))
+		if err != nil {
+			return err
+		}
+		eff, err := val.EffectiveBalance()
+		if err != nil {
+			return err
+		}
+		epc.EffectiveBalances[i] = eff
+		if v.Activation <= currentEpoch && currentEpoch < v.Exit {
+			epc.TotalActiveStake += eff
+		}
+	}
+	epc.TotalActiveStakeSqRoot = Gwei(math.IntegerSquareroot(uint64(epc.TotalActiveStake)))
+
 	prevEpoch := currentEpoch.Previous()
 	if prevEpoch == currentEpoch { // in case of genesis
 		epc.PreviousEpoch = epc.CurrentEpoch

@@ -37,6 +37,16 @@ func TestYamlDecodingMainnetPhase1(t *testing.T) {
 	}
 }
 
+func TestYamlDecodingMainnetAltair(t *testing.T) {
+	var conf common.AltairConfig
+	if err := yaml.Unmarshal(mustLoad("mainnet", "altair"), &conf); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(conf, Mainnet.AltairConfig) {
+		t.Fatal("Failed to load mainnet altair config")
+	}
+}
+
 func TestYamlDecodingMinimalPhase0(t *testing.T) {
 	var conf common.Phase0Config
 	if err := yaml.Unmarshal(mustLoad("minimal", "phase0"), &conf); err != nil {
@@ -54,5 +64,15 @@ func TestYamlDecodingMinimalPhase1(t *testing.T) {
 	}
 	if !reflect.DeepEqual(conf, Minimal.Phase1Config) {
 		t.Fatal("Failed to load minimal phase1 config")
+	}
+}
+
+func TestYamlDecodingMinimalAltair(t *testing.T) {
+	var conf common.AltairConfig
+	if err := yaml.Unmarshal(mustLoad("minimal", "altair"), &conf); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(conf, Minimal.AltairConfig) {
+		t.Fatal("Failed to load minimal altair config")
 	}
 }

@@ -53,6 +53,10 @@ type SlotAfter interface {
 	SlotAfter(delta time.Duration) common.Slot
 }
 
+type GenesisValidatorsRoot interface {
+	GenesisValidatorsRoot() common.Root
+}
+
 type DomainGetter interface {
 	GetDomain(typ common.BLSDomainType, epoch common.Epoch) (common.BLSDomain, error)
 }

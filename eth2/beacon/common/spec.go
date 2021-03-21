@@ -111,12 +111,15 @@ type AltairConfig struct {
 
 	// Domain types
 	DOMAIN_SYNC_COMMITTEE BLSDomainType `yaml:"DOMAIN_SYNC_COMMITTEE" json:"DOMAIN_SYNC_COMMITTEE"`
+
+	ALTAIR_FORK_SLOT    Slot    `yaml:"ALTAIR_FORK_SLOT" json:"ALTAIR_FORK_SLOT"`
+	ALTAIR_FORK_VERSION Version `yaml:"ALTAIR_FORK_VERSION" json:"ALTAIR_FORK_VERSION"`
 }
 
 type Phase1Config struct {
 	// phase1-fork
 	PHASE_1_FORK_VERSION  Version `yaml:"PHASE_1_FORK_VERSION" json:"PHASE_1_FORK_VERSION"`
-	PHASE_1_FORK_SLOT     uint64  `yaml:"PHASE_1_FORK_SLOT" json:"PHASE_1_FORK_SLOT"`
+	PHASE_1_FORK_SLOT     Slot    `yaml:"PHASE_1_FORK_SLOT" json:"PHASE_1_FORK_SLOT"`
 	INITIAL_ACTIVE_SHARDS uint64  `yaml:"INITIAL_ACTIVE_SHARDS" json:"INITIAL_ACTIVE_SHARDS"`
 
 	// beacon-chain
@@ -226,4 +229,15 @@ type Spec struct {
 
 func (spec *Spec) Wrap(des SpecObj) SSZObj {
 	return specObj{spec, des}
+}
+
+func (spec *Spec) ForkVersion(slot Slot) Version {
+	if slot < spec.ALTAIR_FORK_SLOT {
+		return spec.GENESIS_FORK_VERSION
+	}
+	// TODO more forks
+	//if slot < spec.PHASE_1_FORK_SLOT {
+	//	return spec.PHASE_1_FORK_VERSION
+	//}
+	return spec.ALTAIR_FORK_VERSION
 }

@@ -4,26 +4,9 @@ import (
 	"bytes"
 	"context"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
-	"github.com/protolambda/zrnt/eth2/beacon/phase0"
-	"github.com/protolambda/ztyp/tree"
 	"io"
 	"sync"
 )
-
-type BlockWithRoot struct {
-	// Root of the Block.Message
-	Root common.Root
-	// Block, with signature
-	Block common.SignedBeaconBlock
-}
-
-func WithRoot(spec *common.Spec, block *phase0.SignedBeaconBlock) *BlockWithRoot {
-	root := block.Message.HashTreeRoot(spec, tree.GetHashFn())
-	return &BlockWithRoot{
-		Root:  root,
-		Block: block,
-	}
-}
 
 type DBStats struct {
 	Count     int64
@@ -36,23 +19,19 @@ type DB interface {
 	// This is an efficient convenience method for using Import.
 	// Returns exists=true if the block exists (previously), false otherwise. If error, it may not be accurate.
 	// Returns slashable=true if exists=true, but the signatures are different. The existing block is kept.
-	Store(ctx context.Context, block *BlockWithRoot) (exists bool, err error)
+	Store(ctx context.Context, benv *common.BeaconBlockEnvelope) (exists bool, err error)
 	// Import inserts a SignedBeaconBlock, read directly from the reader stream.
 	// Returns exists=true if the block exists (previously), false otherwise. If error, it may not be accurate.
 	// Returns slashable=true if exists=true, but the signatures are different. The existing block is kept.
-	Import(r io.Reader) (exists bool, err error)
-	// Get, an efficient convenience method for getting a block through Export. The block is safe to modify.
-	// The data at the pointer is mutated to the new block.
-	// Returns exists=true if the block exists, false otherwise. If error, it may not be accurate.
-	Get(ctx context.Context, root common.Root, dest common.SpecObj) (exists bool, err error)
+	Import(digest common.ForkDigest, r io.Reader) (exists bool, err error)
+	// Get, a convenience method for getting a block. The block is safe to modify.
+	// Returns the envelope if the block exists, nil otherwise. If error, exists-check may not be accurate.
+	Get(ctx context.Context, root common.Root) (envelope *common.BeaconBlockEnvelope, err error)
 	// Size quickly checks the size of a block, without dealing with the full block.
 	// Returns exists=true if the block exists, false otherwise. If error, it may not be accurate.
 	Size(root common.Root) (size uint64, exists bool)
-	// Export outputs the requested SignedBeaconBlock to the writer in SSZ.
-	// Returns exists=true if the block exists, false otherwise. If error, it may not be accurate.
-	Export(root common.Root, w io.Writer) (exists bool, err error)
 	// Stream is used to stream the contents by getting a reader and total size to read
-	Stream(root common.Root) (r io.ReadCloser, size uint64, exists bool, err error)
+	Stream(root common.Root) (digest common.ForkDigest, r io.ReadCloser, size uint64, exists bool, err error)
 	// Remove removes a block from the DB. Removing a block that does not exist is safe.
 	// Returns exists=true if the block exists (previously), false otherwise. If error, it may not be accurate.
 	Remove(root common.Root) (exists bool, err error)

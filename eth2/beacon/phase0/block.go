@@ -13,14 +13,19 @@ type SignedBeaconBlock struct {
 	Signature common.BLSSignature `json:"signature" yaml:"signature"`
 }
 
-var _ common.SignedBeaconBlock = (*SignedBeaconBlock)(nil)
+var _ common.EnvelopeBuilder = (*SignedBeaconBlock)(nil)
 
-func (b *SignedBeaconBlock) BlockMessage() common.BeaconBlock {
-	return &b.Message
-}
-
-func (b *SignedBeaconBlock) BlockSignature() common.BLSSignature {
-	return b.Signature
+func (b *SignedBeaconBlock) Envelope(spec *common.Spec, digest common.ForkDigest) *common.BeaconBlockEnvelope {
+	return &common.BeaconBlockEnvelope{
+		ForkDigest:    digest,
+		Slot:          b.Message.Slot,
+		ProposerIndex: b.Message.ProposerIndex,
+		ParentRoot:    b.Message.ParentRoot,
+		StateRoot:     b.Message.StateRoot,
+		SignedBlock:   b,
+		BlockRoot:     b.Message.HashTreeRoot(spec, tree.GetHashFn()),
+		Signature:     b.Signature,
+	}
 }
 
 func (b *SignedBeaconBlock) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
@@ -56,21 +61,6 @@ type BeaconBlock struct {
 	ParentRoot    common.Root           `json:"parent_root" yaml:"parent_root"`
 	StateRoot     common.Root           `json:"state_root" yaml:"state_root"`
 	Body          BeaconBlockBody       `json:"body" yaml:"body"`
-}
-
-var _ common.BeaconBlock = (*BeaconBlock)(nil)
-
-func (b *BeaconBlock) BlockSlot() common.Slot {
-	return b.Slot
-}
-func (b *BeaconBlock) BlockProposerIndex() common.ValidatorIndex {
-	return b.ProposerIndex
-}
-func (b *BeaconBlock) BlockParentRoot() common.Root {
-	return b.ParentRoot
-}
-func (b *BeaconBlock) BlockStateRoot() common.Root {
-	return b.StateRoot
 }
 
 func (b *BeaconBlock) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {

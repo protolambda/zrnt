@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/util/bls"
-
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
@@ -212,26 +210,4 @@ func ProcessHeader(ctx context.Context, spec *Spec, state BeaconState, header *B
 		BodyRoot:  header.BodyRoot,
 	}
 	return state.SetLatestBlockHeader(headerRaw)
-}
-
-// Assuming the slot is valid, and optionally assume the proposer index is valid, check if the signature is valid
-func (h *SignedBeaconBlockHeader) VerifyBlockSignature(spec *Spec, epc *EpochsContext, state BeaconState, validateProposerIndex bool) bool {
-	if validateProposerIndex {
-		proposerIndex, err := epc.GetBeaconProposer(h.Message.Slot)
-		if err != nil {
-			return false
-		}
-		if proposerIndex != h.Message.ProposerIndex {
-			return false
-		}
-	}
-	pub, ok := epc.PubkeyCache.Pubkey(h.Message.ProposerIndex)
-	if !ok {
-		return false
-	}
-	domain, err := GetDomain(state, spec.DOMAIN_BEACON_PROPOSER, spec.SlotToEpoch(h.Message.Slot))
-	if err != nil {
-		return false
-	}
-	return bls.Verify(pub, ComputeSigningRoot(h.Message.HashTreeRoot(tree.GetHashFn()), domain), h.Signature)
 }

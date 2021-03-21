@@ -4,88 +4,80 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/ztyp/codec"
-	"github.com/protolambda/ztyp/tree"
 	"io"
 	"sync"
 	"sync/atomic"
 )
 
 type MemDB struct {
-	// beacon.Root -> []byte (serialized SignedBeaconBlock)
+	// beacon.Root -> []byte (fork digest ++ serialized SignedBeaconBlock)
 	data        sync.Map
 	removalLock sync.Mutex
 	stats       DBStats
+	dec         *beacon.ForkDecoder
 	spec        *common.Spec
 }
 
-func NewMemDB(spec *common.Spec) *MemDB {
-	return &MemDB{spec: spec}
+var _ DB = (*MemDB)(nil)
+
+func NewMemDB(spec *common.Spec, dec *beacon.ForkDecoder) *MemDB {
+	return &MemDB{spec: spec, dec: dec}
 }
 
-func (db *MemDB) Store(ctx context.Context, block *BlockWithRoot) (exists bool, err error) {
+func (db *MemDB) Store(ctx context.Context, benv *common.BeaconBlockEnvelope) (exists bool, err error) {
 	// Released when the block is removed from the DB
 	buf := getPoolBlockBuf()
-	err = block.Block.Serialize(db.spec, codec.NewEncodingWriter(buf))
-	if err != nil {
-		return false, fmt.Errorf("failed to store block %s: %v", block.Root, err)
+	if _, err := buf.Write(benv.ForkDigest[:]); err != nil {
+		return false, err
 	}
-	existing, loaded := db.data.LoadOrStore(block.Root, buf.Bytes())
+	err = benv.SignedBlock.Serialize(db.spec, codec.NewEncodingWriter(buf))
+	if err != nil {
+		return false, fmt.Errorf("failed to store block %s: %v", benv.BlockRoot, err)
+	}
+	existing, loaded := db.data.LoadOrStore(benv.BlockRoot, buf.Bytes())
 	if loaded {
 		existingBlock := existing.(*phase0.SignedBeaconBlock)
-		sigDifference := existingBlock.Signature != block.Block.BlockSignature()
+		sigDifference := existingBlock.Signature != benv.Signature
 		dbBlockPool.Put(buf) // put it back, we didn't store it
 		if sigDifference {
 			return true, fmt.Errorf("block %s already exists, but its signature %x does not match new signature %s",
-				block.Root, existingBlock.Signature, block.Block.BlockSignature())
+				benv.BlockRoot, existingBlock.Signature, benv.Signature)
 		}
 	} else {
 		atomic.AddInt64(&db.stats.Count, 1)
-		db.stats.LastWrite = block.Root
+		db.stats.LastWrite = benv.BlockRoot
 	}
 	return loaded, nil
 }
 
-func (db *MemDB) Import(r io.Reader) (exists bool, err error) {
+func (db *MemDB) Import(digest common.ForkDigest, r io.Reader) (exists bool, err error) {
 	buf := getPoolBlockBuf()
+	defer dbBlockPool.Put(buf)
 	if _, err := buf.ReadFrom(r); err != nil {
-		dbBlockPool.Put(buf) // put it back, we didn't use it
 		return false, err
 	}
-	var dest phase0.SignedBeaconBlock
-	err = dest.Deserialize(db.spec, codec.NewDecodingReader(buf, uint64(len(buf.Bytes()))))
+	benv, err := db.dec.DecodeBlock(digest, uint64(len(buf.Bytes())), buf)
 	if err != nil {
 		return false, fmt.Errorf("failed to decode block, nee valid block to get block root. Err: %v", err)
 	}
-	// Take the hash-tree-root of the BeaconBlock, ignore the signature.
-	root := dest.Message.HashTreeRoot(db.spec, tree.GetHashFn())
-	existing, loaded := db.data.LoadOrStore(root, buf.Bytes())
-	if loaded {
-		existingBlock := existing.(*phase0.SignedBeaconBlock)
-		sigDifference := existingBlock.Signature != dest.Signature
-		dbBlockPool.Put(buf) // put it back, we didn't store it
-		if sigDifference {
-			return true, fmt.Errorf("block %s already exists, but its signature %s does not match new signature %s",
-				root, existingBlock.Signature, dest.Signature)
-		}
-	} else {
-		atomic.AddInt64(&db.stats.Count, 1)
-		db.stats.LastWrite = root
-	}
-	return loaded, nil
+	return db.Store(context.Background(), benv)
 }
 
-func (db *MemDB) Get(ctx context.Context, root common.Root, dest common.SpecObj) (exists bool, err error) {
-	// TODO: store version and ensure version matches with dest.
+func (db *MemDB) Get(ctx context.Context, root common.Root) (envelope *common.BeaconBlockEnvelope, err error) {
 	dat, ok := db.data.Load(root)
 	if !ok {
-		return false, nil
+		return nil, nil
 	}
 	buf := dat.(*bytes.Buffer)
-	err = dest.Deserialize(db.spec, codec.NewDecodingReader(buf, uint64(len(buf.Bytes()))))
-	return true, err
+	var digest common.ForkDigest
+	if _, err := buf.Read(digest[:]); err != nil {
+		return nil, err
+	}
+	return db.dec.DecodeBlock(digest, uint64(len(buf.Bytes())), buf)
 }
 
 func (db *MemDB) Size(root common.Root) (size uint64, exists bool) {
@@ -94,17 +86,12 @@ func (db *MemDB) Size(root common.Root) (size uint64, exists bool) {
 		return 0, false
 	}
 	buf := dat.(*bytes.Buffer)
-	return uint64(len(buf.Bytes())), true
-}
-
-func (db *MemDB) Export(root common.Root, w io.Writer) (exists bool, err error) {
-	dat, ok := db.data.Load(root)
-	if !ok {
-		return false, nil
+	s := uint64(len(buf.Bytes()))
+	if s < 4 {
+		// block is corrupt, expected fork digest
+		return 0, false
 	}
-	buf := dat.(*bytes.Buffer)
-	_, err = buf.WriteTo(w)
-	return true, err
+	return s - 4, true
 }
 
 type noClose struct {
@@ -115,13 +102,16 @@ func (n noClose) Close() error {
 	return nil
 }
 
-func (db *MemDB) Stream(root common.Root) (r io.ReadCloser, size uint64, exists bool, err error) {
+func (db *MemDB) Stream(root common.Root) (digest common.ForkDigest, r io.ReadCloser, size uint64, exists bool, err error) {
 	dat, ok := db.data.Load(root)
 	if !ok {
-		return nil, 0, false, nil
+		return common.ForkDigest{}, nil, 0, false, nil
 	}
 	buf := dat.(*bytes.Buffer)
-	return noClose{buf}, uint64(buf.Len()), true, nil
+	if _, err := buf.Read(digest[:]); err != nil {
+		return common.ForkDigest{}, nil, 0, false, err
+	}
+	return digest, noClose{buf}, uint64(buf.Len()), true, nil
 }
 
 func (db *MemDB) Remove(root common.Root) (exists bool, err error) {

@@ -129,5 +129,5 @@ type BeaconState interface {
 	ProcessEpoch(ctx context.Context, spec *Spec, epc *EpochsContext) error
 	// ProcessBlock applies a block to the state.
 	// Excludes slot processing and signature validation. Just applies the block as-is. Error if mismatching slot.
-	ProcessBlock(ctx context.Context, spec *Spec, epc *EpochsContext, block SignedBeaconBlock) error
+	ProcessBlock(ctx context.Context, spec *Spec, epc *EpochsContext, benv *BeaconBlockEnvelope) error
 }

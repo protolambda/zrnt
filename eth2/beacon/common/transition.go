@@ -96,35 +96,54 @@ func ProcessSlots(ctx context.Context, spec *Spec, epc *EpochsContext, state Bea
 // StateTransition to the slot of the given block, then process the block.
 // Returns an error if the slot is older or equal to what the state is already at.
 // Mutates the state, does not copy.
-func StateTransition(ctx context.Context, spec *Spec, epc *EpochsContext, state BeaconState, block SignedBeaconBlock, validateResult bool) error {
-	if err := ProcessSlots(ctx, spec, epc, state, block.BlockMessage().BlockSlot()); err != nil {
+func StateTransition(ctx context.Context, spec *Spec, epc *EpochsContext, state BeaconState, benv *BeaconBlockEnvelope, validateResult bool) error {
+	if err := ProcessSlots(ctx, spec, epc, state, benv.Slot); err != nil {
 		return err
 	}
-	return PostSlotTransition(ctx, spec, epc, state, block, validateResult)
+	return PostSlotTransition(ctx, spec, epc, state, benv, validateResult)
 }
 
 // PostSlotTransition finishes a state transition after applying ProcessSlots(..., block.Slot).
-func PostSlotTransition(ctx context.Context, spec *Spec, epc *EpochsContext, state BeaconState, block SignedBeaconBlock, validateResult bool) error {
+func PostSlotTransition(ctx context.Context, spec *Spec, epc *EpochsContext, state BeaconState, benv *BeaconBlockEnvelope, validateResult bool) error {
 	slot, err := state.Slot()
 	if err != nil {
 		return err
 	}
-	if slot != block.BlockMessage().BlockSlot() {
+	if slot != benv.Slot {
 		return fmt.Errorf("transition of block, post-slot-processing, must run on state with same slot")
 	}
 	if validateResult {
-		h := block.SignedHeader(spec)
-		// Safe to ignore proposer index, it will be checked as part of the ProcessHeader call.
-		if !h.VerifyBlockSignature(spec, epc, state, false) {
+		fork, err := state.Fork()
+		if err != nil {
+			return err
+		}
+		version := spec.ForkVersion(benv.Slot)
+		if fork.CurrentVersion != version {
+			return fmt.Errorf("state does not expected fork version of block slot: %s <> %s (slot %d)",
+				fork.CurrentVersion, version, benv.Slot)
+		}
+		proposer, err := epc.GetBeaconProposer(benv.Slot)
+		if err != nil {
+			return err
+		}
+		genValRoot, err := state.GenesisValidatorsRoot()
+		if err != nil {
+			return err
+		}
+		pub, ok := epc.PubkeyCache.Pubkey(proposer)
+		if !ok {
+			return fmt.Errorf("unknown pubkey for proposer %d", proposer)
+		}
+		if !benv.VerifySignature(spec, genValRoot, proposer, pub) {
 			return errors.New("block has invalid signature")
 		}
 	}
-	if err := state.ProcessBlock(ctx, spec, epc, block); err != nil {
+	if err := state.ProcessBlock(ctx, spec, epc, benv); err != nil {
 		return err
 	}
 
 	// State root verification
-	if validateResult && block.BlockMessage().BlockStateRoot() != state.HashTreeRoot(tree.GetHashFn()) {
+	if validateResult && benv.StateRoot != state.HashTreeRoot(tree.GetHashFn()) {
 		return errors.New("block has invalid state root")
 	}
 	return nil

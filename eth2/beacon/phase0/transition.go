@@ -55,10 +55,10 @@ func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spe
 	return nil
 }
 
-func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, blockIfc common.SignedBeaconBlock) error {
-	signedBlock, ok := blockIfc.(*SignedBeaconBlock)
+func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, benv *common.BeaconBlockEnvelope) error {
+	signedBlock, ok := benv.SignedBlock.(*SignedBeaconBlock)
 	if !ok {
-		return fmt.Errorf("unexpected block type %T in phase0 ProcessBlock", blockIfc)
+		return fmt.Errorf("unexpected block type %T in phase0 ProcessBlock", benv.SignedBlock)
 	}
 	block := &signedBlock.Message
 	slot, err := state.Slot()

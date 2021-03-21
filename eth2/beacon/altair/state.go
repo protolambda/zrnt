@@ -444,8 +444,8 @@ func (state *BeaconStateView) NextSyncCommittee() (*SyncCommitteeView, error) {
 
 func (state *BeaconStateView) ForkSettings(spec *common.Spec) *common.ForkSettings {
 	return &common.ForkSettings{
-		MinSlashingPenaltyQuotient:     spec.ALTAIR_MIN_SLASHING_PENALTY_QUOTIENT,
-		ProportionalSlashingMultiplier: spec.ALTAIR_PROPORTIONAL_SLASHING_MULTIPLIER,
+		MinSlashingPenaltyQuotient:     spec.MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR,
+		ProportionalSlashingMultiplier: spec.PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR,
 	}
 }
 

@@ -57,7 +57,7 @@ func ComputeProposers(spec *Spec, state BeaconState, epoch Epoch, active []Valid
 		proposers[i] = proposer
 		slot++
 	}
-	return &ProposersEpoch{Epoch: epoch, Proposers: proposers}, nil
+	return &ProposersEpoch{Spec: spec, Epoch: epoch, Proposers: proposers}, nil
 }
 
 func ComputeProposerIndex(spec *Spec, registry ValidatorRegistry, active []ValidatorIndex, seed Root) (ValidatorIndex, error) {

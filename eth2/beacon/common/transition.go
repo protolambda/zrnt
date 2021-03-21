@@ -119,7 +119,7 @@ func PostSlotTransition(ctx context.Context, spec *Spec, epc *EpochsContext, sta
 		}
 		version := spec.ForkVersion(benv.Slot)
 		if fork.CurrentVersion != version {
-			return fmt.Errorf("state does not expected fork version of block slot: %s <> %s (slot %d)",
+			return fmt.Errorf("state does not have expected fork version of block slot: %s <> %s (slot %d)",
 				fork.CurrentVersion, version, benv.Slot)
 		}
 		proposer, err := epc.GetBeaconProposer(benv.Slot)

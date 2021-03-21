@@ -31,7 +31,7 @@ func (b *BeaconBlockEnvelope) VerifySignature(spec *Spec, genesisValidatorsRoot 
 	version := spec.ForkVersion(b.Slot)
 	forkRoot := ComputeForkDataRoot(version, genesisValidatorsRoot)
 	// Sanity check fork digest
-	if !bytes.Equal(forkRoot[4:8], b.ForkDigest[:]) {
+	if !bytes.Equal(forkRoot[0:4], b.ForkDigest[:]) {
 		return false
 	}
 	dom := ComputeDomain(spec.DOMAIN_BEACON_PROPOSER, version, genesisValidatorsRoot)

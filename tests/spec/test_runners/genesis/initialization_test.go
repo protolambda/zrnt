@@ -2,7 +2,6 @@ package sanity
 
 import (
 	"bytes"
-	"encoding/hex"
 	"fmt"
 	"github.com/golang/snappy"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
@@ -27,6 +26,11 @@ type DepositsCountMeta struct {
 	DepositsCount uint64 `yaml:"deposits_count"`
 }
 
+type Eth1InitData struct {
+	Eth1BlockHash common.Root      `yaml:"eth1_block_hash"`
+	Eth1Timestamp common.Timestamp `yaml:"eth1_timestamp"`
+}
+
 func (c *InitializationTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
 	c.Spec = readPart.Spec()
 	{
@@ -48,21 +52,13 @@ func (c *InitializationTestCase) Load(t *testing.T, readPart test_util.TestPartR
 		}
 	}
 	{
-		p := readPart.Part("eth1_block_hash.yaml")
+		p := readPart.Part("eth1.yaml")
 		dec := yaml.NewDecoder(p)
-		var blockHash string
-		test_util.Check(t, dec.Decode(&blockHash))
+		var eth1Init Eth1InitData
+		test_util.Check(t, dec.Decode(&eth1Init))
 		test_util.Check(t, p.Close())
-		_, err := hex.Decode(c.Eth1BlockHash[:], []byte(blockHash)[2:])
-		test_util.Check(t, err)
-	}
-	{
-		p := readPart.Part("eth1_timestamp.yaml")
-		dec := yaml.NewDecoder(p)
-		var timestamp common.Timestamp
-		test_util.Check(t, dec.Decode(&timestamp))
-		test_util.Check(t, p.Close())
-		c.Eth1Timestamp = timestamp
+		c.Eth1BlockHash = eth1Init.Eth1BlockHash
+		c.Eth1Timestamp = eth1Init.Eth1Timestamp
 	}
 	m := &DepositsCountMeta{}
 	{

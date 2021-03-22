@@ -106,7 +106,7 @@ func RunTransitionTest(t *testing.T, runnerName string, handlerName string, mkr 
 			if c.ExpectingFailure() {
 				return
 			}
-			t.Errorf("%s/%s process error: %v", runnerName, handlerName, err)
+			t.Fatalf("%s/%s process error: %v", runnerName, handlerName, err)
 		}
 		c.Check(t)
 	})

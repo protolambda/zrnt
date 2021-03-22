@@ -97,6 +97,11 @@ func GenesisFromEth1(spec *common.Spec, eth1BlockHash common.Root, time common.T
 	if err := updateDepTreeRoot(); err != nil {
 		return nil, nil, err
 	}
+	// fetch validator registry again, the state changed.
+	vals, err = state.Validators()
+	if err != nil {
+		return nil, nil, err
+	}
 	valCount, err := vals.ValidatorCount()
 	if err != nil {
 		return nil, nil, err

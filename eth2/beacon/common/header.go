@@ -128,6 +128,10 @@ func (v *BeaconBlockHeaderView) Raw() (*BeaconBlockHeader, error) {
 	if err != nil {
 		return nil, err
 	}
+	proposer, err := v.ProposerIndex()
+	if err != nil {
+		return nil, err
+	}
 	parentRoot, err := v.ParentRoot()
 	if err != nil {
 		return nil, err
@@ -141,10 +145,11 @@ func (v *BeaconBlockHeaderView) Raw() (*BeaconBlockHeader, error) {
 		return nil, err
 	}
 	return &BeaconBlockHeader{
-		Slot:       slot,
-		ParentRoot: parentRoot,
-		StateRoot:  stateRoot,
-		BodyRoot:   bodyRoot,
+		Slot:          slot,
+		ProposerIndex: proposer,
+		ParentRoot:    parentRoot,
+		StateRoot:     stateRoot,
+		BodyRoot:      bodyRoot,
 	}, nil
 }
 
@@ -182,7 +187,7 @@ func ProcessHeader(ctx context.Context, spec *Spec, state BeaconState, header *B
 	// Verify that the parent matches
 	latestRoot := latestHeader.HashTreeRoot(tree.GetHashFn())
 	if header.ParentRoot != latestRoot {
-		return fmt.Errorf("previous block root %x does not match root %x from latest state block header", header.ParentRoot, latestRoot)
+		return fmt.Errorf("previous block root %s does not match root %s from latest state block header", header.ParentRoot, latestRoot)
 	}
 	validators, err := state.Validators()
 	if err != nil {

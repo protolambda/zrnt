@@ -49,6 +49,9 @@ func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spe
 	if err := ProcessRandaoMixesReset(ctx, spec, epc, state); err != nil {
 		return err
 	}
+	if err := ProcessHistoricalRootsUpdate(ctx, spec, epc, state); err != nil {
+		return err
+	}
 	if err := ProcessParticipationRecordUpdates(ctx, spec, epc, state); err != nil {
 		return err
 	}

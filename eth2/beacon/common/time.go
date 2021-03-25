@@ -123,6 +123,14 @@ func (s Slot) HashTreeRoot(hFn tree.HashFn) Root {
 	return Uint64View(s).HashTreeRoot(hFn)
 }
 
+func (s Slot) Previous() Slot {
+	if s == GENESIS_SLOT {
+		return GENESIS_SLOT
+	} else {
+		return s - 1
+	}
+}
+
 func (e Slot) MarshalJSON() ([]byte, error) {
 	return Uint64View(e).MarshalJSON()
 }

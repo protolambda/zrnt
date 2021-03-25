@@ -3,8 +3,10 @@ package altair
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/ztyp/bitfields"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/conv"
@@ -22,23 +24,23 @@ func (li SyncCommitteeBits) View(spec *common.Spec) *SyncCommitteeBitsView {
 }
 
 func (li *SyncCommitteeBits) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
-	return dr.BitList((*[]byte)(li), spec.SYNC_COMMITTEE_SIZE)
+	return dr.BitVector((*[]byte)(li), spec.SYNC_COMMITTEE_SIZE)
 }
 
 func (a SyncCommitteeBits) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
-	return w.BitList(a[:])
+	return w.BitVector(a[:])
 }
 
 func (a SyncCommitteeBits) ByteLength(spec *common.Spec) uint64 {
-	return uint64(len(a))
+	return (spec.SYNC_COMMITTEE_SIZE + 7) / 8
 }
 
-func (a *SyncCommitteeBits) FixedLength(*common.Spec) uint64 {
-	return 0
+func (a *SyncCommitteeBits) FixedLength(spec *common.Spec) uint64 {
+	return (spec.SYNC_COMMITTEE_SIZE + 7) / 8
 }
 
 func (li SyncCommitteeBits) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
-	return hFn.BitListHTR(li, spec.SYNC_COMMITTEE_SIZE)
+	return hFn.BitVectorHTR(li)
 }
 
 func (cb SyncCommitteeBits) MarshalText() ([]byte, error) {
@@ -277,8 +279,78 @@ func AsSyncAggregate(v View, err error) (*SyncAggregateView, error) {
 	return &SyncAggregateView{c}, err
 }
 
-func ProcessSyncCommittee(ctx context.Context, spec *common.Spec, state *BeaconStateView, agg *SyncAggregate) error {
+func ProcessSyncCommittee(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView, agg *SyncAggregate) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	currentSlot, err := state.Slot()
+	if err != nil {
+		return err
+	}
+	if err := bitfields.BitvectorCheck(agg.SyncCommitteeBits, spec.SYNC_COMMITTEE_SIZE); err != nil {
+		return fmt.Errorf("input bypassed deserialization checks, sanity check on sync committee bitvector length failed: %v", err)
+	}
+	prevSlot := currentSlot.Previous()
+	// TODO syncCommitteeIndices = get_sync_committee_indices(state, get_current_epoch(state))
+	syncCommitteeIndices := make([]common.ValidatorIndex, spec.SYNC_COMMITTEE_SIZE, spec.SYNC_COMMITTEE_SIZE)
 	// TODO
+	syncCommitteePubkeys := make([]*common.CachedPubkey, spec.SYNC_COMMITTEE_SIZE, spec.SYNC_COMMITTEE_SIZE)
+
+	includedIndices := make([]common.ValidatorIndex, 0, len(syncCommitteeIndices))
+	includedPubkeys := make([]*common.CachedPubkey, 0, len(syncCommitteeIndices))
+	for i := uint64(0); i < spec.SYNC_COMMITTEE_SIZE; i++ {
+		if agg.SyncCommitteeBits.GetBit(i) {
+			includedIndices = append(includedIndices, syncCommitteeIndices[i])
+			includedPubkeys = append(includedPubkeys, syncCommitteePubkeys[i])
+		}
+	}
+	domain, err := common.GetDomain(state, spec.DOMAIN_SYNC_COMMITTEE, spec.SlotToEpoch(prevSlot))
+	if err != nil {
+		return err
+	}
+	blockRoot, err := common.GetBlockRootAtSlot(spec, state, prevSlot)
+	if err != nil {
+		return err
+	}
+	signingRoot := common.ComputeSigningRoot(blockRoot, domain)
+	if !bls.FastAggregateVerify(includedPubkeys, signingRoot, agg.SyncCommitteeSignature) {
+		return errors.New("invalid sync committee signature")
+	}
+	totalActiveIncrements := epc.TotalActiveStake / spec.EFFECTIVE_BALANCE_INCREMENT
+	baseRewardPerIncrement := (spec.EFFECTIVE_BALANCE_INCREMENT * common.Gwei(spec.BASE_REWARD_FACTOR)) / epc.TotalActiveStakeSqRoot
+	totalBaseRewards := baseRewardPerIncrement * totalActiveIncrements
+	maxEpochRewards := (totalBaseRewards * common.Gwei(SYNC_REWARD_WEIGHT)) / common.Gwei(WEIGHT_DENOMINATOR)
+	maxSlotRewards := ((maxEpochRewards * common.Gwei(len(includedIndices))) /
+		common.Gwei(len(syncCommitteeIndices))) / common.Gwei(spec.SLOTS_PER_EPOCH)
+
+	committeeEffBalance := common.Gwei(0)
+	for _, ci := range includedIndices {
+		committeeEffBalance += epc.EffectiveBalances[ci]
+	}
+	if committeeEffBalance < spec.EFFECTIVE_BALANCE_INCREMENT {
+		committeeEffBalance = spec.EFFECTIVE_BALANCE_INCREMENT
+	}
+	bals, err := state.Balances()
+	if err != nil {
+		return err
+	}
+	proposerRewardSum := common.Gwei(0)
+	for _, ci := range includedIndices {
+		effectiveBalance := epc.EffectiveBalances[ci]
+		inclusionReward := (maxSlotRewards * effectiveBalance) / committeeEffBalance
+		proposerReward := inclusionReward / common.Gwei(spec.PROPOSER_REWARD_QUOTIENT)
+		proposerRewardSum += proposerReward
+		if err := common.IncreaseBalance(bals, ci, inclusionReward-proposerReward); err != nil {
+			return err
+		}
+	}
+	proposer, err := epc.GetBeaconProposer(currentSlot)
+	if err != nil {
+		return err
+	}
+	if err := common.IncreaseBalance(bals, proposer, proposerRewardSum); err != nil {
+		return err
+	}
 	return nil
 }
 

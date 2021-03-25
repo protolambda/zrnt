@@ -2,6 +2,7 @@ package altair
 
 import (
 	"context"
+	"encoding/binary"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
@@ -114,7 +115,35 @@ func (v *ParticipationRegistryView) SetFlags(index common.ValidatorIndex, score 
 	return v.Set(uint64(index), Uint8View(score))
 }
 
-func ProcessParticipationFlagUpdates(ctx context.Context, spec *common.Spec, state common.BeaconState) error {
-	// TODO
-	return nil
+func (v *ParticipationRegistryView) FillZeroes(length uint64) error {
+	// 32 flags (uint8) per node (bytes32)
+	nodesLen := (length + 31) / 32
+	depth := tree.CoverDepth(v.BottomNodeLimit())
+	zero := &tree.Root{}
+	contents, err := tree.SubtreeFillToLength(zero, depth, nodesLen)
+	if err != nil {
+		return err
+	}
+	lengthNode := &tree.Root{}
+	binary.LittleEndian.PutUint64(lengthNode[:8], length)
+	return v.SetBacking(tree.NewPairNode(contents, lengthNode))
+}
+
+func ProcessParticipationFlagUpdates(ctx context.Context, spec *common.Spec, state *BeaconStateView) error {
+	currentEp, err := state.CurrentEpochParticipation()
+	if err != nil {
+		return err
+	}
+	previousEp, err := state.PreviousEpochParticipation()
+	if err != nil {
+		return err
+	}
+	if err := previousEp.SetBacking(currentEp.Backing()); err != nil {
+		return err
+	}
+	length, err := currentEp.Length()
+	if err != nil {
+		return err
+	}
+	return currentEp.FillZeroes(length)
 }

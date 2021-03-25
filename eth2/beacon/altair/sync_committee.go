@@ -221,9 +221,9 @@ func SyncCommitteeIndices(state *BeaconStateView, epoch common.Epoch) []common.V
 	return nil
 }
 
-func ComputeSyncCommittee(state *BeaconStateView, epoch common.Epoch) *SyncCommittee {
+func ComputeSyncCommittee(state *BeaconStateView, epoch common.Epoch) (*SyncCommittee, error) {
 	// TODO
-	return nil
+	return nil, nil
 }
 
 func SyncAggregateType(spec *common.Spec) *ContainerTypeDef {
@@ -354,7 +354,17 @@ func ProcessSyncCommittee(ctx context.Context, spec *common.Spec, epc *common.Ep
 	return nil
 }
 
-func ProcessSyncCommitteeUpdates(ctx context.Context, spec *common.Spec, state common.BeaconState) error {
-	// TODO
+func ProcessSyncCommitteeUpdates(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView) error {
+	nextEpoch := epc.NextEpoch.Epoch
+	if nextEpoch%spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD == 0 {
+		// TODO
+		//current, err := state.CurrentSyncCommittee()
+		//if err != nil {
+		//	return err
+		//}
+		//next := ComputeSyncCommittee(state, nextEpoch + spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
+		// state.current <- state.next
+		// state.next <- next
+	}
 	return nil
 }

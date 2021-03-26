@@ -23,9 +23,8 @@ func (epc *ProposersEpoch) GetBeaconProposer(slot Slot) (ValidatorIndex, error) 
 }
 
 func ComputeProposers(spec *Spec, state BeaconState, epoch Epoch, active []ValidatorIndex) (*ProposersEpoch, error) {
-	// no validators? No proposers to compute. Keep it nil so we can detect and compute it later.
 	if len(active) == 0 {
-		return nil, nil
+		return nil, errors.New("no active validators available to compute proposers")
 	}
 	proposers := make([]ValidatorIndex, spec.SLOTS_PER_EPOCH, spec.SLOTS_PER_EPOCH)
 	mixes, err := state.RandaoMixes()
@@ -89,5 +88,5 @@ func ComputeProposerIndex(spec *Spec, registry ValidatorRegistry, active []Valid
 			}
 		}
 	}
-	return 0, errors.New("random (but balance-biased) infinite scrolling through a committee should always find a proposer")
+	return 0, errors.New("random (but balance-biased) infinite scrolling should always find a proposer")
 }

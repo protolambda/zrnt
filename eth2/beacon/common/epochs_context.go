@@ -16,6 +16,14 @@ type EpochsContext struct {
 	CurrentEpoch  *ShufflingEpoch
 	NextEpoch     *ShufflingEpoch
 
+	// SyncCommitteePeriod is the start of the current sync committee period
+	SyncCommitteePeriod uint64
+	// CurrentSyncCommittee is a slice of SYNC_COMMITTEE_SIZE validator indices for the period
+	// It may contain duplicates.
+	CurrentSyncCommittee []ValidatorIndex
+	// NextSyncCommittee is the sync commitee for the next period
+	NextSyncCommittee []ValidatorIndex
+
 	// TODO: track active effective balances
 	// TODO: track total active stake
 	// Effective balances of all validators at the start of the epoch.
@@ -182,4 +190,16 @@ func (epc *EpochsContext) GetCommitteeCountAtSlot(slot Slot) (uint64, error) {
 
 func (epc *EpochsContext) GetBeaconProposer(slot Slot) (ValidatorIndex, error) {
 	return epc.Proposers.GetBeaconProposer(slot)
+}
+
+func (epc *EpochsContext) GetSyncCommittee(epoch Epoch) ([]ValidatorIndex, error) {
+	period := uint64(epoch / epc.Spec.SHARD_COMMITTEE_PERIOD)
+	if epc.SyncCommitteePeriod == period {
+		return epc.CurrentSyncCommittee, nil
+	} else if epc.SyncCommitteePeriod+1 == period {
+		return epc.NextSyncCommittee, nil
+	} else {
+		return nil, fmt.Errorf("epoch %d is in period %d, but only periods %d and %d are available",
+			epoch, period, epc.SyncCommitteePeriod, epc.SyncCommitteePeriod+1)
+	}
 }

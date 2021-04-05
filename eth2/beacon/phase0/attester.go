@@ -48,8 +48,6 @@ type EpochAttesterData struct {
 	Statuses []AttesterStatus
 	Flats    []common.FlatValidator
 
-	TotalActiveStake common.Gwei
-
 	PrevEpochUnslashedStake       EpochStakeSummary
 	CurrEpochUnslashedTargetStake common.Gwei
 }
@@ -78,10 +76,6 @@ func ComputeEpochAttesterData(ctx context.Context, spec *common.Spec, epc *commo
 
 		if flat.IsActive(prevEpoch) || (flat.Slashed && (prevEpoch+1 < flat.WithdrawableEpoch)) {
 			status.Flags |= EligibleAttester
-		}
-
-		if flat.IsActive(currentEpoch) {
-			out.TotalActiveStake += flat.EffectiveBalance
 		}
 	}
 
@@ -205,9 +199,6 @@ func ComputeEpochAttesterData(ctx context.Context, spec *common.Spec, epc *commo
 		if status.Flags.HasMarkers(CurrTargetAttester | UnslashedAttester) {
 			out.CurrEpochUnslashedTargetStake += flat.EffectiveBalance
 		}
-	}
-	if out.TotalActiveStake < spec.EFFECTIVE_BALANCE_INCREMENT {
-		out.TotalActiveStake = spec.EFFECTIVE_BALANCE_INCREMENT
 	}
 	if out.PrevEpochUnslashedStake.SourceStake < spec.EFFECTIVE_BALANCE_INCREMENT {
 		out.PrevEpochUnslashedStake.SourceStake = spec.EFFECTIVE_BALANCE_INCREMENT

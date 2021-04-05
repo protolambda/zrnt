@@ -21,7 +21,7 @@ func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spe
 	}
 	just := JustificationStakeData{
 		CurrentEpoch:                  epc.CurrentEpoch.Epoch,
-		TotalActiveStake:              attesterData.TotalActiveStake,
+		TotalActiveStake:              epc.TotalActiveStake,
 		PrevEpochUnslashedTargetStake: attesterData.PrevEpochUnslashedStake.TargetStake,
 		CurrEpochUnslashedTargetStake: attesterData.CurrEpochUnslashedTargetStake,
 	}

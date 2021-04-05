@@ -16,17 +16,20 @@ func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spe
 	if err != nil {
 		return err
 	}
+	attesterData, err := ComputeEpochAttesterData(ctx, spec, epc, flats, state)
+	if err != nil {
+		return err
+	}
 	just := phase0.JustificationStakeData{
-		CurrentEpoch: epc.CurrentEpoch.Epoch,
-		// TODO
-		TotalActiveStake:              0,
-		PrevEpochUnslashedTargetStake: 0, // Now with TIMELY_TARGET_FLAG_INDEX participation
-		CurrEpochUnslashedTargetStake: 0, // ditto
+		CurrentEpoch:                  epc.CurrentEpoch.Epoch,
+		TotalActiveStake:              epc.TotalActiveStake,
+		PrevEpochUnslashedTargetStake: attesterData.PrevEpochUnslashedStake.TargetStake,
+		CurrEpochUnslashedTargetStake: attesterData.CurrEpochUnslashedTargetStake,
 	}
 	if err := phase0.ProcessEpochJustification(ctx, spec, &just, state); err != nil {
 		return err
 	}
-	if err := ProcessEpochRewardsAndPenalties(ctx, spec, epc, flats, state); err != nil {
+	if err := ProcessEpochRewardsAndPenalties(ctx, spec, epc, attesterData, state); err != nil {
 		return err
 	}
 	if err := phase0.ProcessEpochRegistryUpdates(ctx, spec, epc, flats, state); err != nil {

@@ -2,13 +2,13 @@ package common
 
 import (
 	"encoding/binary"
+	"errors"
 	"github.com/protolambda/zrnt/eth2/util/hashing"
 )
 
 func ComputeSyncCommitteeIndices(spec *Spec, state BeaconState, baseEpoch Epoch, active []ValidatorIndex) ([]ValidatorIndex, error) {
-	// no validators? No sync committee to compute. Keep it nil so we can detect and compute it later.
 	if len(active) == 0 {
-		return nil, nil
+		return nil, errors.New("no active validators to compute sync committee from")
 	}
 	syncCommittee := make([]ValidatorIndex, 0, spec.SYNC_SUBCOMMITTEE_SIZE)
 	mixes, err := state.RandaoMixes()

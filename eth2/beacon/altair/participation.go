@@ -115,6 +115,26 @@ func (v *ParticipationRegistryView) SetFlags(index common.ValidatorIndex, score 
 	return v.Set(uint64(index), Uint8View(score))
 }
 
+func (v *ParticipationRegistryView) Raw() (ParticipationRegistry, error) {
+	length, err := v.Length()
+	if err != nil {
+		return nil, err
+	}
+	out := make(ParticipationRegistry, 0, length)
+	iter := v.ReadonlyIter()
+	for {
+		el, ok, err := iter.Next()
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			break
+		}
+		out = append(out, ParticipationFlags(el.(Uint8View)))
+	}
+	return out, nil
+}
+
 func (v *ParticipationRegistryView) FillZeroes(length uint64) error {
 	// 32 flags (uint8) per node (bytes32)
 	nodesLen := (length + 31) / 32

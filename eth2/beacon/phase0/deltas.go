@@ -36,7 +36,7 @@ func AttestationRewardsAndPenalties(ctx context.Context, spec *common.Spec,
 
 	attesterStatuses := attesterData.Statuses
 
-	totalBalance := attesterData.TotalActiveStake
+	totalBalance := epc.TotalActiveStake
 
 	prevEpochStake := &attesterData.PrevEpochUnslashedStake
 	prevEpochSourceStake := prevEpochStake.SourceStake

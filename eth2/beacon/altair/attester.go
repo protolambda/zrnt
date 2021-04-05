@@ -12,21 +12,40 @@ type EpochStakeSummary struct {
 }
 
 type EpochAttesterData struct {
-	Flats []common.FlatValidator
+	PrevEpoch common.Epoch
+	CurrEpoch common.Epoch
+
+	Flats           []common.FlatValidator
+	EligibleIndices []common.ValidatorIndex
+
+	PrevParticipation ParticipationRegistry
+	CurrParticipation ParticipationRegistry
 
 	PrevEpochUnslashedStake       EpochStakeSummary
 	CurrEpochUnslashedTargetStake common.Gwei
 }
 
 func ComputeEpochAttesterData(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, flats []common.FlatValidator, state *BeaconStateView) (out *EpochAttesterData, err error) {
+	prevEpoch := epc.PreviousEpoch.Epoch
+	currentEpoch := epc.CurrentEpoch.Epoch
 	out = &EpochAttesterData{
-		Flats: flats,
+		PrevEpoch:       prevEpoch,
+		CurrEpoch:       currentEpoch,
+		Flats:           flats,
+		EligibleIndices: make([]common.ValidatorIndex, 0, len(flats)),
 		PrevEpochUnslashedStake: EpochStakeSummary{
 			SourceStake: 0,
 			TargetStake: 0,
 			HeadStake:   0,
 		},
 		CurrEpochUnslashedTargetStake: 0,
+	}
+	for i := common.ValidatorIndex(0); i < common.ValidatorIndex(len(flats)); i++ {
+		flat := &flats[i]
+		// eligibility check
+		if flat.IsActive(prevEpoch) || (flat.Slashed && prevEpoch+1 < flat.WithdrawableEpoch) {
+			out.EligibleIndices = append(out.EligibleIndices, i)
+		}
 	}
 	prevEpochParticipationView, err := state.PreviousEpochParticipation()
 	if err != nil {
@@ -36,6 +55,7 @@ func ComputeEpochAttesterData(ctx context.Context, spec *common.Spec, epc *commo
 	if err != nil {
 		return nil, err
 	}
+	out.PrevParticipation = prevEpochParticipation
 	currEpochParticipationView, err := state.CurrentEpochParticipation()
 	if err != nil {
 		return nil, err
@@ -44,6 +64,7 @@ func ComputeEpochAttesterData(ctx context.Context, spec *common.Spec, epc *commo
 	if err != nil {
 		return nil, err
 	}
+	out.CurrParticipation = currEpochParticipation
 	for _, vi := range epc.PreviousEpoch.ActiveIndices {
 		if flats[vi].Slashed {
 			continue

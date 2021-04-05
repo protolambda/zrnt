@@ -6,6 +6,8 @@ import (
 )
 
 func ProcessEpochRewardsAndPenalties(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, attesterData *EpochAttesterData, state *BeaconStateView) error {
-	// TODO
+	// TODO source, target, head flag deltas
+	// TODO inactivity deltas
+
 	return nil
 }

@@ -1,6 +1,7 @@
 package altair
 
 import (
+	"context"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
@@ -51,10 +52,48 @@ func AsInactivityScores(v View, err error) (*InactivityScoresView, error) {
 	return &InactivityScoresView{c}, err
 }
 
-func (v *InactivityScoresView) GetScore(index common.ValidatorIndex) (Uint64View, error) {
-	return AsUint64(v.Get(uint64(index)))
+func (v *InactivityScoresView) GetScore(index common.ValidatorIndex) (uint64, error) {
+	s, err := AsUint64(v.Get(uint64(index)))
+	return uint64(s), err
 }
 
-func (v *InactivityScoresView) SetScore(index common.ValidatorIndex, score Uint64View) error {
-	return v.Set(uint64(index), score)
+func (v *InactivityScoresView) SetScore(index common.ValidatorIndex, score uint64) error {
+	return v.Set(uint64(index), Uint64View(score))
+}
+
+func ProcessInactivityUpdates(ctx context.Context, spec *common.Spec, attesterData *EpochAttesterData, state *BeaconStateView) error {
+	inactivityScores, err := state.InactivityScores()
+	if err != nil {
+		return err
+	}
+	finalized, err := state.FinalizedCheckpoint()
+	if err != nil {
+		return err
+	}
+	finalityDelay := attesterData.PrevEpoch - finalized.Epoch
+	isInactivityLeak := finalityDelay > spec.MIN_EPOCHS_TO_INACTIVITY_PENALTY
+
+	for _, vi := range attesterData.EligibleIndices {
+		if !attesterData.Flats[vi].Slashed && (attesterData.PrevParticipation[vi]&TIMELY_TARGET_FLAG != 0) {
+			score, err := inactivityScores.GetScore(vi)
+			if err != nil {
+				return err
+			}
+			if score > 0 {
+				score -= 1
+				if err := inactivityScores.SetScore(vi, score); err != nil {
+					return err
+				}
+			}
+		} else if isInactivityLeak {
+			score, err := inactivityScores.GetScore(vi)
+			if err != nil {
+				return err
+			}
+			if err := inactivityScores.SetScore(vi, score+spec.INACTIVITY_SCORE_BIAS); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

@@ -29,6 +29,9 @@ func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spe
 	if err := phase0.ProcessEpochJustification(ctx, spec, &just, state); err != nil {
 		return err
 	}
+	if err := ProcessInactivityUpdates(ctx, spec, attesterData, state); err != nil {
+		return err
+	}
 	if err := ProcessEpochRewardsAndPenalties(ctx, spec, epc, attesterData, state); err != nil {
 		return err
 	}

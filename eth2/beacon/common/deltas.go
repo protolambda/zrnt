@@ -1,8 +1,10 @@
 package common
 
 import (
+	"errors"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
+	"github.com/protolambda/ztyp/view"
 )
 
 type GweiList []Gwei
@@ -98,4 +100,41 @@ func DecreaseBalance(v Balances, index ValidatorIndex, delta Gwei) error {
 		bal = 0
 	}
 	return v.SetBalance(index, bal)
+}
+
+// Applies deltas to the balances in the state, returns the resulting balances,
+// ready to overwrite the state balances subtree with.
+func ApplyDeltas(state BeaconState, deltas *Deltas) ([]view.BasicView, error) {
+	balances, err := state.Balances()
+	if err != nil {
+		return nil, err
+	}
+	length, err := balances.Length()
+	if err != nil {
+		return nil, err
+	}
+	if uint64(len(deltas.Penalties)) != length || uint64(len(deltas.Rewards)) != length {
+		return nil, errors.New("cannot apply deltas to balances list with different length")
+	}
+	balancesElements := make([]view.BasicView, 0, length)
+	balIterNext := balances.Iter()
+	i := ValidatorIndex(0)
+	for {
+		bal, ok, err := balIterNext()
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			break
+		}
+		bal += deltas.Rewards[i]
+		if penalty := deltas.Penalties[i]; bal >= penalty {
+			bal -= penalty
+		} else {
+			bal = 0
+		}
+		balancesElements = append(balancesElements, view.Uint64View(bal))
+		i++
+	}
+	return balancesElements, nil
 }

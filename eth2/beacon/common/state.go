@@ -56,6 +56,7 @@ type Balances interface {
 	SetBalance(index ValidatorIndex, bal Gwei) error
 	Iter() (next func() (bal Gwei, ok bool, err error))
 	AllBalances() ([]Gwei, error)
+	Length() (uint64, error)
 }
 
 type RandaoMixes interface {

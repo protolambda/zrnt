@@ -2,10 +2,8 @@ package phase0
 
 import (
 	"context"
-	"errors"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/util/math"
-	. "github.com/protolambda/ztyp/view"
 )
 
 type RewardsAndPenalties struct {
@@ -157,33 +155,9 @@ func ProcessEpochRewardsAndPenalties(ctx context.Context, spec *common.Spec, epc
 	sum.Add(rewAndPenalties.Head)
 	sum.Add(rewAndPenalties.InclusionDelay)
 	sum.Add(rewAndPenalties.Inactivity)
-
-	balances, err := state.Balances()
+	balancesElements, err := common.ApplyDeltas(state, sum)
 	if err != nil {
 		return err
-	}
-	if uint64(len(sum.Penalties)) != valCount || uint64(len(sum.Rewards)) != valCount {
-		return errors.New("cannot apply deltas to balances list with different length")
-	}
-	balancesElements := make([]BasicView, 0, valCount)
-	balIterNext := balances.Iter()
-	i := common.ValidatorIndex(0)
-	for {
-		bal, ok, err := balIterNext()
-		if err != nil {
-			return err
-		}
-		if !ok {
-			break
-		}
-		bal += sum.Rewards[i]
-		if penalty := sum.Penalties[i]; bal >= penalty {
-			bal -= penalty
-		} else {
-			bal = 0
-		}
-		balancesElements = append(balancesElements, Uint64View(bal))
-		i++
 	}
 	return state.setBalances(spec, balancesElements)
 }

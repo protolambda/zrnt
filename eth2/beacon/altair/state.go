@@ -295,6 +295,14 @@ func (state *BeaconStateView) Balances() (common.Balances, error) {
 	return phase0.AsRegistryBalances(state.Get(_stateBalances))
 }
 
+func (state *BeaconStateView) setBalances(spec *common.Spec, bals []BasicView) error {
+	newBalancesTree, err := phase0.RegistryBalancesType(spec).FromElements(bals...)
+	if err != nil {
+		return err
+	}
+	return state.Set(_stateBalances, newBalancesTree)
+}
+
 func (state *BeaconStateView) AddValidator(spec *common.Spec, pub common.BLSPubkey, withdrawalCreds common.Root, balance common.Gwei) error {
 	effBalance := balance - (balance % spec.EFFECTIVE_BALANCE_INCREMENT)
 	if effBalance > spec.MAX_EFFECTIVE_BALANCE {

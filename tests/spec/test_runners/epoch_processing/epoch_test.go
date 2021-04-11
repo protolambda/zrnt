@@ -69,7 +69,7 @@ func TestJustificationAndFinalization(t *testing.T) {
 			}
 			just := phase0.JustificationStakeData{
 				CurrentEpoch:                  epc.CurrentEpoch.Epoch,
-				TotalActiveStake:              attesterData.TotalActiveStake,
+				TotalActiveStake:              epc.TotalActiveStake,
 				PrevEpochUnslashedTargetStake: attesterData.PrevEpochUnslashedStake.TargetStake,
 				CurrEpochUnslashedTargetStake: attesterData.CurrEpochUnslashedTargetStake,
 			}

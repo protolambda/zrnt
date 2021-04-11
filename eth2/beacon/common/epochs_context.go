@@ -54,6 +54,7 @@ func NewEpochsContext(spec *Spec, state BeaconState) (*EpochsContext, error) {
 	if err := epc.LoadProposers(state); err != nil {
 		return nil, err
 	}
+	// TODO: sync committee loading
 	return epc, nil
 }
 
@@ -155,21 +156,22 @@ func (epc *EpochsContext) RotateEpochs(state BeaconState) error {
 	if err := epc.LoadProposers(state); err != nil {
 		return err
 	}
-	// Either we stay in the current period, or rotate to the next.
-	periodOfNextEpoch := uint64(nextEpoch / epc.Spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
-	if epc.SyncCommitteePeriod+1 == periodOfNextEpoch {
-		epc.CurrentSyncCommittee = epc.NextSyncCommittee
-		// TODO: check/fix base epoch and active-time of indices
-		scom, err := ComputeSyncCommitteeIndices(epc.Spec, state,
-			nextEpoch+epc.Spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD, epc.CurrentEpoch.ActiveIndices)
-		if err != nil {
-			return err
-		}
-		epc.NextSyncCommittee = scom
-		epc.SyncCommitteePeriod = periodOfNextEpoch
-	} else if epc.SyncCommitteePeriod != periodOfNextEpoch {
-		return fmt.Errorf("expected sync committee period to change one at step a time, got: %d <> %d", epc.SyncCommitteePeriod, periodOfNextEpoch)
-	}
+	// TODO: sync committee rotation
+	////Either we stay in the current period, or rotate to the next.
+	//periodOfNextEpoch := uint64(nextEpoch / epc.Spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
+	//if epc.SyncCommitteePeriod+1 == periodOfNextEpoch {
+	//	epc.CurrentSyncCommittee = epc.NextSyncCommittee
+	//	// TODO: check/fix base epoch and active-time of indices
+	//	scom, err := ComputeSyncCommitteeIndices(epc.Spec, state,
+	//		nextEpoch+epc.Spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD, epc.CurrentEpoch.ActiveIndices)
+	//	if err != nil {
+	//		return err
+	//	}
+	//	epc.NextSyncCommittee = scom
+	//	epc.SyncCommitteePeriod = periodOfNextEpoch
+	//} else if epc.SyncCommitteePeriod != periodOfNextEpoch {
+	//	return fmt.Errorf("expected sync committee period to change one at step a time, got: %d <> %d", epc.SyncCommitteePeriod, periodOfNextEpoch)
+	//}
 	return nil
 }
 

@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/chain"
 	"time"
 )
@@ -45,25 +45,29 @@ func (gve GossipValidatorResult) Unwrap() error {
 }
 
 type Spec interface {
-	Spec() *beacon.Spec
+	Spec() *common.Spec
 }
 
 type SlotAfter interface {
 	// Returns the slot after the given duration elapsed. The duration may be negative. It clips on genesis.
-	SlotAfter(delta time.Duration) beacon.Slot
+	SlotAfter(delta time.Duration) common.Slot
+}
+
+type GenesisValidatorsRoot interface {
+	GenesisValidatorsRoot() common.Root
 }
 
 type DomainGetter interface {
-	GetDomain(typ beacon.BLSDomainType, epoch beacon.Epoch) (beacon.BLSDomain, error)
+	GetDomain(typ common.BLSDomainType, epoch common.Epoch) (common.BLSDomain, error)
 }
 
 type BadBlockValidator interface {
 	// If votes for this block should be rejected.
-	IsBadBlock(root beacon.Root) bool
+	IsBadBlock(root common.Root) bool
 }
 
 type HeadInfo interface {
-	HeadInfo(ctx context.Context) (chain.ChainEntry, *beacon.EpochsContext, *beacon.BeaconStateView, error)
+	HeadInfo(ctx context.Context) (chain.ChainEntry, *common.EpochsContext, common.BeaconState, error)
 }
 
 type Chain interface {
@@ -71,7 +75,7 @@ type Chain interface {
 }
 
 // RetrieveHeadInfo is a util to implement the HeadInfo interface
-func RetrieveHeadInfo(ctx context.Context, ch chain.FullChain) (chain.ChainEntry, *beacon.EpochsContext, *beacon.BeaconStateView, error) {
+func RetrieveHeadInfo(ctx context.Context, ch chain.FullChain) (chain.ChainEntry, *common.EpochsContext, common.BeaconState, error) {
 	headRef, err := ch.Head()
 	if err != nil {
 		return nil, nil, nil, errors.New("could not fetch head ref for validation")

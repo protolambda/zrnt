@@ -4,31 +4,28 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/beacon"
-	"github.com/protolambda/zrnt/eth2/util/bls"
-	"github.com/protolambda/ztyp/tree"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
 )
 
 type BeaconBlockValBackend interface {
 	Spec
 	SlotAfter
 	Chain
-	DomainGetter
+	GenesisValidatorsRoot
 
 	// Checks if the (slot, proposer) pair was seen, does not do any tracking.
-	Seen(slot beacon.Slot, proposer beacon.ValidatorIndex) bool
+	Seen(slot common.Slot, proposer common.ValidatorIndex) bool
 
 	// When the block is fully validated (except proposer index check, but incl. signature check),
 	// the combination can be marked as seen to avoid future duplicate blocks from being propagated.
 	// Must returns true if the block was previously already seen,
 	// to avoid race-conditions (two block validations may run in parallel).
-	Mark(slot beacon.Slot, proposer beacon.ValidatorIndex) bool
+	Mark(slot common.Slot, proposer common.ValidatorIndex) bool
 }
 
-func ValidateBeaconBlock(ctx context.Context, signedBlock *beacon.SignedBeaconBlock,
+func ValidateBeaconBlock(ctx context.Context, block *common.BeaconBlockEnvelope,
 	blockVal BeaconBlockValBackend) GossipValidatorResult {
 	spec := blockVal.Spec()
-	block := &signedBlock.Message
 	// [IGNORE] The block is not from a future slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance) --
 	// i.e. validate that signed_beacon_block.message.slot <= current_slot
 	if maxSlot := blockVal.SlotAfter(MAXIMUM_GOSSIP_CLOCK_DISPARITY); maxSlot < block.Slot {
@@ -78,11 +75,8 @@ func ValidateBeaconBlock(ctx context.Context, signedBlock *beacon.SignedBeaconBl
 	if !ok {
 		return GossipValidatorResult{IGNORE, fmt.Errorf("cannot find pubkey for proposer index %d", block.ProposerIndex)}
 	}
-	domain, err := blockVal.GetDomain(spec.DOMAIN_BEACON_PROPOSER, spec.SlotToEpoch(block.Slot))
-	if err != nil {
-		return GossipValidatorResult{IGNORE, fmt.Errorf("cannot get signature domain for block at slot %d", block.Slot)}
-	}
-	if bls.Verify(pub, beacon.ComputeSigningRoot(block.HashTreeRoot(spec, tree.GetHashFn()), domain), signedBlock.Signature) {
+	// Use untrusted proposer index, we validate this later, after signature check.
+	if !block.VerifySignature(spec, blockVal.GenesisValidatorsRoot(), block.ProposerIndex, pub) {
 		return GossipValidatorResult{REJECT, errors.New("invalid block signature")}
 	}
 
@@ -96,7 +90,7 @@ func ValidateBeaconBlock(ctx context.Context, signedBlock *beacon.SignedBeaconBl
 
 	targetEpoch := spec.SlotToEpoch(block.Slot)
 	parentEpoch := spec.SlotToEpoch(parentRef.Step().Slot())
-	var proposer beacon.ValidatorIndex
+	var proposer common.ValidatorIndex
 	if parentEpoch == targetEpoch {
 		proposer, err = parentEpc.GetBeaconProposer(block.Slot)
 		if err != nil {

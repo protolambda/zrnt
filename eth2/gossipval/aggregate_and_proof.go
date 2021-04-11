@@ -4,7 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/ztyp/tree"
 )
@@ -17,12 +18,12 @@ type AggregatesValBackend interface {
 
 	// Checks if the aggregate attestation defined by aggRoot = hash_tree_root(aggregate) has been seen
 	// (via aggregate gossip, within a verified block, or through the creation of an equivalent aggregate locally).
-	SeenAggregate(aggRoot beacon.Root) bool
+	SeenAggregate(aggRoot common.Root) bool
 	// Checks if an aggregate by the given aggregator for the given epoch has been seen before.
-	SeenAggregator(targetEpoch beacon.Epoch, aggregator beacon.ValidatorIndex) bool
+	SeenAggregator(targetEpoch common.Epoch, aggregator common.ValidatorIndex) bool
 }
 
-func ValidateAggregateAndProof(ctx context.Context, signedAgg *beacon.SignedAggregateAndProof,
+func ValidateAggregateAndProof(ctx context.Context, signedAgg *phase0.SignedAggregateAndProof,
 	aggVal AggregatesValBackend) GossipValidatorResult {
 	spec := aggVal.Spec()
 	// [IGNORE] aggregate.data.slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE
@@ -120,18 +121,18 @@ func ValidateAggregateAndProof(ctx context.Context, signedAgg *beacon.SignedAggr
 	if err != nil {
 		return GossipValidatorResult{IGNORE, err}
 	}
-	if valid, err := spec.ValidateAggregateSelectionProof(epc, state, att.Data.Slot, att.Data.Index, signedAgg.Message.AggregatorIndex, signedAgg.Message.SelectionProof); err != nil {
+	if valid, err := phase0.ValidateAggregateSelectionProof(spec, epc, state, att.Data.Slot, att.Data.Index, signedAgg.Message.AggregatorIndex, signedAgg.Message.SelectionProof); err != nil {
 		return GossipValidatorResult{IGNORE, err}
 	} else if !valid {
 		return GossipValidatorResult{REJECT, errors.New("invalid aggregate")}
 	}
 
 	// [REJECT] The aggregator signature, signed_aggregate_and_proof.signature, is valid.
-	dom, err := state.GetDomain(spec.DOMAIN_AGGREGATE_AND_PROOF, att.Data.Target.Epoch)
+	dom, err := common.GetDomain(state, spec.DOMAIN_AGGREGATE_AND_PROOF, att.Data.Target.Epoch)
 	if err != nil {
 		return GossipValidatorResult{IGNORE, err}
 	}
-	sigRoot := beacon.ComputeSigningRoot(signedAgg.Message.HashTreeRoot(spec, tree.GetHashFn()), dom)
+	sigRoot := common.ComputeSigningRoot(signedAgg.Message.HashTreeRoot(spec, tree.GetHashFn()), dom)
 	pub, ok := epc.PubkeyCache.Pubkey(signedAgg.Message.AggregatorIndex)
 	if !ok {
 		return GossipValidatorResult{IGNORE, fmt.Errorf("missing pubkey: %d", signedAgg.Message.AggregatorIndex)}
@@ -150,7 +151,7 @@ func ValidateAggregateAndProof(ctx context.Context, signedAgg *beacon.SignedAggr
 		// it should always convert.
 		// Something is very wrong if not, e.g. bad bitfield length.
 		return GossipValidatorResult{REJECT, err}
-	} else if err := spec.ValidateIndexedAttestation(epc, state, indexedAtt); err != nil {
+	} else if err := phase0.ValidateIndexedAttestation(spec, epc, state, indexedAtt); err != nil {
 		return GossipValidatorResult{REJECT, err}
 	}
 

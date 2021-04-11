@@ -1,36 +1,49 @@
 package sanity
 
 import (
-	"encoding/hex"
+	"bytes"
 	"fmt"
-	. "github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/golang/snappy"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"github.com/protolambda/ztyp/codec"
 	"gopkg.in/yaml.v3"
+	"io/ioutil"
 	"testing"
 )
 
 type InitializationTestCase struct {
-	Spec          *Spec
-	GenesisState  *BeaconStateView
-	ExpectedState *BeaconStateView
-	Eth1Timestamp Timestamp
-	Eth1BlockHash Root
-	Deposits      []Deposit
+	Spec          *common.Spec
+	GenesisState  *phase0.BeaconStateView
+	ExpectedState *phase0.BeaconStateView
+	Eth1Timestamp common.Timestamp
+	Eth1BlockHash common.Root
+	Deposits      []common.Deposit
 }
 
 type DepositsCountMeta struct {
 	DepositsCount uint64 `yaml:"deposits_count"`
 }
 
+type Eth1InitData struct {
+	Eth1BlockHash common.Root      `yaml:"eth1_block_hash"`
+	Eth1Timestamp common.Timestamp `yaml:"eth1_timestamp"`
+}
+
 func (c *InitializationTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
 	c.Spec = readPart.Spec()
 	{
-		p := readPart.Part("state.ssz")
+		p := readPart.Part("state.ssz_snappy")
 		if p.Exists() {
-			stateSize, err := p.Size()
+			data, err := ioutil.ReadAll(p)
 			test_util.Check(t, err)
-			state, err := AsBeaconStateView(c.Spec.BeaconState().Deserialize(codec.NewDecodingReader(p, stateSize)))
+			test_util.Check(t, p.Close())
+			uncompressed, err := snappy.Decode(nil, data)
+			test_util.Check(t, err)
+			state, err := phase0.AsBeaconStateView(
+				phase0.BeaconStateType(c.Spec).Deserialize(
+					codec.NewDecodingReader(bytes.NewReader(uncompressed), uint64(len(uncompressed)))))
 			test_util.Check(t, err)
 			c.ExpectedState = state
 		} else {
@@ -39,21 +52,13 @@ func (c *InitializationTestCase) Load(t *testing.T, readPart test_util.TestPartR
 		}
 	}
 	{
-		p := readPart.Part("eth1_block_hash.yaml")
+		p := readPart.Part("eth1.yaml")
 		dec := yaml.NewDecoder(p)
-		var blockHash string
-		test_util.Check(t, dec.Decode(&blockHash))
+		var eth1Init Eth1InitData
+		test_util.Check(t, dec.Decode(&eth1Init))
 		test_util.Check(t, p.Close())
-		_, err := hex.Decode(c.Eth1BlockHash[:], []byte(blockHash)[2:])
-		test_util.Check(t, err)
-	}
-	{
-		p := readPart.Part("eth1_timestamp.yaml")
-		dec := yaml.NewDecoder(p)
-		var timestamp Timestamp
-		test_util.Check(t, dec.Decode(&timestamp))
-		test_util.Check(t, p.Close())
-		c.Eth1Timestamp = timestamp
+		c.Eth1BlockHash = eth1Init.Eth1BlockHash
+		c.Eth1Timestamp = eth1Init.Eth1Timestamp
 	}
 	m := &DepositsCountMeta{}
 	{
@@ -64,7 +69,7 @@ func (c *InitializationTestCase) Load(t *testing.T, readPart test_util.TestPartR
 	}
 	{
 		for i := uint64(0); i < m.DepositsCount; i++ {
-			var dep Deposit
+			var dep common.Deposit
 			test_util.LoadSSZ(t, fmt.Sprintf("deposits_%d", i), &dep, readPart)
 			c.Deposits = append(c.Deposits, dep)
 		}
@@ -72,7 +77,7 @@ func (c *InitializationTestCase) Load(t *testing.T, readPart test_util.TestPartR
 }
 
 func (c *InitializationTestCase) Run() error {
-	res, _, err := c.Spec.GenesisFromEth1(c.Eth1BlockHash, c.Eth1Timestamp, c.Deposits, false)
+	res, _, err := phase0.GenesisFromEth1(c.Spec, c.Eth1BlockHash, c.Eth1Timestamp, c.Deposits, false)
 	if err != nil {
 		return err
 	}

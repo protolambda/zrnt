@@ -2,7 +2,7 @@ package states
 
 import (
 	"context"
-	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/tree"
 	"sync"
 	"sync/atomic"
@@ -13,18 +13,17 @@ type MemDB struct {
 	data        sync.Map
 	removalLock sync.Mutex
 	stats       DBStats
-	spec        *beacon.Spec
+	spec        *common.Spec
 }
 
-func NewMemDB(spec *beacon.Spec) *MemDB {
+func NewMemDB(spec *common.Spec) *MemDB {
 	return &MemDB{spec: spec}
 }
 
-func (db *MemDB) Store(ctx context.Context, state *beacon.BeaconStateView) (exists bool, err error) {
+func (db *MemDB) Store(ctx context.Context, state common.BeaconState) (exists bool, err error) {
 	// Released when the block is removed from the DB
 	root := state.HashTreeRoot(tree.GetHashFn())
-	backing := state.Backing()
-	_, loaded := db.data.LoadOrStore(root, backing)
+	_, loaded := db.data.LoadOrStore(root, state)
 	if !loaded {
 		atomic.AddInt64(&db.stats.Count, 1)
 		db.stats.LastWrite = root
@@ -32,18 +31,20 @@ func (db *MemDB) Store(ctx context.Context, state *beacon.BeaconStateView) (exis
 	return loaded, nil
 }
 
-func (db *MemDB) Get(ctx context.Context, root beacon.Root) (state *beacon.BeaconStateView, exists bool, err error) {
+func (db *MemDB) Get(ctx context.Context, root common.Root) (state common.BeaconState, exists bool, err error) {
 	dat, ok := db.data.Load(root)
 	if !ok {
 		return nil, false, nil
 	}
 	exists = true
-	v, vErr := db.spec.BeaconState().ViewFromBacking(dat.(tree.Node), nil)
-	state, err = beacon.AsBeaconStateView(v, vErr)
+	state, ok = dat.(common.BeaconState)
+	if !ok {
+		panic("in-memory db was corrupted with unexpected state type")
+	}
 	return
 }
 
-func (db *MemDB) Remove(root beacon.Root) (exists bool, err error) {
+func (db *MemDB) Remove(root common.Root) (exists bool, err error) {
 	db.removalLock.Lock()
 	defer db.removalLock.Unlock()
 	_, ok := db.data.Load(root)
@@ -59,10 +60,10 @@ func (db *MemDB) Stats() DBStats {
 	return db.stats
 }
 
-func (db *MemDB) List() (out []beacon.Root) {
-	out = make([]beacon.Root, 0, db.stats.Count)
+func (db *MemDB) List() (out []common.Root) {
+	out = make([]common.Root, 0, db.stats.Count)
 	db.data.Range(func(key, value interface{}) bool {
-		id := key.(beacon.Root)
+		id := key.(common.Root)
 		out = append(out, id)
 		return true
 	})
@@ -73,6 +74,6 @@ func (db *MemDB) Path() string {
 	return ""
 }
 
-func (db *MemDB) Spec() *beacon.Spec {
+func (db *MemDB) Spec() *common.Spec {
 	return db.spec
 }

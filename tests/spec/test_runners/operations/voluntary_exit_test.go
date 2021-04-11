@@ -1,14 +1,15 @@
 package operations
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"testing"
 )
 
 type VoluntaryExitTestCase struct {
 	test_util.BaseTransitionTest
-	VoluntaryExit beacon.SignedVoluntaryExit
+	VoluntaryExit phase0.SignedVoluntaryExit
 }
 
 func (c *VoluntaryExitTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
@@ -17,11 +18,11 @@ func (c *VoluntaryExitTestCase) Load(t *testing.T, readPart test_util.TestPartRe
 }
 
 func (c *VoluntaryExitTestCase) Run() error {
-	epc, err := c.Spec.NewEpochsContext(c.Pre)
+	epc, err := common.NewEpochsContext(c.Spec, c.Pre)
 	if err != nil {
 		return err
 	}
-	return c.Spec.ProcessVoluntaryExit(epc, c.Pre, &c.VoluntaryExit)
+	return phase0.ProcessVoluntaryExit(c.Spec, epc, c.Pre, &c.VoluntaryExit)
 }
 
 func TestVoluntaryExit(t *testing.T) {

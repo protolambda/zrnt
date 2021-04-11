@@ -4,60 +4,61 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/ztyp/tree"
 	"sync"
 	"time"
 )
 
 type Assignment struct {
-	Index beacon.ValidatorIndex
-	Epoch beacon.Epoch
+	Index common.ValidatorIndex
+	Epoch common.Epoch
 }
 
 type IndexedAttData struct {
-	Data      beacon.AttestationData
-	Committee beacon.CommitteeIndices
+	Data      phase0.AttestationData
+	Committee common.CommitteeIndices
 }
 
 type AttRef struct {
-	DataRoot beacon.Root
-	Sig      beacon.BLSSignature
+	DataRoot common.Root
+	Sig      common.BLSSignature
 }
 
 type Aggregate struct {
-	Participants beacon.CommitteeBits
-	Sig          beacon.BLSSignature
+	Participants phase0.AttestationBits
+	Sig          common.BLSSignature
 }
 
 type MinAggregates struct {
 	Aggregates []Aggregate
 	// The OR of all bitfields contained in Aggregates list, to easily filter out subsets
-	Participants beacon.CommitteeBits
+	Participants phase0.AttestationBits
 	// Things already covered by the sum of the above aggregates, but maybe useful later. Keep a limited number of these.
 	Extra []Aggregate
 }
 
 type AttestationPool struct {
 	sync.RWMutex
-	spec               *beacon.Spec
-	datas              map[beacon.Root]*IndexedAttData
+	spec               *common.Spec
+	datas              map[common.Root]*IndexedAttData
 	individual         map[Assignment]*AttRef
-	aggregate          map[beacon.Root]*MinAggregates
+	aggregate          map[common.Root]*MinAggregates
 	maxExtraAggregates uint64
 }
 
-func NewAttestationPool(spec *beacon.Spec) *AttestationPool {
+func NewAttestationPool(spec *common.Spec) *AttestationPool {
 	return &AttestationPool{
 		spec:               spec,
-		datas:              make(map[beacon.Root]*IndexedAttData),
+		datas:              make(map[common.Root]*IndexedAttData),
 		individual:         make(map[Assignment]*AttRef),
-		aggregate:          make(map[beacon.Root]*MinAggregates),
+		aggregate:          make(map[common.Root]*MinAggregates),
 		maxExtraAggregates: 10, // TODO: worth tuning
 	}
 }
 
-func (ap *AttestationPool) AddAttestation(att *beacon.Attestation, committee beacon.CommitteeIndices) error {
+func (ap *AttestationPool) AddAttestation(att *phase0.Attestation, committee common.CommitteeIndices) error {
 	ap.Lock()
 	defer ap.Unlock()
 
@@ -127,25 +128,25 @@ func (ap *AttestationPool) AddAttestation(att *beacon.Attestation, committee bea
 }
 
 type attSearch struct {
-	slot *beacon.Slot
-	comm *beacon.CommitteeIndex
+	slot *common.Slot
+	comm *common.CommitteeIndex
 }
 
 type AttSearchOption func(a *attSearch)
 
-func WithSlot(slot beacon.Slot) AttSearchOption {
+func WithSlot(slot common.Slot) AttSearchOption {
 	return func(a *attSearch) {
 		a.slot = &slot
 	}
 }
 
-func WithCommittee(index beacon.CommitteeIndex) AttSearchOption {
+func WithCommittee(index common.CommitteeIndex) AttSearchOption {
 	return func(a *attSearch) {
 		a.comm = &index
 	}
 }
 
-func (ap *AttestationPool) Search(opts ...AttSearchOption) (out []*beacon.Attestation) {
+func (ap *AttestationPool) Search(opts ...AttSearchOption) (out []*phase0.Attestation) {
 	var conf attSearch
 	for _, opt := range opts {
 		opt(&conf)
@@ -159,7 +160,7 @@ func (ap *AttestationPool) Search(opts ...AttSearchOption) (out []*beacon.Attest
 		}
 		agg := ap.aggregate[k]
 		for _, a := range agg.Aggregates {
-			out = append(out, &beacon.Attestation{AggregationBits: a.Participants, Data: d.Data, Signature: a.Sig})
+			out = append(out, &phase0.Attestation{AggregationBits: a.Participants, Data: d.Data, Signature: a.Sig})
 		}
 		// TODO: could add individual attestations
 	}
@@ -170,8 +171,8 @@ func (ap *AttestationPool) Prune() {
 	// TODO
 }
 
-func (ap *AttestationPool) Packing(ctx context.Context, source beacon.Checkpoint, target beacon.Checkpoint,
-	maxCount uint64, maxTime time.Duration) ([]beacon.Attestation, error) {
+func (ap *AttestationPool) Packing(ctx context.Context, source common.Checkpoint, target common.Checkpoint,
+	maxCount uint64, maxTime time.Duration) ([]phase0.Attestation, error) {
 
 	// TODO find best attestations to pack for profit.
 	return nil, nil

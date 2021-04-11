@@ -3,7 +3,7 @@ package forkchoice
 import (
 	"context"
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"sync"
 )
 
@@ -18,12 +18,12 @@ type ProtoForkChoice struct {
 	pin       *NodeRef
 	justified Checkpoint
 	finalized Checkpoint
-	spec      *beacon.Spec
+	spec      *common.Spec
 }
 
 var _ Forkchoice = (*ProtoForkChoice)(nil)
 
-func NewForkChoice(spec *beacon.Spec, finalized Checkpoint, justified Checkpoint,
+func NewForkChoice(spec *common.Spec, finalized Checkpoint, justified Checkpoint,
 	anchorRoot Root, anchorSlot Slot, graph ForkchoiceGraph, votes VoteStore,
 	initialBalances []Gwei) (Forkchoice, error) {
 	fc := &ProtoForkChoice{

@@ -4,7 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/ztyp/tree"
 	"time"
@@ -20,12 +21,12 @@ type AttestationValBackend interface {
 	Chain
 	DomainGetter
 	// Checks if the (target epoch, voter) pair was seen, does not do any tracking.
-	SeenAttestation(targetEpoch beacon.Epoch, voter beacon.ValidatorIndex) bool
+	SeenAttestation(targetEpoch common.Epoch, voter common.ValidatorIndex) bool
 }
 
 const catchupTimeout = time.Second * 2
 
-func ValidateAttestation(ctx context.Context, subnet uint64, att *beacon.Attestation,
+func ValidateAttestation(ctx context.Context, subnet uint64, att *phase0.Attestation,
 	attVal AttestationValBackend) GossipValidatorResult {
 	spec := attVal.Spec()
 
@@ -131,7 +132,7 @@ func ValidateAttestation(ctx context.Context, subnet uint64, att *beacon.Attesta
 	// [REJECT] The attestation is for the correct subnet --
 	// i.e. compute_subnet_for_attestation(committees_per_slot, attestation.data.slot, attestation.data.index)
 	//   == subnet_id, where committees_per_slot = get_committee_count_per_slot(state, attestation.data.target.epoch)
-	assignedSubnet, err := spec.ComputeSubnetForAttestation(committeeCountPerSlot, att.Data.Slot, att.Data.Index)
+	assignedSubnet, err := phase0.ComputeSubnetForAttestation(spec, committeeCountPerSlot, att.Data.Slot, att.Data.Index)
 	if err != nil {
 		return GossipValidatorResult{REJECT, fmt.Errorf("cannot get subnet for attestation (slot %d, committee index %d): %w", att.Data.Slot, att.Data.Index, err)}
 	}
@@ -170,7 +171,7 @@ func ValidateAttestation(ctx context.Context, subnet uint64, att *beacon.Attesta
 	if err != nil {
 		return GossipValidatorResult{IGNORE, errors.New("failed to get domain info for signature check")}
 	}
-	sigRoot := beacon.ComputeSigningRoot(att.Data.HashTreeRoot(tree.GetHashFn()), dom)
+	sigRoot := common.ComputeSigningRoot(att.Data.HashTreeRoot(tree.GetHashFn()), dom)
 	if !bls.Verify(pubkey, sigRoot, att.Signature) {
 		return GossipValidatorResult{REJECT, errors.New("invalid attestation signature")}
 	}

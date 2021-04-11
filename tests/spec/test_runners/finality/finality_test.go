@@ -3,7 +3,8 @@ package finality
 import (
 	"context"
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"gopkg.in/yaml.v3"
 	"testing"
@@ -11,7 +12,7 @@ import (
 
 type FinalityTestCase struct {
 	test_util.BaseTransitionTest
-	Blocks []*beacon.SignedBeaconBlock
+	Blocks []*phase0.SignedBeaconBlock
 }
 
 type BlocksCountMeta struct {
@@ -25,8 +26,8 @@ func (c *FinalityTestCase) Load(t *testing.T, readPart test_util.TestPartReader)
 	m := &BlocksCountMeta{}
 	test_util.Check(t, dec.Decode(&m))
 	test_util.Check(t, p.Close())
-	loadBlock := func(i uint64) *beacon.SignedBeaconBlock {
-		dst := new(beacon.SignedBeaconBlock)
+	loadBlock := func(i uint64) *phase0.SignedBeaconBlock {
+		dst := new(phase0.SignedBeaconBlock)
 		test_util.LoadSpecObj(t, fmt.Sprintf("blocks_%d", i), dst, readPart)
 		return dst
 	}
@@ -36,13 +37,19 @@ func (c *FinalityTestCase) Load(t *testing.T, readPart test_util.TestPartReader)
 }
 
 func (c *FinalityTestCase) Run() error {
-	epc, err := c.Spec.NewEpochsContext(c.Pre)
+	epc, err := common.NewEpochsContext(c.Spec, c.Pre)
 	if err != nil {
 		return err
 	}
 	state := c.Pre
+	valRoot, err := state.GenesisValidatorsRoot()
+	if err != nil {
+		return err
+	}
+	digest := common.ComputeForkDigest(c.Spec.GENESIS_FORK_VERSION, valRoot)
 	for _, b := range c.Blocks {
-		if err := c.Spec.StateTransition(context.Background(), epc, state, b, true); err != nil {
+		benv := b.Envelope(c.Spec, digest)
+		if err := common.StateTransition(context.Background(), c.Spec, epc, state, benv, true); err != nil {
 			return err
 		}
 	}

@@ -1,24 +1,25 @@
 package pool
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"sync"
 )
 
 type ProposerSlashingPool struct {
 	sync.RWMutex
-	spec      *beacon.Spec
-	slashings map[beacon.ValidatorIndex]*beacon.ProposerSlashing
+	spec      *common.Spec
+	slashings map[common.ValidatorIndex]*phase0.ProposerSlashing
 }
 
-func NewProposerSlashingPool(spec *beacon.Spec) *ProposerSlashingPool {
+func NewProposerSlashingPool(spec *common.Spec) *ProposerSlashingPool {
 	return &ProposerSlashingPool{
 		spec:      spec,
-		slashings: make(map[beacon.ValidatorIndex]*beacon.ProposerSlashing),
+		slashings: make(map[common.ValidatorIndex]*phase0.ProposerSlashing),
 	}
 }
 
-func (psp *ProposerSlashingPool) AddProposerSlashing(sl *beacon.ProposerSlashing) (exists bool) {
+func (psp *ProposerSlashingPool) AddProposerSlashing(sl *phase0.ProposerSlashing) (exists bool) {
 	psp.Lock()
 	defer psp.Unlock()
 	key := sl.SignedHeader1.Message.ProposerIndex

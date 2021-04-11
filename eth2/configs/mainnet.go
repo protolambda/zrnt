@@ -1,12 +1,12 @@
 package configs
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
 )
 
-var Mainnet = &beacon.Spec{
+var Mainnet = &common.Spec{
 	CONFIG_NAME: "mainnet",
-	Phase0Config: beacon.Phase0Config{
+	Phase0Config: common.Phase0Config{
 		MAX_COMMITTEES_PER_SLOT:               64,
 		TARGET_COMMITTEE_SIZE:                 128,
 		MAX_VALIDATORS_PER_COMMITTEE:          2048,
@@ -31,7 +31,7 @@ var Mainnet = &beacon.Spec{
 		MAX_EFFECTIVE_BALANCE:                 32_000_000_000,
 		EJECTION_BALANCE:                      16_000_000_000,
 		EFFECTIVE_BALANCE_INCREMENT:           1_000_000_000,
-		GENESIS_FORK_VERSION:                  beacon.Version{0x00, 0x00, 0x00, 0x00},
+		GENESIS_FORK_VERSION:                  common.Version{0x00, 0x00, 0x00, 0x00},
 		BLS_WITHDRAWAL_PREFIX:                 [1]byte{0x00},
 		GENESIS_DELAY:                         604800,
 		SECONDS_PER_SLOT:                      12,
@@ -59,16 +59,31 @@ var Mainnet = &beacon.Spec{
 		MAX_ATTESTATIONS:                      128,
 		MAX_DEPOSITS:                          16,
 		MAX_VOLUNTARY_EXITS:                   16,
-		DOMAIN_BEACON_PROPOSER:                beacon.BLSDomainType{0x00, 0x00, 0x00, 0x00},
-		DOMAIN_BEACON_ATTESTER:                beacon.BLSDomainType{0x01, 0x00, 0x00, 0x00},
-		DOMAIN_RANDAO:                         beacon.BLSDomainType{0x02, 0x00, 0x00, 0x00},
-		DOMAIN_DEPOSIT:                        beacon.BLSDomainType{0x03, 0x00, 0x00, 0x00},
-		DOMAIN_VOLUNTARY_EXIT:                 beacon.BLSDomainType{0x04, 0x00, 0x00, 0x00},
-		DOMAIN_SELECTION_PROOF:                beacon.BLSDomainType{0x05, 0x00, 0x00, 0x00},
-		DOMAIN_AGGREGATE_AND_PROOF:            beacon.BLSDomainType{0x06, 0x00, 0x00, 0x00},
+		DOMAIN_BEACON_PROPOSER:                common.BLSDomainType{0x00, 0x00, 0x00, 0x00},
+		DOMAIN_BEACON_ATTESTER:                common.BLSDomainType{0x01, 0x00, 0x00, 0x00},
+		DOMAIN_RANDAO:                         common.BLSDomainType{0x02, 0x00, 0x00, 0x00},
+		DOMAIN_DEPOSIT:                        common.BLSDomainType{0x03, 0x00, 0x00, 0x00},
+		DOMAIN_VOLUNTARY_EXIT:                 common.BLSDomainType{0x04, 0x00, 0x00, 0x00},
+		DOMAIN_SELECTION_PROOF:                common.BLSDomainType{0x05, 0x00, 0x00, 0x00},
+		DOMAIN_AGGREGATE_AND_PROOF:            common.BLSDomainType{0x06, 0x00, 0x00, 0x00},
 	},
-	Phase1Config: beacon.Phase1Config{
-		PHASE_1_FORK_VERSION:                             beacon.Version{0x01, 0x00, 0x00, 0x00},
+	AltairConfig: common.AltairConfig{
+		INACTIVITY_PENALTY_QUOTIENT_ALTAIR:      3 * (1 << 24),
+		MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR:    64,
+		PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR: 2,
+		SYNC_COMMITTEE_SIZE:                     1024,
+		SYNC_SUBCOMMITTEE_SIZE:                  64,
+		INACTIVITY_SCORE_BIAS:                   4,
+		EPOCHS_PER_SYNC_COMMITTEE_PERIOD:        1 << 8,
+		MIN_SYNC_COMMITTEE_PARTICIPANTS:         1,
+		MAX_VALID_LIGHT_CLIENT_UPDATES:          1 << 13,
+		LIGHT_CLIENT_UPDATE_TIMEOUT:             1 << 13,
+		DOMAIN_SYNC_COMMITTEE:                   common.BLSDomainType{0x07, 0x00, 0x00, 0x00},
+		ALTAIR_FORK_SLOT:                        0,
+		ALTAIR_FORK_VERSION:                     common.Version{0x01, 0x00, 0x00, 0x00},
+	},
+	Phase1Config: common.Phase1Config{
+		PHASE_1_FORK_VERSION:                             common.Version{0x01, 0x00, 0x00, 0x00},
 		PHASE_1_FORK_SLOT:                                0,
 		INITIAL_ACTIVE_SHARDS:                            64,
 		MAX_SHARDS:                                       1024,
@@ -85,12 +100,12 @@ var Mainnet = &beacon.Spec{
 		ONLINE_PERIOD:                                    8,
 		LIGHT_CLIENT_COMMITTEE_PERIOD:                    256,
 		MAX_CUSTODY_CHUNK_CHALLENGE_RECORDS:              1 << 20,
-		DOMAIN_SHARD_PROPOSAL:                            beacon.BLSDomainType{0x80, 0x00, 0x00, 0x00},
-		DOMAIN_SHARD_COMMITTEE:                           beacon.BLSDomainType{0x81, 0x00, 0x00, 0x00},
-		DOMAIN_LIGHT_CLIENT:                              beacon.BLSDomainType{0x82, 0x00, 0x00, 0x00},
-		DOMAIN_CUSTODY_BIT_SLASHING:                      beacon.BLSDomainType{0x83, 0x00, 0x00, 0x00},
-		DOMAIN_LIGHT_SELECTION_PROOF:                     beacon.BLSDomainType{0x84, 0x00, 0x00, 0x00},
-		DOMAIN_LIGHT_AGGREGATE_AND_PROOF:                 beacon.BLSDomainType{0x85, 0x00, 0x00, 0x00},
+		DOMAIN_SHARD_PROPOSAL:                            common.BLSDomainType{0x80, 0x00, 0x00, 0x00},
+		DOMAIN_SHARD_COMMITTEE:                           common.BLSDomainType{0x81, 0x00, 0x00, 0x00},
+		DOMAIN_LIGHT_CLIENT:                              common.BLSDomainType{0x82, 0x00, 0x00, 0x00},
+		DOMAIN_CUSTODY_BIT_SLASHING:                      common.BLSDomainType{0x83, 0x00, 0x00, 0x00},
+		DOMAIN_LIGHT_SELECTION_PROOF:                     common.BLSDomainType{0x84, 0x00, 0x00, 0x00},
+		DOMAIN_LIGHT_AGGREGATE_AND_PROOF:                 common.BLSDomainType{0x85, 0x00, 0x00, 0x00},
 		RANDAO_PENALTY_EPOCHS:                            2,
 		EARLY_DERIVED_SECRET_PENALTY_MAX_FUTURE_EPOCHS:   1 << 15,
 		EPOCHS_PER_CUSTODY_PERIOD:                        1 << 14,

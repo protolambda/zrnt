@@ -3,7 +3,7 @@ package chain
 import (
 	"context"
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/db/states"
 	"sort"
 	"sync"
@@ -37,11 +37,11 @@ func (e *FinalizedEntryView) StateRoot() Root {
 	return e.finChain.entryStateRoot(e.step)
 }
 
-func (e *FinalizedEntryView) EpochsContext(ctx context.Context) (*beacon.EpochsContext, error) {
+func (e *FinalizedEntryView) EpochsContext(ctx context.Context) (*common.EpochsContext, error) {
 	return e.finChain.entryGetEpochsContext(ctx, e.step)
 }
 
-func (e *FinalizedEntryView) State(ctx context.Context) (*beacon.BeaconStateView, error) {
+func (e *FinalizedEntryView) State(ctx context.Context) (common.BeaconState, error) {
 	return e.finChain.entryGetState(ctx, e.step)
 }
 
@@ -55,7 +55,7 @@ type FinalizedChain struct {
 
 	// Cache of pubkeys, may contain pubkeys that are not finalized,
 	// but finalized state will not be in conflict with this cache.
-	PubkeyCache *beacon.PubkeyCache
+	PubkeyCache *common.PubkeyCache
 
 	// Block roots, starting at Anchor, indexed by step.
 	// A blockRoot is a copy of the previous root if a slot is empty.
@@ -72,17 +72,17 @@ type FinalizedChain struct {
 	StateRootsMap map[Root]Step
 
 	// Spec is holds configuration information for the parameters and types of the chain
-	Spec *beacon.Spec
+	Spec *common.Spec
 
 	StateDB states.DB
 }
 
 var _ ColdChain = (*FinalizedChain)(nil)
 
-func NewFinalizedChain(spec *beacon.Spec, stateDB states.DB) *FinalizedChain {
+func NewFinalizedChain(spec *common.Spec, stateDB states.DB) *FinalizedChain {
 	initialCapacity := 200
 	return &FinalizedChain{
-		PubkeyCache:   beacon.EmptyPubkeyCache(),
+		PubkeyCache:   common.EmptyPubkeyCache(),
 		BlockRoots:    make([]Root, 0, initialCapacity),
 		StateRoots:    make([]Root, 0, initialCapacity),
 		BlockRootsMap: make(map[Root]Slot, initialCapacity),
@@ -394,10 +394,10 @@ func (f *FinalizedChain) stateRoot(step Step) Root {
 	return f.StateRoots[step-start]
 }
 
-func (f *FinalizedChain) entryGetEpochsContext(ctx context.Context, step Step) (*beacon.EpochsContext, error) {
+func (f *FinalizedChain) entryGetEpochsContext(ctx context.Context, step Step) (*common.EpochsContext, error) {
 	f.RLock()
 	defer f.RUnlock()
-	epc := &beacon.EpochsContext{
+	epc := &common.EpochsContext{
 		PubkeyCache: f.PubkeyCache,
 	}
 	// We do not store shuffling for older epochs
@@ -415,15 +415,15 @@ func (f *FinalizedChain) entryGetEpochsContext(ctx context.Context, step Step) (
 	return epc, nil
 }
 
-func (f *FinalizedChain) entryGetState(ctx context.Context, step Step) (*beacon.BeaconStateView, error) {
+func (f *FinalizedChain) entryGetState(ctx context.Context, step Step) (common.BeaconState, error) {
 	f.RLock()
 	defer f.RUnlock()
 	return f.getState(ctx, step)
 }
 
-func (f *FinalizedChain) getState(ctx context.Context, step Step) (*beacon.BeaconStateView, error) {
+func (f *FinalizedChain) getState(ctx context.Context, step Step) (common.BeaconState, error) {
 	root := f.stateRoot(step)
-	if root == (beacon.Root{}) {
+	if root == (common.Root{}) {
 		return nil, fmt.Errorf("unknown state, step out of range: %s", step)
 	}
 	state, exists, err := f.StateDB.Get(ctx, root)

@@ -22,6 +22,7 @@ func HandleBLS(testRunner CaseRunner) CaseRunner {
 		if part.Exists() {
 			meta := BLSMeta{}
 			dec := yaml.NewDecoder(part)
+			dec.KnownFields(false)
 			Check(t, dec.Decode(&meta))
 			Check(t, part.Close())
 			if meta.BlsSetting == BlsRequired && !bls.BLS_ACTIVE {

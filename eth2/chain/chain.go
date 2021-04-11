@@ -3,17 +3,18 @@ package chain
 import (
 	"context"
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/eth2/db/states"
 	"sync"
 )
 
-type Root = beacon.Root
-type Epoch = beacon.Epoch
-type Slot = beacon.Slot
-type ValidatorIndex = beacon.ValidatorIndex
-type Gwei = beacon.Gwei
-type Checkpoint = beacon.Checkpoint
+type Root = common.Root
+type Epoch = common.Epoch
+type Slot = common.Slot
+type ValidatorIndex = common.ValidatorIndex
+type Gwei = common.Gwei
+type Checkpoint = common.Checkpoint
 
 // Step combines a Slot and bool for block processing being included or not.
 type Step uint64
@@ -58,12 +59,12 @@ type ChainEntry interface {
 	// Should match state-root in the block at the same slot (if any)
 	StateRoot() Root
 	// The context of this chain entry (shuffling, proposers, etc.)
-	EpochsContext(ctx context.Context) (*beacon.EpochsContext, error)
+	EpochsContext(ctx context.Context) (*common.EpochsContext, error)
 	// StateExclBlock retrieves the state of this slot.
 	// - If IsEmpty: it is the state after processing slots to Slot() (incl.),
 	//   with ProcessSlots(slot), but without any block processing.
 	// - if not IsEmpty: post-block processing (if any block), excl. latest-header update of next slot.
-	State(ctx context.Context) (*beacon.BeaconStateView, error)
+	State(ctx context.Context) (common.BeaconState, error)
 }
 
 type SearchEntry struct {
@@ -113,8 +114,8 @@ type BlockSlotKey struct {
 }
 
 type GenesisInfo struct {
-	Time           beacon.Timestamp
-	ValidatorsRoot beacon.Root
+	Time           common.Timestamp
+	ValidatorsRoot common.Root
 }
 
 type FullChain interface {
@@ -132,13 +133,13 @@ type HotColdChain struct {
 	sync.Mutex
 	HotChain
 	ColdChain
-	Spec *beacon.Spec
+	Spec *common.Spec
 	GenesisInfo
 }
 
 var _ FullChain = (*HotColdChain)(nil)
 
-func NewHotColdChain(anchorState *beacon.BeaconStateView, spec *beacon.Spec, stateDB states.DB) (*HotColdChain, error) {
+func NewHotColdChain(anchorState *phase0.BeaconStateView, spec *common.Spec, stateDB states.DB) (*HotColdChain, error) {
 	time, err := anchorState.GenesisTime()
 	if err != nil {
 		return nil, err

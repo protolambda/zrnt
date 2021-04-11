@@ -1,33 +1,40 @@
 package test_util
 
 import (
+	"bytes"
+	"github.com/golang/snappy"
 	"github.com/protolambda/messagediff"
-	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/eth2/configs"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
+	"io/ioutil"
 	"testing"
 )
 
 type BaseTransitionTest struct {
-	Spec *beacon.Spec
-	Pre  *beacon.BeaconStateView
-	Post *beacon.BeaconStateView
+	Spec *common.Spec
+	Pre  *phase0.BeaconStateView
+	Post *phase0.BeaconStateView
 }
 
 func (c *BaseTransitionTest) ExpectingFailure() bool {
 	return c.Post == nil
 }
 
-func LoadState(t *testing.T, name string, readPart TestPartReader) *beacon.BeaconStateView {
-	p := readPart.Part(name + ".ssz")
+func LoadState(t *testing.T, name string, readPart TestPartReader) *phase0.BeaconStateView {
+	p := readPart.Part(name + ".ssz_snappy")
 	spec := readPart.Spec()
 	if p.Exists() {
-		size, err := p.Size()
-		Check(t, err)
-		state, err := beacon.AsBeaconStateView(spec.BeaconState().Deserialize(codec.NewDecodingReader(p, size)))
+		data, err := ioutil.ReadAll(p)
 		Check(t, err)
 		Check(t, p.Close())
+		uncompressed, err := snappy.Decode(nil, data)
+		Check(t, err)
+		state, err := phase0.AsBeaconStateView(phase0.BeaconStateType(spec).Deserialize(
+			codec.NewDecodingReader(bytes.NewReader(uncompressed), uint64(len(uncompressed)))))
+		Check(t, err)
 		return state
 	} else {
 		return nil
@@ -61,7 +68,7 @@ func (c *BaseTransitionTest) Check(t *testing.T) {
 	}
 }
 
-func CompareStates(spec *beacon.Spec, a *beacon.BeaconStateView, b *beacon.BeaconStateView) (diff string, err error) {
+func CompareStates(spec *common.Spec, a *phase0.BeaconStateView, b *phase0.BeaconStateView) (diff string, err error) {
 	hFn := tree.GetHashFn()
 	preRoot := a.HashTreeRoot(hFn)
 	postRoot := b.HashTreeRoot(hFn)
@@ -99,7 +106,7 @@ func RunTransitionTest(t *testing.T, runnerName string, handlerName string, mkr 
 			if c.ExpectingFailure() {
 				return
 			}
-			t.Errorf("%s/%s process error: %v", runnerName, handlerName, err)
+			t.Fatalf("%s/%s process error: %v", runnerName, handlerName, err)
 		}
 		c.Check(t)
 	})

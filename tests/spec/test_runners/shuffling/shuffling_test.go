@@ -2,7 +2,7 @@ package shuffling
 
 import (
 	"fmt"
-	. "github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/configs"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"gopkg.in/yaml.v3"
@@ -10,10 +10,10 @@ import (
 )
 
 type ShufflingTestCase struct {
-	Spec    *Spec            `yaml:"-"`
-	Seed    Root             `yaml:"seed"`
-	Count   uint64           `yaml:"count"`
-	Mapping []ValidatorIndex `yaml:"mapping"`
+	Spec    *common.Spec            `yaml:"-"`
+	Seed    common.Root             `yaml:"seed"`
+	Count   uint64                  `yaml:"count"`
+	Mapping []common.ValidatorIndex `yaml:"mapping"`
 }
 
 func (testCase *ShufflingTestCase) Run(t *testing.T) {
@@ -22,11 +22,11 @@ func (testCase *ShufflingTestCase) Run(t *testing.T) {
 			t.Fatalf("invalid shuffling test")
 		}
 		t.Run("UnshuffleList", func(t *testing.T) {
-			data := make([]ValidatorIndex, len(testCase.Mapping), len(testCase.Mapping))
+			data := make([]common.ValidatorIndex, len(testCase.Mapping), len(testCase.Mapping))
 			for i := 0; i < len(data); i++ {
-				data[i] = ValidatorIndex(i)
+				data[i] = common.ValidatorIndex(i)
 			}
-			UnshuffleList(testCase.Spec.SHUFFLE_ROUND_COUNT, data, testCase.Seed)
+			common.UnshuffleList(testCase.Spec.SHUFFLE_ROUND_COUNT, data, testCase.Seed)
 			for i := uint64(0); i < testCase.Count; i++ {
 				unshuffledIndex := data[i]
 				expectedIndex := testCase.Mapping[i]
@@ -37,15 +37,15 @@ func (testCase *ShufflingTestCase) Run(t *testing.T) {
 			}
 		})
 		t.Run("ShuffleList", func(t *testing.T) {
-			data := make([]ValidatorIndex, len(testCase.Mapping), len(testCase.Mapping))
+			data := make([]common.ValidatorIndex, len(testCase.Mapping), len(testCase.Mapping))
 			for i := 0; i < len(data); i++ {
-				data[i] = ValidatorIndex(i)
+				data[i] = common.ValidatorIndex(i)
 			}
-			ShuffleList(testCase.Spec.SHUFFLE_ROUND_COUNT, data, testCase.Seed)
+			common.ShuffleList(testCase.Spec.SHUFFLE_ROUND_COUNT, data, testCase.Seed)
 			for i := uint64(0); i < testCase.Count; i++ {
 				shuffleOut := testCase.Mapping[i]
 				shuffledIndex := data[shuffleOut]
-				expectedIndex := ValidatorIndex(i)
+				expectedIndex := common.ValidatorIndex(i)
 				if shuffledIndex != expectedIndex {
 					t.Errorf("different shuffled index: %d, expected %d, at index %d", shuffledIndex, expectedIndex, i)
 					break
@@ -55,8 +55,8 @@ func (testCase *ShufflingTestCase) Run(t *testing.T) {
 		t.Run("UnpermuteIndex", func(t *testing.T) {
 			for i := uint64(0); i < testCase.Count; i++ {
 				shuffledIndex := testCase.Mapping[i]
-				unshuffledIndex := UnpermuteIndex(testCase.Spec.SHUFFLE_ROUND_COUNT, shuffledIndex, testCase.Count, testCase.Seed)
-				if unshuffledIndex != ValidatorIndex(i) {
+				unshuffledIndex := common.UnpermuteIndex(testCase.Spec.SHUFFLE_ROUND_COUNT, shuffledIndex, testCase.Count, testCase.Seed)
+				if unshuffledIndex != common.ValidatorIndex(i) {
 					t.Errorf("different un-permuted index: %d (at %d) unshuffled to %d", shuffledIndex, i, unshuffledIndex)
 					break
 				}
@@ -65,7 +65,7 @@ func (testCase *ShufflingTestCase) Run(t *testing.T) {
 		t.Run("PermuteIndex", func(t *testing.T) {
 			for i := uint64(0); i < testCase.Count; i++ {
 				expectedIndex := testCase.Mapping[i]
-				shuffledIndex := PermuteIndex(testCase.Spec.SHUFFLE_ROUND_COUNT, ValidatorIndex(i), testCase.Count, testCase.Seed)
+				shuffledIndex := common.PermuteIndex(testCase.Spec.SHUFFLE_ROUND_COUNT, common.ValidatorIndex(i), testCase.Count, testCase.Seed)
 				if shuffledIndex != expectedIndex {
 					t.Errorf("different shuffled index: %d, expected %d, at index %d", shuffledIndex, expectedIndex, i)
 					break
@@ -76,7 +76,7 @@ func (testCase *ShufflingTestCase) Run(t *testing.T) {
 }
 
 func TestShuffling(t *testing.T) {
-	runSpecShuffling := func(spec *Spec) func(t *testing.T) {
+	runSpecShuffling := func(spec *common.Spec) func(t *testing.T) {
 		return func(t *testing.T) {
 			test_util.RunHandler(t, "shuffling/core/", func(t *testing.T, readPart test_util.TestPartReader) {
 				p := readPart.Part("mapping.yaml")

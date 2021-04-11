@@ -1,7 +1,7 @@
 package proto
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
 	. "github.com/protolambda/zrnt/eth2/forkchoice"
 )
 
@@ -13,14 +13,14 @@ type VoteTracker struct {
 }
 
 type ProtoVoteStore struct {
-	spec    *beacon.Spec
+	spec    *common.Spec
 	votes   []VoteTracker
 	changed bool
 }
 
 var _ VoteStore = (*ProtoVoteStore)(nil)
 
-func NewProtoVoteStore(spec *beacon.Spec) VoteStore {
+func NewProtoVoteStore(spec *common.Spec) VoteStore {
 	return &ProtoVoteStore{spec: spec, changed: true}
 }
 

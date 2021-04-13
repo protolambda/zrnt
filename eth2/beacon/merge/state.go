@@ -406,12 +406,12 @@ func (state *BeaconStateView) SetFinalizedCheckpoint(c common.Checkpoint) error 
 	return v.Set(&c)
 }
 
-func (state *BeaconStateView) LatestExecutionPayloadHeader() (*ExecutionPayloadHeader, error) {
-	v, err := AsExecutionPayloadHeader(state.Get(_latestExecutionPayloadHeader))
-	if err != nil {
-		return nil, err
-	}
-	return v.Raw()
+func (state *BeaconStateView) LatestExecutionPayloadHeader() (*ExecutionPayloadHeaderView, error) {
+	return AsExecutionPayloadHeader(state.Get(_latestExecutionPayloadHeader))
+}
+
+func (state *BeaconStateView) SetLatestExecutionPayloadHeader(h *ExecutionPayloadHeader) error {
+	return state.Set(_latestExecutionPayloadHeader, h.View())
 }
 
 func (state *BeaconStateView) ForkSettings(spec *common.Spec) *common.ForkSettings {

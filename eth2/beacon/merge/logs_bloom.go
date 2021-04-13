@@ -13,7 +13,11 @@ import (
 
 const BYTES_PER_LOGS_BLOOM = 256
 
-func AsLogsBloom(v view.View, err error) (*LogsBloom, error) {
+type LogsBloomView struct {
+	*view.BasicVectorView
+}
+
+func (v *LogsBloomView) Raw() (*LogsBloom, error) {
 	var out LogsBloom
 	buf := codec.NewEncodingWriter(bytes.NewBuffer(out[:]))
 	if err := v.Serialize(buf); err != nil {
@@ -25,9 +29,26 @@ func AsLogsBloom(v view.View, err error) (*LogsBloom, error) {
 	return &out, nil
 }
 
+func AsLogsBloom(v view.View, err error) (*LogsBloomView, error) {
+	bv, err := view.AsBasicVector(v, err)
+	if err != nil {
+		return nil, err
+	}
+	return &LogsBloomView{bv}, nil
+}
+
 var LogsBloomType = view.BasicVectorType(view.Uint8Type, BYTES_PER_LOGS_BLOOM)
 
 type LogsBloom [BYTES_PER_LOGS_BLOOM]byte
+
+func (s *LogsBloom) View() *LogsBloomView {
+	v, err := AsLogsBloom(LogsBloomType.Deserialize(
+		codec.NewDecodingReader(bytes.NewReader(s[:]), BYTES_PER_LOGS_BLOOM)))
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
 
 func (s *LogsBloom) Deserialize(dr *codec.DecodingReader) error {
 	if s == nil {

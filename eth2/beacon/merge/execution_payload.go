@@ -49,8 +49,15 @@ func (v *ExecutionPayloadHeaderView) Raw() (*ExecutionPayloadHeader, error) {
 	gasLimit, err := AsUint64(values[5], err)
 	timestamp, err := common.AsTimestamp(values[6], err)
 	receiptRoot, err := AsRoot(values[7], err)
-	logsBloom, err := AsLogsBloom(values[8], err)
+	logsBloomView, err := AsLogsBloom(values[8], err)
 	transactionsRoot, err := AsRoot(values[9], err)
+	if err != nil {
+		return nil, err
+	}
+	logsBloom, err := logsBloomView.Raw()
+	if err != nil {
+		return nil, err
+	}
 	return &ExecutionPayloadHeader{
 		BlockHash:        blockHash,
 		ParentHash:       parentHash,
@@ -81,6 +88,19 @@ type ExecutionPayloadHeader struct {
 	ReceiptRoot      Bytes32            `json:"receipt_root" yaml:"receipt_root"`
 	LogsBloom        LogsBloom          `json:"logs_bloom" yaml:"logs_bloom"`
 	TransactionsRoot common.Root        `json:"transactions_root" yaml:"transactions_root"`
+}
+
+func (s *ExecutionPayloadHeader) View() *ExecutionPayloadHeaderView {
+	br, pr, sr := RootView(s.BlockHash), RootView(s.ParentHash), RootView(s.StateRoot)
+	nr, gl, t := Uint64View(s.Number), Uint64View(s.GasLimit), Uint64View(s.Timestamp)
+	rcr, txsr := RootView(s.ReceiptRoot), RootView(s.TransactionsRoot)
+	v, err := AsExecutionPayloadHeader(ExecutionPayloadHeaderType.FromFields(
+		&br, &pr, s.CoinBase.View(),
+		&sr, nr, gl, t, &rcr, s.LogsBloom.View(), &txsr))
+	if err != nil {
+		panic(err)
+	}
+	return v
 }
 
 func (s *ExecutionPayloadHeader) Deserialize(dr *codec.DecodingReader) error {

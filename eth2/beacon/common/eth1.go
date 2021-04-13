@@ -23,6 +23,11 @@ func AsEth1Address(v View, err error) (Eth1Address, error) {
 
 type Eth1Address [20]byte
 
+func (addr Eth1Address) View() SmallByteVecView {
+	// overlay on a copy of the value
+	return SmallByteVecView(addr[:])
+}
+
 func (addr *Eth1Address) Deserialize(dr *codec.DecodingReader) error {
 	if addr == nil {
 		return errors.New("cannot deserialize into nil eth1 address")

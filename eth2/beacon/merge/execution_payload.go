@@ -23,6 +23,7 @@ var ExecutionPayloadHeaderType = ContainerType("ExecutionPayloadHeader", []Field
 	{"state_root", Bytes32Type},
 	{"number", Uint64Type},
 	{"gas_limit", Uint64Type},
+	{"timestamp", common.TimestampType},
 	{"receipt_root", Bytes32Type},
 	{"logs_bloom", LogsBloomType},
 	{"transactions_root", RootType},
@@ -37,7 +38,7 @@ func (v *ExecutionPayloadHeaderView) Raw() (*ExecutionPayloadHeader, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(values) != 9 {
+	if len(values) != 10 {
 		return nil, fmt.Errorf("unexpected number of execution payload header fields: %d", len(values))
 	}
 	blockHash, err := AsRoot(values[0], err)
@@ -46,9 +47,10 @@ func (v *ExecutionPayloadHeaderView) Raw() (*ExecutionPayloadHeader, error) {
 	stateRoot, err := AsRoot(values[3], err)
 	number, err := AsUint64(values[4], err)
 	gasLimit, err := AsUint64(values[5], err)
-	receiptRoot, err := AsRoot(values[6], err)
-	logsBloom, err := AsLogsBloom(values[7], err)
-	transactionsRoot, err := AsRoot(values[8], err)
+	timestamp, err := common.AsTimestamp(values[6], err)
+	receiptRoot, err := AsRoot(values[7], err)
+	logsBloom, err := AsLogsBloom(values[8], err)
+	transactionsRoot, err := AsRoot(values[9], err)
 	return &ExecutionPayloadHeader{
 		BlockHash:        blockHash,
 		ParentHash:       parentHash,
@@ -56,6 +58,7 @@ func (v *ExecutionPayloadHeaderView) Raw() (*ExecutionPayloadHeader, error) {
 		StateRoot:        stateRoot,
 		Number:           uint64(number),
 		GasLimit:         uint64(gasLimit),
+		Timestamp:        timestamp,
 		ReceiptRoot:      receiptRoot,
 		LogsBloom:        *logsBloom,
 		TransactionsRoot: transactionsRoot,
@@ -74,6 +77,7 @@ type ExecutionPayloadHeader struct {
 	StateRoot        Bytes32            `json:"state_root" yaml:"state_root"`
 	Number           uint64             `json:"number" yaml:"number"`
 	GasLimit         uint64             `json:"gas_limit" yaml:"gas_limit"`
+	Timestamp        common.Timestamp   `json:"timestamp" yaml:"timestamp"`
 	ReceiptRoot      Bytes32            `json:"receipt_root" yaml:"receipt_root"`
 	LogsBloom        LogsBloom          `json:"logs_bloom" yaml:"logs_bloom"`
 	TransactionsRoot common.Root        `json:"transactions_root" yaml:"transactions_root"`
@@ -82,13 +86,13 @@ type ExecutionPayloadHeader struct {
 func (s *ExecutionPayloadHeader) Deserialize(dr *codec.DecodingReader) error {
 	return dr.FixedLenContainer(&s.BlockHash, &s.ParentHash, &s.CoinBase,
 		&s.StateRoot, (*Uint64View)(&s.Number), (*Uint64View)(&s.GasLimit),
-		&s.ReceiptRoot, &s.LogsBloom, &s.TransactionsRoot)
+		&s.Timestamp, &s.ReceiptRoot, &s.LogsBloom, &s.TransactionsRoot)
 }
 
 func (s *ExecutionPayloadHeader) Serialize(w *codec.EncodingWriter) error {
 	return w.FixedLenContainer(&s.BlockHash, &s.ParentHash, &s.CoinBase,
 		&s.StateRoot, (*Uint64View)(&s.Number), (*Uint64View)(&s.GasLimit),
-		&s.ReceiptRoot, &s.LogsBloom, &s.TransactionsRoot)
+		&s.Timestamp, &s.ReceiptRoot, &s.LogsBloom, &s.TransactionsRoot)
 }
 
 func (s *ExecutionPayloadHeader) ByteLength() uint64 {
@@ -102,7 +106,7 @@ func (b *ExecutionPayloadHeader) FixedLength() uint64 {
 func (s *ExecutionPayloadHeader) HashTreeRoot(hFn tree.HashFn) common.Root {
 	return hFn.HashTreeRoot(&s.BlockHash, &s.ParentHash, &s.CoinBase,
 		&s.StateRoot, (*Uint64View)(&s.Number), (*Uint64View)(&s.GasLimit),
-		&s.ReceiptRoot, &s.LogsBloom, &s.TransactionsRoot)
+		&s.Timestamp, &s.ReceiptRoot, &s.LogsBloom, &s.TransactionsRoot)
 }
 
 var ExecutionPayloadType = ContainerType("ExecutionPayload", []FieldDef{
@@ -112,6 +116,7 @@ var ExecutionPayloadType = ContainerType("ExecutionPayload", []FieldDef{
 	{"state_root", Bytes32Type},
 	{"number", Uint64Type},
 	{"gas_limit", Uint64Type},
+	{"timestamp", common.TimestampType},
 	{"receipt_root", Bytes32Type},
 	{"logs_bloom", LogsBloomType},
 	{"transactions", PayloadTransactionsType},
@@ -133,6 +138,7 @@ type ExecutionPayload struct {
 	StateRoot    Bytes32             `json:"state_root" yaml:"state_root"`
 	Number       uint64              `json:"number" yaml:"number"`
 	GasLimit     uint64              `json:"gas_limit" yaml:"gas_limit"`
+	Timestamp    common.Timestamp    `json:"timestamp" yaml:"timestamp"`
 	ReceiptRoot  Bytes32             `json:"receipt_root" yaml:"receipt_root"`
 	LogsBloom    LogsBloom           `json:"logs_bloom" yaml:"logs_bloom"`
 	Transactions PayloadTransactions `json:"transactions" yaml:"transactions"`
@@ -140,17 +146,20 @@ type ExecutionPayload struct {
 
 func (b *ExecutionPayload) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
 	return dr.Container(&b.BlockHash, &b.ParentHash, &b.CoinBase, &b.StateRoot,
-		(*Uint64View)(&b.Number), (*Uint64View)(&b.GasLimit), &b.ReceiptRoot, &b.LogsBloom, spec.Wrap(&b.Transactions))
+		(*Uint64View)(&b.Number), (*Uint64View)(&b.GasLimit), &b.Timestamp,
+		&b.ReceiptRoot, &b.LogsBloom, spec.Wrap(&b.Transactions))
 }
 
 func (b *ExecutionPayload) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
 	return w.Container(&b.BlockHash, &b.ParentHash, &b.CoinBase, &b.StateRoot,
-		(*Uint64View)(&b.Number), (*Uint64View)(&b.GasLimit), &b.ReceiptRoot, &b.LogsBloom, spec.Wrap(&b.Transactions))
+		(*Uint64View)(&b.Number), (*Uint64View)(&b.GasLimit), &b.Timestamp,
+		&b.ReceiptRoot, &b.LogsBloom, spec.Wrap(&b.Transactions))
 }
 
 func (b *ExecutionPayload) ByteLength(spec *common.Spec) uint64 {
 	return codec.ContainerLength(&b.BlockHash, &b.ParentHash, &b.CoinBase, &b.StateRoot,
-		(*Uint64View)(&b.Number), (*Uint64View)(&b.GasLimit), &b.ReceiptRoot, &b.LogsBloom, spec.Wrap(&b.Transactions))
+		(*Uint64View)(&b.Number), (*Uint64View)(&b.GasLimit), &b.Timestamp,
+		&b.ReceiptRoot, &b.LogsBloom, spec.Wrap(&b.Transactions))
 }
 
 func (a *ExecutionPayload) FixedLength(*common.Spec) uint64 {
@@ -160,7 +169,8 @@ func (a *ExecutionPayload) FixedLength(*common.Spec) uint64 {
 
 func (b *ExecutionPayload) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
 	return hFn.HashTreeRoot(&b.BlockHash, &b.ParentHash, &b.CoinBase, &b.StateRoot,
-		(*Uint64View)(&b.Number), (*Uint64View)(&b.GasLimit), &b.ReceiptRoot, &b.LogsBloom, spec.Wrap(&b.Transactions))
+		(*Uint64View)(&b.Number), (*Uint64View)(&b.GasLimit), &b.Timestamp,
+		&b.ReceiptRoot, &b.LogsBloom, spec.Wrap(&b.Transactions))
 }
 
 func (ep *ExecutionPayload) Header(spec *common.Spec) *ExecutionPayloadHeader {
@@ -171,6 +181,7 @@ func (ep *ExecutionPayload) Header(spec *common.Spec) *ExecutionPayloadHeader {
 		StateRoot:        ep.StateRoot,
 		Number:           ep.Number,
 		GasLimit:         ep.GasLimit,
+		Timestamp:        ep.Timestamp,
 		ReceiptRoot:      ep.ReceiptRoot,
 		LogsBloom:        ep.LogsBloom,
 		TransactionsRoot: ep.Transactions.HashTreeRoot(spec, tree.GetHashFn()),

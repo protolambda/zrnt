@@ -11,6 +11,8 @@ import (
 // Unix timestamp
 type Timestamp Uint64View
 
+const TimestampType = Uint64Type
+
 func (spec *Spec) TimeToSlot(t Timestamp, genesisTime Timestamp) Slot {
 	if t < genesisTime {
 		return 0

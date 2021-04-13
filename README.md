@@ -9,17 +9,24 @@ The goal of this project is to have a Go version of the Python based spec,
 
 ### `beacon`
 
-The beacon package covers the phase0 state transition, following the Beacon-chain spec, but optimized for performance.
+The beacon package covers the Beacon Chain spec, but optimized for performance.
+
+It is split into packages per fork (`phase0`, `altair`, `merge`, etc.),
+that all follow the same functions/naming patterns.
 
 Globals are split up as following:
 - `<something>Type`: a ZTYP SSZ type description, used to create typed views with. Some types can be derived from a `*Spec` only.
 - `<something>View`: a ZTYP SSZ view. This wraps a binary-tree backing,
  to provide typed a mutable interface to the persistent cached binary-tree datastructure.
-- `(spec *Spec) Process<something>`: The processing functions are all prefixed, and attached to the beacon-state view.
-- `(spec *Spec) StateTransition`: The main transition function
-- `EpochsContext` and `(spec *Spec) NewEpochsContext`: to efficiently transition, data that is used accross the epoch slot is cached in a special container.
- This includes beacon proposers, committee shuffling, pubkey cache, etc. Functions to efficiently copy and update are included.
-- `(spec *Spec) GenesisFromEth1` and `KickStartState` two functions to create a `*BeaconStateView` and accompanying `*EpochsContext` with.
+
+Backing all the forks, the `common` package implements common types and transition functionality:
+- Basic types
+- Beacon block headers
+- Fork-agnostic Beacon block envelopes
+- `StateTransition`, `ProcessSlots`, and misc. transition base functions
+- `Spec`, the standard eth2 configuration, parametrizes a lot of the beacon functionality.
+
+The genesis is implemented in `phase0`, but forks may also implement additional genesis variants, to start a genesis into the fork.
 
 The `Spec` type is very central, and enables multiple different spec configurations at the same time, as well as full customization of the configuration.
 Default configs are available in the `configs` package: `Mainnet` and `configs.Minimal`: preconfigured `*Spec`s to use for common tooling/tests.

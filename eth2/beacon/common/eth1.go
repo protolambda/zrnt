@@ -3,34 +3,65 @@ package common
 import (
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"github.com/protolambda/ztyp/codec"
+	"github.com/protolambda/ztyp/conv"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
 
+const Eth1AddressType = SmallByteVecMeta(20)
+
+func AsEth1Address(v View, err error) (Eth1Address, error) {
+	c, err := AsSmallByteVec(v, err)
+	if err != nil {
+		return Eth1Address{}, err
+	}
+	var out Eth1Address
+	copy(out[:], c)
+	return out, nil
+}
+
 type Eth1Address [20]byte
 
-func (p Eth1Address) MarshalText() ([]byte, error) {
-	return []byte("0x" + hex.EncodeToString(p[:])), nil
+func (addr *Eth1Address) Deserialize(dr *codec.DecodingReader) error {
+	if addr == nil {
+		return errors.New("cannot deserialize into nil eth1 address")
+	}
+	_, err := dr.Read(addr[:])
+	return err
 }
 
-func (p Eth1Address) String() string {
-	return "0x" + hex.EncodeToString(p[:])
+func (addr *Eth1Address) Serialize(w *codec.EncodingWriter) error {
+	return w.Write(addr[:])
 }
 
-func (p *Eth1Address) UnmarshalText(text []byte) error {
-	if p == nil {
+func (*Eth1Address) ByteLength() uint64 {
+	return 20
+}
+
+func (*Eth1Address) FixedLength() uint64 {
+	return 20
+}
+
+func (addr *Eth1Address) HashTreeRoot(hFn tree.HashFn) tree.Root {
+	var out tree.Root
+	copy(out[0:20], addr[:])
+	return out
+}
+
+func (addr Eth1Address) MarshalText() ([]byte, error) {
+	return conv.BytesMarshalText(addr[:])
+}
+
+func (addr Eth1Address) String() string {
+	return "0x" + hex.EncodeToString(addr[:])
+}
+
+func (addr *Eth1Address) UnmarshalText(text []byte) error {
+	if addr == nil {
 		return errors.New("cannot decode into nil Eth1Address")
 	}
-	if len(text) >= 2 && text[0] == '0' && (text[1] == 'x' || text[1] == 'X') {
-		text = text[2:]
-	}
-	if len(text) != 40 {
-		return fmt.Errorf("unexpected length string '%s'", string(text))
-	}
-	_, err := hex.Decode(p[:], text)
-	return err
+	return conv.FixedBytesUnmarshalText(addr[:], text[:])
 }
 
 type Eth1Data struct {

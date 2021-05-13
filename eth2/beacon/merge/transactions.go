@@ -1,8 +1,11 @@
 package merge
 
 import (
+	"encoding/hex"
+	"errors"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/codec"
+	"github.com/protolambda/ztyp/conv"
 	"github.com/protolambda/ztyp/tree"
 	"github.com/protolambda/ztyp/view"
 )
@@ -71,4 +74,19 @@ func (otx *OpaqueTransaction) FixedLength(*common.Spec) uint64 {
 
 func (otx OpaqueTransaction) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
 	return hFn.ByteListHTR(otx, MAX_BYTES_PER_OPAQUE_TRANSACTION)
+}
+
+func (otx OpaqueTransaction) MarshalText() ([]byte, error) {
+	return conv.BytesMarshalText(otx[:])
+}
+
+func (otx OpaqueTransaction) String() string {
+	return "0x" + hex.EncodeToString(otx[:])
+}
+
+func (otx *OpaqueTransaction) UnmarshalText(text []byte) error {
+	if otx == nil {
+		return errors.New("cannot decode into nil transaction")
+	}
+	return conv.DynamicBytesUnmarshalText((*[]byte)(otx), text[:])
 }

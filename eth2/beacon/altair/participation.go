@@ -44,23 +44,24 @@ func (e ParticipationFlags) String() string {
 
 // Participation flag indices
 const (
-	TIMELY_HEAD_FLAG_INDEX   uint8 = 0
-	TIMELY_SOURCE_FLAG_INDEX uint8 = 1
-	TIMELY_TARGET_FLAG_INDEX uint8 = 2
+	TIMELY_SOURCE_FLAG_INDEX uint8 = 0
+	TIMELY_TARGET_FLAG_INDEX uint8 = 1
+	TIMELY_HEAD_FLAG_INDEX   uint8 = 2
 )
 
 const (
-	TIMELY_HEAD_FLAG   ParticipationFlags = 1 << TIMELY_HEAD_FLAG_INDEX
 	TIMELY_SOURCE_FLAG ParticipationFlags = 1 << TIMELY_SOURCE_FLAG_INDEX
 	TIMELY_TARGET_FLAG ParticipationFlags = 1 << TIMELY_TARGET_FLAG_INDEX
+	TIMELY_HEAD_FLAG   ParticipationFlags = 1 << TIMELY_HEAD_FLAG_INDEX
 )
 
 // Participation flag fractions
 const (
-	TIMELY_HEAD_WEIGHT   uint64 = 12
 	TIMELY_SOURCE_WEIGHT uint64 = 12
 	TIMELY_TARGET_WEIGHT uint64 = 24
+	TIMELY_HEAD_WEIGHT   uint64 = 12
 	SYNC_REWARD_WEIGHT   uint64 = 8
+	PROPOSER_WEIGHT      uint64 = 8
 	WEIGHT_DENOMINATOR   uint64 = 64
 )
 

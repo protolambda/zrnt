@@ -176,14 +176,22 @@ func (epc *EpochsContext) RotateEpochs(state BeaconState) error {
 }
 
 func (epc *EpochsContext) getSlotComms(slot Slot) ([][]ValidatorIndex, error) {
-	epoch := epc.Spec.SlotToEpoch(slot)
 	epochSlot := slot % epc.Spec.SLOTS_PER_EPOCH
+	epoch := epc.Spec.SlotToEpoch(slot)
+	comms, err := epc.getEpochComms(epoch)
+	if err != nil {
+		return nil, err
+	}
+	return comms[epochSlot], nil
+}
+
+func (epc *EpochsContext) getEpochComms(epoch Epoch) ([][][]ValidatorIndex, error) {
 	if epoch == epc.PreviousEpoch.Epoch {
-		return epc.PreviousEpoch.Committees[epochSlot], nil
+		return epc.PreviousEpoch.Committees, nil
 	} else if epoch == epc.CurrentEpoch.Epoch {
-		return epc.CurrentEpoch.Committees[epochSlot], nil
+		return epc.CurrentEpoch.Committees, nil
 	} else if epoch == epc.NextEpoch.Epoch {
-		return epc.NextEpoch.Committees[epochSlot], nil
+		return epc.NextEpoch.Committees, nil
 	} else {
 		return nil, fmt.Errorf("beacon committee retrieval: out of range epoch: %d", epoch)
 	}
@@ -206,9 +214,9 @@ func (epc *EpochsContext) GetBeaconCommittee(slot Slot, index CommitteeIndex) ([
 	return slotComms[index], nil
 }
 
-func (epc *EpochsContext) GetCommitteeCountAtSlot(slot Slot) (uint64, error) {
-	slotComms, err := epc.getSlotComms(slot)
-	return uint64(len(slotComms)), err
+func (epc *EpochsContext) GetCommitteeCountPerSlot(epoch Epoch) (uint64, error) {
+	epochComms, err := epc.getEpochComms(epoch)
+	return uint64(len(epochComms[0])), err
 }
 
 func (epc *EpochsContext) GetBeaconProposer(slot Slot) (ValidatorIndex, error) {

@@ -38,14 +38,13 @@ func main() {
 	spec := configs.Mainnet
 
 	state, epc := CreateTestState(spec, 1000, spec.MAX_EFFECTIVE_BALANCE)
+	count, err := epc.GetCommitteeCountPerSlot(0)
+	if err != nil {
+		panic(err)
+	}
 
 	for i := common.Slot(0); i < spec.SLOTS_PER_EPOCH*2; i++ {
-		count, err := epc.GetCommitteeCountAtSlot(i)
-		if err != nil {
-			panic(err)
-		}
-
-		fmt.Printf("slot %d, committee count: %d\n", i, count)
+		fmt.Printf("slot %d\n", i)
 		for j := uint64(0); j < count; j++ {
 			committee, err := epc.GetBeaconCommittee(i, common.CommitteeIndex(j))
 			if err != nil {

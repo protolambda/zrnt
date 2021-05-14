@@ -107,12 +107,6 @@ func ProcessAttestation(spec *common.Spec, epc *common.EpochsContext, state *Bea
 	if err != nil {
 		return err
 	}
-	if !(currentSlot <= data.Slot+spec.SLOTS_PER_EPOCH) {
-		return errors.New("attestation slot is too old")
-	}
-	if !(data.Slot+spec.MIN_ATTESTATION_INCLUSION_DELAY <= currentSlot) {
-		return errors.New("attestation is too new")
-	}
 
 	currentEpoch := spec.SlotToEpoch(currentSlot)
 	previousEpoch := currentEpoch.Previous()
@@ -128,8 +122,15 @@ func ProcessAttestation(spec *common.Spec, epc *common.EpochsContext, state *Bea
 		return errors.New("attestation data is invalid, slot epoch does not match target epoch")
 	}
 
+	if !(currentSlot <= data.Slot+spec.SLOTS_PER_EPOCH) {
+		return errors.New("attestation slot is too old")
+	}
+	if !(data.Slot+spec.MIN_ATTESTATION_INCLUSION_DELAY <= currentSlot) {
+		return errors.New("attestation is too new")
+	}
+
 	// Check committee index
-	if commCount, err := epc.GetCommitteeCountAtSlot(data.Slot); err != nil {
+	if commCount, err := epc.GetCommitteeCountPerSlot(data.Target.Epoch); err != nil {
 		return err
 	} else if uint64(data.Index) >= commCount {
 		return errors.New("attestation data is invalid, committee index out of range")

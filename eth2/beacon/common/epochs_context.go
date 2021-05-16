@@ -7,7 +7,7 @@ import (
 
 type IndexedSyncCommittee struct {
 	CachedPubkeys []*CachedPubkey
-	Indices []ValidatorIndex
+	Indices       []ValidatorIndex
 }
 
 type EpochsContext struct {
@@ -23,7 +23,7 @@ type EpochsContext struct {
 
 	// nil for pre-altair chain
 	CurrentSyncCommittee *IndexedSyncCommittee
-	NextSyncCommittee *IndexedSyncCommittee
+	NextSyncCommittee    *IndexedSyncCommittee
 
 	// TODO: track active effective balances
 	// TODO: track total active stake
@@ -183,7 +183,7 @@ func (epc *EpochsContext) RotateEpochs(state BeaconState) error {
 	}
 	if syncState, ok := state.(SyncCommitteeBeaconState); ok {
 		// if the state has a list of sync committee pubkeys, we want to cache the indices of that sync committee
-		if epc.CurrentEpoch.Epoch % epc.Spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD == 0 {
+		if epc.CurrentEpoch.Epoch%epc.Spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD == 0 {
 			// just got into the epoch, we just need to re-hydrate the EPC
 			if epc.NextSyncCommittee != nil {
 				epc.CurrentSyncCommittee = epc.NextSyncCommittee
@@ -235,7 +235,7 @@ func (epc *EpochsContext) hydrateSyncCommittee(view *SyncCommitteeView) (*Indexe
 	}
 	return &IndexedSyncCommittee{
 		CachedPubkeys: cachedPubs,
-		Indices: indices,
+		Indices:       indices,
 	}, nil
 }
 

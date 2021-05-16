@@ -82,7 +82,7 @@ func SyncCommitteeType(spec *Spec) *ContainerTypeDef {
 
 type SyncCommittee struct {
 	Pubkeys         SyncCommitteePubkeys `json:"pubkeys" yaml:"pubkeys"`
-	AggregatePubkey BLSPubkey     `json:"aggregate_pubkey" yaml:"aggregate_pubkey"`
+	AggregatePubkey BLSPubkey            `json:"aggregate_pubkey" yaml:"aggregate_pubkey"`
 }
 
 func (a *SyncCommittee) Deserialize(spec *Spec, dr *codec.DecodingReader) error {

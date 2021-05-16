@@ -31,14 +31,11 @@ func ComputeFlagDeltas(ctx context.Context, spec *common.Spec, epc *common.Epoch
 		increments := effBal / spec.EFFECTIVE_BALANCE_INCREMENT
 		baseReward := increments * baseRewardPerIncrement
 		prevEpochParticipation := attesterData.PrevParticipation[vi]
-		participation := prevEpochParticipation&flag != 0
+		flagParticipation := prevEpochParticipation&flag != 0
 
 		slashed := attesterData.Flats[vi].Slashed
-		if !slashed && participation {
-			if isInactivityLeak {
-				// This flag reward cancels the inactivity penalty corresponding to the flag index
-				out.Rewards[vi] += (baseReward * weight) / common.Gwei(WEIGHT_DENOMINATOR)
-			} else {
+		if !slashed && flagParticipation {
+			if !isInactivityLeak {
 				rewardNumerator := (baseReward * weight) * unslashedParticipatingIncrements
 				rewardDenominator := activeIncrements * common.Gwei(WEIGHT_DENOMINATOR)
 				out.Rewards[vi] += rewardNumerator / rewardDenominator
@@ -54,19 +51,13 @@ func ComputeInactivityPenaltyDeltas(ctx context.Context, spec *common.Spec, epc 
 	attesterData *EpochAttesterData, inactivityScores *InactivityScoresView) (*common.Deltas, error) {
 	out := common.NewDeltas(uint64(len(attesterData.Flats)))
 	penaltyDenominator := common.Gwei(spec.INACTIVITY_SCORE_BIAS * spec.INACTIVITY_PENALTY_QUOTIENT_ALTAIR)
-	baseRewardPerIncrement := (spec.EFFECTIVE_BALANCE_INCREMENT * common.Gwei(spec.BASE_REWARD_FACTOR)) / epc.TotalActiveStakeSqRoot
 	for _, vi := range attesterData.EligibleIndices {
-		effBal := attesterData.Flats[vi].EffectiveBalance
-		increments := effBal / spec.EFFECTIVE_BALANCE_INCREMENT
-		baseReward := increments * baseRewardPerIncrement
-		out.Penalties[vi] += (baseReward * common.Gwei(TIMELY_SOURCE_WEIGHT)) / common.Gwei(WEIGHT_DENOMINATOR)
-		out.Penalties[vi] += (baseReward * common.Gwei(TIMELY_TARGET_WEIGHT)) / common.Gwei(WEIGHT_DENOMINATOR)
-		out.Penalties[vi] += (baseReward * common.Gwei(TIMELY_HEAD_WEIGHT)) / common.Gwei(WEIGHT_DENOMINATOR)
 		if !(!attesterData.Flats[vi].Slashed && (attesterData.PrevParticipation[vi]&TIMELY_TARGET_FLAG != 0)) {
 			score, err := inactivityScores.GetScore(vi)
 			if err != nil {
 				return nil, err
 			}
+			effBal := attesterData.Flats[vi].EffectiveBalance
 			penaltyNumerator := effBal * common.Gwei(score)
 			out.Penalties[vi] += penaltyNumerator / penaltyDenominator
 		}
@@ -105,22 +96,20 @@ func ProcessEpochRewardsAndPenalties(ctx context.Context, spec *common.Spec, epc
 	if err != nil {
 		return err
 	}
+	inactivityScores, err := state.InactivityScores()
+	if err != nil {
+		return err
+	}
+	inactivityPenalties, err := ComputeInactivityPenaltyDeltas(ctx, spec, epc, attesterData, inactivityScores)
+	if err != nil {
+		return err
+	}
 	valCount := uint64(len(attesterData.Flats))
 	sum := common.NewDeltas(valCount)
 	sum.Add(sourceDeltas)
 	sum.Add(targetDeltas)
 	sum.Add(headDeltas)
-	if isInactivityLeak {
-		inactivityScores, err := state.InactivityScores()
-		if err != nil {
-			return err
-		}
-		inactivityPenalties, err := ComputeInactivityPenaltyDeltas(ctx, spec, epc, attesterData, inactivityScores)
-		if err != nil {
-			return err
-		}
-		sum.Add(inactivityPenalties)
-	}
+	sum.Add(inactivityPenalties)
 	balancesElements, err := common.ApplyDeltas(state, sum)
 	if err != nil {
 		return err

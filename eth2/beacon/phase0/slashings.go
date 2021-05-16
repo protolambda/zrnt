@@ -162,7 +162,7 @@ func SlashValidator(spec *common.Spec, epc *common.EpochsContext, state common.B
 		whistleblowerIndex = &propIndex
 	}
 	whistleblowerReward := effectiveBalance / common.Gwei(spec.WHISTLEBLOWER_REWARD_QUOTIENT)
-	proposerReward := whistleblowerReward / common.Gwei(spec.PROPOSER_REWARD_QUOTIENT)
+	proposerReward := settings.CalcProposerShare(whistleblowerReward)
 	if err := common.IncreaseBalance(bals, propIndex, proposerReward); err != nil {
 		return err
 	}

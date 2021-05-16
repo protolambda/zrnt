@@ -151,6 +151,9 @@ func (v *ParticipationRegistryView) FillZeroes(length uint64) error {
 }
 
 func ProcessParticipationFlagUpdates(ctx context.Context, spec *common.Spec, state *BeaconStateView) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	currentEp, err := state.CurrentEpochParticipation()
 	if err != nil {
 		return err

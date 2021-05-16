@@ -465,6 +465,9 @@ func (state *BeaconStateView) ForkSettings(spec *common.Spec) *common.ForkSettin
 	return &common.ForkSettings{
 		MinSlashingPenaltyQuotient:     spec.MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR,
 		ProportionalSlashingMultiplier: spec.PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR,
+		CalcProposerShare: func(whistleblowerReward common.Gwei) common.Gwei {
+			return whistleblowerReward * common.Gwei(PROPOSER_WEIGHT) / common.Gwei(WEIGHT_DENOMINATOR)
+		},
 	}
 }
 

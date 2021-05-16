@@ -211,7 +211,10 @@ func ProcessSyncCommittee(ctx context.Context, spec *common.Spec, epc *common.Ep
 	return nil
 }
 
-func ProcessSyncCommitteeUpdates(spec *common.Spec, epc *common.EpochsContext, state common.SyncCommitteeBeaconState) error {
+func ProcessSyncCommitteeUpdates(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state common.SyncCommitteeBeaconState) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	nextEpoch := epc.NextEpoch.Epoch
 	if nextEpoch%spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD == 0 {
 		next, err := common.ComputeNextSyncCommittee(spec, epc, state)

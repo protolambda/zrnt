@@ -16,14 +16,6 @@ type EpochsContext struct {
 	CurrentEpoch  *ShufflingEpoch
 	NextEpoch     *ShufflingEpoch
 
-	// SyncCommitteePeriod is the start of the current sync committee period
-	SyncCommitteePeriod uint64
-	// CurrentSyncCommittee is a slice of SYNC_COMMITTEE_SIZE validator indices for the period
-	// It may contain duplicates.
-	CurrentSyncCommittee []ValidatorIndex
-	// NextSyncCommittee is the sync commitee for the next period
-	NextSyncCommittee []ValidatorIndex
-
 	// TODO: track active effective balances
 	// TODO: track total active stake
 	// Effective balances of all validators at the start of the epoch.
@@ -156,22 +148,6 @@ func (epc *EpochsContext) RotateEpochs(state BeaconState) error {
 	if err := epc.LoadProposers(state); err != nil {
 		return err
 	}
-	// TODO: sync committee rotation
-	////Either we stay in the current period, or rotate to the next.
-	//periodOfNextEpoch := uint64(nextEpoch / epc.Spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
-	//if epc.SyncCommitteePeriod+1 == periodOfNextEpoch {
-	//	epc.CurrentSyncCommittee = epc.NextSyncCommittee
-	//	// TODO: check/fix base epoch and active-time of indices
-	//	scom, err := ComputeSyncCommitteeIndices(epc.Spec, state,
-	//		nextEpoch+epc.Spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD, epc.CurrentEpoch.ActiveIndices)
-	//	if err != nil {
-	//		return err
-	//	}
-	//	epc.NextSyncCommittee = scom
-	//	epc.SyncCommitteePeriod = periodOfNextEpoch
-	//} else if epc.SyncCommitteePeriod != periodOfNextEpoch {
-	//	return fmt.Errorf("expected sync committee period to change one at step a time, got: %d <> %d", epc.SyncCommitteePeriod, periodOfNextEpoch)
-	//}
 	return nil
 }
 
@@ -221,16 +197,4 @@ func (epc *EpochsContext) GetCommitteeCountPerSlot(epoch Epoch) (uint64, error) 
 
 func (epc *EpochsContext) GetBeaconProposer(slot Slot) (ValidatorIndex, error) {
 	return epc.Proposers.GetBeaconProposer(slot)
-}
-
-func (epc *EpochsContext) GetSyncCommittee(epoch Epoch) ([]ValidatorIndex, error) {
-	period := uint64(epoch / epc.Spec.SHARD_COMMITTEE_PERIOD)
-	if epc.SyncCommitteePeriod == period {
-		return epc.CurrentSyncCommittee, nil
-	} else if epc.SyncCommitteePeriod+1 == period {
-		return epc.NextSyncCommittee, nil
-	} else {
-		return nil, fmt.Errorf("epoch %d is in period %d, but only periods %d and %d are available",
-			epoch, period, epc.SyncCommitteePeriod, epc.SyncCommitteePeriod+1)
-	}
 }

@@ -15,6 +15,8 @@ func init() {
 	}
 }
 
+var G2_POINT_AT_INFINITY = BLSSignature{0: 0xc0}
+
 const BLS_ACTIVE = true
 
 func Verify(pubkey *CachedPubkey, message [32]byte, signature BLSSignature) bool {
@@ -30,22 +32,32 @@ func Verify(pubkey *CachedPubkey, message [32]byte, signature BLSSignature) bool
 	return parsedSig.VerifyHash(parsedPubkey, message[:])
 }
 
-func parsePubkeys(pubkeys []*CachedPubkey) []hbls.PublicKey {
+func parsePubkeys(pubkeys []*CachedPubkey) ([]hbls.PublicKey, error) {
 	pubs := make([]hbls.PublicKey, len(pubkeys), len(pubkeys))
 	for i, p := range pubkeys {
 		pub, err := p.Pubkey()
 		if err != nil {
-			return nil
+			return nil, err
 		}
 		pubs[i] = *pub
 	}
-	return pubs
+	return pubs, nil
 }
 
-func FastAggregateVerify(pubkeys []*CachedPubkey, message [32]byte, signature BLSSignature) bool {
-	pubs := parsePubkeys(pubkeys)
-	if len(pubs) == 0 { // also if parsePubkeys errors and returns nil
+func Eth2FastAggregateVerify(pubkeys []*CachedPubkey, message [32]byte, signature BLSSignature) bool {
+	pubs, err := parsePubkeys(pubkeys)
+	if err != nil {
 		return false
+	}
+	if len(pubs) == 0 {
+		if signature == G2_POINT_AT_INFINITY {
+			return true
+		} else {
+			// If it's not G2_POINT_AT_INFINITY,
+			// then don't use Herumi BLS to verify something unnecessarily.
+			// And the 0 length pubkeys would panic in Herumi BLS.
+			return false
+		}
 	}
 
 	var parsedSig hbls.Sign

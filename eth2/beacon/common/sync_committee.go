@@ -3,14 +3,26 @@ package common
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"github.com/protolambda/zrnt/eth2/util/hashing"
 )
 
+// Return the sequence of sync committee indices (which may include duplicate indices)
+// for the next sync committee, given a state at a sync committee period boundary.
+//
+// Note: Committee can contain duplicate indices for small validator sets (< SYNC_COMMITTEE_SIZE + 128)
 func ComputeSyncCommitteeIndices(spec *Spec, state BeaconState, baseEpoch Epoch, active []ValidatorIndex) ([]ValidatorIndex, error) {
 	if len(active) == 0 {
 		return nil, errors.New("no active validators to compute sync committee from")
 	}
-	syncCommittee := make([]ValidatorIndex, 0, spec.SYNC_SUBCOMMITTEE_SIZE)
+	slot, err := state.Slot()
+	if err != nil {
+		return nil, err
+	}
+	if epoch := spec.SlotToEpoch(slot); baseEpoch > epoch+1 {
+		return nil, fmt.Errorf("stat at slot %d (epoch %d) is not far along enough to compute sync committee data for epoch %d", slot, epoch, baseEpoch)
+	}
+	syncCommitteeIndices := make([]ValidatorIndex, 0, spec.SYNC_COMMITTEE_SIZE)
 	mixes, err := state.RandaoMixes()
 	if err != nil {
 		return nil, err
@@ -28,10 +40,10 @@ func ComputeSyncCommitteeIndices(spec *Spec, state BeaconState, baseEpoch Epoch,
 	copy(buf[0:32], periodSeed[:])
 	var h [32]byte
 	i := ValidatorIndex(0)
-	for uint64(len(syncCommittee)) < spec.SYNC_SUBCOMMITTEE_SIZE {
-		shuffledI := PermuteIndex(spec.SHUFFLE_ROUND_COUNT, i%ValidatorIndex(len(active)),
+	for uint64(len(syncCommitteeIndices)) < spec.SYNC_COMMITTEE_SIZE {
+		shuffledIndex := PermuteIndex(spec.SHUFFLE_ROUND_COUNT, i%ValidatorIndex(len(active)),
 			uint64(len(active)), periodSeed)
-		candidateIndex := active[shuffledI]
+		candidateIndex := active[shuffledIndex]
 		validator, err := vals.Validator(candidateIndex)
 		if err != nil {
 			return nil, err
@@ -47,9 +59,9 @@ func ComputeSyncCommitteeIndices(spec *Spec, state BeaconState, baseEpoch Epoch,
 		}
 		randomByte := h[i%32]
 		if effectiveBalance*0xff >= spec.MAX_EFFECTIVE_BALANCE*Gwei(randomByte) {
-			syncCommittee = append(syncCommittee, candidateIndex)
+			syncCommitteeIndices = append(syncCommitteeIndices, candidateIndex)
 		}
 		i += 1
 	}
-	return syncCommittee, nil
+	return syncCommitteeIndices, nil
 }

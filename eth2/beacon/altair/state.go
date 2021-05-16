@@ -450,6 +450,17 @@ func (state *BeaconStateView) NextSyncCommittee() (*SyncCommitteeView, error) {
 	return AsSyncCommittee(state.Get(_nextSyncCommittee))
 }
 
+func (state *BeaconStateView) RotateSyncCommittee(next *SyncCommitteeView) error {
+	v, err := state.Get(_nextSyncCommittee)
+	if err != nil {
+		return err
+	}
+	if err := state.Set(_currentSyncCommittee, v); err != nil {
+		return err
+	}
+	return state.Set(_nextSyncCommittee, next)
+}
+
 func (state *BeaconStateView) ForkSettings(spec *common.Spec) *common.ForkSettings {
 	return &common.ForkSettings{
 		MinSlashingPenaltyQuotient:     spec.MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR,

@@ -132,3 +132,10 @@ type BeaconState interface {
 	// Excludes slot processing and signature validation. Just applies the block as-is. Error if mismatching slot.
 	ProcessBlock(ctx context.Context, spec *Spec, epc *EpochsContext, benv *BeaconBlockEnvelope) error
 }
+
+type SyncCommitteeBeaconState interface {
+	BeaconState
+	CurrentSyncCommittee() (*SyncCommitteeView, error)
+	NextSyncCommittee() (*SyncCommitteeView, error)
+	RotateSyncCommittee(next *SyncCommitteeView) error
+}

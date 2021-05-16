@@ -40,8 +40,8 @@ type BeaconState struct {
 	// Inactivity
 	InactivityScores InactivityScores `json:"inactivity_scores" yaml:"inactivity_scores"`
 	// Light client sync committees
-	CurrentSyncCommittee SyncCommittee `json:"current_sync_committee" yaml:"current_sync_committee"`
-	NextSyncCommittee    SyncCommittee `json:"next_sync_committee" yaml:"next_sync_committee"`
+	CurrentSyncCommittee common.SyncCommittee `json:"current_sync_committee" yaml:"current_sync_committee"`
+	NextSyncCommittee    common.SyncCommittee `json:"next_sync_committee" yaml:"next_sync_committee"`
 }
 
 func (v *BeaconState) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
@@ -175,8 +175,8 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 		// Inactivity
 		{"inactivity_scores", InactivityScoresType(spec)},
 		// Sync
-		{"current_sync_committee", SyncCommitteeType(spec)},
-		{"next_sync_committee", SyncCommitteeType(spec)},
+		{"current_sync_committee", common.SyncCommitteeType(spec)},
+		{"next_sync_committee", common.SyncCommitteeType(spec)},
 	})
 }
 
@@ -442,15 +442,15 @@ func (state *BeaconStateView) InactivityScores() (*InactivityScoresView, error) 
 	return AsInactivityScores(state.Get(_inactivityScores))
 }
 
-func (state *BeaconStateView) CurrentSyncCommittee() (*SyncCommitteeView, error) {
-	return AsSyncCommittee(state.Get(_currentSyncCommittee))
+func (state *BeaconStateView) CurrentSyncCommittee() (*common.SyncCommitteeView, error) {
+	return common.AsSyncCommittee(state.Get(_currentSyncCommittee))
 }
 
-func (state *BeaconStateView) NextSyncCommittee() (*SyncCommitteeView, error) {
-	return AsSyncCommittee(state.Get(_nextSyncCommittee))
+func (state *BeaconStateView) NextSyncCommittee() (*common.SyncCommitteeView, error) {
+	return common.AsSyncCommittee(state.Get(_nextSyncCommittee))
 }
 
-func (state *BeaconStateView) RotateSyncCommittee(next *SyncCommitteeView) error {
+func (state *BeaconStateView) RotateSyncCommittee(next *common.SyncCommitteeView) error {
 	v, err := state.Get(_nextSyncCommittee)
 	if err != nil {
 		return err

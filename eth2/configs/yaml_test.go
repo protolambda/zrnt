@@ -27,16 +27,6 @@ func TestYamlDecodingMainnetPhase0(t *testing.T) {
 	}
 }
 
-func TestYamlDecodingMainnetPhase1(t *testing.T) {
-	var conf common.Phase1Config
-	if err := yaml.Unmarshal(mustLoad("mainnet", "phase1"), &conf); err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(conf, Mainnet.Phase1Config) {
-		t.Fatal("Failed to load mainnet phase1 config")
-	}
-}
-
 func TestYamlDecodingMainnetAltair(t *testing.T) {
 	var conf common.AltairConfig
 	if err := yaml.Unmarshal(mustLoad("mainnet", "altair"), &conf); err != nil {
@@ -44,6 +34,26 @@ func TestYamlDecodingMainnetAltair(t *testing.T) {
 	}
 	if !reflect.DeepEqual(conf, Mainnet.AltairConfig) {
 		t.Fatal("Failed to load mainnet altair config")
+	}
+}
+
+func TestYamlDecodingMainnetMerge(t *testing.T) {
+	var conf common.MergeConfig
+	if err := yaml.Unmarshal(mustLoad("mainnet", "merge"), &conf); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(conf, Mainnet.MergeConfig) {
+		t.Fatal("Failed to load mainnet merge config")
+	}
+}
+
+func TestYamlDecodingMainnetSharding(t *testing.T) {
+	var conf common.ShardingConfig
+	if err := yaml.Unmarshal(mustLoad("mainnet", "sharding"), &conf); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(conf, Mainnet.ShardingConfig) {
+		t.Fatal("Failed to load mainnet sharding config")
 	}
 }
 
@@ -57,16 +67,6 @@ func TestYamlDecodingMinimalPhase0(t *testing.T) {
 	}
 }
 
-func TestYamlDecodingMinimalPhase1(t *testing.T) {
-	var conf common.Phase1Config
-	if err := yaml.Unmarshal(mustLoad("minimal", "phase1"), &conf); err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(conf, Minimal.Phase1Config) {
-		t.Fatal("Failed to load minimal phase1 config")
-	}
-}
-
 func TestYamlDecodingMinimalAltair(t *testing.T) {
 	var conf common.AltairConfig
 	if err := yaml.Unmarshal(mustLoad("minimal", "altair"), &conf); err != nil {
@@ -74,5 +74,25 @@ func TestYamlDecodingMinimalAltair(t *testing.T) {
 	}
 	if !reflect.DeepEqual(conf, Minimal.AltairConfig) {
 		t.Fatal("Failed to load minimal altair config")
+	}
+}
+
+func TestYamlDecodingMinimalMerge(t *testing.T) {
+	var conf common.MergeConfig
+	if err := yaml.Unmarshal(mustLoad("minimal", "merge"), &conf); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(conf, Minimal.MergeConfig) {
+		t.Fatal("Failed to load minimal merge config")
+	}
+}
+
+func TestYamlDecodingMinimalSharding(t *testing.T) {
+	var conf common.ShardingConfig
+	if err := yaml.Unmarshal(mustLoad("minimal", "sharding"), &conf); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(conf, Minimal.ShardingConfig) {
+		t.Fatal("Failed to load minimal sharding config")
 	}
 }

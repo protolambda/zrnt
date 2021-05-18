@@ -98,7 +98,6 @@ var Mainnet = &common.Spec{
 		TARGET_SAMPLES_PER_BLOCK:        1024,
 		MAX_GASPRICE:                    1 << 33,
 		MIN_GASPRICE:                    8,
-		SHARD_COMMITTEE_PERIOD:          256,
 		DOMAIN_SHARD_PROPOSER:           common.BLSDomainType{0x80, 0x00, 0x00, 0x00},
 		DOMAIN_SHARD_COMMITTEE:          common.BLSDomainType{0x81, 0x00, 0x00, 0x00},
 	},

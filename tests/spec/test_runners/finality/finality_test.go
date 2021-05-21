@@ -3,7 +3,9 @@ package finality
 import (
 	"context"
 	"fmt"
+	"github.com/protolambda/zrnt/eth2/beacon/altair"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/merge"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"gopkg.in/yaml.v3"
@@ -12,25 +14,44 @@ import (
 
 type FinalityTestCase struct {
 	test_util.BaseTransitionTest
-	Blocks []*phase0.SignedBeaconBlock
+	Blocks []*common.BeaconBlockEnvelope
 }
 
 type BlocksCountMeta struct {
 	BlocksCount uint64 `yaml:"blocks_count"`
 }
 
-func (c *FinalityTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
-	c.BaseTransitionTest.Load(t, readPart)
+func (c *FinalityTestCase) Load(t *testing.T, forkName test_util.ForkName, readPart test_util.TestPartReader) {
+	c.BaseTransitionTest.Load(t, forkName, readPart)
 	p := readPart.Part("meta.yaml")
 	dec := yaml.NewDecoder(p)
 	m := &BlocksCountMeta{}
 	test_util.Check(t, dec.Decode(&m))
 	test_util.Check(t, p.Close())
-	loadBlock := func(i uint64) *phase0.SignedBeaconBlock {
-		dst := new(phase0.SignedBeaconBlock)
-		test_util.LoadSpecObj(t, fmt.Sprintf("blocks_%d", i), dst, readPart)
-		return dst
+	valRoot, err := c.Pre.GenesisValidatorsRoot()
+	test_util.Check(t, err)
+	digest := common.ComputeForkDigest(c.Spec.GENESIS_FORK_VERSION, valRoot)
+
+	loadBlock := func(i uint64) *common.BeaconBlockEnvelope {
+		switch forkName {
+		case "phase0":
+			dst := new(phase0.SignedBeaconBlock)
+			test_util.LoadSpecObj(t, fmt.Sprintf("blocks_%d", i), dst, readPart)
+			return dst.Envelope(c.Spec, digest)
+		case "altair":
+			dst := new(altair.SignedBeaconBlock)
+			test_util.LoadSpecObj(t, fmt.Sprintf("blocks_%d", i), dst, readPart)
+			return dst.Envelope(c.Spec, digest)
+		case "merge":
+			dst := new(merge.SignedBeaconBlock)
+			test_util.LoadSpecObj(t, fmt.Sprintf("blocks_%d", i), dst, readPart)
+			return dst.Envelope(c.Spec, digest)
+		default:
+			t.Fatal(fmt.Errorf("unrecognized fork name: %s", forkName))
+			return nil
+		}
 	}
+
 	for i := uint64(0); i < m.BlocksCount; i++ {
 		c.Blocks = append(c.Blocks, loadBlock(i))
 	}
@@ -42,14 +63,8 @@ func (c *FinalityTestCase) Run() error {
 		return err
 	}
 	state := c.Pre
-	valRoot, err := state.GenesisValidatorsRoot()
-	if err != nil {
-		return err
-	}
-	digest := common.ComputeForkDigest(c.Spec.GENESIS_FORK_VERSION, valRoot)
 	for _, b := range c.Blocks {
-		benv := b.Envelope(c.Spec, digest)
-		if err := common.StateTransition(context.Background(), c.Spec, epc, state, benv, true); err != nil {
+		if err := common.StateTransition(context.Background(), c.Spec, epc, state, b, true); err != nil {
 			return err
 		}
 	}
@@ -57,6 +72,6 @@ func (c *FinalityTestCase) Run() error {
 }
 
 func TestBlocks(t *testing.T) {
-	test_util.RunTransitionTest(t, "finality", "finality",
+	test_util.RunTransitionTest(t, test_util.AllForks, "finality", "finality",
 		func() test_util.TransitionTest { return new(FinalityTestCase) })
 }

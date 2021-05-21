@@ -149,7 +149,7 @@ func GenesisFromEth1(spec *common.Spec, eth1BlockHash common.Root, time common.T
 	return state, epc, nil
 }
 
-func IsValidGenesisState(spec *common.Spec, state *BeaconStateView) (bool, error) {
+func IsValidGenesisState(spec *common.Spec, state common.BeaconState) (bool, error) {
 	genTime, err := state.GenesisTime()
 	if err != nil {
 		return false, err

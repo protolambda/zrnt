@@ -31,7 +31,10 @@ type Eth1InitData struct {
 	Eth1Timestamp common.Timestamp `yaml:"eth1_timestamp"`
 }
 
-func (c *InitializationTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
+func (c *InitializationTestCase) Load(t *testing.T, forkName test_util.ForkName, readPart test_util.TestPartReader) {
+	if forkName != "phase0" {
+		t.Fatalf("genesis initialization not supported for fork %s", forkName)
+	}
 	c.Spec = readPart.Spec()
 	{
 		p := readPart.Part("state.ssz_snappy")
@@ -104,6 +107,7 @@ func (c *InitializationTestCase) Check(t *testing.T) {
 }
 
 func TestInitialization(t *testing.T) {
-	test_util.RunTransitionTest(t, "genesis", "initialization",
+	// TODO: support initialization for all forks, not just phase0
+	test_util.RunTransitionTest(t, []test_util.ForkName{"phase0"}, "genesis", "initialization",
 		func() test_util.TransitionTest { return new(InitializationTestCase) })
 }

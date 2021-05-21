@@ -123,7 +123,7 @@ type RootsYAML struct {
 func (obj *ObjData) runSSZStaticTest(spec *common.Spec) func(t *testing.T) {
 	return func(t *testing.T) {
 
-		test_util.RunHandler(t, "ssz_static/"+obj.TypeName, func(t *testing.T, readPart test_util.TestPartReader) {
+		test_util.RunHandler(t, "ssz_static/"+obj.TypeName, func(t *testing.T, forkName test_util.ForkName, readPart test_util.TestPartReader) {
 			c := &SSZStaticTestCase{
 				Spec:     readPart.Spec(),
 				TypeName: obj.TypeName,
@@ -160,7 +160,7 @@ func (obj *ObjData) runSSZStaticTest(spec *common.Spec) func(t *testing.T) {
 			// Run the test case
 			c.Run(t)
 
-		}, spec)
+		}, spec, "phase0") // TODO: multiple forks
 	}
 }
 

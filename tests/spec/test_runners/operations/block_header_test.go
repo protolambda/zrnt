@@ -13,8 +13,8 @@ type BlockHeaderTestCase struct {
 	Block phase0.BeaconBlock
 }
 
-func (c *BlockHeaderTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
-	c.BaseTransitionTest.Load(t, readPart)
+func (c *BlockHeaderTestCase) Load(t *testing.T, forkName test_util.ForkName, readPart test_util.TestPartReader) {
+	c.BaseTransitionTest.Load(t, forkName, readPart)
 	test_util.LoadSpecObj(t, "block", &c.Block, readPart)
 }
 
@@ -31,6 +31,6 @@ func (c *BlockHeaderTestCase) Run() error {
 }
 
 func TestBlockHeader(t *testing.T) {
-	test_util.RunTransitionTest(t, "operations", "block_header",
+	test_util.RunTransitionTest(t, test_util.AllForks, "operations", "block_header",
 		func() test_util.TransitionTest { return new(BlockHeaderTestCase) })
 }

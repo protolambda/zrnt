@@ -19,8 +19,8 @@ type BlocksCountMeta struct {
 	BlocksCount uint64 `yaml:"blocks_count"`
 }
 
-func (c *BlocksTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
-	c.BaseTransitionTest.Load(t, readPart)
+func (c *BlocksTestCase) Load(t *testing.T, forkName test_util.ForkName, readPart test_util.TestPartReader) {
+	c.BaseTransitionTest.Load(t, forkName, readPart)
 	p := readPart.Part("meta.yaml")
 	dec := yaml.NewDecoder(p)
 	m := &BlocksCountMeta{}
@@ -57,6 +57,8 @@ func (c *BlocksTestCase) Run() error {
 }
 
 func TestBlocks(t *testing.T) {
-	test_util.RunTransitionTest(t, "sanity", "blocks",
+	// TODO: blocks of different phases
+	// TODO: fork activation
+	test_util.RunTransitionTest(t, test_util.AllForks, "sanity", "blocks",
 		func() test_util.TransitionTest { return new(BlocksTestCase) })
 }

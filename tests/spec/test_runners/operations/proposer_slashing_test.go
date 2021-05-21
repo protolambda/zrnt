@@ -12,8 +12,8 @@ type ProposerSlashingTestCase struct {
 	ProposerSlashing phase0.ProposerSlashing
 }
 
-func (c *ProposerSlashingTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
-	c.BaseTransitionTest.Load(t, readPart)
+func (c *ProposerSlashingTestCase) Load(t *testing.T, forkName test_util.ForkName, readPart test_util.TestPartReader) {
+	c.BaseTransitionTest.Load(t, forkName, readPart)
 	test_util.LoadSSZ(t, "proposer_slashing", &c.ProposerSlashing, readPart)
 }
 
@@ -26,6 +26,6 @@ func (c *ProposerSlashingTestCase) Run() error {
 }
 
 func TestProposerSlashing(t *testing.T) {
-	test_util.RunTransitionTest(t, "operations", "proposer_slashing",
+	test_util.RunTransitionTest(t, test_util.AllForks, "operations", "proposer_slashing",
 		func() test_util.TransitionTest { return new(ProposerSlashingTestCase) })
 }

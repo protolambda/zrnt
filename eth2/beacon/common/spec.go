@@ -196,6 +196,9 @@ type Spec struct {
 	AltairConfig   `yaml:",inline"`
 	MergeConfig    `yaml:",inline"`
 	ShardingConfig `yaml:",inline"`
+
+	// Experimental, for merge purposes
+	ExecutionEngine `yaml:"-"`
 }
 
 func (spec *Spec) Wrap(des SpecObj) SSZObj {

@@ -38,7 +38,7 @@ type BeaconState struct {
 	CurrentJustifiedCheckpoint  common.Checkpoint        `json:"current_justified_checkpoint" yaml:"current_justified_checkpoint"`
 	FinalizedCheckpoint         common.Checkpoint        `json:"finalized_checkpoint" yaml:"finalized_checkpoint"`
 	// Execution-layer
-	LatestExecutionPayloadHeader ExecutionPayloadHeader `json:"latest_execution_payload_header" yaml:"latest_execution_payload_header"`
+	LatestExecutionPayloadHeader common.ExecutionPayloadHeader `json:"latest_execution_payload_header" yaml:"latest_execution_payload_header"`
 }
 
 func (v *BeaconState) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
@@ -160,7 +160,7 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 		{"current_justified_checkpoint", common.CheckpointType},
 		{"finalized_checkpoint", common.CheckpointType},
 		// Execution-layer
-		{"latest_execution_payload_header", ExecutionPayloadHeaderType},
+		{"latest_execution_payload_header", common.ExecutionPayloadHeaderType},
 	})
 }
 
@@ -279,12 +279,8 @@ func (state *BeaconStateView) Balances() (common.Balances, error) {
 	return phase0.AsRegistryBalances(state.Get(_stateBalances))
 }
 
-func (state *BeaconStateView) setBalances(spec *common.Spec, bals []BasicView) error {
-	newBalancesTree, err := phase0.RegistryBalancesType(spec).FromElements(bals...)
-	if err != nil {
-		return err
-	}
-	return state.Set(_stateBalances, newBalancesTree)
+func (state *BeaconStateView) SetBalances(balances *phase0.RegistryBalancesView) error {
+	return state.Set(_stateBalances, balances)
 }
 
 func (state *BeaconStateView) AddValidator(spec *common.Spec, pub common.BLSPubkey, withdrawalCreds common.Root, balance common.Gwei) error {
@@ -406,11 +402,11 @@ func (state *BeaconStateView) SetFinalizedCheckpoint(c common.Checkpoint) error 
 	return v.Set(&c)
 }
 
-func (state *BeaconStateView) LatestExecutionPayloadHeader() (*ExecutionPayloadHeaderView, error) {
-	return AsExecutionPayloadHeader(state.Get(_latestExecutionPayloadHeader))
+func (state *BeaconStateView) LatestExecutionPayloadHeader() (*common.ExecutionPayloadHeaderView, error) {
+	return common.AsExecutionPayloadHeader(state.Get(_latestExecutionPayloadHeader))
 }
 
-func (state *BeaconStateView) SetLatestExecutionPayloadHeader(h *ExecutionPayloadHeader) error {
+func (state *BeaconStateView) SetLatestExecutionPayloadHeader(h *common.ExecutionPayloadHeader) error {
 	return state.Set(_latestExecutionPayloadHeader, h.View())
 }
 

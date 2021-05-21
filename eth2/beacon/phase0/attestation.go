@@ -87,7 +87,7 @@ func (li Attestations) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.R
 	}, length, spec.MAX_ATTESTATIONS)
 }
 
-func ProcessAttestations(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView, ops []Attestation) error {
+func ProcessAttestations(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state PendingAttestationsBeaconState, ops []Attestation) error {
 	for i := range ops {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -99,7 +99,7 @@ func ProcessAttestations(ctx context.Context, spec *common.Spec, epc *common.Epo
 	return nil
 }
 
-func ProcessAttestation(spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView, attestation *Attestation) error {
+func ProcessAttestation(spec *common.Spec, epc *common.EpochsContext, state PendingAttestationsBeaconState, attestation *Attestation) error {
 	data := &attestation.Data
 
 	// Check slot

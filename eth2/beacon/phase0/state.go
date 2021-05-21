@@ -269,12 +269,8 @@ func (state *BeaconStateView) Balances() (common.Balances, error) {
 	return AsRegistryBalances(state.Get(_stateBalances))
 }
 
-func (state *BeaconStateView) setBalances(spec *common.Spec, bals []BasicView) error {
-	newBalancesTree, err := RegistryBalancesType(spec).FromElements(bals...)
-	if err != nil {
-		return err
-	}
-	return state.Set(_stateBalances, newBalancesTree)
+func (state *BeaconStateView) SetBalances(balances *RegistryBalancesView) error {
+	return state.Set(_stateBalances, balances)
 }
 
 func (state *BeaconStateView) AddValidator(spec *common.Spec, pub common.BLSPubkey, withdrawalCreds common.Root, balance common.Gwei) error {

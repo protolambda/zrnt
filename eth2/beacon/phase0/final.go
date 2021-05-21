@@ -100,7 +100,7 @@ func ProcessHistoricalRootsUpdate(ctx context.Context, spec *common.Spec, epc *c
 	return nil
 }
 
-func ProcessParticipationRecordUpdates(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView) error {
+func ProcessParticipationRecordUpdates(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state PendingAttestationsBeaconState) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}

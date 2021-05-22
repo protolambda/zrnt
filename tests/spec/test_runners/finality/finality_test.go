@@ -30,21 +30,23 @@ func (c *FinalityTestCase) Load(t *testing.T, forkName test_util.ForkName, readP
 	test_util.Check(t, p.Close())
 	valRoot, err := c.Pre.GenesisValidatorsRoot()
 	test_util.Check(t, err)
-	digest := common.ComputeForkDigest(c.Spec.GENESIS_FORK_VERSION, valRoot)
 
 	loadBlock := func(i uint64) *common.BeaconBlockEnvelope {
 		switch forkName {
 		case "phase0":
 			dst := new(phase0.SignedBeaconBlock)
 			test_util.LoadSpecObj(t, fmt.Sprintf("blocks_%d", i), dst, readPart)
+			digest := common.ComputeForkDigest(c.Spec.GENESIS_FORK_VERSION, valRoot)
 			return dst.Envelope(c.Spec, digest)
 		case "altair":
 			dst := new(altair.SignedBeaconBlock)
 			test_util.LoadSpecObj(t, fmt.Sprintf("blocks_%d", i), dst, readPart)
+			digest := common.ComputeForkDigest(c.Spec.ALTAIR_FORK_VERSION, valRoot)
 			return dst.Envelope(c.Spec, digest)
 		case "merge":
 			dst := new(merge.SignedBeaconBlock)
 			test_util.LoadSpecObj(t, fmt.Sprintf("blocks_%d", i), dst, readPart)
+			digest := common.ComputeForkDigest(c.Spec.MERGE_FORK_VERSION, valRoot)
 			return dst.Envelope(c.Spec, digest)
 		default:
 			t.Fatal(fmt.Errorf("unrecognized fork name: %s", forkName))

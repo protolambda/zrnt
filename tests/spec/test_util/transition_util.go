@@ -2,6 +2,7 @@ package test_util
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"github.com/golang/snappy"
 	"github.com/protolambda/messagediff"
@@ -145,17 +146,29 @@ func RunTransitionTest(t *testing.T, forks []ForkName, runnerName string, handle
 		c.Check(t)
 	})
 	t.Run("minimal", func(t *testing.T) {
+		spec := *configs.Minimal
+		spec.ExecutionEngine = &NoOpExecutionEngine{}
 		for _, fork := range forks {
 			t.Run(string(fork), func(t *testing.T) {
-				RunHandler(t, runnerName+"/"+handlerName, caseRunner, configs.Minimal, fork)
+				RunHandler(t, runnerName+"/"+handlerName, caseRunner, &spec, fork)
 			})
 		}
 	})
 	t.Run("mainnet", func(t *testing.T) {
+		spec := *configs.Mainnet
+		spec.ExecutionEngine = &NoOpExecutionEngine{}
 		for _, fork := range forks {
 			t.Run(string(fork), func(t *testing.T) {
-				RunHandler(t, runnerName+"/"+handlerName, caseRunner, configs.Mainnet, fork)
+				RunHandler(t, runnerName+"/"+handlerName, caseRunner, &spec, fork)
 			})
 		}
 	})
 }
+
+type NoOpExecutionEngine struct{}
+
+func (m *NoOpExecutionEngine) NewBlock(ctx context.Context, executionPayload *common.ExecutionPayload) (success bool, err error) {
+	return true, nil
+}
+
+var _ common.ExecutionEngine = (*NoOpExecutionEngine)(nil)

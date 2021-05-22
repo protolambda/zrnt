@@ -2,6 +2,7 @@ package test_util
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/golang/snappy"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/codec"
@@ -122,6 +123,8 @@ func LoadSpecObj(t *testing.T, name string, dst common.SpecObj, readPart TestPar
 		uncompressed, err := snappy.Decode(nil, data)
 		Check(t, err)
 		spec := readPart.Spec()
+		wow := fmt.Sprintf("%x", uncompressed)
+		fmt.Println(wow)
 		Check(t, dst.Deserialize(spec, codec.NewDecodingReader(bytes.NewReader(uncompressed), uint64(len(uncompressed)))))
 		return true
 	} else {

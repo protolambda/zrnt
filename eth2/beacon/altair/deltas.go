@@ -94,10 +94,6 @@ func AttestationRewardsAndPenalties(ctx context.Context, spec *common.Spec, epc 
 	finalityDelay := attesterData.PrevEpoch - finalized.Epoch
 	isInactivityLeak := finalityDelay > spec.MIN_EPOCHS_TO_INACTIVITY_PENALTY
 
-	currentEpoch := epc.CurrentEpoch.Epoch
-	if currentEpoch == common.GENESIS_EPOCH {
-		return nil, nil
-	}
 	sourceDeltas, err := ComputeFlagDeltas(ctx, spec, epc, attesterData,
 		TIMELY_SOURCE_FLAG, common.Gwei(TIMELY_SOURCE_WEIGHT), isInactivityLeak)
 	if err != nil {
@@ -131,6 +127,11 @@ func AttestationRewardsAndPenalties(ctx context.Context, spec *common.Spec, epc 
 
 func ProcessEpochRewardsAndPenalties(ctx context.Context, spec *common.Spec, epc *common.EpochsContext,
 	attesterData *EpochAttesterData, state *BeaconStateView) error {
+	currentEpoch := epc.CurrentEpoch.Epoch
+	if currentEpoch == common.GENESIS_EPOCH {
+		return nil
+	}
+
 	rewAndPenalties, err := AttestationRewardsAndPenalties(ctx, spec, epc, attesterData, state)
 	if err != nil {
 		return err

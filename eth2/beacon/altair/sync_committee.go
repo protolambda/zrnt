@@ -123,8 +123,9 @@ func (agg *SyncAggregate) ByteLength(spec *common.Spec) uint64 {
 	)
 }
 
-func (agg *SyncAggregate) FixedLength(*common.Spec) uint64 {
-	return 0
+func (agg *SyncAggregate) FixedLength(spec *common.Spec) uint64 {
+	// bitvector + signature
+	return (spec.SYNC_COMMITTEE_SIZE+7)/8 + 96
 }
 
 func (agg *SyncAggregate) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {

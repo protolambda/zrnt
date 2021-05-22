@@ -25,8 +25,8 @@ func (spec *Spec) TimeAtSlot(slot Slot, genesisTime Timestamp) (Timestamp, error
 	// GENESIS_SLOT == 0, no need to subtract it
 	max := (^Timestamp(0)) - genesisTime
 	max /= spec.SECONDS_PER_SLOT
-	if Slot(max) >= slot {
-		return 0, fmt.Errorf("slot value %d is abnormally high: %d, timestamp calculation would overflow 64 bits, max is %d", slot, max)
+	if slot >= Slot(max) {
+		return 0, fmt.Errorf("slot value is abnormally high: %d, timestamp calculation would overflow 64 bits, max is %d", slot, max)
 	}
 	return (Timestamp(slot) * spec.SECONDS_PER_SLOT) + genesisTime, nil
 }

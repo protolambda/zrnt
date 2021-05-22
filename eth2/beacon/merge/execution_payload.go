@@ -2,6 +2,7 @@ package merge
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 )
@@ -9,6 +10,9 @@ import (
 func ProcessExecutionPayload(ctx context.Context, spec *common.Spec, state *BeaconStateView, executionPayload *common.ExecutionPayload, engine common.ExecutionEngine) error {
 	if err := ctx.Err(); err != nil {
 		return err
+	}
+	if engine == nil {
+		return errors.New("nil execution engine")
 	}
 	if completed, err := state.IsTransitionCompleted(); err != nil {
 		return err

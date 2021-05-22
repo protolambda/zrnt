@@ -34,7 +34,6 @@ func (c *SlotsTestCase) Run() error {
 }
 
 func TestSlots(t *testing.T) {
-	// TODO: fork activation
 	test_util.RunTransitionTest(t, test_util.AllForks, "sanity", "slots",
 		func() test_util.TransitionTest { return new(SlotsTestCase) })
 }

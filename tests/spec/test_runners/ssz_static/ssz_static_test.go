@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/hex"
 	"github.com/golang/snappy"
+	"github.com/protolambda/zrnt/eth2/beacon/altair"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/merge"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/eth2/configs"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
@@ -91,46 +93,84 @@ func (testCase *SSZStaticTestCase) Run(t *testing.T) {
 
 type ObjAllocator func() interface{}
 
-type ObjData struct {
-	TypeName string
-	Alloc    ObjAllocator
+var objs = map[test_util.ForkName]map[string]ObjAllocator{
+	"phase0": {},
+	"altair": {},
+	"merge":  {},
 }
 
-var objs = []*ObjData{
-	{TypeName: "Fork", Alloc: func() interface{} { return new(common.Fork) }},
-	{TypeName: "Eth1Data", Alloc: func() interface{} { return new(common.Eth1Data) }},
-	{TypeName: "AttestationData", Alloc: func() interface{} { return new(phase0.AttestationData) }},
-	{TypeName: "IndexedAttestation", Alloc: func() interface{} { return new(phase0.IndexedAttestation) }},
-	{TypeName: "DepositData", Alloc: func() interface{} { return new(common.DepositData) }},
-	{TypeName: "BeaconBlockHeader", Alloc: func() interface{} { return new(common.BeaconBlockHeader) }},
-	{TypeName: "Validator", Alloc: func() interface{} { return new(phase0.Validator) }},
-	{TypeName: "PendingAttestation", Alloc: func() interface{} { return new(phase0.PendingAttestation) }},
-	{TypeName: "HistoricalBatch", Alloc: func() interface{} { return new(phase0.HistoricalBatch) }},
-	{TypeName: "ProposerSlashing", Alloc: func() interface{} { return new(phase0.ProposerSlashing) }},
-	{TypeName: "AttesterSlashing", Alloc: func() interface{} { return new(phase0.AttesterSlashing) }},
-	{TypeName: "Attestation", Alloc: func() interface{} { return new(phase0.Attestation) }},
-	{TypeName: "Deposit", Alloc: func() interface{} { return new(common.Deposit) }},
-	{TypeName: "VoluntaryExit", Alloc: func() interface{} { return new(phase0.VoluntaryExit) }},
-	{TypeName: "BeaconBlockBody", Alloc: func() interface{} { return new(phase0.BeaconBlockBody) }},
-	{TypeName: "BeaconBlock", Alloc: func() interface{} { return new(phase0.BeaconBlock) }},
-	{TypeName: "BeaconState", Alloc: func() interface{} { return new(phase0.BeaconState) }},
+func init() {
+	base := map[string]ObjAllocator{
+		"AggregateAndProof": func() interface{} { return new(phase0.AggregateAndProof) },
+		"Attestation":       func() interface{} { return new(phase0.Attestation) },
+		"AttestationData":   func() interface{} { return new(phase0.AttestationData) },
+		"AttesterSlashing":  func() interface{} { return new(phase0.AttesterSlashing) },
+		"BeaconBlockHeader": func() interface{} { return new(common.BeaconBlockHeader) },
+		"Checkpoint":        func() interface{} { return new(common.Checkpoint) },
+		"Deposit":           func() interface{} { return new(common.Deposit) },
+		"DepositData":       func() interface{} { return new(common.DepositData) },
+		//"Eth1Block": func() interface{} { return new(common.Eth1Block) }, // phase0 validator spec remnant
+		"Eth1Data":                func() interface{} { return new(common.Eth1Data) },
+		"Fork":                    func() interface{} { return new(common.Fork) },
+		"ForkData":                func() interface{} { return new(common.ForkData) },
+		"HistoricalBatch":         func() interface{} { return new(phase0.HistoricalBatch) },
+		"IndexedAttestation":      func() interface{} { return new(phase0.IndexedAttestation) },
+		"PendingAttestation":      func() interface{} { return new(phase0.PendingAttestation) },
+		"ProposerSlashing":        func() interface{} { return new(phase0.ProposerSlashing) },
+		"SignedAggregateAndProof": func() interface{} { return new(phase0.SignedAggregateAndProof) },
+		"SignedBeaconBlockHeader": func() interface{} { return new(common.SignedBeaconBlockHeader) },
+		"SignedVoluntaryExit":     func() interface{} { return new(phase0.SignedVoluntaryExit) },
+		//"SigningData": func() interface{} { return new(common.SigningData) },  // not really encoded/decoded, just HTR
+		"Validator":     func() interface{} { return new(phase0.Validator) },
+		"VoluntaryExit": func() interface{} { return new(phase0.VoluntaryExit) },
+	}
+	for k, v := range base {
+		objs["phase0"][k] = v
+		objs["altair"][k] = v
+		objs["merge"][k] = v
+	}
+	objs["phase0"]["BeaconBlockBody"] = func() interface{} { return new(phase0.BeaconBlockBody) }
+	objs["phase0"]["BeaconBlock"] = func() interface{} { return new(phase0.BeaconBlock) }
+	objs["phase0"]["BeaconState"] = func() interface{} { return new(phase0.BeaconState) }
+	objs["phase0"]["SignedBeaconBlock"] = func() interface{} { return new(phase0.SignedBeaconBlock) }
+
+	objs["altair"]["BeaconBlockBody"] = func() interface{} { return new(altair.BeaconBlockBody) }
+	objs["altair"]["BeaconBlock"] = func() interface{} { return new(altair.BeaconBlock) }
+	objs["altair"]["BeaconState"] = func() interface{} { return new(altair.BeaconState) }
+	objs["altair"]["SignedBeaconBlock"] = func() interface{} { return new(altair.SignedBeaconBlock) }
+	objs["altair"]["SyncAggregate"] = func() interface{} { return new(altair.SyncAggregate) }
+	//objs["altair"]["LightClientSnapshot"] = func() interface{} { return new(altair.LightClientSnapshot) }
+	//objs["altair"]["LightClientUpdate"] = func() interface{} { return new(altair.LightClientUpdate) }
+	//objs["altair"]["ContributionAndProof"] = func() interface{} { return new(altair.ContributionAndProof) }
+	//objs["altair"]["SignedContributionAndProof"] = func() interface{} { return new(altair.SignedContributionAndProof) }
+	//objs["altair"]["SyncAggregatorSelectionData"] = func() interface{} { return new(altair.SyncAggregatorSelectionData) }
+	//objs["altair"]["SyncCommittee"] = func() interface{} { return new(altair.SyncCommittee) }
+	//objs["altair"]["SyncCommitteeSignature"] = func() interface{} { return new(altair.SyncCommitteeSignature) }
+
+	objs["merge"]["BeaconBlockBody"] = func() interface{} { return new(merge.BeaconBlockBody) }
+	objs["merge"]["BeaconBlock"] = func() interface{} { return new(merge.BeaconBlock) }
+	objs["merge"]["BeaconState"] = func() interface{} { return new(merge.BeaconState) }
+	objs["merge"]["SignedBeaconBlock"] = func() interface{} { return new(merge.SignedBeaconBlock) }
+	objs["merge"]["ExecutionPayload"] = func() interface{} { return new(common.ExecutionPayload) }
+	objs["merge"]["ExecutionPayloadHeader"] = func() interface{} { return new(common.ExecutionPayloadHeader) }
+	//objs["merge"]["PowBlock"] = func() interface{} { return new(merge.PowBlock) }
+
 }
 
 type RootsYAML struct {
 	Root string `yaml:"root"`
 }
 
-func (obj *ObjData) runSSZStaticTest(spec *common.Spec) func(t *testing.T) {
+func runSSZStaticTest(fork test_util.ForkName, name string, alloc ObjAllocator, spec *common.Spec) func(t *testing.T) {
 	return func(t *testing.T) {
-
-		test_util.RunHandler(t, "ssz_static/"+obj.TypeName, func(t *testing.T, readPart test_util.TestPartReader) {
+		test_util.RunHandler(t, "ssz_static/"+name, func(t *testing.T, forkName test_util.ForkName, readPart test_util.TestPartReader) {
 			c := &SSZStaticTestCase{
 				Spec:     readPart.Spec(),
-				TypeName: obj.TypeName,
+				TypeName: name,
 			}
 
 			// Allocate an empty value to decode into later for testing.
-			c.Value = obj.Alloc()
+			c.Value = alloc()
 
 			// Load the SSZ encoded data as a bytes array. The test will serialize it both ways.
 			{
@@ -160,18 +200,28 @@ func (obj *ObjData) runSSZStaticTest(spec *common.Spec) func(t *testing.T) {
 			// Run the test case
 			c.Run(t)
 
-		}, spec)
+		}, spec, fork)
 	}
-}
-
-func (obj *ObjData) RunHandler(t *testing.T) {
-	t.Run("minimal", obj.runSSZStaticTest(configs.Minimal))
-	t.Run("mainnet", obj.runSSZStaticTest(configs.Mainnet))
 }
 
 func TestSSZStatic(t *testing.T) {
 	t.Parallel()
-	for _, o := range objs {
-		o.RunHandler(t)
-	}
+	t.Run("minimal", func(t *testing.T) {
+		for fork, objByName := range objs {
+			t.Run(string(fork), func(t *testing.T) {
+				for k, v := range objByName {
+					t.Run(k, runSSZStaticTest(fork, k, v, configs.Minimal))
+				}
+			})
+		}
+	})
+	t.Run("mainnet", func(t *testing.T) {
+		for fork, objByName := range objs {
+			t.Run(string(fork), func(t *testing.T) {
+				for k, v := range objByName {
+					t.Run(k, runSSZStaticTest(fork, k, v, configs.Mainnet))
+				}
+			})
+		}
+	})
 }

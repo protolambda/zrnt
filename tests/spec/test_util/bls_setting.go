@@ -17,7 +17,7 @@ type BLSMeta struct {
 }
 
 func HandleBLS(testRunner CaseRunner) CaseRunner {
-	return func(t *testing.T, readPart TestPartReader) {
+	return func(t *testing.T, forkName ForkName, readPart TestPartReader) {
 		part := readPart.Part("meta.yaml")
 		if part.Exists() {
 			meta := BLSMeta{}
@@ -34,6 +34,6 @@ func HandleBLS(testRunner CaseRunner) CaseRunner {
 				return
 			}
 		}
-		testRunner(t, readPart)
+		testRunner(t, forkName, readPart)
 	}
 }

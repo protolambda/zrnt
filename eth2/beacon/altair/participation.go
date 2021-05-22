@@ -44,24 +44,25 @@ func (e ParticipationFlags) String() string {
 
 // Participation flag indices
 const (
-	TIMELY_HEAD_FLAG_INDEX   uint8 = 0
-	TIMELY_SOURCE_FLAG_INDEX uint8 = 1
-	TIMELY_TARGET_FLAG_INDEX uint8 = 2
+	TIMELY_SOURCE_FLAG_INDEX uint8 = 0
+	TIMELY_TARGET_FLAG_INDEX uint8 = 1
+	TIMELY_HEAD_FLAG_INDEX   uint8 = 2
 )
 
 const (
-	TIMELY_HEAD_FLAG   ParticipationFlags = 1 << TIMELY_HEAD_FLAG_INDEX
 	TIMELY_SOURCE_FLAG ParticipationFlags = 1 << TIMELY_SOURCE_FLAG_INDEX
 	TIMELY_TARGET_FLAG ParticipationFlags = 1 << TIMELY_TARGET_FLAG_INDEX
+	TIMELY_HEAD_FLAG   ParticipationFlags = 1 << TIMELY_HEAD_FLAG_INDEX
 )
 
 // Participation flag fractions
 const (
-	TIMELY_HEAD_WEIGHT   uint64 = 12
-	TIMELY_SOURCE_WEIGHT uint64 = 12
-	TIMELY_TARGET_WEIGHT uint64 = 24
-	SYNC_REWARD_WEIGHT   uint64 = 8
-	WEIGHT_DENOMINATOR   uint64 = 64
+	TIMELY_SOURCE_WEIGHT common.Gwei = 12
+	TIMELY_TARGET_WEIGHT common.Gwei = 24
+	TIMELY_HEAD_WEIGHT   common.Gwei = 12
+	SYNC_REWARD_WEIGHT   common.Gwei = 8
+	PROPOSER_WEIGHT      common.Gwei = 8
+	WEIGHT_DENOMINATOR   common.Gwei = 64
 )
 
 type ParticipationRegistry []ParticipationFlags
@@ -150,6 +151,9 @@ func (v *ParticipationRegistryView) FillZeroes(length uint64) error {
 }
 
 func ProcessParticipationFlagUpdates(ctx context.Context, spec *common.Spec, state *BeaconStateView) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	currentEp, err := state.CurrentEpochParticipation()
 	if err != nil {
 		return err

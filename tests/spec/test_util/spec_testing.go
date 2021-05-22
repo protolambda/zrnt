@@ -2,6 +2,7 @@ package test_util
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/golang/snappy"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/codec"
@@ -25,7 +26,7 @@ type TestPartReader interface {
 }
 
 // Runs a test case
-type CaseRunner func(t *testing.T, readPart TestPartReader)
+type CaseRunner func(t *testing.T, forkName ForkName, readPart TestPartReader)
 
 func Check(t *testing.T, err error) {
 	if err != nil {
@@ -63,12 +64,12 @@ func (s *partAndSpec) Spec() *common.Spec {
 	return s.spec
 }
 
-func RunHandler(t *testing.T, handlerPath string, caseRunner CaseRunner, spec *common.Spec) {
+func RunHandler(t *testing.T, handlerPath string, caseRunner CaseRunner, spec *common.Spec, fork ForkName) {
 	// get the current path, go to the root, and get the tests path
 	_, filename, _, _ := runtime.Caller(0)
 	basepath := filepath.Dir(filepath.Dir(filename))
 	handlerAbsPath := filepath.Join(basepath, "eth2.0-spec-tests", "tests",
-		spec.CONFIG_NAME, "phase0", filepath.FromSlash(handlerPath))
+		spec.CONFIG_NAME, string(fork), filepath.FromSlash(handlerPath))
 
 	forEachDir := func(t *testing.T, path string, callItem func(t *testing.T, path string)) {
 		if _, err := os.Stat(path); os.IsNotExist(err) {
@@ -99,7 +100,7 @@ func RunHandler(t *testing.T, handlerPath string, caseRunner CaseRunner, spec *c
 				return &testPartFile{File: f}
 			}
 		}
-		caseRunner(t, &partAndSpec{readPart: partReader, spec: spec})
+		caseRunner(t, fork, &partAndSpec{readPart: partReader, spec: spec})
 	}
 
 	runSuite := func(t *testing.T, path string) {
@@ -122,6 +123,8 @@ func LoadSpecObj(t *testing.T, name string, dst common.SpecObj, readPart TestPar
 		uncompressed, err := snappy.Decode(nil, data)
 		Check(t, err)
 		spec := readPart.Spec()
+		wow := fmt.Sprintf("%x", uncompressed)
+		fmt.Println(wow)
 		Check(t, dst.Deserialize(spec, codec.NewDecodingReader(bytes.NewReader(uncompressed), uint64(len(uncompressed)))))
 		return true
 	} else {

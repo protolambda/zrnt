@@ -3,6 +3,7 @@ package epoch_processing
 import (
 	"context"
 	"fmt"
+	"github.com/protolambda/zrnt/eth2/beacon/altair"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
@@ -11,22 +12,36 @@ import (
 )
 
 type RewardsTest struct {
-	Spec   *common.Spec
-	Pre    *phase0.BeaconStateView
-	Input  *phase0.RewardsAndPenalties
-	Output *phase0.RewardsAndPenalties
+	Spec *common.Spec
+	Pre  common.BeaconState
+
+	Input struct {
+		Source *common.Deltas
+		Target *common.Deltas
+		Head   *common.Deltas
+		// missing in Altair+
+		InclusionDelay *common.Deltas
+		Inactivity     *common.Deltas
+	}
+	Output struct {
+		Source *common.Deltas
+		Target *common.Deltas
+		Head   *common.Deltas
+		// missing in Altair+
+		InclusionDelay *common.Deltas
+		Inactivity     *common.Deltas
+	}
 }
 
 func (c *RewardsTest) ExpectingFailure() bool {
 	return false
 }
 
-func (c *RewardsTest) Load(t *testing.T, readPart test_util.TestPartReader) {
+func (c *RewardsTest) Load(t *testing.T, forkName test_util.ForkName, readPart test_util.TestPartReader) {
 	c.Spec = readPart.Spec()
 
-	c.Pre = test_util.LoadState(t, "pre", readPart)
+	c.Pre = test_util.LoadState(t, forkName, "pre", readPart)
 
-	c.Input = &phase0.RewardsAndPenalties{}
 	sourceDeltas := new(common.Deltas)
 	if test_util.LoadSpecObj(t, "source_deltas", sourceDeltas, readPart) {
 		c.Input.Source = sourceDeltas
@@ -45,11 +60,13 @@ func (c *RewardsTest) Load(t *testing.T, readPart test_util.TestPartReader) {
 	} else {
 		t.Fatalf("failed to load head_deltas")
 	}
-	inclusionDelayDeltas := new(common.Deltas)
-	if test_util.LoadSpecObj(t, "inclusion_delay_deltas", inclusionDelayDeltas, readPart) {
-		c.Input.InclusionDelay = inclusionDelayDeltas
-	} else {
-		t.Fatalf("failed to load inclusion_delay_deltas")
+	if forkName != "altair" {
+		inclusionDelayDeltas := new(common.Deltas)
+		if test_util.LoadSpecObj(t, "inclusion_delay_deltas", inclusionDelayDeltas, readPart) {
+			c.Input.InclusionDelay = inclusionDelayDeltas
+		} else {
+			t.Fatalf("failed to load inclusion_delay_deltas")
+		}
 	}
 	inactivityPenaltyDeltas := new(common.Deltas)
 	if test_util.LoadSpecObj(t, "inactivity_penalty_deltas", inactivityPenaltyDeltas, readPart) {
@@ -85,8 +102,15 @@ func (c *RewardsTest) Check(t *testing.T) {
 	diffDeltas("source", c.Output.Source, c.Input.Source)
 	diffDeltas("target", c.Output.Target, c.Input.Target)
 	diffDeltas("head", c.Output.Head, c.Input.Head)
-	diffDeltas("inclusion delay", c.Output.InclusionDelay, c.Input.InclusionDelay)
+	if c.Input.InclusionDelay != nil {
+		diffDeltas("inclusion delay", c.Output.InclusionDelay, c.Input.InclusionDelay)
+	}
 	diffDeltas("inactivity", c.Output.Inactivity, c.Input.Inactivity)
+}
+
+type phase0LikeRewards interface {
+	phase0.PendingAttestationsBeaconState
+	phase0.BalancesBeaconState
 }
 
 func (c *RewardsTest) Run() error {
@@ -102,28 +126,55 @@ func (c *RewardsTest) Run() error {
 	if err != nil {
 		return err
 	}
-	attesterData, err := phase0.ComputeEpochAttesterData(context.Background(), c.Spec, epc, flats, c.Pre)
-	if err != nil {
-		return err
+
+	if s, ok := c.Pre.(phase0LikeRewards); ok {
+		attesterData, err := phase0.ComputeEpochAttesterData(context.Background(), c.Spec, epc, flats, s)
+		if err != nil {
+			return err
+		}
+		deltas, err := phase0.AttestationRewardsAndPenalties(context.Background(), c.Spec, epc, attesterData, s)
+		if err != nil {
+			return err
+		}
+		c.Output.Source = deltas.Source
+		c.Output.Target = deltas.Target
+		c.Output.Head = deltas.Head
+		c.Output.InclusionDelay = deltas.InclusionDelay
+		c.Output.Inactivity = deltas.Inactivity
+	} else if s, ok := c.Pre.(*altair.BeaconStateView); ok {
+		attesterData, err := altair.ComputeEpochAttesterData(context.Background(), c.Spec, epc, flats, s)
+		if err != nil {
+			return err
+		}
+		deltas, err := altair.AttestationRewardsAndPenalties(context.Background(), c.Spec, epc, attesterData, s)
+		if err != nil {
+			return err
+		}
+		c.Output.Source = deltas.Source
+		c.Output.Target = deltas.Target
+		c.Output.Head = deltas.Head
+		// no inclusion delay penalties during epoch in altair+, part of the block processing instead.
+		c.Output.Inactivity = deltas.Inactivity
+	} else {
+		return fmt.Errorf("unrecognized state type: %T", c.Pre)
 	}
-	c.Output, err = phase0.AttestationRewardsAndPenalties(context.Background(), c.Spec, epc, attesterData, c.Pre)
 	return err
 }
 
 func TestBasic(t *testing.T) {
-	test_util.RunTransitionTest(t, "rewards", "basic", func() test_util.TransitionTest {
+	test_util.RunTransitionTest(t, test_util.AllForks, "rewards", "basic", func() test_util.TransitionTest {
 		return &RewardsTest{}
 	})
 }
 
 func TestLeak(t *testing.T) {
-	test_util.RunTransitionTest(t, "rewards", "leak", func() test_util.TransitionTest {
+	test_util.RunTransitionTest(t, test_util.AllForks, "rewards", "leak", func() test_util.TransitionTest {
 		return &RewardsTest{}
 	})
 }
 
 func TestRandom(t *testing.T) {
-	test_util.RunTransitionTest(t, "rewards", "random", func() test_util.TransitionTest {
+	test_util.RunTransitionTest(t, test_util.AllForks, "rewards", "random", func() test_util.TransitionTest {
 		return &RewardsTest{}
 	})
 }

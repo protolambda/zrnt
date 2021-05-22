@@ -12,8 +12,8 @@ type AttesterSlashingTestCase struct {
 	AttesterSlashing phase0.AttesterSlashing
 }
 
-func (c *AttesterSlashingTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
-	c.BaseTransitionTest.Load(t, readPart)
+func (c *AttesterSlashingTestCase) Load(t *testing.T, forkName test_util.ForkName, readPart test_util.TestPartReader) {
+	c.BaseTransitionTest.Load(t, forkName, readPart)
 	test_util.LoadSpecObj(t, "attester_slashing", &c.AttesterSlashing, readPart)
 }
 
@@ -26,6 +26,6 @@ func (c *AttesterSlashingTestCase) Run() error {
 }
 
 func TestAttesterSlashing(t *testing.T) {
-	test_util.RunTransitionTest(t, "operations", "attester_slashing",
+	test_util.RunTransitionTest(t, test_util.AllForks, "operations", "attester_slashing",
 		func() test_util.TransitionTest { return new(AttesterSlashingTestCase) })
 }

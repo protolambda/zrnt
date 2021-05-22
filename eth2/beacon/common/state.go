@@ -77,6 +77,7 @@ type Slashings interface {
 type ForkSettings struct {
 	MinSlashingPenaltyQuotient     uint64
 	ProportionalSlashingMultiplier uint64
+	CalcProposerShare              func(whistleblowerReward Gwei) Gwei
 }
 
 type BeaconState interface {
@@ -131,4 +132,11 @@ type BeaconState interface {
 	// ProcessBlock applies a block to the state.
 	// Excludes slot processing and signature validation. Just applies the block as-is. Error if mismatching slot.
 	ProcessBlock(ctx context.Context, spec *Spec, epc *EpochsContext, benv *BeaconBlockEnvelope) error
+}
+
+type SyncCommitteeBeaconState interface {
+	BeaconState
+	CurrentSyncCommittee() (*SyncCommitteeView, error)
+	NextSyncCommittee() (*SyncCommitteeView, error)
+	RotateSyncCommittee(next *SyncCommitteeView) error
 }

@@ -25,7 +25,7 @@ func NewRewardsAndPenalties(validatorCount uint64) *RewardsAndPenalties {
 }
 
 func AttestationRewardsAndPenalties(ctx context.Context, spec *common.Spec,
-	epc *common.EpochsContext, attesterData *EpochAttesterData, state *BeaconStateView) (*RewardsAndPenalties, error) {
+	epc *common.EpochsContext, attesterData *EpochAttesterData, state common.BeaconState) (*RewardsAndPenalties, error) {
 
 	validatorCount := common.ValidatorIndex(uint64(len(attesterData.Statuses)))
 	res := NewRewardsAndPenalties(uint64(validatorCount))
@@ -135,8 +135,13 @@ func AttestationRewardsAndPenalties(ctx context.Context, spec *common.Spec,
 	return res, nil
 }
 
+type BalancesBeaconState interface {
+	common.BeaconState
+	SetBalances(balances *RegistryBalancesView) error
+}
+
 func ProcessEpochRewardsAndPenalties(ctx context.Context, spec *common.Spec, epc *common.EpochsContext,
-	attesterData *EpochAttesterData, state *BeaconStateView) error {
+	attesterData *EpochAttesterData, state BalancesBeaconState) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -159,5 +164,9 @@ func ProcessEpochRewardsAndPenalties(ctx context.Context, spec *common.Spec, epc
 	if err != nil {
 		return err
 	}
-	return state.setBalances(spec, balancesElements)
+	balancesView, err := AsRegistryBalances(RegistryBalancesType(spec).FromElements(balancesElements...))
+	if err != nil {
+		return err
+	}
+	return state.SetBalances(balancesView)
 }

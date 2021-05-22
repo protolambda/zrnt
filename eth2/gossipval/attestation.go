@@ -121,7 +121,7 @@ func ValidateAttestation(ctx context.Context, subnet uint64, att *phase0.Attesta
 
 	// [REJECT] The committee index is within the expected range --
 	// i.e. data.index < get_committee_count_per_slot(state, data.target.epoch).
-	committeeCountPerSlot, err := targetEpc.GetCommitteeCountAtSlot(att.Data.Slot)
+	committeeCountPerSlot, err := targetEpc.GetCommitteeCountPerSlot(att.Data.Target.Epoch)
 	if err != nil {
 		return GossipValidatorResult{REJECT, fmt.Errorf("cannot get commitee count for slot %d: %w", att.Data.Slot, err)}
 	}

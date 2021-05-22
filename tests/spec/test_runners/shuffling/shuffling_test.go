@@ -78,15 +78,16 @@ func (testCase *ShufflingTestCase) Run(t *testing.T) {
 func TestShuffling(t *testing.T) {
 	runSpecShuffling := func(spec *common.Spec) func(t *testing.T) {
 		return func(t *testing.T) {
-			test_util.RunHandler(t, "shuffling/core/", func(t *testing.T, readPart test_util.TestPartReader) {
-				p := readPart.Part("mapping.yaml")
-				dec := yaml.NewDecoder(p)
-				c := &ShufflingTestCase{}
-				test_util.Check(t, dec.Decode(&c))
-				c.Spec = readPart.Spec()
-				test_util.Check(t, p.Close())
-				c.Run(t)
-			}, configs.Mainnet)
+			test_util.RunHandler(t, "shuffling/core/",
+				func(t *testing.T, forkName test_util.ForkName, readPart test_util.TestPartReader) {
+					p := readPart.Part("mapping.yaml")
+					dec := yaml.NewDecoder(p)
+					c := &ShufflingTestCase{}
+					test_util.Check(t, dec.Decode(&c))
+					c.Spec = readPart.Spec()
+					test_util.Check(t, p.Close())
+					c.Run(t)
+				}, configs.Mainnet, "phase0")
 		}
 	}
 	t.Run("minimal", runSpecShuffling(configs.Minimal))

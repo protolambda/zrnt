@@ -122,7 +122,7 @@ type BeaconBlockBody struct {
 	Deposits          phase0.Deposits          `json:"deposits" yaml:"deposits"`
 	VoluntaryExits    phase0.VoluntaryExits    `json:"voluntary_exits" yaml:"voluntary_exits"`
 
-	ExecutionPayload ExecutionPayload `json:"execution_payload" yaml:"execution_payload"`
+	ExecutionPayload common.ExecutionPayload `json:"execution_payload" yaml:"execution_payload"`
 }
 
 func (b *BeaconBlockBody) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
@@ -186,7 +186,7 @@ func (b BeaconBlockBody) CheckLimits(spec *common.Spec) error {
 		return fmt.Errorf("too many voluntary exits: %d", x)
 	}
 	// TODO: also check sum of byte size, sanity check block size.
-	if x := len(b.ExecutionPayload.Transactions); x > MAX_APPLICATION_TRANSACTIONS {
+	if x := len(b.ExecutionPayload.Transactions); x > common.MAX_EXECUTION_TRANSACTIONS {
 		return fmt.Errorf("too many transactions: %d", x)
 	}
 	return nil
@@ -204,6 +204,6 @@ func BeaconBlockBodyType(spec *common.Spec) *ContainerTypeDef {
 		{"deposits", phase0.BlockDepositsType(spec)},
 		{"voluntary_exits", phase0.BlockVoluntaryExitsType(spec)},
 		// Merge
-		{"execution_payload", ExecutionPayloadType},
+		{"execution_payload", common.ExecutionPayloadType},
 	})
 }

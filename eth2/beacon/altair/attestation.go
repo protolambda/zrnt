@@ -24,16 +24,9 @@ func ProcessAttestations(ctx context.Context, spec *common.Spec, epc *common.Epo
 func ProcessAttestation(spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView, attestation *phase0.Attestation) error {
 	data := &attestation.Data
 
-	// Check slot
 	currentSlot, err := state.Slot()
 	if err != nil {
 		return err
-	}
-	if !(currentSlot <= data.Slot+spec.SLOTS_PER_EPOCH) {
-		return errors.New("attestation slot is too old")
-	}
-	if !(data.Slot+spec.MIN_ATTESTATION_INCLUSION_DELAY <= currentSlot) {
-		return errors.New("attestation is too new")
 	}
 
 	currentEpoch := spec.SlotToEpoch(currentSlot)
@@ -50,39 +43,25 @@ func ProcessAttestation(spec *common.Spec, epc *common.EpochsContext, state *Bea
 		return errors.New("attestation data is invalid, slot epoch does not match target epoch")
 	}
 
+	// safe additions, slot converts to a valid epoch, thus must be low
+	if !(currentSlot <= data.Slot+spec.SLOTS_PER_EPOCH) {
+		return errors.New("attestation slot is too old")
+	}
+	if !(data.Slot+spec.MIN_ATTESTATION_INCLUSION_DELAY <= currentSlot) {
+		return errors.New("attestation is too new")
+	}
+
 	// Check committee index
-	if commCount, err := epc.GetCommitteeCountAtSlot(data.Slot); err != nil {
+	if commCount, err := epc.GetCommitteeCountPerSlot(data.Target.Epoch); err != nil {
 		return err
 	} else if uint64(data.Index) >= commCount {
 		return errors.New("attestation data is invalid, committee index out of range")
 	}
 
-	var justifiedCheckpoint common.Checkpoint
-	var epochParticipation *ParticipationRegistryView
-	// Check source
-	if data.Target.Epoch == currentEpoch {
-		justifiedCheckpoint, err = state.CurrentJustifiedCheckpoint()
-		if err != nil {
-			return err
-		}
-		epochParticipation, err = state.CurrentEpochParticipation()
-		if err != nil {
-			return err
-		}
-	} else {
-		justifiedCheckpoint, err = state.PreviousJustifiedCheckpoint()
-		if err != nil {
-			return err
-		}
-		epochParticipation, err = state.PreviousEpochParticipation()
-		if err != nil {
-			return err
-		}
-	}
-
-	// In spec: assert is_matching_source
-	if data.Source != justifiedCheckpoint {
-		return errors.New("attestation source does not match current justified checkpoint")
+	// Note: this checks the source checkpoint.
+	applyFlags, err := GetApplicableAttestationParticipationFlags(spec, state, data, currentSlot-data.Slot)
+	if err != nil {
+		return err
 	}
 
 	// Check signature and bitfields
@@ -97,53 +76,48 @@ func ProcessAttestation(spec *common.Spec, epc *common.EpochsContext, state *Bea
 		return fmt.Errorf("attestation could not be verified in its indexed form: %v", err)
 	}
 
-	expectedHead, err := common.GetBlockRootAtSlot(spec, state, data.Slot)
-	if err != nil {
-		return err
-	}
-	expectedTarget, err := common.GetBlockRoot(spec, state, data.Target.Epoch)
-	if err != nil {
-		return err
-	}
-	matchingHead := expectedHead == data.BeaconBlockRoot
-	matchingTaget := expectedTarget == data.Target.Root
-
-	flags := ParticipationFlags(0)
-	if currentSlot <= data.Slot+common.Slot(math.IntegerSquareroot(uint64(spec.SLOTS_PER_EPOCH))) {
-		flags |= TIMELY_SOURCE_FLAG
-	}
-	if matchingTaget && currentSlot <= data.Slot+spec.SLOTS_PER_EPOCH {
-		flags |= TIMELY_TARGET_FLAG
-	}
-	if matchingHead && matchingTaget && currentSlot <= data.Slot+spec.MIN_ATTESTATION_INCLUSION_DELAY {
-		flags |= TIMELY_HEAD_FLAG
+	var epochParticipation *ParticipationRegistryView
+	// Check source
+	if data.Target.Epoch == currentEpoch {
+		epochParticipation, err = state.CurrentEpochParticipation()
+		if err != nil {
+			return err
+		}
+	} else {
+		epochParticipation, err = state.PreviousEpochParticipation()
+		if err != nil {
+			return err
+		}
 	}
 
 	// TODO: probably better to batch flag changes, needs optimization, tree structure not good for this.
-	proposerRewardNumerator := uint64(0)
+	proposerRewardNumerator := common.Gwei(0)
+	baseRewardPerIncrement := spec.EFFECTIVE_BALANCE_INCREMENT * common.Gwei(spec.BASE_REWARD_FACTOR) / epc.TotalActiveStakeSqRoot
 	for _, vi := range indexedAtt.AttestingIndices {
-		baseReward := uint64(epc.EffectiveBalances[vi]) * spec.BASE_REWARD_FACTOR / uint64(epc.TotalActiveStakeSqRoot)
+		if applyFlags == 0 { // no work to do, just skip ahead
+			continue
+		}
+		increments := epc.EffectiveBalances[vi] / spec.EFFECTIVE_BALANCE_INCREMENT
+		baseReward := increments * baseRewardPerIncrement
 		existingFlags, err := epochParticipation.GetFlags(vi)
 		if err != nil {
 			return err
 		}
-		if (flags&TIMELY_SOURCE_FLAG != 0) && (existingFlags&TIMELY_SOURCE_FLAG == 0) {
+		if (applyFlags&TIMELY_SOURCE_FLAG != 0) && (existingFlags&TIMELY_SOURCE_FLAG == 0) {
 			proposerRewardNumerator += baseReward * TIMELY_SOURCE_WEIGHT
 		}
-		if (flags&TIMELY_TARGET_FLAG != 0) && (existingFlags&TIMELY_TARGET_FLAG == 0) {
+		if (applyFlags&TIMELY_TARGET_FLAG != 0) && (existingFlags&TIMELY_TARGET_FLAG == 0) {
 			proposerRewardNumerator += baseReward * TIMELY_TARGET_WEIGHT
 		}
-		if (flags&TIMELY_HEAD_FLAG != 0) && (existingFlags&TIMELY_HEAD_FLAG == 0) {
+		if (applyFlags&TIMELY_HEAD_FLAG != 0) && (existingFlags&TIMELY_HEAD_FLAG == 0) {
 			proposerRewardNumerator += baseReward * TIMELY_HEAD_WEIGHT
 		}
-		if flags != 0 {
-			if err := epochParticipation.SetFlags(vi, existingFlags|flags); err != nil {
-				return err
-			}
+		if err := epochParticipation.SetFlags(vi, existingFlags|applyFlags); err != nil {
+			return err
 		}
 	}
-
-	proposerReward := common.Gwei(proposerRewardNumerator / (WEIGHT_DENOMINATOR * spec.PROPOSER_REWARD_QUOTIENT))
+	proposerRewardDenominator := ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT
+	proposerReward := proposerRewardNumerator / proposerRewardDenominator
 	proposerIndex, err := epc.GetBeaconProposer(currentSlot)
 	if err != nil {
 		return err
@@ -155,6 +129,57 @@ func ProcessAttestation(spec *common.Spec, epc *common.EpochsContext, state *Bea
 	if err := common.IncreaseBalance(bals, proposerIndex, proposerReward); err != nil {
 		return err
 	}
-
 	return nil
+}
+
+func GetApplicableAttestationParticipationFlags(
+	spec *common.Spec, state *BeaconStateView,
+	data *phase0.AttestationData, inclusionDelay common.Slot) (out ParticipationFlags, err error) {
+
+	currentSlot, err := state.Slot()
+	if err != nil {
+		return 0, err
+	}
+
+	currentEpoch := spec.SlotToEpoch(currentSlot)
+
+	var justifiedCheckpoint common.Checkpoint
+	if data.Target.Epoch == currentEpoch {
+		justifiedCheckpoint, err = state.CurrentJustifiedCheckpoint()
+		if err != nil {
+			return 0, err
+		}
+	} else {
+		justifiedCheckpoint, err = state.PreviousJustifiedCheckpoint()
+		if err != nil {
+			return 0, err
+		}
+	}
+	expectedHead, err := common.GetBlockRootAtSlot(spec, state, data.Slot)
+	if err != nil {
+		return 0, err
+	}
+	expectedTarget, err := common.GetBlockRoot(spec, state, data.Target.Epoch)
+	if err != nil {
+		return 0, err
+	}
+
+	isMatchingSource := data.Source == justifiedCheckpoint
+	isMatchingTarget := isMatchingSource && expectedTarget == data.Target.Root
+	isMatchingHead := isMatchingTarget && expectedHead == data.BeaconBlockRoot
+
+	if !isMatchingSource {
+		return 0, fmt.Errorf("source %s must match justified %s", data.Source, justifiedCheckpoint)
+	}
+
+	if isMatchingSource && inclusionDelay <= common.Slot(math.IntegerSquareroot(uint64(spec.SLOTS_PER_EPOCH))) {
+		out |= TIMELY_SOURCE_FLAG
+	}
+	if isMatchingTarget && inclusionDelay <= spec.SLOTS_PER_EPOCH {
+		out |= TIMELY_TARGET_FLAG
+	}
+	if isMatchingHead && inclusionDelay == spec.MIN_ATTESTATION_INCLUSION_DELAY {
+		out |= TIMELY_HEAD_FLAG
+	}
+	return out, nil
 }

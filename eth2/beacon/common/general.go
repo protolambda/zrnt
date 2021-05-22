@@ -9,6 +9,8 @@ import (
 
 type Root = tree.Root
 
+type Bytes32 = Root
+
 const Bytes32Type = RootType
 
 type Shard Uint64View

@@ -90,142 +90,6 @@ func SyncCommitteeBitsType(spec *common.Spec) *BitVectorTypeDef {
 	return BitVectorType(spec.SYNC_COMMITTEE_SIZE)
 }
 
-func SyncCommitteePubkeysType(spec *common.Spec) VectorTypeDef {
-	return VectorType(common.BLSPubkeyType, spec.SYNC_COMMITTEE_SIZE)
-}
-
-type SyncCommitteePubkeys []common.BLSPubkey
-
-func (li *SyncCommitteePubkeys) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
-	*li = make([]common.BLSPubkey, spec.SYNC_COMMITTEE_SIZE, spec.SYNC_COMMITTEE_SIZE)
-	return dr.Vector(func(i uint64) codec.Deserializable {
-		return &(*li)[i]
-	}, common.BLSPubkeyType.Size, spec.SYNC_COMMITTEE_SIZE)
-}
-
-func (a SyncCommitteePubkeys) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
-	return w.Vector(func(i uint64) codec.Serializable {
-		return &a[i]
-	}, common.BLSPubkeyType.Size, spec.SYNC_COMMITTEE_SIZE)
-}
-
-func (a SyncCommitteePubkeys) ByteLength(spec *common.Spec) uint64 {
-	return spec.SYNC_COMMITTEE_SIZE * common.BLSPubkeyType.Size
-}
-
-func (a *SyncCommitteePubkeys) FixedLength(spec *common.Spec) uint64 {
-	return spec.SYNC_COMMITTEE_SIZE * common.BLSPubkeyType.Size
-}
-
-func (li SyncCommitteePubkeys) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
-	return hFn.ComplexVectorHTR(func(i uint64) tree.HTR {
-		return &li[i]
-	}, spec.SYNC_COMMITTEE_SIZE)
-}
-
-type SyncCommitteePubkeysView struct {
-	*ComplexVectorView
-}
-
-func AsSyncCommitteePubkeys(v View, err error) (*SyncCommitteePubkeysView, error) {
-	c, err := AsComplexVector(v, err)
-	return &SyncCommitteePubkeysView{c}, err
-}
-
-func SyncCommitteePubkeyAggregatesType(spec *common.Spec) *ComplexVectorTypeDef {
-	return ComplexVectorType(common.BLSPubkeyType, spec.SYNC_COMMITTEE_SIZE/spec.SYNC_SUBCOMMITTEE_SIZE)
-}
-
-type SyncCommitteePubkeyAggregates []common.BLSPubkey
-
-func (li *SyncCommitteePubkeyAggregates) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
-	s := spec.SYNC_COMMITTEE_SIZE / spec.SYNC_SUBCOMMITTEE_SIZE
-	*li = make([]common.BLSPubkey, s, s)
-	return dr.Vector(func(i uint64) codec.Deserializable {
-		return &(*li)[i]
-	}, common.BLSPubkeyType.Size, s)
-}
-
-func (a SyncCommitteePubkeyAggregates) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
-	return w.Vector(func(i uint64) codec.Serializable {
-		return &a[i]
-	}, common.BLSPubkeyType.Size, spec.SYNC_COMMITTEE_SIZE/spec.SYNC_SUBCOMMITTEE_SIZE)
-}
-
-func (a SyncCommitteePubkeyAggregates) ByteLength(spec *common.Spec) uint64 {
-	return spec.SYNC_COMMITTEE_SIZE / spec.SYNC_SUBCOMMITTEE_SIZE * common.BLSPubkeyType.Size
-}
-
-func (a *SyncCommitteePubkeyAggregates) FixedLength(spec *common.Spec) uint64 {
-	return spec.SYNC_COMMITTEE_SIZE / spec.SYNC_SUBCOMMITTEE_SIZE * common.BLSPubkeyType.Size
-}
-
-func (li SyncCommitteePubkeyAggregates) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
-	return hFn.ComplexVectorHTR(func(i uint64) tree.HTR {
-		return &li[i]
-	}, spec.SYNC_COMMITTEE_SIZE/spec.SYNC_SUBCOMMITTEE_SIZE)
-}
-
-type SyncCommitteePubkeyAggregatesView struct {
-	*ComplexVectorView
-}
-
-func AsSyncCommitteePubkeyAggregates(v View, err error) (*SyncCommitteePubkeyAggregatesView, error) {
-	c, err := AsComplexVector(v, err)
-	return &SyncCommitteePubkeyAggregatesView{c}, err
-}
-
-func SyncCommitteeType(spec *common.Spec) *ContainerTypeDef {
-	return ContainerType("SyncCommittee", []FieldDef{
-		{"pubkeys", SyncCommitteePubkeysType(spec)},
-		{"pubkey_aggregates", SyncCommitteePubkeyAggregatesType(spec)},
-	})
-}
-
-type SyncCommittee struct {
-	CommitteePubkeys SyncCommitteePubkeys
-	PubkeyAggregates SyncCommitteePubkeyAggregates
-}
-
-func (a *SyncCommittee) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
-	return dr.FixedLenContainer(spec.Wrap(&a.CommitteePubkeys), spec.Wrap(&a.PubkeyAggregates))
-}
-
-func (a *SyncCommittee) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
-	return w.FixedLenContainer(spec.Wrap(&a.CommitteePubkeys), spec.Wrap(&a.PubkeyAggregates))
-}
-
-func (a *SyncCommittee) ByteLength(spec *common.Spec) uint64 {
-	return (spec.SYNC_COMMITTEE_SIZE + spec.SYNC_COMMITTEE_SIZE/spec.SYNC_SUBCOMMITTEE_SIZE) * common.BLSPubkeyType.Size
-}
-
-func (*SyncCommittee) FixedLength(spec *common.Spec) uint64 {
-	return (spec.SYNC_COMMITTEE_SIZE + spec.SYNC_COMMITTEE_SIZE/spec.SYNC_SUBCOMMITTEE_SIZE) * common.BLSPubkeyType.Size
-}
-
-func (p *SyncCommittee) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
-	return hFn.HashTreeRoot(spec.Wrap(&p.CommitteePubkeys), spec.Wrap(&p.PubkeyAggregates))
-}
-
-type SyncCommitteeView struct {
-	*ContainerView
-}
-
-func AsSyncCommittee(v View, err error) (*SyncCommitteeView, error) {
-	c, err := AsContainer(v, err)
-	return &SyncCommitteeView{c}, err
-}
-
-func SyncCommitteeIndices(state *BeaconStateView, epoch common.Epoch) []common.ValidatorIndex {
-	// TODO
-	return nil
-}
-
-func ComputeSyncCommittee(state *BeaconStateView, epoch common.Epoch) (*SyncCommittee, error) {
-	// TODO
-	return nil, nil
-}
-
 func SyncAggregateType(spec *common.Spec) *ContainerTypeDef {
 	return ContainerType("SyncAggregate", []FieldDef{
 		{"sync_committee_bits", SyncCommitteeBitsType(spec)},
@@ -259,8 +123,9 @@ func (agg *SyncAggregate) ByteLength(spec *common.Spec) uint64 {
 	)
 }
 
-func (agg *SyncAggregate) FixedLength(*common.Spec) uint64 {
-	return 0
+func (agg *SyncAggregate) FixedLength(spec *common.Spec) uint64 {
+	// bitvector + signature
+	return (spec.SYNC_COMMITTEE_SIZE+7)/8 + 96
 }
 
 func (agg *SyncAggregate) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
@@ -290,20 +155,21 @@ func ProcessSyncCommittee(ctx context.Context, spec *common.Spec, epc *common.Ep
 	if err := bitfields.BitvectorCheck(agg.SyncCommitteeBits, spec.SYNC_COMMITTEE_SIZE); err != nil {
 		return fmt.Errorf("input bypassed deserialization checks, sanity check on sync committee bitvector length failed: %v", err)
 	}
-	prevSlot := currentSlot.Previous()
-	// TODO syncCommitteeIndices = get_sync_committee_indices(state, get_current_epoch(state))
-	syncCommitteeIndices := make([]common.ValidatorIndex, spec.SYNC_COMMITTEE_SIZE, spec.SYNC_COMMITTEE_SIZE)
-	// TODO
-	syncCommitteePubkeys := make([]*common.CachedPubkey, spec.SYNC_COMMITTEE_SIZE, spec.SYNC_COMMITTEE_SIZE)
 
-	includedIndices := make([]common.ValidatorIndex, 0, len(syncCommitteeIndices))
-	includedPubkeys := make([]*common.CachedPubkey, 0, len(syncCommitteeIndices))
+	if epc.CurrentSyncCommittee == nil {
+		return fmt.Errorf("missing current sync committee info in EPC")
+	}
+
+	participantIndices := make([]common.ValidatorIndex, 0, spec.SYNC_COMMITTEE_SIZE)
+	participantPubkeys := make([]*common.CachedPubkey, 0, spec.SYNC_COMMITTEE_SIZE)
 	for i := uint64(0); i < spec.SYNC_COMMITTEE_SIZE; i++ {
 		if agg.SyncCommitteeBits.GetBit(i) {
-			includedIndices = append(includedIndices, syncCommitteeIndices[i])
-			includedPubkeys = append(includedPubkeys, syncCommitteePubkeys[i])
+			participantIndices = append(participantIndices, epc.CurrentSyncCommittee.Indices[i])
+			participantPubkeys = append(participantPubkeys, epc.CurrentSyncCommittee.CachedPubkeys[i])
 		}
 	}
+
+	prevSlot := currentSlot.Previous()
 	domain, err := common.GetDomain(state, spec.DOMAIN_SYNC_COMMITTEE, spec.SlotToEpoch(prevSlot))
 	if err != nil {
 		return err
@@ -313,34 +179,25 @@ func ProcessSyncCommittee(ctx context.Context, spec *common.Spec, epc *common.Ep
 		return err
 	}
 	signingRoot := common.ComputeSigningRoot(blockRoot, domain)
-	if !bls.FastAggregateVerify(includedPubkeys, signingRoot, agg.SyncCommitteeSignature) {
+	if !bls.Eth2FastAggregateVerify(participantPubkeys, signingRoot, agg.SyncCommitteeSignature) {
 		return errors.New("invalid sync committee signature")
 	}
+
+	// Compute participant and proposer rewards
 	totalActiveIncrements := epc.TotalActiveStake / spec.EFFECTIVE_BALANCE_INCREMENT
 	baseRewardPerIncrement := (spec.EFFECTIVE_BALANCE_INCREMENT * common.Gwei(spec.BASE_REWARD_FACTOR)) / epc.TotalActiveStakeSqRoot
 	totalBaseRewards := baseRewardPerIncrement * totalActiveIncrements
-	maxEpochRewards := (totalBaseRewards * common.Gwei(SYNC_REWARD_WEIGHT)) / common.Gwei(WEIGHT_DENOMINATOR)
-	maxSlotRewards := ((maxEpochRewards * common.Gwei(len(includedIndices))) /
-		common.Gwei(len(syncCommitteeIndices))) / common.Gwei(spec.SLOTS_PER_EPOCH)
+	maxParticipantRewards := (totalBaseRewards * SYNC_REWARD_WEIGHT) / WEIGHT_DENOMINATOR / common.Gwei(spec.SLOTS_PER_EPOCH)
+	participantReward := maxParticipantRewards / common.Gwei(spec.SYNC_COMMITTEE_SIZE)
+	proposerReward := participantReward*PROPOSER_WEIGHT/WEIGHT_DENOMINATOR - PROPOSER_WEIGHT
 
-	committeeEffBalance := common.Gwei(0)
-	for _, ci := range includedIndices {
-		committeeEffBalance += epc.EffectiveBalances[ci]
-	}
-	if committeeEffBalance < spec.EFFECTIVE_BALANCE_INCREMENT {
-		committeeEffBalance = spec.EFFECTIVE_BALANCE_INCREMENT
-	}
+	// Apply participant and proposer rewards
 	bals, err := state.Balances()
 	if err != nil {
 		return err
 	}
-	proposerRewardSum := common.Gwei(0)
-	for _, ci := range includedIndices {
-		effectiveBalance := epc.EffectiveBalances[ci]
-		inclusionReward := (maxSlotRewards * effectiveBalance) / committeeEffBalance
-		proposerReward := inclusionReward / common.Gwei(spec.PROPOSER_REWARD_QUOTIENT)
-		proposerRewardSum += proposerReward
-		if err := common.IncreaseBalance(bals, ci, inclusionReward-proposerReward); err != nil {
+	for _, ci := range participantIndices {
+		if err := common.IncreaseBalance(bals, ci, participantReward); err != nil {
 			return err
 		}
 	}
@@ -348,23 +205,30 @@ func ProcessSyncCommittee(ctx context.Context, spec *common.Spec, epc *common.Ep
 	if err != nil {
 		return err
 	}
+	proposerRewardSum := proposerReward * common.Gwei(len(participantIndices))
 	if err := common.IncreaseBalance(bals, proposer, proposerRewardSum); err != nil {
 		return err
 	}
 	return nil
 }
 
-func ProcessSyncCommitteeUpdates(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView) error {
+func ProcessSyncCommitteeUpdates(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state common.SyncCommitteeBeaconState) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	nextEpoch := epc.NextEpoch.Epoch
 	if nextEpoch%spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD == 0 {
-		// TODO
-		//current, err := state.CurrentSyncCommittee()
-		//if err != nil {
-		//	return err
-		//}
-		//next := ComputeSyncCommittee(state, nextEpoch + spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
-		// state.current <- state.next
-		// state.next <- next
+		next, err := common.ComputeNextSyncCommittee(spec, epc, state)
+		if err != nil {
+			return fmt.Errorf("failed to update sync committee: %v", next)
+		}
+		nextView, err := next.View(spec)
+		if err != nil {
+			return fmt.Errorf("failed to convert sync committee to state tree representation")
+		}
+		if err := state.RotateSyncCommittee(nextView); err != nil {
+			return fmt.Errorf("failed to rotate sync committee: %v", err)
+		}
 	}
 	return nil
 }

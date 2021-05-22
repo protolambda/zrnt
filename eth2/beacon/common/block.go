@@ -25,10 +25,15 @@ type BeaconBlockEnvelope struct {
 }
 
 func (b *BeaconBlockEnvelope) VerifySignature(spec *Spec, genesisValidatorsRoot Root, proposer ValidatorIndex, pub *CachedPubkey) bool {
+	version := spec.ForkVersion(b.Slot)
+	return b.VerifySignatureVersioned(spec, version, genesisValidatorsRoot, proposer, pub)
+}
+
+// deprecated: to verify with explicit version
+func (b *BeaconBlockEnvelope) VerifySignatureVersioned(spec *Spec, version Version, genesisValidatorsRoot Root, proposer ValidatorIndex, pub *CachedPubkey) bool {
 	if b.ProposerIndex != proposer {
 		return false
 	}
-	version := spec.ForkVersion(b.Slot)
 	forkRoot := ComputeForkDataRoot(version, genesisValidatorsRoot)
 	// Sanity check fork digest
 	if !bytes.Equal(forkRoot[0:4], b.ForkDigest[:]) {

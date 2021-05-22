@@ -62,6 +62,13 @@ func (v *InactivityScoresView) SetScore(index common.ValidatorIndex, score uint6
 }
 
 func ProcessInactivityUpdates(ctx context.Context, spec *common.Spec, attesterData *EpochAttesterData, state *BeaconStateView) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	// Skip genesis epoch
+	if attesterData.CurrEpoch == common.GENESIS_EPOCH {
+		return nil
+	}
 	inactivityScores, err := state.InactivityScores()
 	if err != nil {
 		return err
@@ -74,23 +81,32 @@ func ProcessInactivityUpdates(ctx context.Context, spec *common.Spec, attesterDa
 	isInactivityLeak := finalityDelay > spec.MIN_EPOCHS_TO_INACTIVITY_PENALTY
 
 	for _, vi := range attesterData.EligibleIndices {
+		score, err := inactivityScores.GetScore(vi)
+		if err != nil {
+			return err
+		}
+		newScore := score
+
+		// Increase inactivity score of inactive validators
 		if !attesterData.Flats[vi].Slashed && (attesterData.PrevParticipation[vi]&TIMELY_TARGET_FLAG != 0) {
-			score, err := inactivityScores.GetScore(vi)
-			if err != nil {
-				return err
+			if newScore > 0 {
+				newScore -= 1
 			}
-			if score > 0 {
-				score -= 1
-				if err := inactivityScores.SetScore(vi, score); err != nil {
-					return err
-				}
+		} else {
+			newScore += spec.INACTIVITY_SCORE_BIAS
+		}
+
+		if !isInactivityLeak {
+			if newScore < spec.INACTIVITY_SCORE_RECOVERY_RATE {
+				newScore = 0
+			} else if score >= spec.INACTIVITY_SCORE_RECOVERY_RATE {
+				newScore -= spec.INACTIVITY_SCORE_RECOVERY_RATE
 			}
-		} else if isInactivityLeak {
-			score, err := inactivityScores.GetScore(vi)
-			if err != nil {
-				return err
-			}
-			if err := inactivityScores.SetScore(vi, score+spec.INACTIVITY_SCORE_BIAS); err != nil {
+		}
+
+		// if there was any change, update the state.
+		if newScore != score {
+			if err := inactivityScores.SetScore(vi, newScore); err != nil {
 				return err
 			}
 		}

@@ -12,8 +12,8 @@ type DepositTestCase struct {
 	Deposit common.Deposit
 }
 
-func (c *DepositTestCase) Load(t *testing.T, readPart test_util.TestPartReader) {
-	c.BaseTransitionTest.Load(t, readPart)
+func (c *DepositTestCase) Load(t *testing.T, forkName test_util.ForkName, readPart test_util.TestPartReader) {
+	c.BaseTransitionTest.Load(t, forkName, readPart)
 	test_util.LoadSSZ(t, "deposit", &c.Deposit, readPart)
 }
 
@@ -26,6 +26,6 @@ func (c *DepositTestCase) Run() error {
 }
 
 func TestDeposit(t *testing.T) {
-	test_util.RunTransitionTest(t, "operations", "deposit",
+	test_util.RunTransitionTest(t, test_util.AllForks, "operations", "deposit",
 		func() test_util.TransitionTest { return new(DepositTestCase) })
 }

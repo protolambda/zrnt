@@ -52,7 +52,15 @@ type EpochAttesterData struct {
 	CurrEpochUnslashedTargetStake common.Gwei
 }
 
-func ComputeEpochAttesterData(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, flats []common.FlatValidator, state *BeaconStateView) (out *EpochAttesterData, err error) {
+type PendingAttestationsBeaconState interface {
+	common.BeaconState
+	PreviousEpochAttestations() (*PendingAttestationsView, error)
+	CurrentEpochAttestations() (*PendingAttestationsView, error)
+}
+
+func ComputeEpochAttesterData(ctx context.Context, spec *common.Spec, epc *common.EpochsContext,
+	flats []common.FlatValidator, state PendingAttestationsBeaconState) (out *EpochAttesterData, err error) {
+
 	count := common.ValidatorIndex(len(flats))
 	prevEpoch := epc.PreviousEpoch.Epoch
 	currentEpoch := epc.CurrentEpoch.Epoch

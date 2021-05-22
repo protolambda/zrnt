@@ -40,8 +40,8 @@ type BeaconState struct {
 	// Inactivity
 	InactivityScores InactivityScores `json:"inactivity_scores" yaml:"inactivity_scores"`
 	// Light client sync committees
-	CurrentSyncCommittee SyncCommittee `json:"current_sync_committee" yaml:"current_sync_committee"`
-	NextSyncCommittee    SyncCommittee `json:"next_sync_committee" yaml:"next_sync_committee"`
+	CurrentSyncCommittee common.SyncCommittee `json:"current_sync_committee" yaml:"current_sync_committee"`
+	NextSyncCommittee    common.SyncCommittee `json:"next_sync_committee" yaml:"next_sync_committee"`
 }
 
 func (v *BeaconState) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
@@ -175,8 +175,8 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 		// Inactivity
 		{"inactivity_scores", InactivityScoresType(spec)},
 		// Sync
-		{"current_sync_committee", SyncCommitteeType(spec)},
-		{"next_sync_committee", SyncCommitteeType(spec)},
+		{"current_sync_committee", common.SyncCommitteeType(spec)},
+		{"next_sync_committee", common.SyncCommitteeType(spec)},
 	})
 }
 
@@ -295,12 +295,8 @@ func (state *BeaconStateView) Balances() (common.Balances, error) {
 	return phase0.AsRegistryBalances(state.Get(_stateBalances))
 }
 
-func (state *BeaconStateView) setBalances(spec *common.Spec, bals []BasicView) error {
-	newBalancesTree, err := phase0.RegistryBalancesType(spec).FromElements(bals...)
-	if err != nil {
-		return err
-	}
-	return state.Set(_stateBalances, newBalancesTree)
+func (state *BeaconStateView) SetBalances(balances *phase0.RegistryBalancesView) error {
+	return state.Set(_stateBalances, balances)
 }
 
 func (state *BeaconStateView) AddValidator(spec *common.Spec, pub common.BLSPubkey, withdrawalCreds common.Root, balance common.Gwei) error {
@@ -344,6 +340,13 @@ func (state *BeaconStateView) AddValidator(spec *common.Spec, pub common.BLSPubk
 		return err
 	}
 	if err := currPart.Append(Uint8View(ParticipationFlags(0))); err != nil {
+		return err
+	}
+	inActivityScores, err := state.InactivityScores()
+	if err != nil {
+		return err
+	}
+	if err := inActivityScores.Append(Uint8View(0)); err != nil {
 		return err
 	}
 	// New in Altair: init inactivity score
@@ -442,18 +445,32 @@ func (state *BeaconStateView) InactivityScores() (*InactivityScoresView, error) 
 	return AsInactivityScores(state.Get(_inactivityScores))
 }
 
-func (state *BeaconStateView) CurrentSyncCommittee() (*SyncCommitteeView, error) {
-	return AsSyncCommittee(state.Get(_currentSyncCommittee))
+func (state *BeaconStateView) CurrentSyncCommittee() (*common.SyncCommitteeView, error) {
+	return common.AsSyncCommittee(state.Get(_currentSyncCommittee))
 }
 
-func (state *BeaconStateView) NextSyncCommittee() (*SyncCommitteeView, error) {
-	return AsSyncCommittee(state.Get(_nextSyncCommittee))
+func (state *BeaconStateView) NextSyncCommittee() (*common.SyncCommitteeView, error) {
+	return common.AsSyncCommittee(state.Get(_nextSyncCommittee))
+}
+
+func (state *BeaconStateView) RotateSyncCommittee(next *common.SyncCommitteeView) error {
+	v, err := state.Get(_nextSyncCommittee)
+	if err != nil {
+		return err
+	}
+	if err := state.Set(_currentSyncCommittee, v); err != nil {
+		return err
+	}
+	return state.Set(_nextSyncCommittee, next)
 }
 
 func (state *BeaconStateView) ForkSettings(spec *common.Spec) *common.ForkSettings {
 	return &common.ForkSettings{
 		MinSlashingPenaltyQuotient:     spec.MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR,
 		ProportionalSlashingMultiplier: spec.PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR,
+		CalcProposerShare: func(whistleblowerReward common.Gwei) common.Gwei {
+			return whistleblowerReward * PROPOSER_WEIGHT / WEIGHT_DENOMINATOR
+		},
 	}
 }
 

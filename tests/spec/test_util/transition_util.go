@@ -141,7 +141,7 @@ func RunTransitionTest(t *testing.T, forks []ForkName, runnerName string, handle
 			if c.ExpectingFailure() {
 				return
 			}
-			t.Fatalf("%s/%s process error: %v", runnerName, handlerName, err)
+			t.Errorf("%s/%s process error: %v", runnerName, handlerName, err)
 		}
 		c.Check(t)
 	})

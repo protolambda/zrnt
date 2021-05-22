@@ -106,7 +106,7 @@ func ProcessInactivityUpdates(ctx context.Context, spec *common.Spec, attesterDa
 
 		// if there was any change, update the state.
 		if newScore != score {
-			if err := inactivityScores.SetScore(vi, score); err != nil {
+			if err := inactivityScores.SetScore(vi, newScore); err != nil {
 				return err
 			}
 		}

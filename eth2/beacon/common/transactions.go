@@ -10,9 +10,9 @@ import (
 )
 
 const MAX_BYTES_PER_OPAQUE_TRANSACTION = 1 << 20
-const MAX_APPLICATION_TRANSACTIONS = 1 << 14
+const MAX_EXECUTION_TRANSACTIONS = 1 << 14
 
-var PayloadTransactionsType = view.ListType(OpaqueTransactionType, MAX_APPLICATION_TRANSACTIONS)
+var PayloadTransactionsType = view.ListType(OpaqueTransactionType, MAX_EXECUTION_TRANSACTIONS)
 
 type PayloadTransactions []OpaqueTransaction
 
@@ -21,7 +21,7 @@ func (txs *PayloadTransactions) Deserialize(spec *Spec, dr *codec.DecodingReader
 		i := len(*txs)
 		*txs = append(*txs, OpaqueTransaction{})
 		return spec.Wrap(&((*txs)[i]))
-	}, 0, MAX_APPLICATION_TRANSACTIONS)
+	}, 0, MAX_EXECUTION_TRANSACTIONS)
 }
 
 func (txs PayloadTransactions) Serialize(spec *Spec, w *codec.EncodingWriter) error {
@@ -48,7 +48,7 @@ func (txs PayloadTransactions) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
 			return spec.Wrap(&txs[i])
 		}
 		return nil
-	}, length, MAX_APPLICATION_TRANSACTIONS)
+	}, length, MAX_EXECUTION_TRANSACTIONS)
 }
 
 var OpaqueTransactionType = view.BasicListType(view.Uint8Type, MAX_BYTES_PER_OPAQUE_TRANSACTION)

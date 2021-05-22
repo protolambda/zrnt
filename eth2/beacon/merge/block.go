@@ -186,7 +186,7 @@ func (b BeaconBlockBody) CheckLimits(spec *common.Spec) error {
 		return fmt.Errorf("too many voluntary exits: %d", x)
 	}
 	// TODO: also check sum of byte size, sanity check block size.
-	if x := len(b.ExecutionPayload.Transactions); x > common.MAX_APPLICATION_TRANSACTIONS {
+	if x := len(b.ExecutionPayload.Transactions); x > common.MAX_EXECUTION_TRANSACTIONS {
 		return fmt.Errorf("too many transactions: %d", x)
 	}
 	return nil

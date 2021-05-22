@@ -342,6 +342,13 @@ func (state *BeaconStateView) AddValidator(spec *common.Spec, pub common.BLSPubk
 	if err := currPart.Append(Uint8View(ParticipationFlags(0))); err != nil {
 		return err
 	}
+	inActivityScores, err := state.InactivityScores()
+	if err != nil {
+		return err
+	}
+	if err := inActivityScores.Append(Uint8View(0)); err != nil {
+		return err
+	}
 	// New in Altair: init inactivity score
 	return nil
 }
@@ -462,7 +469,7 @@ func (state *BeaconStateView) ForkSettings(spec *common.Spec) *common.ForkSettin
 		MinSlashingPenaltyQuotient:     spec.MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR,
 		ProportionalSlashingMultiplier: spec.PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR,
 		CalcProposerShare: func(whistleblowerReward common.Gwei) common.Gwei {
-			return whistleblowerReward * common.Gwei(PROPOSER_WEIGHT) / common.Gwei(WEIGHT_DENOMINATOR)
+			return whistleblowerReward * PROPOSER_WEIGHT / WEIGHT_DENOMINATOR
 		},
 	}
 }

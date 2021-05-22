@@ -187,9 +187,9 @@ func ProcessSyncCommittee(ctx context.Context, spec *common.Spec, epc *common.Ep
 	totalActiveIncrements := epc.TotalActiveStake / spec.EFFECTIVE_BALANCE_INCREMENT
 	baseRewardPerIncrement := (spec.EFFECTIVE_BALANCE_INCREMENT * common.Gwei(spec.BASE_REWARD_FACTOR)) / epc.TotalActiveStakeSqRoot
 	totalBaseRewards := baseRewardPerIncrement * totalActiveIncrements
-	maxParticipantRewards := (totalBaseRewards * common.Gwei(SYNC_REWARD_WEIGHT)) / common.Gwei(WEIGHT_DENOMINATOR) / common.Gwei(spec.SLOTS_PER_EPOCH)
+	maxParticipantRewards := (totalBaseRewards * SYNC_REWARD_WEIGHT) / WEIGHT_DENOMINATOR / common.Gwei(spec.SLOTS_PER_EPOCH)
 	participantReward := maxParticipantRewards / common.Gwei(spec.SYNC_COMMITTEE_SIZE)
-	proposerReward := participantReward * common.Gwei(PROPOSER_WEIGHT) / common.Gwei(WEIGHT_DENOMINATOR-PROPOSER_WEIGHT)
+	proposerReward := participantReward*PROPOSER_WEIGHT/WEIGHT_DENOMINATOR - PROPOSER_WEIGHT
 
 	// Apply participant and proposer rewards
 	bals, err := state.Balances()

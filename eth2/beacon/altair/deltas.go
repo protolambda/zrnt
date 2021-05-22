@@ -38,11 +38,11 @@ func ComputeFlagDeltas(ctx context.Context, spec *common.Spec, epc *common.Epoch
 		if !slashed && flagParticipation {
 			if !isInactivityLeak {
 				rewardNumerator := (baseReward * weight) * unslashedParticipatingIncrements
-				rewardDenominator := activeIncrements * common.Gwei(WEIGHT_DENOMINATOR)
+				rewardDenominator := activeIncrements * WEIGHT_DENOMINATOR
 				out.Rewards[vi] += rewardNumerator / rewardDenominator
 			}
-		} else {
-			out.Penalties[vi] += (baseReward * weight) / common.Gwei(WEIGHT_DENOMINATOR)
+		} else if flag != TIMELY_HEAD_FLAG {
+			out.Penalties[vi] += (baseReward * weight) / WEIGHT_DENOMINATOR
 		}
 	}
 	return out, nil
@@ -95,17 +95,17 @@ func AttestationRewardsAndPenalties(ctx context.Context, spec *common.Spec, epc 
 	isInactivityLeak := finalityDelay > spec.MIN_EPOCHS_TO_INACTIVITY_PENALTY
 
 	sourceDeltas, err := ComputeFlagDeltas(ctx, spec, epc, attesterData,
-		TIMELY_SOURCE_FLAG, common.Gwei(TIMELY_SOURCE_WEIGHT), isInactivityLeak)
+		TIMELY_SOURCE_FLAG, TIMELY_SOURCE_WEIGHT, isInactivityLeak)
 	if err != nil {
 		return nil, err
 	}
 	targetDeltas, err := ComputeFlagDeltas(ctx, spec, epc, attesterData,
-		TIMELY_TARGET_FLAG, common.Gwei(TIMELY_TARGET_WEIGHT), isInactivityLeak)
+		TIMELY_TARGET_FLAG, TIMELY_TARGET_WEIGHT, isInactivityLeak)
 	if err != nil {
 		return nil, err
 	}
 	headDeltas, err := ComputeFlagDeltas(ctx, spec, epc, attesterData,
-		TIMELY_TARGET_FLAG, common.Gwei(TIMELY_TARGET_WEIGHT), isInactivityLeak)
+		TIMELY_HEAD_FLAG, TIMELY_HEAD_WEIGHT, isInactivityLeak)
 	if err != nil {
 		return nil, err
 	}

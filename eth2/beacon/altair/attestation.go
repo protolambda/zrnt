@@ -91,12 +91,14 @@ func ProcessAttestation(spec *common.Spec, epc *common.EpochsContext, state *Bea
 	}
 
 	// TODO: probably better to batch flag changes, needs optimization, tree structure not good for this.
-	proposerRewardNumerator := uint64(0)
+	proposerRewardNumerator := common.Gwei(0)
+	baseRewardPerIncrement := spec.EFFECTIVE_BALANCE_INCREMENT * common.Gwei(spec.BASE_REWARD_FACTOR) / epc.TotalActiveStakeSqRoot
 	for _, vi := range indexedAtt.AttestingIndices {
 		if applyFlags == 0 { // no work to do, just skip ahead
 			continue
 		}
-		baseReward := uint64(epc.EffectiveBalances[vi]) * spec.BASE_REWARD_FACTOR / uint64(epc.TotalActiveStakeSqRoot)
+		increments := epc.EffectiveBalances[vi] / spec.EFFECTIVE_BALANCE_INCREMENT
+		baseReward := increments * baseRewardPerIncrement
 		existingFlags, err := epochParticipation.GetFlags(vi)
 		if err != nil {
 			return err
@@ -115,7 +117,7 @@ func ProcessAttestation(spec *common.Spec, epc *common.EpochsContext, state *Bea
 		}
 	}
 	proposerRewardDenominator := ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT
-	proposerReward := common.Gwei(proposerRewardNumerator / proposerRewardDenominator)
+	proposerReward := proposerRewardNumerator / proposerRewardDenominator
 	proposerIndex, err := epc.GetBeaconProposer(currentSlot)
 	if err != nil {
 		return err

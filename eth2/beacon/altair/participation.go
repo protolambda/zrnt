@@ -57,12 +57,12 @@ const (
 
 // Participation flag fractions
 const (
-	TIMELY_SOURCE_WEIGHT uint64 = 12
-	TIMELY_TARGET_WEIGHT uint64 = 24
-	TIMELY_HEAD_WEIGHT   uint64 = 12
-	SYNC_REWARD_WEIGHT   uint64 = 8
-	PROPOSER_WEIGHT      uint64 = 8
-	WEIGHT_DENOMINATOR   uint64 = 64
+	TIMELY_SOURCE_WEIGHT common.Gwei = 12
+	TIMELY_TARGET_WEIGHT common.Gwei = 24
+	TIMELY_HEAD_WEIGHT   common.Gwei = 12
+	SYNC_REWARD_WEIGHT   common.Gwei = 8
+	PROPOSER_WEIGHT      common.Gwei = 8
+	WEIGHT_DENOMINATOR   common.Gwei = 64
 )
 
 type ParticipationRegistry []ParticipationFlags

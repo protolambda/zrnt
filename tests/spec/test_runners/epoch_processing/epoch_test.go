@@ -96,11 +96,20 @@ func TestJustificationAndFinalization(t *testing.T) {
 }
 
 func TestParticipationRecordUpdates(t *testing.T) {
-	test_util.RunTransitionTest(t, test_util.AllForks, "epoch_processing", "participation_record_updates",
+	test_util.RunTransitionTest(t, []test_util.ForkName{"phase0", "merge"}, "epoch_processing", "participation_record_updates",
 		NewEpochTest(func(spec *common.Spec, state common.BeaconState, epc *common.EpochsContext, flats []common.FlatValidator) error {
 			if s, ok := state.(phase0.PendingAttestationsBeaconState); ok {
 				return phase0.ProcessParticipationRecordUpdates(context.Background(), spec, epc, s)
-			} else if s, ok := state.(*altair.BeaconStateView); ok {
+			} else {
+				return fmt.Errorf("unrecognized state type: %T", state)
+			}
+		}))
+}
+
+func TestParticipationFlagUpdates(t *testing.T) {
+	test_util.RunTransitionTest(t, []test_util.ForkName{"altair"}, "epoch_processing", "participation_flag_updates",
+		NewEpochTest(func(spec *common.Spec, state common.BeaconState, epc *common.EpochsContext, flats []common.FlatValidator) error {
+			if s, ok := state.(*altair.BeaconStateView); ok {
 				return altair.ProcessParticipationFlagUpdates(context.Background(), spec, s)
 			} else {
 				return fmt.Errorf("unrecognized state type: %T", state)
@@ -159,5 +168,16 @@ func TestSlashingsReset(t *testing.T) {
 	test_util.RunTransitionTest(t, test_util.AllForks, "epoch_processing", "slashings_reset",
 		NewEpochTest(func(spec *common.Spec, state common.BeaconState, epc *common.EpochsContext, flats []common.FlatValidator) error {
 			return phase0.ProcessSlashingsReset(context.Background(), spec, epc, state)
+		}))
+}
+
+func TestSyncCommitteeUpdates(t *testing.T) {
+	test_util.RunTransitionTest(t, []test_util.ForkName{"altair"}, "epoch_processing", "sync_committee_updates",
+		NewEpochTest(func(spec *common.Spec, state common.BeaconState, epc *common.EpochsContext, flats []common.FlatValidator) error {
+			if s, ok := state.(common.SyncCommitteeBeaconState); ok {
+				return altair.ProcessSyncCommitteeUpdates(context.Background(), spec, epc, s)
+			} else {
+				return fmt.Errorf("unrecognized state type: %T", state)
+			}
 		}))
 }

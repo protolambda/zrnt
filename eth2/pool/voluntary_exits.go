@@ -29,3 +29,20 @@ func (vep *VoluntaryExitPool) AddVoluntaryExit(exit *phase0.SignedVoluntaryExit)
 	vep.exits[key] = exit
 	return false
 }
+
+func (vep *VoluntaryExitPool) All() []*phase0.SignedVoluntaryExit {
+	vep.RLock()
+	defer vep.RUnlock()
+	out := make([]*phase0.SignedVoluntaryExit, 0, len(vep.exits))
+	for _, a := range vep.exits {
+		out = append(out, a)
+	}
+	return out
+}
+
+// Pack n exits, removes the exits from the pool. A ranking function is used to pick the best exits.
+// Exits with negative rank function outputs will not be packed.
+func (vep *VoluntaryExitPool) Pack(rank func(sl *phase0.SignedVoluntaryExit) int, n uint) []*phase0.SignedVoluntaryExit {
+	// TODO
+	return nil
+}

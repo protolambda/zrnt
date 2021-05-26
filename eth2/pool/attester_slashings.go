@@ -48,3 +48,10 @@ func (asp *AttesterSlashingPool) All() []*phase0.AttesterSlashing {
 	}
 	return out
 }
+
+// Pack n slashings, removes the slashings from the pool. A reward estimator is used to pick the best slashings.
+// Slashings with negative rewards will not be packed.
+func (asp *AttesterSlashingPool) Pack(estReward func(sl *phase0.AttesterSlashing) int, n uint) []*phase0.AttesterSlashing {
+	// TODO
+	return nil
+}

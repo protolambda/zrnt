@@ -41,10 +41,19 @@ type MinAggregates struct {
 
 type AttestationPool struct {
 	sync.RWMutex
-	spec               *common.Spec
-	datas              map[common.Root]*IndexedAttData
-	individual         map[Assignment]*AttRef
-	aggregate          map[common.Root]*MinAggregates
+	spec *common.Spec
+	// att data root -> (data contents, committee indices)
+	datas map[common.Root]*IndexedAttData
+	// (validator, epoch) -> individual attestation
+	individual map[Assignment]*AttRef
+	// att data root -> minimum representation of everything attesting to it
+	aggregate map[common.Root]*MinAggregates
+	// (validator, epoch) -> att data root.
+	// When a validator participates in an aggregate, remember which attestation data the validator is attesting too.
+	// This helps filter duplicate aggregate attestations:
+	// if all aggregate participants already voted, it can be ignored (and maybe slashed if bad double votes).
+	aggPerValidator map[Assignment]common.Root
+	// Keep some extra data around, which is already covered by larger aggregates, to try and pack better results.
 	maxExtraAggregates uint64
 }
 
@@ -96,7 +105,7 @@ func (ap *AttestationPool) AddAttestation(att *phase0.Attestation, committee com
 		return nil
 	}
 
-	// aggregates: don't store than we have to.
+	// aggregates: don't store more than we have to.
 	// Sometimes we find some different ones, keep those, every attester counts.
 	// No aggregation yet, we can put together the best version later.
 	if existing, ok := ap.aggregate[dataRoot]; ok {
@@ -115,13 +124,39 @@ func (ap *AttestationPool) AddAttestation(att *phase0.Attestation, committee com
 			// this aggregate adds additional participants compared to the total we had before, keep it!
 			existing.Aggregates = append(existing.Aggregates,
 				Aggregate{Participants: att.AggregationBits, Sig: att.Signature})
+
+			// remember the participants attested this epoch
+			key := Assignment{Index: 0, Epoch: att.Data.Target.Epoch}
+			for i, vi := range committee {
+				if att.AggregationBits.GetBit(uint64(i)) {
+					key.Index = vi
+					ap.aggPerValidator[key] = dataRoot
+				}
+			}
 			return nil
 		}
 	} else {
-		ap.aggregate[dataRoot] = &MinAggregates{
-			Aggregates: []Aggregate{{Participants: att.AggregationBits, Sig: att.Signature}},
-			// copy, we mutate this bitfield later, while still using the original (stored in above array)
-			Participants: att.AggregationBits.Copy(),
+		hasNewAttester := false
+		key := Assignment{Index: 0, Epoch: att.Data.Target.Epoch}
+		// check if we have not seen any of the participants attest this epoch yet
+		for i, vi := range committee {
+			if att.AggregationBits.GetBit(uint64(i)) {
+				key.Index = vi
+				if _, ok := ap.aggPerValidator[key]; !ok {
+					hasNewAttester = true
+					ap.aggPerValidator[key] = dataRoot
+				}
+			}
+		}
+		if hasNewAttester {
+			ap.aggregate[dataRoot] = &MinAggregates{
+				Aggregates: []Aggregate{{Participants: att.AggregationBits, Sig: att.Signature}},
+				// copy, we mutate this bitfield later, while still using the original (stored in above array)
+				Participants: att.AggregationBits.Copy(),
+			}
+		} else {
+			return fmt.Errorf("ignoring new attestation for different data:" +
+				"all participants voted for other data this epoch already, whole attestation is likely slashable")
 		}
 		return nil
 	}
@@ -167,12 +202,36 @@ func (ap *AttestationPool) Search(opts ...AttSearchOption) (out []*phase0.Attest
 	return out
 }
 
-func (ap *AttestationPool) Prune() {
-	// TODO
+// Prune pool based on current epoch, attestations which cannot be included anymore will get pruned.
+func (ap *AttestationPool) Prune(epoch common.Epoch) {
+	min := epoch.Previous()
+	for k, v := range ap.datas {
+		if v.Data.Target.Epoch < min {
+			delete(ap.datas, k)
+			delete(ap.aggregate, k)
+		}
+	}
+	for k := range ap.individual {
+		if k.Epoch < min {
+			delete(ap.individual, k)
+		}
+	}
+	for k := range ap.aggPerValidator {
+		if k.Epoch < min {
+			delete(ap.aggPerValidator, k)
+		}
+	}
 }
 
-func (ap *AttestationPool) Packing(ctx context.Context, source common.Checkpoint, target common.Checkpoint,
-	maxCount uint64, maxTime time.Duration) ([]phase0.Attestation, error) {
+// Approximation of the optimal attestation packing.
+// Attestations must match source, get prioritized if the target is correct, and more if the head is correct.
+// Attestations may not be included if they already are (checked via included func).
+// Maximum attestation output and packing-time constraints apply.
+func (ap *AttestationPool) Packing(ctx context.Context,
+	source common.Checkpoint, target common.Checkpoint,
+	headRoot common.Root, headSlot common.Slot,
+	maxCount uint64, maxTime time.Duration,
+	included func(epoch common.Epoch, index common.ValidatorIndex)) ([]phase0.Attestation, error) {
 
 	// TODO find best attestations to pack for profit.
 	return nil, nil

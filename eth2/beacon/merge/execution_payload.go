@@ -7,16 +7,22 @@ import (
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 )
 
-func ProcessExecutionPayload(ctx context.Context, spec *common.Spec, state *BeaconStateView, executionPayload *common.ExecutionPayload, engine common.ExecutionEngine) error {
+func ProcessExecutionPayload(ctx context.Context, spec *common.Spec, state ExecutionTrackingBeaconState, executionPayload *common.ExecutionPayload, engine common.ExecutionEngine) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 	if engine == nil {
 		return errors.New("nil execution engine")
 	}
-	if completed, err := state.IsTransitionCompleted(); err != nil {
-		return err
-	} else if completed {
+	completed := true
+	if s, ok := state.(ExecutionUpgradeBeaconState); ok {
+		var err error
+		completed, err = s.IsTransitionCompleted()
+		if err != nil {
+			return err
+		}
+	}
+	if completed {
 		latestExecHeader, err := state.LatestExecutionPayloadHeader()
 		if err != nil {
 			return err

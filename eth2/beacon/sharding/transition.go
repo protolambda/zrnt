@@ -1,11 +1,11 @@
-package merge
+package sharding
 
 import (
 	"context"
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/merge"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
-	"github.com/protolambda/ztyp/tree"
 )
 
 func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spec, epc *common.EpochsContext) error {
@@ -39,6 +39,11 @@ func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spe
 	if err := phase0.ProcessEpochSlashings(ctx, spec, epc, flats, state); err != nil {
 		return err
 	}
+
+	// TODO process_pending_headers (TODO: rename to process_pending_shard_headers)
+	// TODO charge_confirmed_header_fees (TODO: rename to charge_confirmed_shard_header_fees)
+	// TODO reset_pending_headers (TODO: rename to reset_pending_shard_headers)
+
 	if err := phase0.ProcessEffectiveBalanceUpdates(ctx, spec, epc, flats, state); err != nil {
 		return err
 	}
@@ -95,66 +100,35 @@ func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spe
 	if err := phase0.ProcessAttesterSlashings(ctx, spec, epc, state, body.AttesterSlashings); err != nil {
 		return err
 	}
+	// TODO: process shard proposer slashings
+	// TODO: check shard headers count against active shard count
+	// TODO: process shard headers
 	if err := phase0.ProcessAttestations(ctx, spec, epc, state, body.Attestations); err != nil {
 		return err
 	}
+	// TODO: wrap attestation processing, to add shard confirmation work
 	if err := phase0.ProcessDeposits(ctx, spec, epc, state, body.Deposits); err != nil {
 		return err
 	}
 	if err := phase0.ProcessVoluntaryExits(ctx, spec, epc, state, body.VoluntaryExits); err != nil {
 		return err
 	}
-	if enabled, err := state.IsExecutionEnabled(spec, block); err != nil {
+	// TODO: check if execution is enabled, like in merge?
+	if err := merge.ProcessExecutionPayload(ctx, spec, state, &body.ExecutionPayload, spec.ExecutionEngine); err != nil {
 		return err
-	} else if enabled {
-		if err := ProcessExecutionPayload(ctx, spec, state, &body.ExecutionPayload, spec.ExecutionEngine); err != nil {
-			return err
-		}
 	}
+	//
 	return nil
 }
 
-type ExecutionUpgradeBeaconState interface {
-	IsExecutionEnabled(spec *common.Spec, block *BeaconBlock) (bool, error)
-	IsTransitionCompleted() (bool, error)
-	IsTransitionBlock(spec *common.Spec, block *BeaconBlock) (bool, error)
-}
-
-type ExecutionTrackingBeaconState interface {
-	common.BeaconState
-
-	LatestExecutionPayloadHeader() (*common.ExecutionPayloadHeaderView, error)
-	SetLatestExecutionPayloadHeader(h *common.ExecutionPayloadHeader) error
-}
-
 func (state *BeaconStateView) IsExecutionEnabled(spec *common.Spec, block *BeaconBlock) (bool, error) {
-	isTransitionCompleted, err := state.IsTransitionCompleted()
-	if err != nil {
-		return false, err
-	}
-	if isTransitionCompleted {
-		return true, nil
-	}
-	return state.IsTransitionBlock(spec, block)
+	return true, nil
 }
 
 func (state *BeaconStateView) IsTransitionCompleted() (bool, error) {
-	execHeader, err := state.LatestExecutionPayloadHeader()
-	if err != nil {
-		return false, err
-	}
-	empty := common.ExecutionPayloadHeaderType.DefaultNode().MerkleRoot(tree.GetHashFn())
-	return execHeader.HashTreeRoot(tree.GetHashFn()) != empty, nil
+	return true, nil
 }
 
 func (state *BeaconStateView) IsTransitionBlock(spec *common.Spec, block *BeaconBlock) (bool, error) {
-	isTransitionCompleted, err := state.IsTransitionCompleted()
-	if err != nil {
-		return false, err
-	}
-	if isTransitionCompleted {
-		return false, nil
-	}
-	empty := common.ExecutionPayloadType.DefaultNode().MerkleRoot(tree.GetHashFn())
-	return block.Body.ExecutionPayload.HashTreeRoot(spec, tree.GetHashFn()) != empty, nil
+	return false, nil
 }

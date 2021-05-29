@@ -40,11 +40,9 @@ type BeaconState struct {
 	// Execution-layer
 	LatestExecutionPayloadHeader common.ExecutionPayloadHeader `json:"latest_execution_payload_header" yaml:"latest_execution_payload_header"`
 	// Sharding
-	PreviousEpochPendingShardHeaders     PendingShardHeaders       `json:"previous_epoch_pending_shard_headers" yaml:"previous_epoch_pending_shard_headers"`
-	CurrentEpochPendingShardHeaders      PendingShardHeaders       `json:"current_epoch_pending_shard_headers" yaml:"current_epoch_pending_shard_headers"`
-	GrandparentEpochConfirmedCommitments DataCommitmentsEpochTable `json:"grandparent_epoch_confirmed_commitments" yaml:"grandparent_epoch_confirmed_commitments"`
-	ShardGasPrice                        Uint64View                `json:"shard_gasprice" yaml:"shard_gasprice"`
-	CurrentEpochStartShard               common.Shard              `json:"current_epoch_start_shard" yaml:"current_epoch_start_shard"`
+	ShardBuffer            ShardBuffer  `json:"shard_buffer" yaml:"shard_buffer"`
+	ShardGasPrice          Uint64View   `json:"shard_gasprice" yaml:"shard_gasprice"`
+	CurrentEpochStartShard common.Shard `json:"current_epoch_start_shard" yaml:"current_epoch_start_shard"`
 }
 
 func (v *BeaconState) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
@@ -59,9 +57,7 @@ func (v *BeaconState) Deserialize(spec *common.Spec, dr *codec.DecodingReader) e
 		&v.PreviousJustifiedCheckpoint, &v.CurrentJustifiedCheckpoint,
 		&v.FinalizedCheckpoint,
 		&v.LatestExecutionPayloadHeader,
-		spec.Wrap(&v.PreviousEpochPendingShardHeaders),
-		spec.Wrap(&v.CurrentEpochPendingShardHeaders),
-		spec.Wrap(&v.GrandparentEpochConfirmedCommitments),
+		spec.Wrap(&v.ShardBuffer),
 		&v.ShardGasPrice,
 		&v.CurrentEpochStartShard)
 }
@@ -78,9 +74,7 @@ func (v *BeaconState) Serialize(spec *common.Spec, w *codec.EncodingWriter) erro
 		&v.PreviousJustifiedCheckpoint, &v.CurrentJustifiedCheckpoint,
 		&v.FinalizedCheckpoint,
 		&v.LatestExecutionPayloadHeader,
-		spec.Wrap(&v.PreviousEpochPendingShardHeaders),
-		spec.Wrap(&v.CurrentEpochPendingShardHeaders),
-		spec.Wrap(&v.GrandparentEpochConfirmedCommitments),
+		spec.Wrap(&v.ShardBuffer),
 		&v.ShardGasPrice,
 		&v.CurrentEpochStartShard)
 }
@@ -97,9 +91,7 @@ func (v *BeaconState) ByteLength(spec *common.Spec) uint64 {
 		&v.PreviousJustifiedCheckpoint, &v.CurrentJustifiedCheckpoint,
 		&v.FinalizedCheckpoint,
 		&v.LatestExecutionPayloadHeader,
-		spec.Wrap(&v.PreviousEpochPendingShardHeaders),
-		spec.Wrap(&v.CurrentEpochPendingShardHeaders),
-		spec.Wrap(&v.GrandparentEpochConfirmedCommitments),
+		spec.Wrap(&v.ShardBuffer),
 		&v.ShardGasPrice,
 		&v.CurrentEpochStartShard)
 }
@@ -120,9 +112,7 @@ func (v *BeaconState) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Ro
 		&v.PreviousJustifiedCheckpoint, &v.CurrentJustifiedCheckpoint,
 		&v.FinalizedCheckpoint,
 		&v.LatestExecutionPayloadHeader,
-		spec.Wrap(&v.PreviousEpochPendingShardHeaders),
-		spec.Wrap(&v.CurrentEpochPendingShardHeaders),
-		spec.Wrap(&v.GrandparentEpochConfirmedCommitments),
+		spec.Wrap(&v.ShardBuffer),
 		&v.ShardGasPrice,
 		&v.CurrentEpochStartShard)
 }
@@ -152,9 +142,7 @@ const (
 	_stateCurrentJustifiedCheckpoint
 	_stateFinalizedCheckpoint
 	_latestExecutionPayloadHeader
-	_previousEpochPendingShardHeaders
-	_currentEpochPendingShardHeaders
-	_grandparentEpochConfirmedCommitments
+	_shardBuffer
 	_shardGasprice
 	_currentEpochStartShard
 )
@@ -193,9 +181,7 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 		// Execution-layer
 		{"latest_execution_payload_header", common.ExecutionPayloadHeaderType},
 		// Sharding
-		{"previous_epoch_pending_shard_headers", PendingShardHeadersType(spec)},
-		{"current_epoch_pending_shard_headers", PendingShardHeadersType(spec)},
-		{"grandparent_epoch_confirmed_commitments", DataCommitmentsEpochTableType(spec)},
+		{"shard_buffer", ShardBufferType(spec)},
 		{"shard_gasprice", Uint64Type},
 		{"current_epoch_start_shard", common.ShardType},
 	})
@@ -447,7 +433,25 @@ func (state *BeaconStateView) SetLatestExecutionPayloadHeader(h *common.Executio
 	return state.Set(_latestExecutionPayloadHeader, h.View())
 }
 
-// TODO: implement getters/setters for new sharding state fields
+func (state *BeaconStateView) ShardBuffer() (*ShardBufferView, error) {
+	return AsShardBuffer(state.Get(_shardBuffer))
+}
+
+func (state *BeaconStateView) ShardGasPrice() (common.Gwei, error) {
+	return common.AsGwei(state.Get(_shardGasprice))
+}
+
+func (state *BeaconStateView) SetShardGasPrice(price common.Gwei) error {
+	return state.Set(_shardGasprice, Uint64View(price))
+}
+
+func (state *BeaconStateView) CurrentEpochStartShard() (common.Shard, error) {
+	return common.AsShard(state.Get(_currentEpochStartShard))
+}
+
+func (state *BeaconStateView) SetCurrentEpochStartShard(shard common.Shard) error {
+	return state.Set(_currentEpochStartShard, Uint64View(shard))
+}
 
 func (state *BeaconStateView) ForkSettings(spec *common.Spec) *common.ForkSettings {
 	return &common.ForkSettings{

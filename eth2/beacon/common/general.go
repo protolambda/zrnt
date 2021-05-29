@@ -49,6 +49,11 @@ func (e Shard) String() string {
 
 const ShardType = Uint64Type
 
+func AsShard(v View, err error) (Shard, error) {
+	i, err := AsUint64(v, err)
+	return Shard(i), err
+}
+
 type CommitteeIndex Uint64View
 
 func (i *CommitteeIndex) Deserialize(dr *codec.DecodingReader) error {

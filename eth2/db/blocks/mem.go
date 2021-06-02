@@ -148,3 +148,7 @@ func (db *MemDB) Path() string {
 func (db *MemDB) Spec() *common.Spec {
 	return db.spec
 }
+
+func (db *MemDB) Close() error {
+	return nil
+}

@@ -194,3 +194,7 @@ func (db *FileDB) Path() string {
 func (db *FileDB) Spec() *common.Spec {
 	return db.spec
 }
+
+func (db *FileDB) Close() error {
+	return nil
+}

@@ -41,8 +41,9 @@ type DB interface {
 	List() []common.Root
 	// Get Path
 	Path() string
-	// Spec of states
+	// Spec of blocks
 	Spec() *common.Spec
+	io.Closer
 }
 
 // Mainnet blocks are 157756 in v0.12.x, buffer can grow if necessary, and should be enough for most custom configs.

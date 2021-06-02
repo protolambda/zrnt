@@ -3,6 +3,7 @@ package states
 import (
 	"context"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"io"
 )
 
 type DBStats struct {
@@ -19,4 +20,5 @@ type DB interface {
 	Get(ctx context.Context, root common.Root) (state common.BeaconState, err error)
 	// Remove removes a state from the DB. Removing a state that does not exist is safe.
 	Remove(root common.Root) error
+	io.Closer
 }

@@ -9,28 +9,26 @@ import (
 
 type MemDB struct {
 	// beacon.Root -> tree.Node (backing of BeaconStateView)
-	data        sync.Map
-	removalLock sync.Mutex
-	spec        *common.Spec
+	data sync.Map
+	spec *common.Spec
 }
 
 func NewMemDB(spec *common.Spec) *MemDB {
 	return &MemDB{spec: spec}
 }
 
-func (db *MemDB) Store(ctx context.Context, state common.BeaconState) (exists bool, err error) {
+func (db *MemDB) Store(ctx context.Context, state common.BeaconState) error {
 	// Released when the block is removed from the DB
 	root := state.HashTreeRoot(tree.GetHashFn())
-	_, loaded := db.data.LoadOrStore(root, state)
-	return loaded, nil
+	db.data.Store(root, state)
+	return nil
 }
 
-func (db *MemDB) Get(ctx context.Context, root common.Root) (state common.BeaconState, exists bool, err error) {
+func (db *MemDB) Get(ctx context.Context, root common.Root) (state common.BeaconState, err error) {
 	dat, ok := db.data.Load(root)
 	if !ok {
-		return nil, false, nil
+		return nil, nil
 	}
-	exists = true
 	state, ok = dat.(common.BeaconState)
 	if !ok {
 		panic("in-memory db was corrupted with unexpected state type")
@@ -38,10 +36,11 @@ func (db *MemDB) Get(ctx context.Context, root common.Root) (state common.Beacon
 	return
 }
 
-func (db *MemDB) Remove(root common.Root) (exists bool, err error) {
-	db.removalLock.Lock()
-	defer db.removalLock.Unlock()
-	_, ok := db.data.Load(root)
+func (db *MemDB) Remove(root common.Root) error {
 	db.data.Delete(root)
-	return ok, nil
+	return nil
+}
+
+func (db *MemDB) Close() error {
+	return nil
 }

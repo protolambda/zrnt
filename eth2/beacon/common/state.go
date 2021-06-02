@@ -3,6 +3,7 @@ package common
 import (
 	"context"
 	"github.com/protolambda/ztyp/tree"
+	"github.com/protolambda/ztyp/view"
 )
 
 type BatchRoots interface {
@@ -81,6 +82,8 @@ type ForkSettings struct {
 }
 
 type BeaconState interface {
+	view.View
+
 	GenesisTime() (Timestamp, error)
 	SetGenesisTime(t Timestamp) error
 	GenesisValidatorsRoot() (Root, error)
@@ -123,7 +126,7 @@ type BeaconState interface {
 	SetFinalizedCheckpoint(c Checkpoint) error
 
 	HashTreeRoot(fn tree.HashFn) Root
-	Copy() (BeaconState, error)
+	CopyState() (BeaconState, error)
 
 	ForkSettings(spec *Spec) *ForkSettings
 

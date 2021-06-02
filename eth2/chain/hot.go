@@ -51,7 +51,7 @@ func (e *HotEntry) EpochsContext(context.Context) (*common.EpochsContext, error)
 
 func (e *HotEntry) State(context.Context) (common.BeaconState, error) {
 	// Return a copy of the view, the state itself may not be modified
-	return e.state.Copy()
+	return e.state.CopyState()
 }
 
 type HotChain interface {
@@ -417,7 +417,7 @@ func (uc *UnfinalizedChain) Towards(ctx context.Context, fromBlockRoot Root, toS
 		uc.State2Key[stateRoot] = key
 		last = entry
 
-		state, err = state.Copy()
+		state, err = state.CopyState()
 		if err != nil {
 			return nil, err
 		}

@@ -346,7 +346,7 @@ func (f *FinalizedChain) OnFinalizedEntry(ctx context.Context, entry ChainEntry)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve state of new finalized entry %s: %v", next, err)
 	}
-	if _, err := f.StateDB.Store(ctx, state); err != nil {
+	if err := f.StateDB.Store(ctx, state); err != nil {
 		return fmt.Errorf("failed to store state of new finalized entry %s: %v", next, err)
 	}
 
@@ -426,11 +426,11 @@ func (f *FinalizedChain) getState(ctx context.Context, step Step) (common.Beacon
 	if root == (common.Root{}) {
 		return nil, fmt.Errorf("unknown state, step out of range: %s", step)
 	}
-	state, exists, err := f.StateDB.Get(ctx, root)
+	state, err := f.StateDB.Get(ctx, root)
 	if err != nil {
 		return nil, err
 	}
-	if !exists {
+	if state == nil {
 		return nil, fmt.Errorf("state for state-root %x (step %s) does not exist: %v", root, step, err)
 	}
 	return state, nil

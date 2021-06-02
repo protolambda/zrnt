@@ -434,6 +434,6 @@ func (state *BeaconStateView) Raw(spec *common.Spec) (*BeaconState, error) {
 	return &raw, nil
 }
 
-func (state *BeaconStateView) Copy() (common.BeaconState, error) {
+func (state *BeaconStateView) CopyState() (common.BeaconState, error) {
 	return AsBeaconStateView(state.ContainerView.Copy())
 }

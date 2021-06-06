@@ -9,9 +9,9 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
-const UNCONFIRMED_SHARD_DATA = 0
-const CONFIRMED_SHARD_DATA = 1
-const PENDING_SHARD_DATA = 2
+const SHARD_WORK_UNCONFIRMED = 0
+const SHARD_WORK_CONFIRMED = 1
+const SHARD_WORK_PENDING = 2
 
 func ShardWorkStatusType(spec *common.Spec) *UnionTypeDef {
 	return UnionType([]TypeDef{
@@ -31,13 +31,13 @@ func (h *ShardWorkStatus) Deserialize(spec *common.Spec, dr *codec.DecodingReade
 	return dr.Union(func(selector uint8) (codec.Deserializable, error) {
 		h.Selector = selector
 		switch selector {
-		case UNCONFIRMED_SHARD_DATA:
+		case SHARD_WORK_UNCONFIRMED:
 			return nil, nil
-		case CONFIRMED_SHARD_DATA:
+		case SHARD_WORK_CONFIRMED:
 			dat := new(DataCommitment)
 			h.Value = dat
 			return dat, nil
-		case PENDING_SHARD_DATA:
+		case SHARD_WORK_PENDING:
 			dat := new(PendingShardHeaders)
 			h.Value = dat
 			return spec.Wrap(dat), nil
@@ -49,20 +49,20 @@ func (h *ShardWorkStatus) Deserialize(spec *common.Spec, dr *codec.DecodingReade
 
 func (h *ShardWorkStatus) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
 	switch h.Selector {
-	case UNCONFIRMED_SHARD_DATA:
-		return w.Union(UNCONFIRMED_SHARD_DATA, nil)
-	case CONFIRMED_SHARD_DATA:
+	case SHARD_WORK_UNCONFIRMED:
+		return w.Union(SHARD_WORK_UNCONFIRMED, nil)
+	case SHARD_WORK_CONFIRMED:
 		commitment, ok := h.Value.(*DataCommitment)
 		if !ok {
-			return fmt.Errorf("invalid value type for CONFIRMED_SHARD_DATA selector: %T", h.Value)
+			return fmt.Errorf("invalid value type for SHARD_WORK_CONFIRMED selector: %T", h.Value)
 		}
-		return w.Union(CONFIRMED_SHARD_DATA, commitment)
-	case PENDING_SHARD_DATA:
+		return w.Union(SHARD_WORK_CONFIRMED, commitment)
+	case SHARD_WORK_PENDING:
 		headers, ok := h.Value.(*PendingShardHeaders)
 		if !ok {
-			return fmt.Errorf("invalid value type for PENDING_SHARD_DATA selector: %T", h.Value)
+			return fmt.Errorf("invalid value type for SHARD_WORK_PENDING selector: %T", h.Value)
 		}
-		return w.Union(PENDING_SHARD_DATA, spec.Wrap(headers))
+		return w.Union(SHARD_WORK_PENDING, spec.Wrap(headers))
 	default:
 		return errors.New("bad selector value")
 	}

@@ -14,6 +14,7 @@ func PendingShardHeaderType(spec *common.Spec) *ContainerTypeDef {
 		{"root", RootType},
 		{"votes", phase0.AttestationBitsType(spec)},
 		{"weight", common.GweiType},
+		{"update_slot", common.SlotType},
 	})
 }
 
@@ -26,26 +27,28 @@ type PendingShardHeader struct {
 	Votes phase0.AttestationBits `json:"votes" yaml:"votes"`
 	// Sum of effective balances of votes
 	Weight common.Gwei `json:"weight" yaml:"weight"`
+	// When the header was last updated, as reference for weight accuracy
+	UpdateSlot common.Slot `json:"update_slot" yaml:"update_slot"`
 }
 
 func (h *PendingShardHeader) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
-	return dr.Container(&h.Commitment, &h.Root, spec.Wrap(&h.Votes), &h.Weight)
+	return dr.Container(&h.Commitment, &h.Root, spec.Wrap(&h.Votes), &h.Weight, &h.UpdateSlot)
 }
 
 func (h *PendingShardHeader) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
-	return w.Container(&h.Commitment, &h.Root, spec.Wrap(&h.Votes), &h.Weight)
+	return w.Container(&h.Commitment, &h.Root, spec.Wrap(&h.Votes), &h.Weight, &h.UpdateSlot)
 }
 
 func (h *PendingShardHeader) ByteLength(spec *common.Spec) uint64 {
-	return DataCommitmentType.TypeByteLength() + 32 + h.Votes.ByteLength(spec) + 8
+	return codec.ContainerLength(&h.Commitment, &h.Root, spec.Wrap(&h.Votes), &h.Weight, &h.UpdateSlot)
 }
 
 func (h *PendingShardHeader) FixedLength(spec *common.Spec) uint64 {
-	return DataCommitmentType.TypeByteLength() + 32 + 4 + 8
+	return 0
 }
 
 func (h *PendingShardHeader) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
-	return hFn.HashTreeRoot(&h.Commitment, &h.Root, spec.Wrap(&h.Votes), &h.Weight)
+	return hFn.HashTreeRoot(&h.Commitment, &h.Root, spec.Wrap(&h.Votes), &h.Weight, &h.UpdateSlot)
 }
 
 func PendingShardHeadersType(spec *common.Spec) *ComplexListTypeDef {

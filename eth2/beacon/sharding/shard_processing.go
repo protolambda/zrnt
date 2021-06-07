@@ -242,7 +242,7 @@ func ResetPendingShardWork(ctx context.Context, spec *common.Spec, state *Beacon
 			}
 			// empty bitlist, packed in bytes, with delimiter bit
 			emptyBits := make(phase0.AttestationBits, (len(committee)/8)+1)
-			emptyBits[len(emptyBits)-1] = uint8(len(committee)) & 7
+			emptyBits[len(emptyBits)-1] = 1 << (uint8(len(committee)) & 7)
 
 			column[shard] = ShardWork{Status: ShardWorkStatus{
 				Selector: SHARD_WORK_PENDING,

@@ -145,8 +145,8 @@ type ShardingConfig struct {
 	TARGET_SAMPLES_PER_BLOCK    uint64 `yaml:"TARGET_SAMPLES_PER_BLOCK" json:"TARGET_SAMPLES_PER_BLOCK"`
 
 	// Gwei values
-	MAX_GASPRICE           uint64        `yaml:"MAX_GASPRICE" json:"MAX_GASPRICE"`
-	MIN_GASPRICE           uint64        `yaml:"MIN_GASPRICE" json:"MIN_GASPRICE"`
+	MAX_GASPRICE           Gwei          `yaml:"MAX_GASPRICE" json:"MAX_GASPRICE"`
+	MIN_GASPRICE           Gwei          `yaml:"MIN_GASPRICE" json:"MIN_GASPRICE"`
 	DOMAIN_SHARD_PROPOSER  BLSDomainType `yaml:"DOMAIN_SHARD_PROPOSER" json:"DOMAIN_SHARD_PROPOSER"`
 	DOMAIN_SHARD_COMMITTEE BLSDomainType `yaml:"DOMAIN_SHARD_COMMITTEE" json:"DOMAIN_SHARD_COMMITTEE"`
 }
@@ -216,5 +216,37 @@ func (spec *Spec) ForkVersion(slot Slot) Version {
 		return spec.MERGE_FORK_VERSION
 	} else {
 		return spec.SHARDING_FORK_VERSION
+	}
+}
+
+func (spec *Spec) ActiveShardCount(epoch Epoch) uint64 {
+	// TODO: this may become more dynamic, based on state, fork, etc.
+	return spec.INITIAL_ACTIVE_SHARDS
+}
+
+func (spec *Spec) ComputeUpdatedGasPrice(prevGasPrice Gwei, shardBlockLength uint64, adjustmentQuotient uint64) Gwei {
+	if shardBlockLength > spec.TARGET_SAMPLES_PER_BLOCK {
+		delta := Gwei(uint64(prevGasPrice) * (shardBlockLength - spec.TARGET_SAMPLES_PER_BLOCK) /
+			spec.TARGET_SAMPLES_PER_BLOCK / adjustmentQuotient)
+		if delta < 1 {
+			delta = 1
+		}
+		out := prevGasPrice + delta
+		if out > spec.MAX_GASPRICE {
+			out = spec.MAX_GASPRICE
+		}
+		return out
+	} else {
+		delta := Gwei(uint64(prevGasPrice) * (spec.TARGET_SAMPLES_PER_BLOCK - shardBlockLength) /
+			spec.TARGET_SAMPLES_PER_BLOCK / adjustmentQuotient)
+		if delta < 1 {
+			delta = 1
+		}
+		out := spec.MIN_GASPRICE + delta
+		if out < prevGasPrice {
+			out = prevGasPrice
+		}
+		out -= delta
+		return out
 	}
 }

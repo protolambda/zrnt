@@ -25,6 +25,15 @@ func AsDataCommitment(v View, err error) (*DataCommitmentView, error) {
 	return &DataCommitmentView{c}, err
 }
 
+func (v *DataCommitmentView) Point() (BLSCommitment, error) {
+	return common.AsBLSPubkey(v.Get(0))
+}
+
+func (v *DataCommitmentView) Length() (uint64, error) {
+	l, err := AsUint64(v.Get(1))
+	return uint64(l), err
+}
+
 func (v *DataCommitmentView) Raw() (*DataCommitment, error) {
 	point, err := common.AsBLSPubkey(v.Get(0))
 	if err != nil {

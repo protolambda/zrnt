@@ -286,3 +286,8 @@ func (epc *EpochsContext) GetCommitteeCountPerSlot(epoch Epoch) (uint64, error) 
 func (epc *EpochsContext) GetBeaconProposer(slot Slot) (ValidatorIndex, error) {
 	return epc.Proposers.GetBeaconProposer(slot)
 }
+
+func (epc *EpochsContext) GetShardProposer(slot Slot, shard Shard) (ValidatorIndex, error) {
+	// TODO
+	return 0, nil
+}

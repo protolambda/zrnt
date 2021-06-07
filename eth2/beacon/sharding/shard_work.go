@@ -21,6 +21,11 @@ func ShardWorkStatusType(spec *common.Spec) *UnionTypeDef {
 	})
 }
 
+func AsShardWorkStatus(v View, err error) (*ShardWorkStatusView, error) {
+	c, err := AsUnion(v, err)
+	return &ShardWorkStatusView{c}, err
+}
+
 type ShardWorkStatus struct {
 	Selector uint8 `json:"selector" yaml:"selector"`
 	// Either nil, *DataCommitment or *PendingShardHeaders
@@ -69,18 +74,24 @@ func (h *ShardWorkStatus) Serialize(spec *common.Spec, w *codec.EncodingWriter) 
 }
 
 func (h *ShardWorkStatus) ByteLength(spec *common.Spec) uint64 {
-	if h.Value == nil {
+	switch h.Selector {
+	case SHARD_WORK_UNCONFIRMED:
 		return 1
-	}
-	commitment, ok := h.Value.(*DataCommitment)
-	if ok {
+	case SHARD_WORK_CONFIRMED:
+		commitment, ok := h.Value.(*DataCommitment)
+		if !ok {
+			panic(fmt.Errorf("invalid value type for SHARD_WORK_CONFIRMED selector: %T", h.Value))
+		}
 		return commitment.ByteLength()
-	}
-	headers, ok := h.Value.(*PendingShardHeaders)
-	if !ok {
+	case SHARD_WORK_PENDING:
+		headers, ok := h.Value.(*PendingShardHeaders)
+		if !ok {
+			panic(fmt.Errorf("invalid value type for SHARD_WORK_PENDING selector: %T", h.Value))
+		}
 		return headers.ByteLength(spec)
+	default:
+		panic(errors.New("bad selector value"))
 	}
-	return 0
 }
 
 func (h *ShardWorkStatus) FixedLength(spec *common.Spec) uint64 {
@@ -88,7 +99,7 @@ func (h *ShardWorkStatus) FixedLength(spec *common.Spec) uint64 {
 }
 
 func (h *ShardWorkStatus) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
-	if h.Value == nil {
+	if h.Selector == SHARD_WORK_UNCONFIRMED {
 		return hFn.Union(h.Selector, nil)
 	}
 	commitment, ok := h.Value.(*DataCommitment)
@@ -100,6 +111,31 @@ func (h *ShardWorkStatus) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) commo
 		return hFn.Union(h.Selector, spec.Wrap(headers))
 	}
 	return common.Root{}
+}
+
+func (h *ShardWorkStatus) View(spec *common.Spec) (*ShardWorkStatusView, error) {
+	switch h.Selector {
+	case SHARD_WORK_UNCONFIRMED:
+		return AsShardWorkStatus(ShardWorkStatusType(spec).FromView(SHARD_WORK_UNCONFIRMED, nil))
+	case SHARD_WORK_CONFIRMED:
+		commitment, ok := h.Value.(*DataCommitment)
+		if !ok {
+			return nil, fmt.Errorf("invalid value type for SHARD_WORK_CONFIRMED selector: %T", h.Value)
+		}
+		return AsShardWorkStatus(ShardWorkStatusType(spec).FromView(SHARD_WORK_CONFIRMED, commitment.View()))
+	case SHARD_WORK_PENDING:
+		headers, ok := h.Value.(*PendingShardHeaders)
+		if !ok {
+			return nil, fmt.Errorf("invalid value type for SHARD_WORK_PENDING selector: %T", h.Value)
+		}
+		headersView, err := headers.View(spec)
+		if err != nil {
+			return nil, err
+		}
+		return AsShardWorkStatus(ShardWorkStatusType(spec).FromView(SHARD_WORK_PENDING, headersView))
+	default:
+		return nil, errors.New("bad selector value")
+	}
 }
 
 type ShardWorkStatusView struct {
@@ -128,6 +164,14 @@ func (h *ShardWork) FixedLength(spec *common.Spec) uint64 {
 
 func (h *ShardWork) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
 	return hFn.HashTreeRoot(spec.Wrap(&h.Status))
+}
+
+func (h *ShardWork) View(spec *common.Spec) (*ShardWorkView, error) {
+	statusView, err := h.Status.View(spec)
+	if err != nil {
+		return nil, err
+	}
+	return AsShardWork(ShardWorkType(spec).FromFields(statusView))
 }
 
 func ShardWorkType(spec *common.Spec) *ContainerTypeDef {

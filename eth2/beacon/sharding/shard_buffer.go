@@ -59,6 +59,18 @@ func (sc ShardColumn) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Ro
 	}, length, spec.MAX_SHARDS)
 }
 
+func (sc ShardColumn) View(spec *common.Spec) (*ShardColumnView, error) {
+	elements := make([]View, len(sc), len(sc))
+	for i := 0; i < len(sc); i++ {
+		v, err := sc[i].View(spec)
+		if err != nil {
+			return nil, err
+		}
+		elements[i] = v
+	}
+	return AsShardColumn(ShardColumnType(spec).FromElements(elements...))
+}
+
 func ShardBufferType(spec *common.Spec) *ComplexVectorTypeDef {
 	return ComplexVectorType(ShardColumnType(spec), uint64(spec.SHARD_STATE_MEMORY_SLOTS))
 }
@@ -72,6 +84,10 @@ func AsShardBuffer(v View, err error) (*ShardBufferView, error) {
 
 func (v *ShardBufferView) Column(i uint64) (*ShardColumnView, error) {
 	return AsShardColumn(v.Get(i))
+}
+
+func (v *ShardBufferView) SetColumn(i uint64, view *ShardColumnView) error {
+	return v.Set(i, view)
 }
 
 type ShardBuffer []ShardColumn

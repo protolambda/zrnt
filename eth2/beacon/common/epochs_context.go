@@ -291,3 +291,8 @@ func (epc *EpochsContext) GetShardProposer(slot Slot, shard Shard) (ValidatorInd
 	// TODO
 	return 0, nil
 }
+
+func (epc *EpochsContext) StartShard(slot Slot) (Shard, error) {
+	// TODO
+	return 0, nil
+}

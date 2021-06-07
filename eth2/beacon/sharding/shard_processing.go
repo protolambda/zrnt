@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/ztyp/tree"
 )
 
@@ -198,10 +199,71 @@ func ChargeConfirmedShardFees(ctx context.Context, spec *common.Spec, state *Bea
 	return nil
 }
 
-func ResetPendingShardWork(ctx context.Context, spec *common.Spec, state *BeaconStateView) error {
+func ResetPendingShardWork(ctx context.Context, spec *common.Spec, state *BeaconStateView, epc *common.EpochsContext) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	// TODO
+	slot, err := state.Slot()
+	if err != nil {
+		return err
+	}
+
+	currentEpoch := spec.SlotToEpoch(slot)
+	nextEpoch := currentEpoch + 1
+	nextEpochStartSlot, _ := spec.EpochStartSlot(nextEpoch)
+
+	buffer, err := state.ShardBuffer()
+	if err != nil {
+		return err
+	}
+
+	committeesPerSlot, err := epc.GetCommitteeCountPerSlot(nextEpoch)
+	if err != nil {
+		return err
+	}
+	activeShards := spec.ActiveShardCount(nextEpoch)
+
+	end := nextEpochStartSlot + spec.SLOTS_PER_EPOCH
+	for slot := nextEpochStartSlot; slot < end; slot++ {
+		bufferIndex := uint64(slot % spec.SHARD_STATE_MEMORY_SLOTS)
+
+		startShard, err := epc.StartShard(slot)
+		if err != nil {
+			return err
+		}
+
+		column := make(ShardColumn, activeShards, activeShards)
+		for committeeIndex := common.CommitteeIndex(0); committeeIndex < common.CommitteeIndex(committeesPerSlot); committeeIndex++ {
+			shard := (startShard + common.Shard(committeeIndex)) % common.Shard(activeShards)
+			// a committee is available, initialize a pending shard-header list
+			committee, err := epc.GetBeaconCommittee(slot, committeeIndex)
+			if err != nil {
+				return err
+			}
+			// empty bitlist, packed in bytes, with delimiter bit
+			emptyBits := make(phase0.AttestationBits, (len(committee)/8)+1)
+			emptyBits[len(emptyBits)-1] = uint8(len(committee)) & 7
+
+			column[shard] = ShardWork{Status: ShardWorkStatus{
+				Selector: SHARD_WORK_PENDING,
+				Value: PendingShardHeaders{
+					PendingShardHeader{
+						Commitment: DataCommitment{},
+						Root:       common.Root{},
+						Votes:      emptyBits,
+						Weight:     0,
+						UpdateSlot: slot,
+					},
+				},
+			}}
+		}
+		newColumnView, err := column.View(spec)
+		if err != nil {
+			return err
+		}
+		if err := buffer.Set(bufferIndex, newColumnView); err != nil {
+			return err
+		}
+	}
 	return nil
 }

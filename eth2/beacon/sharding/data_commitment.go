@@ -53,6 +53,11 @@ type DataCommitment struct {
 	Length Uint64View `json:"length" yaml:"length"`
 }
 
+func (d *DataCommitment) View() *DataCommitmentView {
+	v, _ := AsDataCommitment(DataCommitmentType.FromFields(common.ViewPubkey(&d.Point), d.Length))
+	return v
+}
+
 func (d *DataCommitment) Deserialize(dr *codec.DecodingReader) error {
 	return dr.FixedLenContainer(&d.Point, &d.Length)
 }

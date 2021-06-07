@@ -12,10 +12,10 @@ func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spe
 	if err := ProcessPendingShardConfirmations(ctx, spec, state); err != nil {
 		return err
 	}
-	if err := ChargeConfirmedShardFees(ctx, spec, state); err != nil {
+	if err := ChargeConfirmedShardFees(ctx, spec, state, epc); err != nil {
 		return err
 	}
-	if err := ResetPendingShardWork(ctx, spec, state); err != nil {
+	if err := ResetPendingShardWork(ctx, spec, state, epc); err != nil {
 		return err
 	}
 

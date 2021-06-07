@@ -80,6 +80,17 @@ func (h *PendingShardHeader) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) co
 	return hFn.HashTreeRoot(&h.Commitment, &h.Root, spec.Wrap(&h.Votes), &h.Weight, &h.UpdateSlot)
 }
 
+func (h *PendingShardHeader) View(spec *common.Spec) *PendingShardHeaderView {
+	r := RootView(h.Root)
+	psh, _ := AsPendingShardHeader(PendingShardHeaderType(spec).FromFields(
+		h.Commitment.View(),
+		&r,
+		h.Votes.View(spec),
+		Uint64View(h.Weight),
+		Uint64View(h.UpdateSlot)))
+	return psh
+}
+
 func PendingShardHeadersType(spec *common.Spec) *ComplexListTypeDef {
 	return ComplexListType(PendingShardHeaderType(spec), spec.MAX_SHARD_HEADERS_PER_SHARD)
 }
@@ -132,4 +143,12 @@ func (hl PendingShardHeaders) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) c
 		}
 		return nil
 	}, length, spec.MAX_SHARD_HEADERS_PER_SHARD)
+}
+
+func (hl PendingShardHeaders) View(spec *common.Spec) (*PendingShardHeadersView, error) {
+	elements := make([]View, len(hl), len(hl))
+	for i := 0; i < len(hl); i++ {
+		elements[i] = hl[i].View(spec)
+	}
+	return AsPendingShardHeaders(PendingShardHeadersType(spec).FromElements(elements...))
 }

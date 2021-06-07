@@ -18,6 +18,35 @@ func PendingShardHeaderType(spec *common.Spec) *ContainerTypeDef {
 	})
 }
 
+type PendingShardHeaderView struct {
+	*ContainerView
+}
+
+func AsPendingShardHeader(v View, err error) (*PendingShardHeaderView, error) {
+	c, err := AsContainer(v, err)
+	return &PendingShardHeaderView{c}, err
+}
+
+func (v *PendingShardHeaderView) Commitment() (*DataCommitmentView, error) {
+	return AsDataCommitment(v.Get(0))
+}
+
+func (v *PendingShardHeaderView) Root() (common.Root, error) {
+	return AsRoot(v.Get(1))
+}
+
+func (v *PendingShardHeaderView) Votes() (*phase0.AttestationBitsView, error) {
+	return phase0.AsAttestationBits(v.Get(2))
+}
+
+func (v *PendingShardHeaderView) Weight() (common.Gwei, error) {
+	return common.AsGwei(v.Get(3))
+}
+
+func (v *PendingShardHeaderView) UpdateSlot() (common.Slot, error) {
+	return common.AsSlot(v.Get(4))
+}
+
 type PendingShardHeader struct {
 	// KZG10 commitment to the data
 	Commitment DataCommitment `json:"commitment" yaml:"commitment"`
@@ -53,6 +82,19 @@ func (h *PendingShardHeader) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) co
 
 func PendingShardHeadersType(spec *common.Spec) *ComplexListTypeDef {
 	return ComplexListType(PendingShardHeaderType(spec), spec.MAX_SHARD_HEADERS_PER_SHARD)
+}
+
+type PendingShardHeadersView struct {
+	*ComplexListView
+}
+
+func AsPendingShardHeaders(v View, err error) (*PendingShardHeadersView, error) {
+	c, err := AsComplexList(v, err)
+	return &PendingShardHeadersView{c}, err
+}
+
+func (v *PendingShardHeadersView) Header(i uint64) (*PendingShardHeaderView, error) {
+	return AsPendingShardHeader(v.Get(i))
 }
 
 type PendingShardHeaders []PendingShardHeader

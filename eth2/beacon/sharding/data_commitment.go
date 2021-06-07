@@ -16,6 +16,27 @@ var DataCommitmentType = ContainerType("DataCommitment", []FieldDef{
 	{"length", Uint64Type},
 })
 
+type DataCommitmentView struct {
+	*ContainerView
+}
+
+func AsDataCommitment(v View, err error) (*DataCommitmentView, error) {
+	c, err := AsContainer(v, err)
+	return &DataCommitmentView{c}, err
+}
+
+func (v *DataCommitmentView) Raw() (*DataCommitment, error) {
+	point, err := common.AsBLSPubkey(v.Get(0))
+	if err != nil {
+		return nil, err
+	}
+	length, err := AsUint64(v.Get(1))
+	if err != nil {
+		return nil, err
+	}
+	return &DataCommitment{Point: point, Length: length}, nil
+}
+
 type DataCommitment struct {
 	// KZG10 commitment to the data
 	Point BLSCommitment `json:"point" yaml:"point"`

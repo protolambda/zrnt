@@ -102,6 +102,10 @@ func (h *ShardWorkStatus) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) commo
 	return common.Root{}
 }
 
+type ShardWorkStatusView struct {
+	*UnionView
+}
+
 type ShardWork struct {
 	Status ShardWorkStatus `json:"status" yaml:"status"`
 }
@@ -130,4 +134,18 @@ func ShardWorkType(spec *common.Spec) *ContainerTypeDef {
 	return ContainerType("ShardWork", []FieldDef{
 		{"status", ShardWorkStatusType(spec)},
 	})
+}
+
+type ShardWorkView struct {
+	*ContainerView
+}
+
+func AsShardWork(v View, err error) (*ShardWorkView, error) {
+	c, err := AsContainer(v, err)
+	return &ShardWorkView{c}, err
+}
+
+func (v *ShardWorkView) Status() (*ShardWorkStatusView, error) {
+	c, err := AsUnion(v.Get(0))
+	return &ShardWorkStatusView{c}, err
 }

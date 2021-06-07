@@ -18,6 +18,10 @@ func AsShardColumn(v View, err error) (*ShardColumnView, error) {
 	return &ShardColumnView{c}, err
 }
 
+func (v *ShardColumnView) GetWork(shard common.Shard) (*ShardWorkView, error) {
+	return AsShardWork(v.Get(uint64(shard)))
+}
+
 type ShardColumn []ShardWork
 
 func (sc *ShardColumn) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
@@ -56,7 +60,7 @@ func (sc ShardColumn) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Ro
 }
 
 func ShardBufferType(spec *common.Spec) *ComplexVectorTypeDef {
-	return ComplexVectorType(ShardColumnType(spec), spec.SHARD_STATE_MEMORY_SLOTS)
+	return ComplexVectorType(ShardColumnType(spec), uint64(spec.SHARD_STATE_MEMORY_SLOTS))
 }
 
 type ShardBufferView struct{ *ComplexVectorView }
@@ -66,19 +70,23 @@ func AsShardBuffer(v View, err error) (*ShardBufferView, error) {
 	return &ShardBufferView{c}, err
 }
 
+func (v *ShardBufferView) Column(i uint64) (*ShardColumnView, error) {
+	return AsShardColumn(v.Get(i))
+}
+
 type ShardBuffer []ShardColumn
 
 func (li *ShardBuffer) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
 	*li = make([]ShardColumn, spec.SHARD_STATE_MEMORY_SLOTS, spec.SHARD_STATE_MEMORY_SLOTS)
 	return dr.Vector(func(i uint64) codec.Deserializable {
 		return spec.Wrap(&(*li)[i])
-	}, 0, spec.SHARD_STATE_MEMORY_SLOTS)
+	}, 0, uint64(spec.SHARD_STATE_MEMORY_SLOTS))
 }
 
 func (a ShardBuffer) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
 	return w.Vector(func(i uint64) codec.Serializable {
 		return spec.Wrap(&a[i])
-	}, 0, spec.SHARD_STATE_MEMORY_SLOTS)
+	}, 0, uint64(spec.SHARD_STATE_MEMORY_SLOTS))
 }
 
 func (a ShardBuffer) ByteLength(spec *common.Spec) (out uint64) {
@@ -96,5 +104,5 @@ func (a *ShardBuffer) FixedLength(spec *common.Spec) uint64 {
 func (li ShardBuffer) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
 	return hFn.ComplexVectorHTR(func(i uint64) tree.HTR {
 		return spec.Wrap(&li[i])
-	}, spec.SHARD_STATE_MEMORY_SLOTS)
+	}, uint64(spec.SHARD_STATE_MEMORY_SLOTS))
 }

@@ -9,6 +9,16 @@ import (
 )
 
 func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spec, epc *common.EpochsContext) error {
+	if err := ProcessPendingShardConfirmations(ctx, spec, state); err != nil {
+		return err
+	}
+	if err := ChargeConfirmedShardFees(ctx, spec, state); err != nil {
+		return err
+	}
+	if err := ResetPendingShardWork(ctx, spec, state); err != nil {
+		return err
+	}
+
 	vals, err := state.Validators()
 	if err != nil {
 		return err
@@ -40,14 +50,10 @@ func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spe
 		return err
 	}
 
-	// TODO process_pending_headers (TODO: rename to process_pending_shard_headers)
-	// TODO charge_confirmed_header_fees (TODO: rename to charge_confirmed_shard_header_fees)
-	// TODO reset_pending_headers (TODO: rename to reset_pending_shard_headers)
-
-	if err := phase0.ProcessEffectiveBalanceUpdates(ctx, spec, epc, flats, state); err != nil {
+	if err := phase0.ProcessEth1DataReset(ctx, spec, epc, state); err != nil {
 		return err
 	}
-	if err := phase0.ProcessEth1DataReset(ctx, spec, epc, state); err != nil {
+	if err := phase0.ProcessEffectiveBalanceUpdates(ctx, spec, epc, flats, state); err != nil {
 		return err
 	}
 	if err := phase0.ProcessSlashingsReset(ctx, spec, epc, state); err != nil {

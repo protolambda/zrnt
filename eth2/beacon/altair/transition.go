@@ -108,7 +108,7 @@ func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spe
 	if err := phase0.ProcessVoluntaryExits(ctx, spec, epc, state, body.VoluntaryExits); err != nil {
 		return err
 	}
-	if err := ProcessSyncCommittee(ctx, spec, epc, state, &body.SyncAggregate); err != nil {
+	if err := ProcessSyncAggregate(ctx, spec, epc, state, &body.SyncAggregate); err != nil {
 		return err
 	}
 	return nil

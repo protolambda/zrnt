@@ -28,7 +28,7 @@ func (c *SyncAggregateTestCase) Run() error {
 	if !ok {
 		return fmt.Errorf("unrecognized state type: %T", c.Pre)
 	}
-	return altair.ProcessSyncCommittee(context.Background(), c.Spec, epc, s, &c.SyncAggregate)
+	return altair.ProcessSyncAggregate(context.Background(), c.Spec, epc, s, &c.SyncAggregate)
 }
 
 func TestSyncAggregate(t *testing.T) {

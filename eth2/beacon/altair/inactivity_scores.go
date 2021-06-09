@@ -65,7 +65,7 @@ func ProcessInactivityUpdates(ctx context.Context, spec *common.Spec, attesterDa
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	// Skip genesis epoch
+	// Skip the genesis epoch as score updates are based on the previous epoch participation
 	if attesterData.CurrEpoch == common.GENESIS_EPOCH {
 		return nil
 	}
@@ -87,7 +87,7 @@ func ProcessInactivityUpdates(ctx context.Context, spec *common.Spec, attesterDa
 		}
 		newScore := score
 
-		// Increase inactivity score of inactive validators
+		// Increase the inactivity score of inactive validators
 		if !attesterData.Flats[vi].Slashed && (attesterData.PrevParticipation[vi]&TIMELY_TARGET_FLAG != 0) {
 			if newScore > 0 {
 				newScore -= 1
@@ -96,10 +96,11 @@ func ProcessInactivityUpdates(ctx context.Context, spec *common.Spec, attesterDa
 			newScore += spec.INACTIVITY_SCORE_BIAS
 		}
 
+		// Decrease the inactivity score of all eligible validators during a leak-free epoch
 		if !isInactivityLeak {
 			if newScore < spec.INACTIVITY_SCORE_RECOVERY_RATE {
 				newScore = 0
-			} else if score >= spec.INACTIVITY_SCORE_RECOVERY_RATE {
+			} else {
 				newScore -= spec.INACTIVITY_SCORE_RECOVERY_RATE
 			}
 		}

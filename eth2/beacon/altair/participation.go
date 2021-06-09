@@ -57,10 +57,10 @@ const (
 
 // Participation flag fractions
 const (
-	TIMELY_SOURCE_WEIGHT common.Gwei = 12
-	TIMELY_TARGET_WEIGHT common.Gwei = 24
-	TIMELY_HEAD_WEIGHT   common.Gwei = 12
-	SYNC_REWARD_WEIGHT   common.Gwei = 8
+	TIMELY_SOURCE_WEIGHT common.Gwei = 14
+	TIMELY_TARGET_WEIGHT common.Gwei = 26
+	TIMELY_HEAD_WEIGHT   common.Gwei = 14
+	SYNC_REWARD_WEIGHT   common.Gwei = 2
 	PROPOSER_WEIGHT      common.Gwei = 8
 	WEIGHT_DENOMINATOR   common.Gwei = 64
 )

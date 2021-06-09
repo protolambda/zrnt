@@ -144,7 +144,7 @@ func AsSyncAggregate(v View, err error) (*SyncAggregateView, error) {
 	return &SyncAggregateView{c}, err
 }
 
-func ProcessSyncCommittee(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView, agg *SyncAggregate) error {
+func ProcessSyncAggregate(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView, agg *SyncAggregate) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -160,11 +160,9 @@ func ProcessSyncCommittee(ctx context.Context, spec *common.Spec, epc *common.Ep
 		return fmt.Errorf("missing current sync committee info in EPC")
 	}
 
-	participantIndices := make([]common.ValidatorIndex, 0, spec.SYNC_COMMITTEE_SIZE)
 	participantPubkeys := make([]*common.CachedPubkey, 0, spec.SYNC_COMMITTEE_SIZE)
 	for i := uint64(0); i < spec.SYNC_COMMITTEE_SIZE; i++ {
 		if agg.SyncCommitteeBits.GetBit(i) {
-			participantIndices = append(participantIndices, epc.CurrentSyncCommittee.Indices[i])
 			participantPubkeys = append(participantPubkeys, epc.CurrentSyncCommittee.CachedPubkeys[i])
 		}
 	}
@@ -191,21 +189,31 @@ func ProcessSyncCommittee(ctx context.Context, spec *common.Spec, epc *common.Ep
 	participantReward := maxParticipantRewards / common.Gwei(spec.SYNC_COMMITTEE_SIZE)
 	proposerReward := participantReward*PROPOSER_WEIGHT/WEIGHT_DENOMINATOR - PROPOSER_WEIGHT
 
-	// Apply participant and proposer rewards
+	// Apply participant rewards and penalties
 	bals, err := state.Balances()
 	if err != nil {
 		return err
 	}
-	for _, ci := range participantIndices {
-		if err := common.IncreaseBalance(bals, ci, participantReward); err != nil {
-			return err
+	// Note: the minimum effective balance of the proposer is sufficient
+	// to not result in differences from spec operations
+	for i := uint64(0); i < spec.SYNC_COMMITTEE_SIZE; i++ {
+		validatorIndex := epc.CurrentSyncCommittee.Indices[i]
+		if agg.SyncCommitteeBits.GetBit(i) {
+			if err := common.IncreaseBalance(bals, validatorIndex, participantReward); err != nil {
+				return err
+			}
+		} else {
+			if err := common.DecreaseBalance(bals, validatorIndex, participantReward); err != nil {
+				return err
+			}
 		}
 	}
+	// Apply proposer rewards
 	proposer, err := epc.GetBeaconProposer(currentSlot)
 	if err != nil {
 		return err
 	}
-	proposerRewardSum := proposerReward * common.Gwei(len(participantIndices))
+	proposerRewardSum := proposerReward * common.Gwei(len(participantPubkeys))
 	if err := common.IncreaseBalance(bals, proposer, proposerRewardSum); err != nil {
 		return err
 	}

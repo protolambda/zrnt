@@ -32,6 +32,6 @@ func (c *SyncAggregateTestCase) Run() error {
 }
 
 func TestSyncAggregate(t *testing.T) {
-	test_util.RunTransitionTest(t, []test_util.ForkName{"altair"}, "operations", "sync_committee",
+	test_util.RunTransitionTest(t, []test_util.ForkName{"altair"}, "operations", "sync_aggregate",
 		func() test_util.TransitionTest { return new(SyncAggregateTestCase) })
 }

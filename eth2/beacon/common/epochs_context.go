@@ -81,9 +81,34 @@ func (epc *EpochsContext) LoadShuffling(state BeaconState) error {
 	if err != nil {
 		return err
 	}
+	if err := epc.loadCurrentStake(state, indicesBounded); err != nil {
+		return err
+	}
 
+	prevEpoch := currentEpoch.Previous()
+	if prevEpoch == currentEpoch { // in case of genesis
+		epc.PreviousEpoch = epc.CurrentEpoch
+	} else {
+		epc.PreviousEpoch, err = ComputeShufflingEpoch(epc.Spec, state, indicesBounded, prevEpoch)
+		if err != nil {
+			return err
+		}
+	}
+	epc.NextEpoch, err = ComputeShufflingEpoch(epc.Spec, state, indicesBounded, currentEpoch+1)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (epc *EpochsContext) loadCurrentStake(state BeaconState, indicesBounded []BoundedIndex) error {
 	epc.EffectiveBalances = make([]Gwei, len(indicesBounded), len(indicesBounded))
 	epc.TotalActiveStake = 0
+	vals, err := state.Validators()
+	if err != nil {
+		return err
+	}
+	currentEpoch := epc.CurrentEpoch.Epoch
 	for i, v := range indicesBounded {
 		// TODO: optimize effective balance retrieval
 		val, err := vals.Validator(ValidatorIndex(i))
@@ -103,20 +128,6 @@ func (epc *EpochsContext) LoadShuffling(state BeaconState) error {
 		epc.TotalActiveStake = epc.Spec.EFFECTIVE_BALANCE_INCREMENT
 	}
 	epc.TotalActiveStakeSqRoot = Gwei(math.IntegerSquareroot(uint64(epc.TotalActiveStake)))
-
-	prevEpoch := currentEpoch.Previous()
-	if prevEpoch == currentEpoch { // in case of genesis
-		epc.PreviousEpoch = epc.CurrentEpoch
-	} else {
-		epc.PreviousEpoch, err = ComputeShufflingEpoch(epc.Spec, state, indicesBounded, prevEpoch)
-		if err != nil {
-			return err
-		}
-	}
-	epc.NextEpoch, err = ComputeShufflingEpoch(epc.Spec, state, indicesBounded, currentEpoch+1)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -179,6 +190,9 @@ func (epc *EpochsContext) RotateEpochs(state BeaconState) error {
 		return err
 	}
 	if err := epc.LoadProposers(state); err != nil {
+		return err
+	}
+	if err := epc.loadCurrentStake(state, indicesBounded); err != nil {
 		return err
 	}
 	if syncState, ok := state.(SyncCommitteeBeaconState); ok {

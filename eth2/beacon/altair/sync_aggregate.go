@@ -187,7 +187,7 @@ func ProcessSyncAggregate(ctx context.Context, spec *common.Spec, epc *common.Ep
 	totalBaseRewards := baseRewardPerIncrement * totalActiveIncrements
 	maxParticipantRewards := (totalBaseRewards * SYNC_REWARD_WEIGHT) / WEIGHT_DENOMINATOR / common.Gwei(spec.SLOTS_PER_EPOCH)
 	participantReward := maxParticipantRewards / common.Gwei(spec.SYNC_COMMITTEE_SIZE)
-	proposerReward := participantReward*PROPOSER_WEIGHT/WEIGHT_DENOMINATOR - PROPOSER_WEIGHT
+	proposerReward := participantReward * PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)
 
 	// Apply participant rewards and penalties
 	bals, err := state.Balances()

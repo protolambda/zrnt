@@ -69,7 +69,7 @@ func RunHandler(t *testing.T, handlerPath string, caseRunner CaseRunner, spec *c
 	_, filename, _, _ := runtime.Caller(0)
 	basepath := filepath.Dir(filepath.Dir(filename))
 	handlerAbsPath := filepath.Join(basepath, "eth2.0-spec-tests", "tests",
-		spec.CONFIG_NAME, string(fork), filepath.FromSlash(handlerPath))
+		spec.PRESET_BASE, string(fork), filepath.FromSlash(handlerPath))
 
 	forEachDir := func(t *testing.T, path string, callItem func(t *testing.T, path string)) {
 		if _, err := os.Stat(path); os.IsNotExist(err) {

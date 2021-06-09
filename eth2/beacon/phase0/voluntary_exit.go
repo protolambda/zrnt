@@ -167,7 +167,7 @@ func ValidateVoluntaryExit(spec *common.Spec, epc *common.EpochsContext, state c
 	if !ok {
 		return errors.New("could not find index of exiting validator")
 	}
-	domain, err := common.GetDomain(state, spec.DOMAIN_VOLUNTARY_EXIT, exit.Epoch)
+	domain, err := common.GetDomain(state, common.DOMAIN_VOLUNTARY_EXIT, exit.Epoch)
 	if err != nil {
 		return err
 	}

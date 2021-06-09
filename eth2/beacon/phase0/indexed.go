@@ -123,7 +123,7 @@ func ValidateIndexedAttestation(spec *common.Spec, epc *common.EpochsContext, st
 	if err := ValidateIndexedAttestationNoSignature(spec, state, indexedAttestation); err != nil {
 		return err
 	}
-	dom, err := common.GetDomain(state, spec.DOMAIN_BEACON_ATTESTER, indexedAttestation.Data.Target.Epoch)
+	dom, err := common.GetDomain(state, common.DOMAIN_BEACON_ATTESTER, indexedAttestation.Data.Target.Epoch)
 	if err != nil {
 		return err
 	}

@@ -9,90 +9,110 @@ import (
 	"testing"
 )
 
-func mustLoad(name string, phase string) []byte {
-	b, err := ioutil.ReadFile(filepath.Join("yamls", name, phase+".yaml"))
+func mustLoad(path ...string) []byte {
+	b, err := ioutil.ReadFile(filepath.Join("yamls", filepath.Join(path...)) + ".yaml")
 	if err != nil {
 		panic(err)
 	}
 	return b
 }
 
-func TestYamlDecodingMainnetPhase0(t *testing.T) {
-	var conf common.Phase0Config
-	if err := yaml.Unmarshal(mustLoad("mainnet", "phase0"), &conf); err != nil {
+func TestYamlDecodingMainnetConfig(t *testing.T) {
+	var conf common.Config
+	if err := yaml.Unmarshal(mustLoad("configs", "mainnet"), &conf); err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(conf, Mainnet.Phase0Config) {
-		t.Fatal("Failed to load mainnet phase0 config")
+	if !reflect.DeepEqual(conf, Mainnet.Config) {
+		t.Fatal("Failed to load mainnet config")
+	}
+}
+
+func TestYamlDecodingMinimalConfig(t *testing.T) {
+	var conf common.Config
+	if err := yaml.Unmarshal(mustLoad("configs", "minimal"), &conf); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(conf, Minimal.Config) {
+		t.Fatal("Failed to load minimal config")
+	}
+}
+
+func TestYamlDecodingMainnetPhase0(t *testing.T) {
+	var conf common.Phase0Preset
+	if err := yaml.Unmarshal(mustLoad("presets", "mainnet", "phase0"), &conf); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(conf, Mainnet.Phase0Preset) {
+		t.Fatal("Failed to load mainnet phase0 preset")
 	}
 }
 
 func TestYamlDecodingMainnetAltair(t *testing.T) {
-	var conf common.AltairConfig
-	if err := yaml.Unmarshal(mustLoad("mainnet", "altair"), &conf); err != nil {
+	var conf common.AltairPreset
+	if err := yaml.Unmarshal(mustLoad("presets", "mainnet", "altair"), &conf); err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(conf, Mainnet.AltairConfig) {
-		t.Fatal("Failed to load mainnet altair config")
+	if !reflect.DeepEqual(conf, Mainnet.AltairPreset) {
+		t.Fatal("Failed to load mainnet altair preset")
 	}
 }
 
 func TestYamlDecodingMainnetMerge(t *testing.T) {
-	var conf common.MergeConfig
-	if err := yaml.Unmarshal(mustLoad("mainnet", "merge"), &conf); err != nil {
+	var conf common.MergePreset
+	if err := yaml.Unmarshal(mustLoad("presets", "mainnet", "merge"), &conf); err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(conf, Mainnet.MergeConfig) {
-		t.Fatal("Failed to load mainnet merge config")
+	if !reflect.DeepEqual(conf, Mainnet.MergePreset) {
+		t.Fatal("Failed to load mainnet merge preset")
 	}
 }
 
 func TestYamlDecodingMainnetSharding(t *testing.T) {
-	var conf common.ShardingConfig
-	if err := yaml.Unmarshal(mustLoad("mainnet", "sharding"), &conf); err != nil {
+	var conf common.ShardingPreset
+	if err := yaml.Unmarshal(mustLoad("presets", "mainnet", "sharding"), &conf); err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(conf, Mainnet.ShardingConfig) {
-		t.Fatal("Failed to load mainnet sharding config")
+	if !reflect.DeepEqual(conf, Mainnet.ShardingPreset) {
+		t.Fatal("Failed to load mainnet sharding preset")
 	}
 }
 
 func TestYamlDecodingMinimalPhase0(t *testing.T) {
-	var conf common.Phase0Config
-	if err := yaml.Unmarshal(mustLoad("minimal", "phase0"), &conf); err != nil {
+	var conf common.Phase0Preset
+	if err := yaml.Unmarshal(mustLoad("presets", "minimal", "phase0"), &conf); err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(conf, Minimal.Phase0Config) {
-		t.Fatal("Failed to load minimal phase0 config")
+	if !reflect.DeepEqual(conf, Minimal.Phase0Preset) {
+		t.Fatal("Failed to load minimal phase0 preset")
 	}
 }
 
 func TestYamlDecodingMinimalAltair(t *testing.T) {
-	var conf common.AltairConfig
-	if err := yaml.Unmarshal(mustLoad("minimal", "altair"), &conf); err != nil {
+	var conf common.AltairPreset
+	if err := yaml.Unmarshal(mustLoad("presets", "minimal", "altair"), &conf); err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(conf, Minimal.AltairConfig) {
-		t.Fatal("Failed to load minimal altair config")
+	if !reflect.DeepEqual(conf, Minimal.AltairPreset) {
+		t.Fatal("Failed to load minimal altair preset")
 	}
 }
 
 func TestYamlDecodingMinimalMerge(t *testing.T) {
-	var conf common.MergeConfig
-	if err := yaml.Unmarshal(mustLoad("minimal", "merge"), &conf); err != nil {
+	var conf common.MergePreset
+	if err := yaml.Unmarshal(mustLoad("presets", "minimal", "merge"), &conf); err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(conf, Minimal.MergeConfig) {
-		t.Fatal("Failed to load minimal merge config")
+	if !reflect.DeepEqual(conf, Minimal.MergePreset) {
+		t.Fatal("Failed to load minimal merge preset")
 	}
 }
 
 func TestYamlDecodingMinimalSharding(t *testing.T) {
-	var conf common.ShardingConfig
-	if err := yaml.Unmarshal(mustLoad("minimal", "sharding"), &conf); err != nil {
+	var conf common.ShardingPreset
+	if err := yaml.Unmarshal(mustLoad("presets", "minimal", "sharding"), &conf); err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(conf, Minimal.ShardingConfig) {
-		t.Fatal("Failed to load minimal sharding config")
+	if !reflect.DeepEqual(conf, Minimal.ShardingPreset) {
+		t.Fatal("Failed to load minimal sharding preset")
 	}
 }

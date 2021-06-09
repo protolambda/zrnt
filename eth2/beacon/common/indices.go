@@ -36,6 +36,6 @@ func (p CommitteeIndices) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
 	}, uint64(len(p)), spec.MAX_VALIDATORS_PER_COMMITTEE)
 }
 
-func (c *Phase0Config) CommitteeIndices() ListTypeDef {
+func (c *Phase0Preset) CommitteeIndices() ListTypeDef {
 	return ListType(ValidatorIndexType, c.MAX_VALIDATORS_PER_COMMITTEE)
 }

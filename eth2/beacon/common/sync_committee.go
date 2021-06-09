@@ -181,7 +181,7 @@ func ComputeSyncCommitteeIndices(spec *Spec, state BeaconState, baseEpoch Epoch,
 	if err != nil {
 		return nil, err
 	}
-	periodSeed, err := GetSeed(spec, mixes, baseEpoch, spec.DOMAIN_SYNC_COMMITTEE)
+	periodSeed, err := GetSeed(spec, mixes, baseEpoch, DOMAIN_SYNC_COMMITTEE)
 	if err != nil {
 		return nil, err
 	}

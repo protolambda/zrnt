@@ -31,7 +31,7 @@ func ComputeProposers(spec *Spec, state BeaconState, epoch Epoch, active []Valid
 	if err != nil {
 		return nil, err
 	}
-	epochSeed, err := GetSeed(spec, mixes, epoch, spec.DOMAIN_BEACON_PROPOSER)
+	epochSeed, err := GetSeed(spec, mixes, epoch, DOMAIN_BEACON_PROPOSER)
 	if err != nil {
 		return nil, err
 	}

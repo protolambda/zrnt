@@ -102,7 +102,7 @@ func ProcessRandaoReveal(ctx context.Context, spec *common.Spec, epc *common.Epo
 		return errors.New("could not find pubkey of proposer")
 	}
 	epoch := spec.SlotToEpoch(slot)
-	domain, err := common.GetDomain(state, spec.DOMAIN_RANDAO, epoch)
+	domain, err := common.GetDomain(state, common.DOMAIN_RANDAO, epoch)
 	if err != nil {
 		return err
 	}

@@ -39,7 +39,7 @@ func (b *BeaconBlockEnvelope) VerifySignatureVersioned(spec *Spec, version Versi
 	if !bytes.Equal(forkRoot[0:4], b.ForkDigest[:]) {
 		return false
 	}
-	dom := ComputeDomain(spec.DOMAIN_BEACON_PROPOSER, version, genesisValidatorsRoot)
+	dom := ComputeDomain(DOMAIN_BEACON_PROPOSER, version, genesisValidatorsRoot)
 	return bls.Verify(pub, ComputeSigningRoot(b.BlockRoot, dom), b.Signature)
 }
 

@@ -176,7 +176,7 @@ var CheckpointType = ContainerType("Checkpoint", []FieldDef{
 	{"root", RootType},
 })
 
-func (c *Phase0Config) CheckPoint() *ContainerTypeDef {
+func (c *Phase0Preset) CheckPoint() *ContainerTypeDef {
 	return ContainerType("Checkpoint", []FieldDef{
 		{"epoch", EpochType},
 		{"root", RootType},

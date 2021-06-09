@@ -139,7 +139,7 @@ func ValidateProposerSlashing(spec *common.Spec, epc *common.EpochsContext, stat
 	} else if !slashable {
 		return errors.New("proposer slashing requires proposer to be slashable")
 	}
-	domain, err := common.GetDomain(state, spec.DOMAIN_BEACON_PROPOSER, spec.SlotToEpoch(ps.SignedHeader1.Message.Slot))
+	domain, err := common.GetDomain(state, common.DOMAIN_BEACON_PROPOSER, spec.SlotToEpoch(ps.SignedHeader1.Message.Slot))
 	if err != nil {
 		return err
 	}

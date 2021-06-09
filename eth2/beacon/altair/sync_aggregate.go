@@ -168,7 +168,7 @@ func ProcessSyncAggregate(ctx context.Context, spec *common.Spec, epc *common.Ep
 	}
 
 	prevSlot := currentSlot.Previous()
-	domain, err := common.GetDomain(state, spec.DOMAIN_SYNC_COMMITTEE, spec.SlotToEpoch(prevSlot))
+	domain, err := common.GetDomain(state, common.DOMAIN_SYNC_COMMITTEE, spec.SlotToEpoch(prevSlot))
 	if err != nil {
 		return err
 	}

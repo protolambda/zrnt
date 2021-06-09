@@ -12,7 +12,7 @@ import (
 
 // Given some committee size at a given slot, and a signature (not validated here) for that same slot
 func IsAggregator(spec *common.Spec, commSize uint64, selectionProof common.BLSSignature) bool {
-	modulo := commSize / spec.TARGET_AGGREGATORS_PER_COMMITTEE
+	modulo := commSize / common.TARGET_AGGREGATORS_PER_COMMITTEE
 	if modulo == 0 {
 		modulo = 1
 	}
@@ -22,7 +22,7 @@ func IsAggregator(spec *common.Spec, commSize uint64, selectionProof common.BLSS
 }
 
 func AggregateSelectionProofSigningRoot(spec *common.Spec, domainFn common.BLSDomainFn, slot common.Slot) (common.Root, error) {
-	domain, err := domainFn(spec.DOMAIN_SELECTION_PROOF, spec.SlotToEpoch(slot))
+	domain, err := domainFn(common.DOMAIN_SELECTION_PROOF, spec.SlotToEpoch(slot))
 	if err != nil {
 		return common.Root{}, err
 	}

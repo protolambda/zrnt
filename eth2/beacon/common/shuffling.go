@@ -67,7 +67,7 @@ func ComputeShufflingEpoch(spec *Spec, state BeaconState, indicesBounded []Bound
 	if err != nil {
 		return nil, err
 	}
-	seed, err := GetSeed(spec, mixes, epoch, spec.DOMAIN_BEACON_ATTESTER)
+	seed, err := GetSeed(spec, mixes, epoch, DOMAIN_BEACON_ATTESTER)
 	if err != nil {
 		return nil, err
 	}

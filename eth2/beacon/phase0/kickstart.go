@@ -54,7 +54,7 @@ func KickStartStateWithSignatures(spec *common.Spec, eth1BlockHash common.Root, 
 		if err := secKey.Deserialize(keys[i][:]); err != nil {
 			return nil, nil, err
 		}
-		dom := common.ComputeDomain(spec.DOMAIN_DEPOSIT, spec.GENESIS_FORK_VERSION, common.Root{})
+		dom := common.ComputeDomain(common.DOMAIN_DEPOSIT, spec.GENESIS_FORK_VERSION, common.Root{})
 		msg := common.ComputeSigningRoot(d.Data.MessageRoot(), dom)
 		sig := secKey.SignHash(msg[:])
 		var p common.BLSPubkey

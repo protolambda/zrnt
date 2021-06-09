@@ -128,7 +128,7 @@ func ValidateAggregateAndProof(ctx context.Context, signedAgg *phase0.SignedAggr
 	}
 
 	// [REJECT] The aggregator signature, signed_aggregate_and_proof.signature, is valid.
-	dom, err := common.GetDomain(state, spec.DOMAIN_AGGREGATE_AND_PROOF, att.Data.Target.Epoch)
+	dom, err := common.GetDomain(state, common.DOMAIN_AGGREGATE_AND_PROOF, att.Data.Target.Epoch)
 	if err != nil {
 		return GossipValidatorResult{IGNORE, err}
 	}

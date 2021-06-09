@@ -135,7 +135,7 @@ func ProcessDeposit(spec *common.Spec, epc *common.EpochsContext, state common.B
 			common.ComputeSigningRoot(
 				dep.Data.MessageRoot(),
 				// Fork-agnostic domain since deposits are valid across forks
-				common.ComputeDomain(spec.DOMAIN_DEPOSIT, spec.GENESIS_FORK_VERSION, common.Root{})),
+				common.ComputeDomain(common.DOMAIN_DEPOSIT, spec.GENESIS_FORK_VERSION, common.Root{})),
 			dep.Data.Signature) {
 			// invalid signatures are OK,
 			// the depositor will not receive anything because of their mistake,

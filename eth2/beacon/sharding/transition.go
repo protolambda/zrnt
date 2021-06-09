@@ -106,7 +106,9 @@ func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spe
 	if err := phase0.ProcessAttesterSlashings(ctx, spec, epc, state, body.AttesterSlashings); err != nil {
 		return err
 	}
-	// TODO: process shard proposer slashings
+	if err := ProcessShardProposerSlashings(ctx, spec, epc, state, body.ShardProposerSlashings); err != nil {
+		return err
+	}
 	// TODO: check shard headers count against active shard count
 	// TODO: process shard headers
 	if err := phase0.ProcessAttestations(ctx, spec, epc, state, body.Attestations); err != nil {
@@ -119,11 +121,9 @@ func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spe
 	if err := phase0.ProcessVoluntaryExits(ctx, spec, epc, state, body.VoluntaryExits); err != nil {
 		return err
 	}
-	// TODO: check if execution is enabled, like in merge?
 	if err := merge.ProcessExecutionPayload(ctx, spec, state, &body.ExecutionPayload, spec.ExecutionEngine); err != nil {
 		return err
 	}
-	//
 	return nil
 }
 

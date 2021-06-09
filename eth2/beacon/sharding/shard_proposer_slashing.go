@@ -1,7 +1,12 @@
 package sharding
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/phase0"
+	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
@@ -73,4 +78,74 @@ func (li ShardProposerSlashings) HashTreeRoot(spec *common.Spec, hFn tree.HashFn
 		}
 		return nil
 	}, length, spec.MAX_SHARD_PROPOSER_SLASHINGS)
+}
+
+func ProcessShardProposerSlashings(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, ops []ShardProposerSlashing) error {
+	for i := range ops {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if err := ProcessShardProposerSlashing(spec, epc, state, &ops[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func ProcessShardProposerSlashing(spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, proposerSlashing *ShardProposerSlashing) error {
+	ref1 := &proposerSlashing.SignedReference1.Message
+	ref2 := &proposerSlashing.SignedReference2.Message
+
+	// Verify header slots match
+	if ref1.Slot != ref2.Slot {
+		return fmt.Errorf("invalid shard proposer slashing, slots must be equal, got %d <> %d", ref1.Slot, ref2.Slot)
+	}
+	// Verify header shards match
+	if ref1.Shard != ref2.Shard {
+		return fmt.Errorf("invalid shard proposer slashing, shards must be equal, got %d <> %d", ref1.Shard, ref2.Shard)
+	}
+	// Verify header proposer indices match
+	if ref1.ProposerIndex != ref2.ProposerIndex {
+		return fmt.Errorf("invalid shard proposer slashing, proposers must be equal, got %d <> %d", ref1.ProposerIndex, ref2.ProposerIndex)
+	}
+	// Verify the headers are different (i.e. different body)
+	if ref1.BodyRoot == ref2.BodyRoot {
+		return fmt.Errorf("invalid shard proposer slashing, body roots must be different, got %s <> %s", ref1.BodyRoot, ref2.BodyRoot)
+	}
+	// Verify the proposer is slashable
+	validators, err := state.Validators()
+	if err != nil {
+		return err
+	}
+	validator, err := validators.Validator(ref1.ProposerIndex)
+	if err != nil {
+		return err
+	}
+	if slashable, err := phase0.IsSlashable(validator, epc.CurrentEpoch.Epoch); err != nil {
+		return err
+	} else if !slashable {
+		return fmt.Errorf("shard proposer slashing requires proposer (%d) to be slashable", ref1.ProposerIndex)
+	}
+	domain, err := common.GetDomain(state, common.DOMAIN_BEACON_PROPOSER, spec.SlotToEpoch(ref1.Slot))
+	if err != nil {
+		return err
+	}
+	pubkey, ok := epc.PubkeyCache.Pubkey(ref1.ProposerIndex)
+	if !ok {
+		return fmt.Errorf("could not find pubkey of proposer %d", ref1.ProposerIndex)
+	}
+	// Verify signatures
+	if !bls.Verify(
+		pubkey,
+		common.ComputeSigningRoot(ref1.HashTreeRoot(tree.GetHashFn()), domain),
+		proposerSlashing.SignedReference1.Signature) {
+		return errors.New("shard proposer slashing header 1 has invalid BLS signature")
+	}
+	if !bls.Verify(
+		pubkey,
+		common.ComputeSigningRoot(ref2.HashTreeRoot(tree.GetHashFn()), domain),
+		proposerSlashing.SignedReference2.Signature) {
+		return errors.New("shard proposer slashing header 2 has invalid BLS signature")
+	}
+	return nil
 }

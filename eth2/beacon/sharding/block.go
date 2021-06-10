@@ -200,6 +200,12 @@ func (b BeaconBlockBody) CheckLimits(spec *common.Spec) error {
 	if x := len(b.ExecutionPayload.Transactions); x > common.MAX_EXECUTION_TRANSACTIONS {
 		return fmt.Errorf("too many transactions: %d", x)
 	}
+	if x := uint64(len(b.ShardProposerSlashings)); x > spec.MAX_SHARD_PROPOSER_SLASHINGS {
+		return fmt.Errorf("too many shard proposer slashings: %d", x)
+	}
+	if x := uint64(len(b.ShardHeaders)); x > spec.MAX_SHARDS*spec.MAX_SHARD_HEADERS_PER_SHARD {
+		return fmt.Errorf("too many shard headers: %d", x)
+	}
 	return nil
 }
 
@@ -211,7 +217,7 @@ func BeaconBlockBodyType(spec *common.Spec) *ContainerTypeDef {
 		// Operations
 		{"proposer_slashings", phase0.BlockProposerSlashingsType(spec)},
 		{"attester_slashings", phase0.BlockAttesterSlashingsType(spec)},
-		{"attestations", phase0.BlockAttestationsType(spec)},
+		{"attestations", BlockAttestationsType(spec)},
 		{"deposits", phase0.BlockDepositsType(spec)},
 		{"voluntary_exits", phase0.BlockVoluntaryExitsType(spec)},
 		// Merge

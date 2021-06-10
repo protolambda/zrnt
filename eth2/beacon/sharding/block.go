@@ -118,7 +118,7 @@ type BeaconBlockBody struct {
 
 	ProposerSlashings phase0.ProposerSlashings `json:"proposer_slashings" yaml:"proposer_slashings"`
 	AttesterSlashings phase0.AttesterSlashings `json:"attester_slashings" yaml:"attester_slashings"`
-	Attestations      phase0.Attestations      `json:"attestations" yaml:"attestations"`
+	Attestations      Attestations             `json:"attestations" yaml:"attestations"`
 	Deposits          phase0.Deposits          `json:"deposits" yaml:"deposits"`
 	VoluntaryExits    phase0.VoluntaryExits    `json:"voluntary_exits" yaml:"voluntary_exits"`
 

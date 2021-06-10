@@ -160,6 +160,12 @@ type Config struct {
 	DEPOSIT_CONTRACT_ADDRESS Eth1Address `yaml:"DEPOSIT_CONTRACT_ADDRESS" json:"DEPOSIT_CONTRACT_ADDRESS"`
 }
 
+// TODO
+//type TrustedSetup struct {
+//	G1_SETUP []BLSPubkey `yaml:"G1_SETUP" json:"G1_SETUP"`
+//	G2_SETUP []BLSSignature `yaml:"G2_SETUP" json:"G2_SETUP"`
+//}
+
 type SpecObj interface {
 	Deserialize(spec *Spec, dr *codec.DecodingReader) error
 	Serialize(spec *Spec, w *codec.EncodingWriter) error
@@ -206,6 +212,7 @@ type Spec struct {
 	MergePreset    `yaml:",inline"`
 	ShardingPreset `yaml:",inline"`
 	Config         `yaml:",inline"`
+	//TrustedSetup   `yaml:",inline"`
 
 	// Experimental, for merge purposes
 	ExecutionEngine `yaml:"-"`

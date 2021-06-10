@@ -109,12 +109,16 @@ func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spe
 	if err := ProcessShardProposerSlashings(ctx, spec, epc, state, body.ShardProposerSlashings); err != nil {
 		return err
 	}
-	// TODO: check shard headers count against active shard count
-	// TODO: process shard headers
-	if err := phase0.ProcessAttestations(ctx, spec, epc, state, body.Attestations); err != nil {
+	activeShardCount := spec.ActiveShardCount(epc.CurrentEpoch.Epoch)
+	if uint64(len(body.ShardHeaders)) > spec.MAX_SHARD_HEADERS_PER_SHARD * activeShardCount {
+		return fmt.Errorf("too many shard headers included in block: %d", len(body.ShardHeaders))
+	}
+	if err := ProcessShardHeaders(ctx, spec, epc, state, body.ShardHeaders); err != nil {
 		return err
 	}
-	// TODO: wrap attestation processing, to add shard confirmation work
+	if err := ProcessAttestations(ctx, spec, epc, state, body.Attestations); err != nil {
+		return err
+	}
 	if err := phase0.ProcessDeposits(ctx, spec, epc, state, body.Deposits); err != nil {
 		return err
 	}

@@ -110,7 +110,7 @@ func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spe
 		return err
 	}
 	activeShardCount := spec.ActiveShardCount(epc.CurrentEpoch.Epoch)
-	if uint64(len(body.ShardHeaders)) > spec.MAX_SHARD_HEADERS_PER_SHARD * activeShardCount {
+	if uint64(len(body.ShardHeaders)) > spec.MAX_SHARD_HEADERS_PER_SHARD*activeShardCount {
 		return fmt.Errorf("too many shard headers included in block: %d", len(body.ShardHeaders))
 	}
 	if err := ProcessShardHeaders(ctx, spec, epc, state, body.ShardHeaders); err != nil {

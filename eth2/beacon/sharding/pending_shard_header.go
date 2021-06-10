@@ -39,12 +39,24 @@ func (v *PendingShardHeaderView) Votes() (*phase0.AttestationBitsView, error) {
 	return phase0.AsAttestationBits(v.Get(2))
 }
 
+func (v *PendingShardHeaderView) SetVotes(bits *phase0.AttestationBitsView) error {
+	return v.Set(2, bits)
+}
+
 func (v *PendingShardHeaderView) Weight() (common.Gwei, error) {
 	return common.AsGwei(v.Get(3))
 }
 
+func (v *PendingShardHeaderView) SetWeight(w common.Gwei) error {
+	return v.Set(3, Uint64View(w))
+}
+
 func (v *PendingShardHeaderView) UpdateSlot() (common.Slot, error) {
 	return common.AsSlot(v.Get(4))
+}
+
+func (v *PendingShardHeaderView) SetUpdateSlot(slot common.Slot) error {
+	return v.Set(4, Uint64View(slot))
 }
 
 type PendingShardHeader struct {

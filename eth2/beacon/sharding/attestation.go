@@ -2,6 +2,7 @@ package sharding
 
 import (
 	"context"
+	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/ztyp/codec"
@@ -22,9 +23,9 @@ func AttestationType(spec *common.Spec) *ContainerTypeDef {
 }
 
 type Attestation struct {
-	AggregationBits phase0.AttestationBits     `json:"aggregation_bits" yaml:"aggregation_bits"`
-	Data            AttestationData     `json:"data" yaml:"data"`
-	Signature       common.BLSSignature `json:"signature" yaml:"signature"`
+	AggregationBits phase0.AttestationBits `json:"aggregation_bits" yaml:"aggregation_bits"`
+	Data            AttestationData        `json:"data" yaml:"data"`
+	Signature       common.BLSSignature    `json:"signature" yaml:"signature"`
 }
 
 func (a *Attestation) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
@@ -99,14 +100,14 @@ func ProcessAttestations(ctx context.Context, spec *common.Spec, epc *common.Epo
 func ProcessAttestation(spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView, attestation *Attestation) error {
 	phase0Att := phase0.Attestation{
 		AggregationBits: attestation.AggregationBits,
-		Data:            phase0.AttestationData{
+		Data: phase0.AttestationData{
 			Slot:            attestation.Data.Slot,
 			Index:           attestation.Data.Index,
 			BeaconBlockRoot: attestation.Data.BeaconBlockRoot,
 			Source:          attestation.Data.Source,
 			Target:          attestation.Data.Target,
 		},
-		Signature:       attestation.Signature,
+		Signature: attestation.Signature,
 	}
 	if err := phase0.ProcessAttestation(spec, epc, state, &phase0Att); err != nil {
 		return err
@@ -115,6 +116,170 @@ func ProcessAttestation(spec *common.Spec, epc *common.EpochsContext, state *Bea
 }
 
 func UpdatePendingShardWork(spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView, attestation *Attestation) error {
-	// TODO
+	attestationShard, err := epc.ComputeShardFromCommitteeIndex(attestation.Data.Index)
+	if err != nil {
+		return err
+	}
+	bufferIndex := uint64(attestation.Data.Slot % spec.SHARD_STATE_MEMORY_SLOTS)
+	// Check that this data is still pending
+	buffer, err := state.ShardBuffer()
+	if err != nil {
+		return err
+	}
+	column, err := buffer.Column(bufferIndex)
+	if err != nil {
+		return err
+	}
+	committeeWork, err := column.GetWork(attestationShard)
+	if err != nil {
+		return err
+	}
+	workStatus, err := committeeWork.Status()
+	if err != nil {
+		return err
+	}
+	selector, err := workStatus.Selector()
+	if err != nil {
+		return err
+	}
+	if selector != SHARD_WORK_PENDING {
+		// Attestation doesn't need to be processed, shard/slot pair is unconfirmable or already confirmed
+		return nil
+	}
+	currentHeaders, err := AsPendingShardHeaders(workStatus.Value())
+	if err != nil {
+		return err
+	}
+	// Find the corresponding header, abort if it cannot be found
+	headerIndex := uint64(0)
+	found := false
+	iter := currentHeaders.Iter()
+	for {
+		elem, ok, err := iter.Next()
+		if err != nil {
+			return err
+		}
+		if !ok {
+			break
+		}
+		pendingHeader, err := AsPendingShardHeader(elem, nil)
+		if err != nil {
+			return err
+		}
+		pendingHeaderRoot, err := pendingHeader.Root()
+		if err != nil {
+			return err
+		}
+		if pendingHeaderRoot == attestation.Data.ShardHeaderRoot {
+			found = true
+			break
+		}
+		headerIndex++
+	}
+	if !found {
+		return fmt.Errorf("attestation for unknown shard header is invalid, header root: %s", attestation.Data.ShardHeaderRoot)
+	}
+
+	pendingHeader, err := AsPendingShardHeader(currentHeaders.Get(headerIndex))
+	if err != nil {
+		return err
+	}
+	fullCommittee, err := epc.GetBeaconCommittee(attestation.Data.Slot, attestation.Data.Index)
+	if err != nil {
+		return err
+	}
+
+	// The weight may be outdated if it is not the initial weight, and from a previous epoch
+	weight, err := pendingHeader.Weight()
+	if err != nil {
+		return err
+	}
+	if weight != 0 {
+		updateSlot, err := pendingHeader.UpdateSlot()
+		if err != nil {
+			return err
+		}
+		pendingBitsView, err := pendingHeader.Votes()
+		if err != nil {
+			return err
+		}
+		pendingBits, err := pendingBitsView.Raw()
+		if err != nil {
+			return err
+		}
+		if spec.SlotToEpoch(updateSlot) < epc.CurrentEpoch.Epoch {
+			weight := common.Gwei(0)
+			for i, valIndex := range fullCommittee {
+				if pendingBits.GetBit(uint64(i)) {
+					weight += epc.EffectiveBalances[valIndex]
+				}
+			}
+			if err := pendingHeader.SetWeight(weight); err != nil {
+				return err
+			}
+		}
+	}
+
+	slot, err := state.Slot()
+	if err != nil {
+		return err
+	}
+	if err := pendingHeader.SetUpdateSlot(slot); err != nil {
+		return err
+	}
+
+	// Update votes bitfield in the state, update weights
+	pendingBitsView, err := pendingHeader.Votes()
+	if err != nil {
+		return err
+	}
+	pendingBits, err := pendingBitsView.Raw()
+	if err != nil {
+		return err
+	}
+	fullCommitteeBalance := common.Gwei(0)
+	anyChange := false
+	for i, valIndex := range fullCommittee {
+		eff := epc.EffectiveBalances[valIndex]
+		fullCommitteeBalance += eff
+		if attestation.AggregationBits.GetBit(uint64(i)) {
+			if !pendingBits.GetBit(uint64(i)) {
+				weight += epc.EffectiveBalances[valIndex]
+				pendingBits.SetBit(uint64(i), true)
+				anyChange = true
+			}
+		}
+	}
+	if anyChange {
+		if err := pendingHeader.SetWeight(weight); err != nil {
+			return err
+		}
+		if err := pendingHeader.SetVotes(pendingBits.View(spec)); err != nil {
+			return err
+		}
+	}
+
+	// Check if the PendingShardHeader is eligible for expedited confirmation, requiring 2/3 of balance attesting
+	if weight*3 > fullCommitteeBalance*2 {
+		commView, err := pendingHeader.Commitment()
+		if err != nil {
+			return err
+		}
+		commitment, err := commView.Raw()
+		if err != nil {
+			return err
+		}
+		if *commitment == (DataCommitment{}) {
+			// The committee voted to not confirm anything
+			if err := workStatus.Change(SHARD_WORK_UNCONFIRMED, nil); err != nil {
+				return err
+			}
+		} else {
+			if err := workStatus.Change(SHARD_WORK_CONFIRMED, commView); err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }

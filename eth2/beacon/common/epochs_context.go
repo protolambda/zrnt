@@ -310,3 +310,8 @@ func (epc *EpochsContext) StartShard(slot Slot) (Shard, error) {
 	// TODO
 	return 0, nil
 }
+
+func (epc *EpochsContext) ComputeShardFromCommitteeIndex(index CommitteeIndex) (Shard, error) {
+	// TODO
+	return 0, nil
+}

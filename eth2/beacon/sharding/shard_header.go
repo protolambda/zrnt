@@ -159,7 +159,7 @@ func ProcessShardHeader(spec *common.Spec, epc *common.EpochsContext, state *Bea
 	}
 	// Verify that the block root matches,
 	// to ensure the header will only be included in this specific Beacon Chain sub-tree.
-	blockRoot, err := common.GetBlockRootAtSlot(spec, state, header.Slot - 1)
+	blockRoot, err := common.GetBlockRootAtSlot(spec, state, header.Slot-1)
 	if err != nil {
 		return err
 	}

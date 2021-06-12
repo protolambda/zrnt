@@ -31,6 +31,8 @@ func ViewSignature(sig *BLSSignature) *BLSSignatureView {
 
 var BLSSignatureType = BasicVectorType(ByteType, 96)
 
+const BLSDomainTypeTreeType = Bytes4Type
+
 // Mixed into a BLS domain to define its type
 type BLSDomainType [4]byte
 
@@ -83,6 +85,8 @@ func (dt *BLSDomainType) UnmarshalText(text []byte) error {
 // Functions that just need a specific BLS domain can use this function.
 type BLSDomainFn func(typ BLSDomainType, epoch Epoch) (BLSDomain, error)
 
+const BLSDomainTreeType = RootType
+
 // BLS domain (8 bytes): fork version (32 bits) concatenated with BLS domain type (32 bits)
 type BLSDomain [32]byte
 
@@ -118,9 +122,14 @@ func ComputeDomain(domainType BLSDomainType, forkVersion Version, genesisValidat
 	return
 }
 
+var SigningDataType = ContainerType("SigningData", []FieldDef{
+	{"object_root", RootType},
+	{"domain", BLSDomainTreeType},
+})
+
 type SigningData struct {
-	ObjectRoot Root
-	Domain     BLSDomain
+	ObjectRoot Root      `json:"object_root" yaml:"object_root"`
+	Domain     BLSDomain `json:"domain" yaml:"domain"`
 }
 
 func (d *SigningData) Deserialize(dr *codec.DecodingReader) error {

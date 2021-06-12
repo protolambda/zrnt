@@ -74,6 +74,8 @@ func AsVersion(v View, err error) (Version, error) {
 	return AsBytes4(v, err)
 }
 
+const ForkDigestType = Bytes4Type
+
 // A digest of the current fork data
 type ForkDigest [4]byte
 
@@ -123,6 +125,11 @@ func (p *ForkDigest) UnmarshalText(text []byte) error {
 	_, err := hex.Decode(p[:], text)
 	return err
 }
+
+var ForkDataType = ContainerType("ForkData", []FieldDef{
+	{"current_version", VersionType},
+	{"genesis_validators_root", RootType},
+})
 
 type ForkData struct {
 	CurrentVersion        Version `json:"curent_version" yaml:"curent_version"`

@@ -353,12 +353,12 @@ func (state *BeaconStateView) Slashings() (common.Slashings, error) {
 	return phase0.AsSlashings(state.Get(_stateSlashings))
 }
 
-func (state *BeaconStateView) PreviousEpochAttestations() (*phase0.PendingAttestationsView, error) {
-	return phase0.AsPendingAttestations(state.Get(_statePreviousEpochAttestations))
+func (state *BeaconStateView) PreviousEpochAttestations() (*PendingAttestationsView, error) {
+	return AsPendingAttestations(state.Get(_statePreviousEpochAttestations))
 }
 
-func (state *BeaconStateView) CurrentEpochAttestations() (*phase0.PendingAttestationsView, error) {
-	return phase0.AsPendingAttestations(state.Get(_stateCurrentEpochAttestations))
+func (state *BeaconStateView) CurrentEpochAttestations() (*PendingAttestationsView, error) {
+	return AsPendingAttestations(state.Get(_stateCurrentEpochAttestations))
 }
 
 func (state *BeaconStateView) JustificationBits() (common.JustificationBits, error) {

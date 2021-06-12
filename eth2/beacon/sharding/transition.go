@@ -103,7 +103,7 @@ func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spe
 	if err := phase0.ProcessProposerSlashings(ctx, spec, epc, state, body.ProposerSlashings); err != nil {
 		return err
 	}
-	if err := phase0.ProcessAttesterSlashings(ctx, spec, epc, state, body.AttesterSlashings); err != nil {
+	if err := ProcessAttesterSlashings(ctx, spec, epc, state, body.AttesterSlashings); err != nil {
 		return err
 	}
 	if err := ProcessShardProposerSlashings(ctx, spec, epc, state, body.ShardProposerSlashings); err != nil {

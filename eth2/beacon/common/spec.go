@@ -181,6 +181,11 @@ type SSZObj interface {
 	tree.HTR
 }
 
+type WrappedSpecObj interface {
+	SSZObj
+	Unwrap() SpecObj
+}
+
 type specObj struct {
 	spec *Spec
 	des  SpecObj
@@ -204,6 +209,10 @@ func (s specObj) HashTreeRoot(h tree.HashFn) Root {
 
 func (s specObj) FixedLength() uint64 {
 	return s.des.FixedLength(s.spec)
+}
+
+func (s specObj) Unwrap() SpecObj {
+	return s.des
 }
 
 type Spec struct {

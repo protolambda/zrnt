@@ -2,12 +2,14 @@ package sharding
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
+	"sort"
 )
 
 func BlockAttestationsType(spec *common.Spec) ListTypeDef {
@@ -98,21 +100,134 @@ func ProcessAttestations(ctx context.Context, spec *common.Spec, epc *common.Epo
 }
 
 func ProcessAttestation(spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView, attestation *Attestation) error {
-	phase0Att := phase0.Attestation{
-		AggregationBits: attestation.AggregationBits,
-		Data: phase0.AttestationData{
-			Slot:            attestation.Data.Slot,
-			Index:           attestation.Data.Index,
-			BeaconBlockRoot: attestation.Data.BeaconBlockRoot,
-			Source:          attestation.Data.Source,
-			Target:          attestation.Data.Target,
-		},
-		Signature: attestation.Signature,
-	}
-	if err := phase0.ProcessAttestation(spec, epc, state, &phase0Att); err != nil {
+	if err := ClassicProcessAttestation(spec, epc, state, attestation); err != nil {
 		return err
 	}
 	return UpdatePendingShardWork(spec, epc, state, attestation)
+}
+
+func ClassicProcessAttestation(spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView, attestation *Attestation) error {
+	data := &attestation.Data
+
+	// Check slot
+	currentSlot, err := state.Slot()
+	if err != nil {
+		return err
+	}
+
+	currentEpoch := spec.SlotToEpoch(currentSlot)
+	previousEpoch := currentEpoch.Previous()
+
+	// Check target
+	if data.Target.Epoch < previousEpoch {
+		return errors.New("attestation data is invalid, target is too far in past")
+	} else if data.Target.Epoch > currentEpoch {
+		return errors.New("attestation data is invalid, target is in future")
+	}
+	// And if it matches the slot
+	if data.Target.Epoch != spec.SlotToEpoch(data.Slot) {
+		return errors.New("attestation data is invalid, slot epoch does not match target epoch")
+	}
+
+	if !(currentSlot <= data.Slot+spec.SLOTS_PER_EPOCH) {
+		return errors.New("attestation slot is too old")
+	}
+	if !(data.Slot+spec.MIN_ATTESTATION_INCLUSION_DELAY <= currentSlot) {
+		return errors.New("attestation is too new")
+	}
+
+	// Check committee index
+	if commCount, err := epc.GetCommitteeCountPerSlot(data.Target.Epoch); err != nil {
+		return err
+	} else if uint64(data.Index) >= commCount {
+		return errors.New("attestation data is invalid, committee index out of range")
+	}
+
+	// Check source
+	if data.Target.Epoch == currentEpoch {
+		currentJustified, err := state.CurrentJustifiedCheckpoint()
+		if err != nil {
+			return err
+		}
+		if data.Source != currentJustified {
+			return errors.New("attestation source does not match current justified checkpoint")
+		}
+	} else {
+		previousJustified, err := state.PreviousJustifiedCheckpoint()
+		if err != nil {
+			return err
+		}
+		if data.Source != previousJustified {
+			return errors.New("attestation source does not match previous justified checkpoint")
+		}
+	}
+
+	// Check signature and bitfields
+	committee, err := epc.GetBeaconCommittee(data.Slot, data.Index)
+	if err != nil {
+		return err
+	}
+	if indexedAtt, err := attestation.ConvertToIndexed(spec, committee); err != nil {
+		return fmt.Errorf("attestation could not be converted to an indexed attestation: %v", err)
+	} else if err := ValidateIndexedAttestation(spec, epc, state, indexedAtt); err != nil {
+		return fmt.Errorf("attestation could not be verified in its indexed form: %v", err)
+	}
+
+	proposerIndex, err := epc.GetBeaconProposer(currentSlot)
+	if err != nil {
+		return err
+	}
+	// Cache pending attestation
+	pendingAttestationRaw := PendingAttestation{
+		Data:            *data,
+		AggregationBits: attestation.AggregationBits,
+		InclusionDelay:  currentSlot - data.Slot,
+		ProposerIndex:   proposerIndex,
+	}
+	pendingAttestation := pendingAttestationRaw.View(spec)
+
+	if data.Target.Epoch == currentEpoch {
+		atts, err := state.CurrentEpochAttestations()
+		if err != nil {
+			return err
+		}
+		if err := atts.Append(pendingAttestation); err != nil {
+			return err
+		}
+	} else {
+		atts, err := state.PreviousEpochAttestations()
+		if err != nil {
+			return err
+		}
+		if err := atts.Append(pendingAttestation); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Convert attestation to (almost) indexed-verifiable form
+func (attestation *Attestation) ConvertToIndexed(spec *common.Spec, committee []common.ValidatorIndex) (*IndexedAttestation, error) {
+	bitLen := attestation.AggregationBits.BitLen()
+	if uint64(len(committee)) != bitLen {
+		return nil, fmt.Errorf("committee size does not match bits size: %d <> %d", len(committee), bitLen)
+	}
+
+	participants := make([]common.ValidatorIndex, 0, len(committee))
+	for i := uint64(0); i < bitLen; i++ {
+		if attestation.AggregationBits.GetBit(i) {
+			participants = append(participants, committee[i])
+		}
+	}
+	sort.Slice(participants, func(i int, j int) bool {
+		return participants[i] < participants[j]
+	})
+
+	return &IndexedAttestation{
+		AttestingIndices: participants,
+		Data:             attestation.Data,
+		Signature:        attestation.Signature,
+	}, nil
 }
 
 func UpdatePendingShardWork(spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView, attestation *Attestation) error {

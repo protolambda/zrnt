@@ -117,7 +117,7 @@ type BeaconBlockBody struct {
 	Graffiti     common.Root         `json:"graffiti" yaml:"graffiti"`
 
 	ProposerSlashings phase0.ProposerSlashings `json:"proposer_slashings" yaml:"proposer_slashings"`
-	AttesterSlashings phase0.AttesterSlashings `json:"attester_slashings" yaml:"attester_slashings"`
+	AttesterSlashings AttesterSlashings        `json:"attester_slashings" yaml:"attester_slashings"`
 	Attestations      Attestations             `json:"attestations" yaml:"attestations"`
 	Deposits          phase0.Deposits          `json:"deposits" yaml:"deposits"`
 	VoluntaryExits    phase0.VoluntaryExits    `json:"voluntary_exits" yaml:"voluntary_exits"`
@@ -216,7 +216,7 @@ func BeaconBlockBodyType(spec *common.Spec) *ContainerTypeDef {
 		{"graffiti", common.Bytes32Type},   // Arbitrary data
 		// Operations
 		{"proposer_slashings", phase0.BlockProposerSlashingsType(spec)},
-		{"attester_slashings", phase0.BlockAttesterSlashingsType(spec)},
+		{"attester_slashings", BlockAttesterSlashingsType(spec)},
 		{"attestations", BlockAttestationsType(spec)},
 		{"deposits", phase0.BlockDepositsType(spec)},
 		{"voluntary_exits", phase0.BlockVoluntaryExitsType(spec)},

@@ -62,6 +62,22 @@ type DepositMessage struct {
 	Amount                Gwei      `json:"amount" yaml:"amount"`
 }
 
+func (d *DepositMessage) Deserialize(dr *codec.DecodingReader) error {
+	return dr.FixedLenContainer(&d.Pubkey, &d.WithdrawalCredentials, &d.Amount)
+}
+
+func (d *DepositMessage) Serialize(w *codec.EncodingWriter) error {
+	return w.FixedLenContainer(&d.Pubkey, &d.WithdrawalCredentials, &d.Amount)
+}
+
+func (a *DepositMessage) ByteLength() uint64 {
+	return 48 + 32 + 8
+}
+
+func (a *DepositMessage) FixedLength() uint64 {
+	return 48 + 32 + 8
+}
+
 func (b *DepositMessage) HashTreeRoot(hFn tree.HashFn) Root {
 	return hFn.HashTreeRoot(b.Pubkey, b.WithdrawalCredentials, b.Amount)
 }

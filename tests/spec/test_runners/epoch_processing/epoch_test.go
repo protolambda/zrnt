@@ -66,7 +66,7 @@ func TestJustificationAndFinalization(t *testing.T) {
 	test_util.RunTransitionTest(t, test_util.AllForks, "epoch_processing", "justification_and_finalization",
 		NewEpochTest(func(spec *common.Spec, state common.BeaconState, epc *common.EpochsContext, flats []common.FlatValidator) error {
 			var just *phase0.JustificationStakeData
-			if s, ok := state.(phase0.PendingAttestationsBeaconState); ok {
+			if s, ok := state.(phase0.Phase0PendingAttestationsBeaconState); ok {
 				attesterData, err := phase0.ComputeEpochAttesterData(context.Background(), spec, epc, flats, s)
 				if err != nil {
 					return err
@@ -98,7 +98,7 @@ func TestJustificationAndFinalization(t *testing.T) {
 func TestParticipationRecordUpdates(t *testing.T) {
 	test_util.RunTransitionTest(t, []test_util.ForkName{"phase0", "merge"}, "epoch_processing", "participation_record_updates",
 		NewEpochTest(func(spec *common.Spec, state common.BeaconState, epc *common.EpochsContext, flats []common.FlatValidator) error {
-			if s, ok := state.(phase0.PendingAttestationsBeaconState); ok {
+			if s, ok := state.(phase0.Phase0PendingAttestationsBeaconState); ok {
 				return phase0.ProcessParticipationRecordUpdates(context.Background(), spec, epc, s)
 			} else {
 				return fmt.Errorf("unrecognized state type: %T", state)
@@ -132,7 +132,7 @@ func TestRegistryUpdates(t *testing.T) {
 }
 
 type phase0LikeRewards interface {
-	phase0.PendingAttestationsBeaconState
+	phase0.Phase0PendingAttestationsBeaconState
 	phase0.BalancesBeaconState
 }
 

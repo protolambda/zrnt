@@ -109,7 +109,7 @@ func (c *RewardsTest) Check(t *testing.T) {
 }
 
 type phase0LikeRewards interface {
-	phase0.PendingAttestationsBeaconState
+	phase0.Phase0PendingAttestationsBeaconState
 	phase0.BalancesBeaconState
 }
 

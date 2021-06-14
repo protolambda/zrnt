@@ -1,74 +1,22 @@
-package phase0
+package sharding
 
 import (
 	"context"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 )
-
-type EpochStakeSummary struct {
-	SourceStake common.Gwei
-	TargetStake common.Gwei
-	HeadStake   common.Gwei
-}
-
-type AttesterFlag uint8
-
-func (flags AttesterFlag) HasMarkers(markers AttesterFlag) bool {
-	return flags&markers == markers
-}
-
-const (
-	PrevSourceAttester AttesterFlag = 1 << iota
-	PrevTargetAttester
-	PrevHeadAttester
-
-	CurrSourceAttester
-	CurrTargetAttester
-	CurrHeadAttester
-
-	UnslashedAttester
-	EligibleAttester
-)
-
-type AttesterStatus struct {
-	// The delay of inclusion of the latest attestation by the attester.
-	// No delay (i.e. 0) by default
-	InclusionDelay common.Slot
-	// The validator index of the proposer of the attested beacon block.
-	// Only valid if the validator has an attesting flag set.
-	AttestedProposer common.ValidatorIndex
-	// A bitfield of markers describing the recent actions of the validator
-	Flags AttesterFlag
-}
-
-type EpochAttesterData struct {
-	PrevEpoch common.Epoch
-	CurrEpoch common.Epoch
-
-	Statuses []AttesterStatus
-	Flats    []common.FlatValidator
-
-	PrevEpochUnslashedStake       EpochStakeSummary
-	CurrEpochUnslashedTargetStake common.Gwei
-}
-
-type Phase0PendingAttestationsBeaconState interface {
-	common.BeaconState
-	PreviousEpochAttestations() (*PendingAttestationsView, error)
-	CurrentEpochAttestations() (*PendingAttestationsView, error)
-}
 
 func ComputeEpochAttesterData(ctx context.Context, spec *common.Spec, epc *common.EpochsContext,
-	flats []common.FlatValidator, state Phase0PendingAttestationsBeaconState) (out *EpochAttesterData, err error) {
+	flats []common.FlatValidator, state *BeaconStateView) (out *phase0.EpochAttesterData, err error) {
 
 	count := common.ValidatorIndex(len(flats))
 	prevEpoch := epc.PreviousEpoch.Epoch
 	currentEpoch := epc.CurrentEpoch.Epoch
 
-	out = &EpochAttesterData{
+	out = &phase0.EpochAttesterData{
 		PrevEpoch: prevEpoch,
 		CurrEpoch: currentEpoch,
-		Statuses:  make([]AttesterStatus, count, count),
+		Statuses:  make([]phase0.AttesterStatus, count, count),
 		Flats:     flats,
 	}
 
@@ -79,18 +27,18 @@ func ComputeEpochAttesterData(ctx context.Context, spec *common.Spec, epc *commo
 		status.AttestedProposer = common.ValidatorIndexMarker
 
 		if !flat.Slashed {
-			status.Flags |= UnslashedAttester
+			status.Flags |= phase0.UnslashedAttester
 		}
 
 		if flat.IsActive(prevEpoch) || (flat.Slashed && (prevEpoch+1 < flat.WithdrawableEpoch)) {
-			status.Flags |= EligibleAttester
+			status.Flags |= phase0.EligibleAttester
 		}
 	}
 
 	processEpoch := func(
 		attestations *PendingAttestationsView,
 		epoch common.Epoch,
-		sourceFlag, targetFlag, headFlag AttesterFlag) error {
+		sourceFlag, targetFlag, headFlag phase0.AttesterFlag) error {
 
 		startSlot, err := spec.EpochStartSlot(epoch)
 		if err != nil {
@@ -178,7 +126,7 @@ func ComputeEpochAttesterData(ctx context.Context, spec *common.Spec, epc *commo
 		return nil, err
 	}
 	if err := processEpoch(prevAtts, prevEpoch,
-		PrevSourceAttester, PrevTargetAttester, PrevHeadAttester); err != nil {
+		phase0.PrevSourceAttester, phase0.PrevTargetAttester, phase0.PrevHeadAttester); err != nil {
 		return nil, err
 	}
 	currAtts, err := state.CurrentEpochAttestations()
@@ -186,7 +134,7 @@ func ComputeEpochAttesterData(ctx context.Context, spec *common.Spec, epc *commo
 		return nil, err
 	}
 	if err := processEpoch(currAtts, currentEpoch,
-		CurrSourceAttester, CurrTargetAttester, CurrHeadAttester); err != nil {
+		phase0.CurrSourceAttester, phase0.CurrTargetAttester, phase0.CurrHeadAttester); err != nil {
 		return nil, err
 	}
 
@@ -194,17 +142,17 @@ func ComputeEpochAttesterData(ctx context.Context, spec *common.Spec, epc *commo
 		status := &out.Statuses[i]
 		flat := &flats[i]
 		// nested, since they are subsets anyway
-		if status.Flags.HasMarkers(PrevSourceAttester | UnslashedAttester) {
+		if status.Flags.HasMarkers(phase0.PrevSourceAttester | phase0.UnslashedAttester) {
 			out.PrevEpochUnslashedStake.SourceStake += flat.EffectiveBalance
 			// already know it's unslashed, just look if attesting target, then head
-			if status.Flags.HasMarkers(PrevTargetAttester) {
+			if status.Flags.HasMarkers(phase0.PrevTargetAttester) {
 				out.PrevEpochUnslashedStake.TargetStake += flat.EffectiveBalance
-				if status.Flags.HasMarkers(PrevHeadAttester) {
+				if status.Flags.HasMarkers(phase0.PrevHeadAttester) {
 					out.PrevEpochUnslashedStake.HeadStake += flat.EffectiveBalance
 				}
 			}
 		}
-		if status.Flags.HasMarkers(CurrTargetAttester | UnslashedAttester) {
+		if status.Flags.HasMarkers(phase0.CurrTargetAttester | phase0.UnslashedAttester) {
 			out.CurrEpochUnslashedTargetStake += flat.EffectiveBalance
 		}
 	}

@@ -24,7 +24,7 @@ func (c *AttestationTestCase) Run() error {
 	if err != nil {
 		return err
 	}
-	if s, ok := c.Pre.(phase0.PendingAttestationsBeaconState); ok {
+	if s, ok := c.Pre.(phase0.Phase0PendingAttestationsBeaconState); ok {
 		return phase0.ProcessAttestation(c.Spec, epc, s, &c.Attestation)
 	} else if s, ok := c.Pre.(*altair.BeaconStateView); ok {
 		return altair.ProcessAttestation(c.Spec, epc, s, &c.Attestation)

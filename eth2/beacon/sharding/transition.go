@@ -27,7 +27,7 @@ func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spe
 	if err != nil {
 		return err
 	}
-	attesterData, err := phase0.ComputeEpochAttesterData(ctx, spec, epc, flats, state)
+	attesterData, err := ComputeEpochAttesterData(ctx, spec, epc, flats, state)
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spe
 	if err := phase0.ProcessHistoricalRootsUpdate(ctx, spec, epc, state); err != nil {
 		return err
 	}
-	if err := phase0.ProcessParticipationRecordUpdates(ctx, spec, epc, state); err != nil {
+	if err := ProcessParticipationRecordUpdates(ctx, spec, epc, state); err != nil {
 		return err
 	}
 	return nil

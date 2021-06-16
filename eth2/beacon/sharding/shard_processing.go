@@ -116,7 +116,7 @@ func ProcessPendingShardConfirmations(ctx context.Context, spec *common.Spec, st
 	return nil
 }
 
-func ChargeConfirmedShardFees(ctx context.Context, spec *common.Spec, state *BeaconStateView, epc *common.EpochsContext) error {
+func ChargeConfirmedShardFees(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -199,7 +199,7 @@ func ChargeConfirmedShardFees(ctx context.Context, spec *common.Spec, state *Bea
 	return nil
 }
 
-func ResetPendingShardWork(ctx context.Context, spec *common.Spec, state *BeaconStateView, epc *common.EpochsContext) error {
+func ResetPendingShardWork(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}

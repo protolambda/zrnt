@@ -55,7 +55,7 @@ func ProcessSlot(ctx context.Context, _ *Spec, state BeaconState) error {
 // Process the state to the given slot.
 // Returns an error if the slot is older than the state is already at.
 // Mutates the state, does not copy.
-func ProcessSlots(ctx context.Context, spec *Spec, epc *EpochsContext, state BeaconState, slot Slot) error {
+func ProcessSlots(ctx context.Context, spec *Spec, epc *EpochsContext, state UpgradeableBeaconState, slot Slot) error {
 	// happens at the start of every CurrentSlot
 	currentSlot, err := state.Slot()
 	if err != nil {
@@ -89,6 +89,10 @@ func ProcessSlots(ctx context.Context, spec *Spec, epc *EpochsContext, state Bea
 				return err
 			}
 		}
+
+		if err := state.UpgradeMaybe(ctx, spec, epc); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -96,7 +100,7 @@ func ProcessSlots(ctx context.Context, spec *Spec, epc *EpochsContext, state Bea
 // StateTransition to the slot of the given block, then process the block.
 // Returns an error if the slot is older or equal to what the state is already at.
 // Mutates the state, does not copy.
-func StateTransition(ctx context.Context, spec *Spec, epc *EpochsContext, state BeaconState, benv *BeaconBlockEnvelope, validateResult bool) error {
+func StateTransition(ctx context.Context, spec *Spec, epc *EpochsContext, state UpgradeableBeaconState, benv *BeaconBlockEnvelope, validateResult bool) error {
 	if err := ProcessSlots(ctx, spec, epc, state, benv.Slot); err != nil {
 		return err
 	}

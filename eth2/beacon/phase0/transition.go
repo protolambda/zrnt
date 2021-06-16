@@ -37,10 +37,10 @@ func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spe
 	if err := ProcessEpochSlashings(ctx, spec, epc, flats, state); err != nil {
 		return err
 	}
-	if err := ProcessEffectiveBalanceUpdates(ctx, spec, epc, flats, state); err != nil {
+	if err := ProcessEth1DataReset(ctx, spec, epc, state); err != nil {
 		return err
 	}
-	if err := ProcessEth1DataReset(ctx, spec, epc, state); err != nil {
+	if err := ProcessEffectiveBalanceUpdates(ctx, spec, epc, flats, state); err != nil {
 		return err
 	}
 	if err := ProcessSlashingsReset(ctx, spec, epc, state); err != nil {

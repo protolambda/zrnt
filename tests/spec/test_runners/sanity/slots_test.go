@@ -21,6 +21,14 @@ func (c *SlotsTestCase) Load(t *testing.T, forkName test_util.ForkName, readPart
 	test_util.Check(t, p.Close())
 }
 
+type nonUpgradeable struct {
+	common.BeaconState
+}
+
+func (*nonUpgradeable) UpgradeMaybe(ctx context.Context, spec *common.Spec, epc *common.EpochsContext) error {
+	return nil
+}
+
 func (c *SlotsTestCase) Run() error {
 	epc, err := common.NewEpochsContext(c.Spec, c.Pre)
 	if err != nil {
@@ -30,7 +38,7 @@ func (c *SlotsTestCase) Run() error {
 	if err != nil {
 		return err
 	}
-	return common.ProcessSlots(context.Background(), c.Spec, epc, c.Pre, slot+c.Slots)
+	return common.ProcessSlots(context.Background(), c.Spec, epc, &nonUpgradeable{c.Pre}, slot+c.Slots)
 }
 
 func TestSlots(t *testing.T) {

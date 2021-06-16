@@ -3,6 +3,7 @@ package finality
 import (
 	"context"
 	"fmt"
+	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/merge"
@@ -64,7 +65,10 @@ func (c *FinalityTestCase) Run() error {
 	if err != nil {
 		return err
 	}
-	state := c.Pre
+	state := &beacon.StandardUpgradeableBeaconState{BeaconState: c.Pre}
+	defer func() {
+		c.Pre = state.BeaconState
+	}()
 	for _, b := range c.Blocks {
 		if err := common.StateTransition(context.Background(), c.Spec, epc, state, b, true); err != nil {
 			return err

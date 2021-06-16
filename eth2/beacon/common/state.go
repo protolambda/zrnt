@@ -137,6 +137,13 @@ type BeaconState interface {
 	ProcessBlock(ctx context.Context, spec *Spec, epc *EpochsContext, benv *BeaconBlockEnvelope) error
 }
 
+type UpgradeableBeaconState interface {
+	BeaconState
+
+	// Called whenever the state may need to upgrade to a next fork, changes the BeaconState interface contents if so.
+	UpgradeMaybe(ctx context.Context, spec *Spec, epc *EpochsContext) error
+}
+
 type SyncCommitteeBeaconState interface {
 	BeaconState
 	CurrentSyncCommittee() (*SyncCommitteeView, error)

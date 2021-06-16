@@ -3,8 +3,10 @@
 package common
 
 import (
+	"encoding/json"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
+	"gopkg.in/yaml.v3"
 )
 
 const TARGET_AGGREGATORS_PER_COMMITTEE = 16
@@ -183,7 +185,7 @@ type SSZObj interface {
 
 type WrappedSpecObj interface {
 	SSZObj
-	Unwrap() SpecObj
+	Unwrap() (*Spec, SpecObj)
 }
 
 type specObj struct {
@@ -191,28 +193,44 @@ type specObj struct {
 	des  SpecObj
 }
 
-func (s specObj) Deserialize(dr *codec.DecodingReader) error {
+func (s *specObj) Deserialize(dr *codec.DecodingReader) error {
 	return s.des.Deserialize(s.spec, dr)
 }
 
-func (s specObj) Serialize(w *codec.EncodingWriter) error {
+func (s *specObj) Serialize(w *codec.EncodingWriter) error {
 	return s.des.Serialize(s.spec, w)
 }
 
-func (s specObj) ByteLength() uint64 {
+func (s *specObj) ByteLength() uint64 {
 	return s.des.ByteLength(s.spec)
 }
 
-func (s specObj) HashTreeRoot(h tree.HashFn) Root {
+func (s *specObj) HashTreeRoot(h tree.HashFn) Root {
 	return s.des.HashTreeRoot(s.spec, h)
 }
 
-func (s specObj) FixedLength() uint64 {
+func (s *specObj) FixedLength() uint64 {
 	return s.des.FixedLength(s.spec)
 }
 
-func (s specObj) Unwrap() SpecObj {
-	return s.des
+func (s *specObj) Unwrap() (*Spec, SpecObj) {
+	return s.spec, s.des
+}
+
+func (s *specObj) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, s.des)
+}
+
+func (s *specObj) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.des)
+}
+
+func (s *specObj) UnmarshalYAML(value *yaml.Node) error {
+	return value.Decode(s.des)
+}
+
+func (s *specObj) MarshalYAML() (interface{}, error) {
+	return s.des, nil
 }
 
 type Spec struct {
@@ -227,8 +245,9 @@ type Spec struct {
 	ExecutionEngine `yaml:"-"`
 }
 
+// Wraps the object to parametrize with given spec. JSON and YAML functionality is proxied to the inner value.
 func (spec *Spec) Wrap(des SpecObj) SSZObj {
-	return specObj{spec, des}
+	return &specObj{spec, des}
 }
 
 func (spec *Spec) ForkVersion(slot Slot) Version {

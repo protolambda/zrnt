@@ -3,12 +3,13 @@ package altair
 import (
 	"context"
 	"encoding/binary"
+	"encoding/json"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/codec"
-	"github.com/protolambda/ztyp/conv"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
-	"unsafe"
+	"gopkg.in/yaml.v3"
+	"strings"
 )
 
 const ParticipationFlagsType = Uint8Type
@@ -70,43 +71,71 @@ const (
 type ParticipationRegistry []ParticipationFlags
 
 func (r ParticipationRegistry) MarshalText() ([]byte, error) {
-	return conv.BytesMarshalText(*(*[]byte)(unsafe.Pointer(&r)))
+	return []byte(r.String()), nil
 }
 
 func (r ParticipationRegistry) String() string {
-	return conv.BytesString(*(*[]byte)(unsafe.Pointer(&r)))
+	var out strings.Builder
+	out.WriteRune('[')
+	if len(r) > 0 {
+		out.WriteString(r[0].String())
+		if len(r) > 1 {
+			for i := range r[1:] {
+				out.WriteRune(',')
+				out.WriteString(r[1+i].String())
+			}
+		}
+	}
+	out.WriteRune(']')
+	return out.String()
 }
 
 func (r *ParticipationRegistry) UnmarshalText(text []byte) error {
-	return conv.DynamicBytesUnmarshalText((*[]byte)(unsafe.Pointer(r)), text)
+	return json.Unmarshal(text, (*[]ParticipationFlags)(r))
 }
 
-func (a *ParticipationRegistry) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
+func (r *ParticipationRegistry) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, (*[]ParticipationFlags)(r))
+}
+
+func (r ParticipationRegistry) MarshalJSON() ([]byte, error) {
+	return r.MarshalText()
+}
+
+func (r *ParticipationRegistry) UnmarshalYAML(value *yaml.Node) error {
+	return value.Decode((*[]ParticipationFlags)(r))
+}
+
+func (r ParticipationRegistry) MarshalYAML() (interface{}, error) {
+	return ([]ParticipationFlags)(r), nil
+}
+
+func (r *ParticipationRegistry) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
 	return dr.List(func() codec.Deserializable {
-		i := len(*a)
-		*a = append(*a, ParticipationFlags(0))
-		return &(*a)[i]
+		i := len(*r)
+		*r = append(*r, ParticipationFlags(0))
+		return &(*r)[i]
 	}, ParticipationFlagsType.TypeByteLength(), spec.VALIDATOR_REGISTRY_LIMIT)
 }
 
-func (a ParticipationRegistry) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
+func (r ParticipationRegistry) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
 	return w.List(func(i uint64) codec.Serializable {
-		return &a[i]
-	}, ParticipationFlagsType.TypeByteLength(), uint64(len(a)))
+		return &r[i]
+	}, ParticipationFlagsType.TypeByteLength(), uint64(len(r)))
 }
 
-func (a ParticipationRegistry) ByteLength(spec *common.Spec) (out uint64) {
-	return uint64(len(a)) * ParticipationFlagsType.TypeByteLength()
+func (r ParticipationRegistry) ByteLength(spec *common.Spec) (out uint64) {
+	return uint64(len(r)) * ParticipationFlagsType.TypeByteLength()
 }
 
-func (a *ParticipationRegistry) FixedLength(spec *common.Spec) uint64 {
+func (r *ParticipationRegistry) FixedLength(spec *common.Spec) uint64 {
 	return 0 // it's a list, no fixed length
 }
 
-func (li ParticipationRegistry) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
+func (r ParticipationRegistry) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
 	return hFn.Uint8ListHTR(func(i uint64) uint8 {
-		return uint8(li[i])
-	}, uint64(len(li)), spec.VALIDATOR_REGISTRY_LIMIT)
+		return uint8(r[i])
+	}, uint64(len(r)), spec.VALIDATOR_REGISTRY_LIMIT)
 }
 
 func ParticipationRegistryType(spec *common.Spec) *BasicListTypeDef {

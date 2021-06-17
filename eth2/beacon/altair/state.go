@@ -449,8 +449,16 @@ func (state *BeaconStateView) CurrentSyncCommittee() (*common.SyncCommitteeView,
 	return common.AsSyncCommittee(state.Get(_currentSyncCommittee))
 }
 
+func (state *BeaconStateView) SetCurrentSyncCommittee(v *common.SyncCommitteeView) error {
+	return state.Set(_currentSyncCommittee, v)
+}
+
 func (state *BeaconStateView) NextSyncCommittee() (*common.SyncCommitteeView, error) {
 	return common.AsSyncCommittee(state.Get(_nextSyncCommittee))
+}
+
+func (state *BeaconStateView) SetNextSyncCommittee(v *common.SyncCommitteeView) error {
+	return state.Set(_nextSyncCommittee, v)
 }
 
 func (state *BeaconStateView) RotateSyncCommittee(next *common.SyncCommitteeView) error {

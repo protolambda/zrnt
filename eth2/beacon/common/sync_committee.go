@@ -137,14 +137,18 @@ func AsSyncCommittee(v View, err error) (*SyncCommitteeView, error) {
 func ComputeNextSyncCommittee(spec *Spec, epc *EpochsContext, state BeaconState) (*SyncCommittee, error) {
 	indices, err := ComputeSyncCommitteeIndices(spec, state, epc.NextEpoch.Epoch, epc.NextEpoch.ActiveIndices)
 	if err != nil {
-		return nil, fmt.Errorf("failed to compute sync committee indices for next epoch: %d", indices)
+		return nil, fmt.Errorf("failed to compute sync committee indices for next epoch: %d", epc.NextEpoch.Epoch)
 	}
+	return IndicesToSyncCommittee(indices, epc.PubkeyCache)
+}
+
+func IndicesToSyncCommittee(indices []ValidatorIndex, pubCache *PubkeyCache) (*SyncCommittee, error) {
 	var pubs []BLSPubkey
 	var blsAggregate hbls.PublicKey
 	for _, idx := range indices {
-		pub, ok := epc.PubkeyCache.Pubkey(idx)
+		pub, ok := pubCache.Pubkey(idx)
 		if !ok {
-			return nil, fmt.Errorf("failed to get sync committee data, pubkey cache is missing pubkey for index %d: %v", idx, err)
+			return nil, fmt.Errorf("failed to get sync committee data, pubkey cache is missing pubkey for index %d", idx)
 		}
 		blsPub, err := pub.Pubkey()
 		if err != nil {

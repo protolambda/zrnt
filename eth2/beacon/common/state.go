@@ -148,5 +148,7 @@ type SyncCommitteeBeaconState interface {
 	BeaconState
 	CurrentSyncCommittee() (*SyncCommitteeView, error)
 	NextSyncCommittee() (*SyncCommitteeView, error)
+	SetCurrentSyncCommittee(v *SyncCommitteeView) error
+	SetNextSyncCommittee(v *SyncCommitteeView) error
 	RotateSyncCommittee(next *SyncCommitteeView) error
 }

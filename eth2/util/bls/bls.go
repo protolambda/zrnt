@@ -121,7 +121,11 @@ type CachedPubkey struct {
 func (c *CachedPubkey) Pubkey() (*hbls.PublicKey, error) {
 	if c.decompressed == nil {
 		var parsedPubkey hbls.PublicKey
-		if err := parsedPubkey.Deserialize(c.Compressed[:]); err != nil {
+		// Due to poor Herumi BLS CGO bindings, it must deserialize into a pointer that does not also have another pointer, or CGO will complain with:
+		// "panic: runtime error: cgo argument has Go pointer to Go pointer"
+		tmp := make([]byte, 48, 48)
+		copy(tmp, c.Compressed[:])
+		if err := parsedPubkey.Deserialize(tmp); err != nil {
 			return nil, err
 		}
 		c.decompressed = &parsedPubkey

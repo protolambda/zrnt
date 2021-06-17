@@ -74,17 +74,22 @@ func ComputeShufflingEpoch(spec *Spec, state BeaconState, indicesBounded []Bound
 	return NewShufflingEpoch(spec, indicesBounded, seed, epoch), nil
 }
 
+func ActiveIndices(indicesBounded []BoundedIndex, epoch Epoch) []ValidatorIndex {
+	out := make([]ValidatorIndex, 0, len(indicesBounded))
+	for _, v := range indicesBounded {
+		if v.Activation <= epoch && epoch < v.Exit {
+			out = append(out, v.Index)
+		}
+	}
+	return out
+}
+
 func NewShufflingEpoch(spec *Spec, indicesBounded []BoundedIndex, seed Root, epoch Epoch) *ShufflingEpoch {
 	shep := &ShufflingEpoch{
 		Epoch: epoch,
 	}
 
-	shep.ActiveIndices = make([]ValidatorIndex, 0, len(indicesBounded))
-	for _, v := range indicesBounded {
-		if v.Activation <= epoch && epoch < v.Exit {
-			shep.ActiveIndices = append(shep.ActiveIndices, v.Index)
-		}
-	}
+	shep.ActiveIndices = ActiveIndices(indicesBounded, epoch)
 
 	// Copy over the active indices, then get the shuffling of them
 	shep.Shuffling = make([]ValidatorIndex, len(shep.ActiveIndices), len(shep.ActiveIndices))

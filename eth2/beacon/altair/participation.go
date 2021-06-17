@@ -5,8 +5,10 @@ import (
 	"encoding/binary"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/codec"
+	"github.com/protolambda/ztyp/conv"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
+	"unsafe"
 )
 
 const ParticipationFlagsType = Uint8Type
@@ -66,6 +68,18 @@ const (
 )
 
 type ParticipationRegistry []ParticipationFlags
+
+func (r ParticipationRegistry) MarshalText() ([]byte, error) {
+	return conv.BytesMarshalText(*(*[]byte)(unsafe.Pointer(&r)))
+}
+
+func (r ParticipationRegistry) String() string {
+	return conv.BytesString(*(*[]byte)(unsafe.Pointer(&r)))
+}
+
+func (r *ParticipationRegistry) UnmarshalText(text []byte) error {
+	return conv.DynamicBytesUnmarshalText((*[]byte)(unsafe.Pointer(r)), text)
+}
 
 func (a *ParticipationRegistry) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
 	return dr.List(func() codec.Deserializable {

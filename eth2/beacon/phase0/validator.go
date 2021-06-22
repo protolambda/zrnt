@@ -18,16 +18,18 @@ type Validator struct {
 	ActivationEpoch            common.Epoch `json:"activation_epoch" yaml:"activation_epoch"`
 	ExitEpoch                  common.Epoch `json:"exit_epoch" yaml:"exit_epoch"`
 	WithdrawableEpoch          common.Epoch `json:"withdrawable_epoch" yaml:"withdrawable_epoch"`
+	// TODO: Merge version of Validator, so common is not broken
+	WithdrawnEpoch common.Epoch `json:"withdrawn_epoch" yaml:"withdrawn_epoch"`
 }
 
 func (v *Validator) Deserialize(dr *codec.DecodingReader) error {
 	return dr.FixedLenContainer(&v.Pubkey, &v.WithdrawalCredentials, &v.EffectiveBalance, (*BoolView)(&v.Slashed),
-		&v.ActivationEligibilityEpoch, &v.ActivationEpoch, &v.ExitEpoch, &v.WithdrawableEpoch)
+		&v.ActivationEligibilityEpoch, &v.ActivationEpoch, &v.ExitEpoch, &v.WithdrawableEpoch, &v.WithdrawnEpoch)
 }
 
 func (v *Validator) Serialize(w *codec.EncodingWriter) error {
 	return w.FixedLenContainer(&v.Pubkey, &v.WithdrawalCredentials, &v.EffectiveBalance, (*BoolView)(&v.Slashed),
-		&v.ActivationEligibilityEpoch, &v.ActivationEpoch, &v.ExitEpoch, &v.WithdrawableEpoch)
+		&v.ActivationEligibilityEpoch, &v.ActivationEpoch, &v.ExitEpoch, &v.WithdrawableEpoch, &v.WithdrawnEpoch)
 }
 
 func (a *Validator) ByteLength() uint64 {
@@ -40,7 +42,7 @@ func (*Validator) FixedLength() uint64 {
 
 func (v *Validator) HashTreeRoot(hFn tree.HashFn) common.Root {
 	return hFn.HashTreeRoot(v.Pubkey, v.WithdrawalCredentials, v.EffectiveBalance, (BoolView)(v.Slashed),
-		v.ActivationEligibilityEpoch, v.ActivationEpoch, v.ExitEpoch, v.WithdrawableEpoch)
+		v.ActivationEligibilityEpoch, v.ActivationEpoch, v.ExitEpoch, v.WithdrawableEpoch, v.WithdrawnEpoch)
 }
 
 func (v *Validator) View() *ValidatorView {
@@ -54,6 +56,7 @@ func (v *Validator) View() *ValidatorView {
 		Uint64View(v.ActivationEpoch),
 		Uint64View(v.ExitEpoch),
 		Uint64View(v.WithdrawableEpoch),
+		Uint64View(v.WithdrawnEpoch),
 	)
 	return &ValidatorView{c}
 }
@@ -68,6 +71,7 @@ var ValidatorType = ContainerType("Validator", []FieldDef{
 	{"activation_epoch", common.EpochType},
 	{"exit_epoch", common.EpochType},
 	{"withdrawable_epoch", common.EpochType}, // When validator can withdraw funds
+	{"withdrawn_epoch", common.EpochType},    // When latest withdrawn occurred
 })
 
 const (
@@ -80,6 +84,7 @@ const (
 	_validatorActivationEpoch
 	_validatorExitEpoch
 	_validatorWithdrawableEpoch
+	_validatorWithdrawnEpoch
 )
 
 type ValidatorView struct {
@@ -141,6 +146,12 @@ func (v *ValidatorView) WithdrawableEpoch() (common.Epoch, error) {
 }
 func (v *ValidatorView) SetWithdrawableEpoch(epoch common.Epoch) error {
 	return v.Set(_validatorWithdrawableEpoch, Uint64View(epoch))
+}
+func (v *ValidatorView) WithdrawnEpoch() (common.Epoch, error) {
+	return common.AsEpoch(v.Get(_validatorWithdrawnEpoch))
+}
+func (v *ValidatorView) SetWithdrawnEpoch(epoch common.Epoch) error {
+	return v.Set(_validatorWithdrawnEpoch, Uint64View(epoch))
 }
 
 func (v *ValidatorView) Flatten(dst *common.FlatValidator) error {

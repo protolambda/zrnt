@@ -21,7 +21,7 @@ download-tests:
 
 test: create-test-dir
 	gotestsum --junitfile $(TEST_OUT_DIR)/junit.xml -- -tags preset_minimal \
-	-coverpkg=github.com/protolambda/zrnt/eth2/... \
+	-coverpkg=github.com/zilm13/zrnt/eth2/... \
 	-covermode=count -coverprofile $(TEST_OUT_DIR)/coverage.out \
 	./tests/spec/test_runners/... ./eth2/...
 

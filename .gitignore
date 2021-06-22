@@ -17,3 +17,6 @@ debug_out
 tests/spec/eth2.0-spec-tests
 
 test_out
+
+# IDEA
+.idea/

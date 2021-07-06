@@ -61,7 +61,11 @@ func (db *FileDB) Import(digest common.ForkDigest, r io.Reader) (exists bool, er
 	if _, err := buf.ReadFrom(r); err != nil {
 		return false, err
 	}
-	benv, err := db.dec.DecodeBlock(digest, uint64(len(buf.Bytes())), buf)
+	block, err := db.dec.AllocBlock(digest)
+	if err != nil {
+		return false, err
+	}
+	benv, err := decodeOpaqueBlock(block, db.spec, digest, uint64(len(buf.Bytes())), buf)
 	if err != nil {
 		return false, fmt.Errorf("failed to decode block, nee valid block to get block root. Err: %v", err)
 	}
@@ -86,7 +90,11 @@ func (db *FileDB) Get(ctx context.Context, root common.Root) (envelope *common.B
 	if _, err := f.Read(digest[:]); err != nil {
 		return nil, err
 	}
-	return db.dec.DecodeBlock(digest, uint64(info.Size()), f)
+	block, err := db.dec.AllocBlock(digest)
+	if err != nil {
+		return nil, err
+	}
+	return decodeOpaqueBlock(block, db.spec, digest, uint64(info.Size()), f)
 }
 
 func (db *FileDB) Size(root common.Root) (size uint64, exists bool) {

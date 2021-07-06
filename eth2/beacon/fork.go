@@ -8,8 +8,6 @@ import (
 	"github.com/protolambda/zrnt/eth2/beacon/merge"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/eth2/beacon/sharding"
-	"github.com/protolambda/ztyp/codec"
-	"io"
 )
 
 type ForkDecoder struct {
@@ -31,31 +29,24 @@ func NewForkDecoder(spec *common.Spec, genesisValRoot common.Root) *ForkDecoder 
 	}
 }
 
-func (d *ForkDecoder) DecodeBlock(digest common.ForkDigest,
-	length uint64, r io.Reader) (*common.BeaconBlockEnvelope, error) {
+type OpaqueBlock interface {
+	common.SpecObj
+	common.EnvelopeBuilder
+}
 
-	var block interface {
-		common.EnvelopeBuilder
-		common.SpecObj
-	}
-
+func (d *ForkDecoder) AllocBlock(digest common.ForkDigest) (OpaqueBlock, error) {
 	switch digest {
 	case d.Genesis:
-		block = new(phase0.SignedBeaconBlock)
+		return new(phase0.SignedBeaconBlock), nil
 	case d.Altair:
-		block = new(altair.SignedBeaconBlock)
+		return new(altair.SignedBeaconBlock), nil
 	case d.Merge:
-		block = new(merge.SignedBeaconBlock)
+		return new(merge.SignedBeaconBlock), nil
 	case d.Sharding:
-		block = new(sharding.SignedBeaconBlock)
+		return new(sharding.SignedBeaconBlock), nil
 	default:
 		return nil, fmt.Errorf("unrecognized fork digest: %s", digest)
 	}
-
-	if err := block.Deserialize(d.Spec, codec.NewDecodingReader(r, length)); err != nil {
-		return nil, err
-	}
-	return block.Envelope(d.Spec, digest), nil
 }
 
 type StandardUpgradeableBeaconState struct {

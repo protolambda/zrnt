@@ -14,13 +14,13 @@ type BeaconBlockValBackend interface {
 	GenesisValidatorsRoot
 
 	// Checks if the (slot, proposer) pair was seen, does not do any tracking.
-	Seen(slot common.Slot, proposer common.ValidatorIndex) bool
+	SeenBlock(slot common.Slot, proposer common.ValidatorIndex) bool
 
 	// When the block is fully validated (except proposer index check, but incl. signature check),
 	// the combination can be marked as seen to avoid future duplicate blocks from being propagated.
 	// Must returns true if the block was previously already seen,
 	// to avoid race-conditions (two block validations may run in parallel).
-	Mark(slot common.Slot, proposer common.ValidatorIndex) bool
+	MarkBlock(slot common.Slot, proposer common.ValidatorIndex) bool
 }
 
 func ValidateBeaconBlock(ctx context.Context, block *common.BeaconBlockEnvelope,
@@ -33,7 +33,7 @@ func ValidateBeaconBlock(ctx context.Context, block *common.BeaconBlockEnvelope,
 	}
 
 	// [IGNORE] The block is the first block with valid signature received for the proposer for the slot, signed_beacon_block.message.slot.
-	if blockVal.Seen(block.Slot, block.ProposerIndex) {
+	if blockVal.SeenBlock(block.Slot, block.ProposerIndex) {
 		return GossipValidatorResult{IGNORE, fmt.Errorf("already seen a block for slot %d proposer %d", block.Slot, block.ProposerIndex)}
 	}
 
@@ -80,7 +80,7 @@ func ValidateBeaconBlock(ctx context.Context, block *common.BeaconBlockEnvelope,
 		return GossipValidatorResult{REJECT, errors.New("invalid block signature")}
 	}
 
-	if !blockVal.Mark(block.Slot, block.ProposerIndex) {
+	if !blockVal.MarkBlock(block.Slot, block.ProposerIndex) {
 		// since we last checked, a parallel validation may have accepted a block for this (slot, proposer) pair. So we do this validation again.
 		return GossipValidatorResult{IGNORE, fmt.Errorf("already seen a block for slot %d proposer %d", block.Slot, block.ProposerIndex)}
 	}

@@ -3,7 +3,9 @@ package blocks
 import (
 	"bytes"
 	"context"
+	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/ztyp/codec"
 	"io"
 	"sync"
 )
@@ -60,4 +62,12 @@ func getPoolBlockBuf() *bytes.Buffer {
 	buf := dbBlockPool.Get().(*bytes.Buffer)
 	buf.Reset()
 	return buf
+}
+
+func decodeOpaqueBlock(block beacon.OpaqueBlock, spec *common.Spec,
+	digest common.ForkDigest, length uint64, r io.Reader) (*common.BeaconBlockEnvelope, error) {
+	if err := block.Deserialize(spec, codec.NewDecodingReader(r, length)); err != nil {
+		return nil, err
+	}
+	return block.Envelope(spec, digest), nil
 }

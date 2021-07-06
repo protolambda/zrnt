@@ -12,6 +12,8 @@ type VoluntaryExitValBackend interface {
 	HeadInfo
 	// Checks if a valid exit for the given validator has been seen before.
 	SeenExit(index common.ValidatorIndex) bool
+	// Marks exit as seen
+	MarkExit(index common.ValidatorIndex)
 }
 
 func ValidateVoluntaryExit(ctx context.Context, volExit *phase0.SignedVoluntaryExit, exitVal VoluntaryExitValBackend) GossipValidatorResult {
@@ -29,6 +31,8 @@ func ValidateVoluntaryExit(ctx context.Context, volExit *phase0.SignedVoluntaryE
 	if err := phase0.ValidateVoluntaryExit(exitVal.Spec(), epc, state, volExit); err != nil {
 		return GossipValidatorResult{REJECT, err}
 	}
+
+	exitVal.MarkExit(volExit.Message.ValidatorIndex)
 
 	return GossipValidatorResult{ACCEPT, nil}
 }

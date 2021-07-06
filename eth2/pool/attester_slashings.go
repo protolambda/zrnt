@@ -7,35 +7,29 @@ import (
 	"sync"
 )
 
-type VersionedRoot struct {
-	Root    common.Root
-	Version common.Version
-}
-
 type AttesterSlashingPool struct {
 	sync.RWMutex
 	spec      *common.Spec
-	slashings map[VersionedRoot]*phase0.AttesterSlashing
+	slashings map[common.Root]*phase0.AttesterSlashing
 }
 
 func NewAttesterSlashingPool(spec *common.Spec) *AttesterSlashingPool {
 	return &AttesterSlashingPool{
 		spec:      spec,
-		slashings: make(map[VersionedRoot]*phase0.AttesterSlashing),
+		slashings: make(map[common.Root]*phase0.AttesterSlashing),
 	}
 }
 
 // This does not filter slashings that are a subset of other slashings.
 // The pool merely collects them. Make sure to protect against spam elsewhere as a caller.
-func (asp *AttesterSlashingPool) AddAttesterSlashing(sl *phase0.AttesterSlashing, version common.Version) (exists bool) {
+func (asp *AttesterSlashingPool) AddAttesterSlashing(sl *phase0.AttesterSlashing) (exists bool) {
 	root := sl.HashTreeRoot(asp.spec, tree.GetHashFn())
 	asp.Lock()
 	defer asp.Unlock()
-	key := VersionedRoot{Root: root, Version: version}
-	if _, ok := asp.slashings[key]; ok {
+	if _, ok := asp.slashings[root]; ok {
 		return true
 	}
-	asp.slashings[key] = sl
+	asp.slashings[root] = sl
 	return false
 }
 

@@ -11,6 +11,7 @@ type ProposerSlashingValBackend interface {
 	Spec
 	HeadInfo
 	SeenProposerSlashing(proposer common.ValidatorIndex) bool
+	MarkProposerSlashing(index common.ValidatorIndex)
 }
 
 func ValidateProposerSlashing(ctx context.Context, propSl *phase0.ProposerSlashing, propSlVal ProposerSlashingValBackend) GossipValidatorResult {
@@ -35,5 +36,6 @@ func ValidateProposerSlashing(ctx context.Context, propSl *phase0.ProposerSlashi
 	if err := phase0.ValidateProposerSlashing(spec, epc, state, propSl); err != nil {
 		return GossipValidatorResult{REJECT, err}
 	}
+	propSlVal.MarkProposerSlashing(proposer)
 	return GossipValidatorResult{ACCEPT, nil}
 }

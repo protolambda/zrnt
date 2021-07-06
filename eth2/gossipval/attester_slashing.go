@@ -17,6 +17,8 @@ type AttesterSlashingValBackend interface {
 	// and should not be marked as seen because of just the check itself.
 	// It is recommended to regard any indices which were finalized as slashed, as seen.
 	AttesterSlashableAllSeen(indices []common.ValidatorIndex) bool
+	// Mark slashable indices as seen
+	MarkAttesterSlashings(indices []common.ValidatorIndex)
 }
 
 func ValidateAttesterSlashing(ctx context.Context, attSl *phase0.AttesterSlashing, attSlVal AttesterSlashingValBackend) GossipValidatorResult {
@@ -81,6 +83,6 @@ func ValidateAttesterSlashing(ctx context.Context, attSl *phase0.AttesterSlashin
 	if err := phase0.ValidateIndexedAttestation(spec, epc, state, sa2); err != nil {
 		return GossipValidatorResult{REJECT, fmt.Errorf("attester slashing att 2 signature is invalid: %v", err)}
 	}
-
+	attSlVal.MarkAttesterSlashings(slashable)
 	return GossipValidatorResult{ACCEPT, nil}
 }

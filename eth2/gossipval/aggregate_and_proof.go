@@ -19,8 +19,11 @@ type AggregatesValBackend interface {
 	// Checks if the aggregate attestation defined by aggRoot = hash_tree_root(aggregate) has been seen
 	// (via aggregate gossip, within a verified block, or through the creation of an equivalent aggregate locally).
 	SeenAggregate(aggRoot common.Root) bool
+	MarkAggregate(aggRoot common.Root)
+
 	// Checks if an aggregate by the given aggregator for the given epoch has been seen before.
 	SeenAggregator(targetEpoch common.Epoch, aggregator common.ValidatorIndex) bool
+	MarkAggregator(targetEpoch common.Epoch, aggregator common.ValidatorIndex)
 }
 
 func ValidateAggregateAndProof(ctx context.Context, signedAgg *phase0.SignedAggregateAndProof,
@@ -154,6 +157,9 @@ func ValidateAggregateAndProof(ctx context.Context, signedAgg *phase0.SignedAggr
 	} else if err := phase0.ValidateIndexedAttestation(spec, epc, state, indexedAtt); err != nil {
 		return GossipValidatorResult{REJECT, err}
 	}
+
+	aggVal.MarkAggregate(aggRoot)
+	aggVal.MarkAggregator(att.Data.Target.Epoch, signedAgg.Message.AggregatorIndex)
 
 	return GossipValidatorResult{ACCEPT, nil}
 }

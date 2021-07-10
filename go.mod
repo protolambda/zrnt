@@ -1,6 +1,6 @@
 module github.com/protolambda/zrnt
 
-go 1.14
+go 1.15
 
 require (
 	github.com/golang/snappy v0.0.3

@@ -1,3 +1,3 @@
 package eth2
 
-const VERSION = "v0.16.6"
+const VERSION = "v0.17.0"

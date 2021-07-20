@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	blsu "github.com/protolambda/bls12-381-util"
 
 	"github.com/protolambda/zrnt/eth2/beacon/common"
-	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/zrnt/eth2/util/merkle"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
@@ -127,16 +127,24 @@ func ProcessDeposit(spec *common.Spec, epc *common.EpochsContext, state common.B
 		valIndex = common.ValidatorIndex(valCount)
 	}
 
+	blsPub, err := dep.Data.Pubkey.Pubkey()
 	// Check if it is a known validator that is depositing ("if pubkey not in validator_pubkeys")
 	if !exists {
+		if err != nil {
+			// deposit is skipped, still valid block.
+			return nil
+		}
+		signingRoot := common.ComputeSigningRoot(
+			dep.Data.MessageRoot(),
+			// Fork-agnostic domain since deposits are valid across forks
+			common.ComputeDomain(common.DOMAIN_DEPOSIT, spec.GENESIS_FORK_VERSION, common.Root{}))
+		sig, err := dep.Data.Signature.Signature()
+		if err != nil {
+			// deposit is skipped, still valid block.
+			return nil
+		}
 		// Verify the deposit signature (proof of possession) which is not checked by the deposit contract
-		if !ignoreSignatureAndProof && !bls.Verify(
-			&common.CachedPubkey{Compressed: dep.Data.Pubkey},
-			common.ComputeSigningRoot(
-				dep.Data.MessageRoot(),
-				// Fork-agnostic domain since deposits are valid across forks
-				common.ComputeDomain(common.DOMAIN_DEPOSIT, spec.GENESIS_FORK_VERSION, common.Root{})),
-			dep.Data.Signature) {
+		if !ignoreSignatureAndProof && !blsu.Verify(blsPub, signingRoot[:], sig) {
 			// invalid signatures are OK,
 			// the depositor will not receive anything because of their mistake,
 			// and the chain continues.

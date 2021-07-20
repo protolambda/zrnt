@@ -5,15 +5,86 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/util/bls"
+	blsu "github.com/protolambda/bls12-381-util"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 )
 
-type CachedPubkey = bls.CachedPubkey
+type BLSPubkey [48]byte
 
-type BLSPubkey = bls.BLSPubkey
+func (p *BLSPubkey) Deserialize(dr *codec.DecodingReader) error {
+	if p == nil {
+		return errors.New("nil pubkey")
+	}
+	_, err := dr.Read(p[:])
+	return err
+}
+
+func (p *BLSPubkey) Serialize(w *codec.EncodingWriter) error {
+	return w.Write(p[:])
+}
+
+func (BLSPubkey) ByteLength() uint64 {
+	return 96
+}
+
+func (BLSPubkey) FixedLength() uint64 {
+	return 96
+}
+
+func (p BLSPubkey) HashTreeRoot(hFn tree.HashFn) tree.Root {
+	var a, b tree.Root
+	copy(a[:], p[0:32])
+	copy(b[:], p[32:48])
+	return hFn(a, b)
+}
+
+func (p BLSPubkey) MarshalText() ([]byte, error) {
+	return []byte("0x" + hex.EncodeToString(p[:])), nil
+}
+
+func (p BLSPubkey) String() string {
+	return "0x" + hex.EncodeToString(p[:])
+}
+
+func (p *BLSPubkey) UnmarshalText(text []byte) error {
+	if p == nil {
+		return errors.New("cannot decode into nil BLSPubkey")
+	}
+	if len(text) >= 2 && text[0] == '0' && (text[1] == 'x' || text[1] == 'X') {
+		text = text[2:]
+	}
+	if len(text) != 96 {
+		return fmt.Errorf("unexpected length string '%s'", string(text))
+	}
+	_, err := hex.Decode(p[:], text)
+	return err
+}
+
+func (p *BLSPubkey) Pubkey() (*blsu.Pubkey, error) {
+	var pub blsu.Pubkey
+	if err := pub.Deserialize((*[48]byte)(p)); err != nil {
+		return nil, err
+	}
+	return &pub, nil
+}
+
+type CachedPubkey struct {
+	Compressed   BLSPubkey
+	decompressed *blsu.Pubkey
+}
+
+func (c *CachedPubkey) Pubkey() (*blsu.Pubkey, error) {
+	if c.decompressed == nil {
+		pub, err := c.Compressed.Pubkey()
+		if err != nil {
+			return nil, err
+		}
+		c.decompressed = pub
+	}
+	return c.decompressed, nil
+}
 
 func ViewPubkey(pub *BLSPubkey) *BLSPubkeyView {
 	v, _ := BLSPubkeyType.Deserialize(codec.NewDecodingReader(bytes.NewReader(pub[:]), 48))
@@ -22,7 +93,66 @@ func ViewPubkey(pub *BLSPubkey) *BLSPubkeyView {
 
 var BLSPubkeyType = BasicVectorType(ByteType, 48)
 
-type BLSSignature = bls.BLSSignature
+type BLSSignature [96]byte
+
+func (s *BLSSignature) Deserialize(dr *codec.DecodingReader) error {
+	if s == nil {
+		return errors.New("nil signature")
+	}
+	_, err := dr.Read(s[:])
+	return err
+}
+
+func (s *BLSSignature) Serialize(w *codec.EncodingWriter) error {
+	return w.Write(s[:])
+}
+
+func (BLSSignature) ByteLength() uint64 {
+	return 96
+}
+
+func (BLSSignature) FixedLength() uint64 {
+	return 96
+}
+
+func (s BLSSignature) HashTreeRoot(hFn tree.HashFn) tree.Root {
+	var a, b, c tree.Root
+	copy(a[:], s[0:32])
+	copy(b[:], s[32:64])
+	copy(c[:], s[64:96])
+
+	return hFn(hFn(a, b), hFn(c, tree.Root{}))
+}
+
+func (p BLSSignature) MarshalText() ([]byte, error) {
+	return []byte("0x" + hex.EncodeToString(p[:])), nil
+}
+
+func (p BLSSignature) String() string {
+	return "0x" + hex.EncodeToString(p[:])
+}
+
+func (p *BLSSignature) UnmarshalText(text []byte) error {
+	if p == nil {
+		return errors.New("cannot decode into nil BLSSignature")
+	}
+	if len(text) >= 2 && text[0] == '0' && (text[1] == 'x' || text[1] == 'X') {
+		text = text[2:]
+	}
+	if len(text) != 192 {
+		return fmt.Errorf("unexpected length string '%s'", string(text))
+	}
+	_, err := hex.Decode(p[:], text)
+	return err
+}
+
+func (p *BLSSignature) Signature() (*blsu.Signature, error) {
+	var sig blsu.Signature
+	if err := sig.Deserialize((*[96]byte)(p)); err != nil {
+		return nil, err
+	}
+	return &sig, nil
+}
 
 func ViewSignature(sig *BLSSignature) *BLSSignatureView {
 	v, _ := BLSSignatureType.Deserialize(codec.NewDecodingReader(bytes.NewReader(sig[:]), 48))

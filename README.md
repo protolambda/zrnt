@@ -92,8 +92,6 @@ Implements in-memory collections for the common gossip message topics:
 
 Hashing, merkleization, and other utils can be found in `eth2/util`.
 
-BLS is a package that wraps Herumi BLS. However, it is put behind a build-flag. Use `bls_on` and `bls_off` to use it or not.
-
 SSZ is provided by ZTYP, but has two forms:
 - Native Go structs, with `Deserialize`, `Serialize` and `HashTreeRoot` methods, built on the `hashing` and `codec` packages.
 - Type descriptions and Views, optimized for caching, representing data as binary trees. Primarily used for the `BeaconStateView`.

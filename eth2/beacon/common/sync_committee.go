@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	hbls "github.com/herumi/bls-eth-go-binary/bls"
+	blsu "github.com/protolambda/bls12-381-util"
 	"github.com/protolambda/zrnt/eth2/util/hashing"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
@@ -144,7 +144,7 @@ func ComputeNextSyncCommittee(spec *Spec, epc *EpochsContext, state BeaconState)
 
 func IndicesToSyncCommittee(indices []ValidatorIndex, pubCache *PubkeyCache) (*SyncCommittee, error) {
 	var pubs []BLSPubkey
-	var blsAggregate hbls.PublicKey
+	var blsPubs []*blsu.Pubkey
 	for _, idx := range indices {
 		pub, ok := pubCache.Pubkey(idx)
 		if !ok {
@@ -154,11 +154,14 @@ func IndicesToSyncCommittee(indices []ValidatorIndex, pubCache *PubkeyCache) (*S
 		if err != nil {
 			return nil, fmt.Errorf("pubkey cache contains invalid pubkey at index %d: %v", idx, err)
 		}
-		blsAggregate.Add(blsPub)
 		pubs = append(pubs, pub.Compressed)
+		blsPubs = append(blsPubs, blsPub)
 	}
-	var aggregate BLSPubkey
-	copy(aggregate[:], blsAggregate.Serialize())
+	blsAggregate, err := blsu.AggregatePubkeys(blsPubs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to aggregate sync-committee bls pubkeys")
+	}
+	aggregate := BLSPubkey(blsAggregate.Serialize())
 	return &SyncCommittee{
 		Pubkeys:         pubs,
 		AggregatePubkey: aggregate,

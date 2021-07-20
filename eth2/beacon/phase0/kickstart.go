@@ -2,7 +2,7 @@ package phase0
 
 import (
 	"errors"
-	hbls "github.com/herumi/bls-eth-go-binary/bls"
+	blsu "github.com/protolambda/bls12-381-util"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 )
 
@@ -50,19 +50,22 @@ func KickStartStateWithSignatures(spec *common.Spec, eth1BlockHash common.Root, 
 			Amount:                v.Balance,
 			Signature:             common.BLSSignature{},
 		}
-		var secKey hbls.SecretKey
-		if err := secKey.Deserialize(keys[i][:]); err != nil {
+		var secKey blsu.SecretKey
+		if err := secKey.Deserialize(&keys[i]); err != nil {
 			return nil, nil, err
 		}
 		dom := common.ComputeDomain(common.DOMAIN_DEPOSIT, spec.GENESIS_FORK_VERSION, common.Root{})
 		msg := common.ComputeSigningRoot(d.Data.MessageRoot(), dom)
-		sig := secKey.SignHash(msg[:])
-		var p common.BLSPubkey
-		copy(p[:], secKey.GetPublicKey().Serialize())
+		sig := blsu.Sign(&secKey, msg[:])
+		pub, err := blsu.SkToPk(&secKey)
+		if err != nil {
+			return nil, nil, err
+		}
+		p := common.BLSPubkey(pub.Serialize())
 		if p != d.Data.Pubkey {
 			return nil, nil, errors.New("privkey invalid, expected different pubkey")
 		}
-		copy(d.Data.Signature[:], sig.Serialize())
+		d.Data.Signature = sig.Serialize()
 	}
 
 	state, epc, err := GenesisFromEth1(spec, eth1BlockHash, 0, deps, true)

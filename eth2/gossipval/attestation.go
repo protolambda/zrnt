@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	blsu "github.com/protolambda/bls12-381-util"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
-	"github.com/protolambda/zrnt/eth2/util/bls"
+
 	"github.com/protolambda/ztyp/tree"
 	"time"
 )
@@ -174,7 +175,15 @@ func ValidateAttestation(ctx context.Context, subnet uint64, att *phase0.Attesta
 		return GossipValidatorResult{IGNORE, errors.New("failed to get domain info for signature check")}, nil
 	}
 	sigRoot := common.ComputeSigningRoot(att.Data.HashTreeRoot(tree.GetHashFn()), dom)
-	if !bls.Verify(pubkey, sigRoot, att.Signature) {
+	sig, err := att.Signature.Signature()
+	if err != nil {
+		return GossipValidatorResult{REJECT, fmt.Errorf("failed to deserialize attestation signature: %v", err)}, nil
+	}
+	blsPub, err := pubkey.Pubkey()
+	if err != nil {
+		return GossipValidatorResult{IGNORE, fmt.Errorf("failed to deserialize cached pubkey: %v", err)}, nil
+	}
+	if !blsu.Verify(blsPub, sigRoot[:], sig) {
 		return GossipValidatorResult{REJECT, errors.New("invalid attestation signature")}, nil
 	}
 	attVal.MarkAttestation(att.Data.Target.Epoch, voter)

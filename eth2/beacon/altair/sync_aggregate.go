@@ -5,8 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	blsu "github.com/protolambda/bls12-381-util"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
-	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/ztyp/bitfields"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/conv"
@@ -160,10 +160,14 @@ func ProcessSyncAggregate(ctx context.Context, spec *common.Spec, epc *common.Ep
 		return fmt.Errorf("missing current sync committee info in EPC")
 	}
 
-	participantPubkeys := make([]*common.CachedPubkey, 0, spec.SYNC_COMMITTEE_SIZE)
+	participantPubkeys := make([]*blsu.Pubkey, 0, spec.SYNC_COMMITTEE_SIZE)
 	for i := uint64(0); i < spec.SYNC_COMMITTEE_SIZE; i++ {
 		if agg.SyncCommitteeBits.GetBit(i) {
-			participantPubkeys = append(participantPubkeys, epc.CurrentSyncCommittee.CachedPubkeys[i])
+			pub, err := epc.CurrentSyncCommittee.CachedPubkeys[i].Pubkey()
+			if err != nil {
+				return fmt.Errorf("failed to decode cached pubkey in sync-committee: %v", err)
+			}
+			participantPubkeys = append(participantPubkeys, pub)
 		}
 	}
 
@@ -177,7 +181,11 @@ func ProcessSyncAggregate(ctx context.Context, spec *common.Spec, epc *common.Ep
 		return err
 	}
 	signingRoot := common.ComputeSigningRoot(blockRoot, domain)
-	if !bls.Eth2FastAggregateVerify(participantPubkeys, signingRoot, agg.SyncCommitteeSignature) {
+	sig, err := agg.SyncCommitteeSignature.Signature()
+	if err != nil {
+		return fmt.Errorf("failed to decode and sub-group check sync committee signature: %v", err)
+	}
+	if !blsu.Eth2FastAggregateVerify(participantPubkeys, signingRoot[:], sig) {
 		return errors.New("invalid sync committee signature")
 	}
 

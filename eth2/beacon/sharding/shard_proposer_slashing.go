@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	blsu "github.com/protolambda/bls12-381-util"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
-	"github.com/protolambda/zrnt/eth2/util/bls"
+
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
@@ -134,17 +135,25 @@ func ProcessShardProposerSlashing(spec *common.Spec, epc *common.EpochsContext, 
 	if !ok {
 		return fmt.Errorf("could not find pubkey of proposer %d", ref1.ProposerIndex)
 	}
+	blsPub, err := pubkey.Pubkey()
+	if err != nil {
+		return fmt.Errorf("failed to deserialize cached pubkey: %v", err)
+	}
+	sigRoot1 := common.ComputeSigningRoot(ref1.HashTreeRoot(tree.GetHashFn()), domain)
+	sig1, err := proposerSlashing.SignedReference1.Signature.Signature()
+	if err != nil {
+		return err
+	}
+	sig2, err := proposerSlashing.SignedReference2.Signature.Signature()
+	if err != nil {
+		return err
+	}
 	// Verify signatures
-	if !bls.Verify(
-		pubkey,
-		common.ComputeSigningRoot(ref1.HashTreeRoot(tree.GetHashFn()), domain),
-		proposerSlashing.SignedReference1.Signature) {
+	if !blsu.Verify(blsPub, sigRoot1[:], sig1) {
 		return errors.New("shard proposer slashing header 1 has invalid BLS signature")
 	}
-	if !bls.Verify(
-		pubkey,
-		common.ComputeSigningRoot(ref2.HashTreeRoot(tree.GetHashFn()), domain),
-		proposerSlashing.SignedReference2.Signature) {
+	sigRoot2 := common.ComputeSigningRoot(ref2.HashTreeRoot(tree.GetHashFn()), domain)
+	if !blsu.Verify(blsPub, sigRoot2[:], sig2) {
 		return errors.New("shard proposer slashing header 2 has invalid BLS signature")
 	}
 	return nil

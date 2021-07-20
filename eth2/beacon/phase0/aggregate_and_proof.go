@@ -4,8 +4,8 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
+	blsu "github.com/protolambda/bls12-381-util"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
-	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 )
@@ -74,7 +74,15 @@ func ValidateAggregateSelectionProof(spec *common.Spec, epc *common.EpochsContex
 	if !ok {
 		return false, fmt.Errorf("could not fetch pubkey for aggregator %d", aggregator)
 	}
-	return bls.Verify(pub, sigRoot, selectionProof), nil
+	blsPub, err := pub.Pubkey()
+	if err != nil {
+		return false, fmt.Errorf("could not deserialize cached pubkey: %v", err)
+	}
+	sig, err := selectionProof.Signature()
+	if err != nil {
+		return false, fmt.Errorf("failed to deserialize and sub-group check selection proof signature")
+	}
+	return blsu.Verify(blsPub, sigRoot[:], sig), nil
 }
 
 type SignedAggregateAndProof struct {

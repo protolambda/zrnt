@@ -2,7 +2,7 @@ package common
 
 import (
 	"bytes"
-	"github.com/protolambda/zrnt/eth2/util/bls"
+	blsu "github.com/protolambda/bls12-381-util"
 )
 
 type BeaconBlockEnvelope struct {
@@ -29,8 +29,7 @@ func (b *BeaconBlockEnvelope) VerifySignature(spec *Spec, genesisValidatorsRoot 
 	return b.VerifySignatureVersioned(spec, version, genesisValidatorsRoot, proposer, pub)
 }
 
-// deprecated: to verify with explicit version
-func (b *BeaconBlockEnvelope) VerifySignatureVersioned(spec *Spec, version Version, genesisValidatorsRoot Root, proposer ValidatorIndex, pub *CachedPubkey) bool {
+func (b *BeaconBlockEnvelope) VerifySignatureVersioned(spec *Spec, version Version, genesisValidatorsRoot Root, proposer ValidatorIndex, cachedPub *CachedPubkey) bool {
 	if b.ProposerIndex != proposer {
 		return false
 	}
@@ -39,8 +38,17 @@ func (b *BeaconBlockEnvelope) VerifySignatureVersioned(spec *Spec, version Versi
 	if !bytes.Equal(forkRoot[0:4], b.ForkDigest[:]) {
 		return false
 	}
+	pub, err := cachedPub.Pubkey()
+	if err != nil {
+		return false
+	}
 	dom := ComputeDomain(DOMAIN_BEACON_PROPOSER, version, genesisValidatorsRoot)
-	return bls.Verify(pub, ComputeSigningRoot(b.BlockRoot, dom), b.Signature)
+	signingRoot := ComputeSigningRoot(b.BlockRoot, dom)
+	sig, err := b.Signature.Signature()
+	if err != nil {
+		return false
+	}
+	return blsu.Verify(pub, signingRoot[:], sig)
 }
 
 type EnvelopeBuilder interface {

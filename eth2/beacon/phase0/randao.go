@@ -3,9 +3,10 @@ package phase0
 import (
 	"context"
 	"errors"
+	"fmt"
+	blsu "github.com/protolambda/bls12-381-util"
 
 	"github.com/protolambda/zrnt/eth2/beacon/common"
-	"github.com/protolambda/zrnt/eth2/util/bls"
 	. "github.com/protolambda/zrnt/eth2/util/hashing"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
@@ -101,19 +102,22 @@ func ProcessRandaoReveal(ctx context.Context, spec *common.Spec, epc *common.Epo
 	if !ok {
 		return errors.New("could not find pubkey of proposer")
 	}
+	blsPub, err := proposerPubkey.Pubkey()
+	if err != nil {
+		return err
+	}
 	epoch := spec.SlotToEpoch(slot)
 	domain, err := common.GetDomain(state, common.DOMAIN_RANDAO, epoch)
 	if err != nil {
 		return err
 	}
+	sigRoot := common.ComputeSigningRoot(epoch.HashTreeRoot(tree.GetHashFn()), domain)
+	revealSig, err := reveal.Signature()
+	if err != nil {
+		return fmt.Errorf("failed to deserialize and sub-group check randao reveal: %v", err)
+	}
 	// Verify RANDAO reveal
-	if !bls.Verify(
-		proposerPubkey,
-		common.ComputeSigningRoot(
-			epoch.HashTreeRoot(tree.GetHashFn()),
-			domain),
-		reveal,
-	) {
+	if !blsu.Verify(blsPub, sigRoot[:], revealSig) {
 		return errors.New("randao invalid")
 	}
 	mixes, err := state.RandaoMixes()

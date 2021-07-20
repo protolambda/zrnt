@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	blsu "github.com/protolambda/bls12-381-util"
 
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 
-	"github.com/protolambda/zrnt/eth2/util/bls"
 	. "github.com/protolambda/ztyp/view"
 )
 
@@ -147,17 +147,25 @@ func ValidateProposerSlashing(spec *common.Spec, epc *common.EpochsContext, stat
 	if !ok {
 		return errors.New("could not find pubkey of proposer")
 	}
+	blsPub, err := pubkey.Pubkey()
+	if err != nil {
+		return err
+	}
+	sigRoot1 := common.ComputeSigningRoot(ps.SignedHeader1.Message.HashTreeRoot(tree.GetHashFn()), domain)
+	sigRoot2 := common.ComputeSigningRoot(ps.SignedHeader2.Message.HashTreeRoot(tree.GetHashFn()), domain)
+	sig1, err := ps.SignedHeader1.Signature.Signature()
+	if err != nil {
+		return err
+	}
+	sig2, err := ps.SignedHeader2.Signature.Signature()
+	if err != nil {
+		return err
+	}
 	// Verify signatures
-	if !bls.Verify(
-		pubkey,
-		common.ComputeSigningRoot(ps.SignedHeader1.Message.HashTreeRoot(tree.GetHashFn()), domain),
-		ps.SignedHeader1.Signature) {
+	if !blsu.Verify(blsPub, sigRoot1[:], sig1) {
 		return errors.New("proposer slashing header 1 has invalid BLS signature")
 	}
-	if !bls.Verify(
-		pubkey,
-		common.ComputeSigningRoot(ps.SignedHeader2.Message.HashTreeRoot(tree.GetHashFn()), domain),
-		ps.SignedHeader2.Signature) {
+	if !blsu.Verify(blsPub, sigRoot2[:], sig2) {
 		return errors.New("proposer slashing header 2 has invalid BLS signature")
 	}
 	return nil

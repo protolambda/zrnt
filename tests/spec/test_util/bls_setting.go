@@ -1,7 +1,6 @@
 package test_util
 
 import (
-	"github.com/protolambda/zrnt/eth2/util/bls"
 	"gopkg.in/yaml.v3"
 	"testing"
 )
@@ -25,11 +24,12 @@ func HandleBLS(testRunner CaseRunner) CaseRunner {
 			dec.KnownFields(false)
 			Check(t, dec.Decode(&meta))
 			Check(t, part.Close())
-			if meta.BlsSetting == BlsRequired && !bls.BLS_ACTIVE {
-				t.Skip("skipping BLS-required test because BLS is disabled")
-				return
-			}
-			if meta.BlsSetting == BlsIgnored && bls.BLS_ACTIVE {
+			//if meta.BlsSetting == BlsRequired && !bls.BLS_ACTIVE {
+			//	t.Skip("skipping BLS-required test because BLS is disabled")
+			//	return
+			//}
+			// TODO re-introduce compile flag to disable BLS
+			if meta.BlsSetting == BlsIgnored /*&& bls.BLS_ACTIVE */ {
 				t.Skip("skipping BLS-ignored test because BLS is enabled")
 				return
 			}

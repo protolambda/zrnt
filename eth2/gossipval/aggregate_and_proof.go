@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	blsu "github.com/protolambda/bls12-381-util"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
-	"github.com/protolambda/zrnt/eth2/util/bls"
+
 	"github.com/protolambda/ztyp/tree"
 )
 
@@ -140,7 +141,15 @@ func ValidateAggregateAndProof(ctx context.Context, signedAgg *phase0.SignedAggr
 	if !ok {
 		return GossipValidatorResult{IGNORE, fmt.Errorf("missing pubkey: %d", signedAgg.Message.AggregatorIndex)}
 	}
-	if !bls.Verify(pub, sigRoot, signedAgg.Signature) {
+	blsPub, err := pub.Pubkey()
+	if err != nil {
+		return GossipValidatorResult{IGNORE, fmt.Errorf("failed to deserialize cached pubkey: %v", err)}
+	}
+	sig, err := signedAgg.Signature.Signature()
+	if err != nil {
+		return GossipValidatorResult{REJECT, fmt.Errorf("failed to deserialize aggregate signature: %v", err)}
+	}
+	if !blsu.Verify(blsPub, sigRoot[:2], sig) {
 		return GossipValidatorResult{REJECT, errors.New("invalid aggregate signature")}
 	}
 

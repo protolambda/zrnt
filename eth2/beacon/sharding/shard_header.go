@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	blsu "github.com/protolambda/bls12-381-util"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
-	"github.com/protolambda/zrnt/eth2/util/bls"
+
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
@@ -236,7 +237,15 @@ func ProcessShardHeader(spec *common.Spec, epc *common.EpochsContext, state *Bea
 		return fmt.Errorf("could not find pubkey of shard blob proposer %d", header.ProposerIndex)
 	}
 	signingRoot := common.ComputeSigningRoot(header.HashTreeRoot(tree.GetHashFn()), dom)
-	if !bls.Verify(pubkey, signingRoot, signedHeader.Signature) {
+	blsPub, err := pubkey.Pubkey()
+	if err != nil {
+		return fmt.Errorf("failed to deserialize cached pubkey: %v", err)
+	}
+	sig, err := signedHeader.Signature.Signature()
+	if err != nil {
+		return fmt.Errorf("failed to deserialize and sub-group check shard header signature: %v", err)
+	}
+	if !blsu.Verify(blsPub, signingRoot[:], sig) {
 		return errors.New("shard blob header has invalid signature")
 	}
 

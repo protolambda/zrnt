@@ -3,8 +3,9 @@ package sharding
 import (
 	"errors"
 	"fmt"
+	blsu "github.com/protolambda/bls12-381-util"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
-	"github.com/protolambda/zrnt/eth2/util/bls"
+
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
@@ -96,23 +97,29 @@ func ValidateIndexedAttestationNoSignature(spec *common.Spec, state common.Beaco
 }
 
 func ValidateIndexedAttestationSignature(spec *common.Spec, dom common.BLSDomain, pubCache *common.PubkeyCache, indexedAttestation *IndexedAttestation) error {
-	pubkeys := make([]*common.CachedPubkey, 0, len(indexedAttestation.AttestingIndices))
+	pubkeys := make([]*blsu.Pubkey, 0, len(indexedAttestation.AttestingIndices))
 	for _, i := range indexedAttestation.AttestingIndices {
 		pub, ok := pubCache.Pubkey(i)
 		if !ok {
 			return fmt.Errorf("could not find pubkey for index %d", i)
 		}
-		pubkeys = append(pubkeys, pub)
+		blsPub, err := pub.Pubkey()
+		if err != nil {
+			return fmt.Errorf("failed to deserialize cached pubkey: %v", err)
+		}
+		pubkeys = append(pubkeys, blsPub)
 	}
 	// empty attestation. (Double check, since this function is public, the user might not have validated if it's empty or not)
 	if len(pubkeys) <= 0 {
 		return errors.New("in phase 0 no empty attestation signatures are allowed")
 	}
 
-	if !bls.Eth2FastAggregateVerify(pubkeys,
-		common.ComputeSigningRoot(indexedAttestation.Data.HashTreeRoot(tree.GetHashFn()), dom),
-		indexedAttestation.Signature,
-	) {
+	sigRoot := common.ComputeSigningRoot(indexedAttestation.Data.HashTreeRoot(tree.GetHashFn()), dom)
+	sig, err := indexedAttestation.Signature.Signature()
+	if err != nil {
+		return fmt.Errorf("failed to deserialize and sub-group check indexed attestation signature: %v", err)
+	}
+	if !blsu.Eth2FastAggregateVerify(pubkeys, sigRoot[:], sig) {
 		return errors.New("could not verify BLS signature for indexed attestation")
 	}
 	return nil

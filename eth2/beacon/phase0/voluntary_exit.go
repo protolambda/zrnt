@@ -3,8 +3,9 @@ package phase0
 import (
 	"context"
 	"errors"
+	"fmt"
+	blsu "github.com/protolambda/bls12-381-util"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
-	"github.com/protolambda/zrnt/eth2/util/bls"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
@@ -171,11 +172,17 @@ func ValidateVoluntaryExit(spec *common.Spec, epc *common.EpochsContext, state c
 	if err != nil {
 		return err
 	}
+	sigRoot := common.ComputeSigningRoot(signedExit.Message.HashTreeRoot(tree.GetHashFn()), domain)
+	blsPub, err := pubkey.Pubkey()
+	if err != nil {
+		return fmt.Errorf("failed to deserialize cached pubkey: %v", err)
+	}
+	sig, err := signedExit.Signature.Signature()
+	if err != nil {
+		return fmt.Errorf("failed to deserialize and sub-group check exit signature: %v", err)
+	}
 	// Verify signature
-	if !bls.Verify(
-		pubkey,
-		common.ComputeSigningRoot(signedExit.Message.HashTreeRoot(tree.GetHashFn()), domain),
-		signedExit.Signature) {
+	if !blsu.Verify(blsPub, sigRoot[:], sig) {
 		return errors.New("voluntary exit signature could not be verified")
 	}
 	return nil

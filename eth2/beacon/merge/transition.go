@@ -155,6 +155,6 @@ func (state *BeaconStateView) IsTransitionBlock(spec *common.Spec, block *Beacon
 	if isTransitionCompleted {
 		return false, nil
 	}
-	empty := common.ExecutionPayloadType.DefaultNode().MerkleRoot(tree.GetHashFn())
+	empty := common.ExecutionPayloadType(spec).DefaultNode().MerkleRoot(tree.GetHashFn())
 	return block.Body.ExecutionPayload.HashTreeRoot(spec, tree.GetHashFn()) != empty, nil
 }

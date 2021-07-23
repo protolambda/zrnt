@@ -221,7 +221,7 @@ func BeaconBlockBodyType(spec *common.Spec) *ContainerTypeDef {
 		{"deposits", phase0.BlockDepositsType(spec)},
 		{"voluntary_exits", phase0.BlockVoluntaryExitsType(spec)},
 		// Merge
-		{"execution_payload", common.ExecutionPayloadType},
+		{"execution_payload", common.ExecutionPayloadType(spec)},
 		// Sharding
 		{"shard_proposer_slashings", BlockShardProposerSlashingsType(spec)},
 		{"shard_headers", BlockShardHeadersType(spec)},

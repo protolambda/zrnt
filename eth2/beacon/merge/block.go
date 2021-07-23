@@ -204,6 +204,6 @@ func BeaconBlockBodyType(spec *common.Spec) *ContainerTypeDef {
 		{"deposits", phase0.BlockDepositsType(spec)},
 		{"voluntary_exits", phase0.BlockVoluntaryExitsType(spec)},
 		// Merge
-		{"execution_payload", common.ExecutionPayloadType},
+		{"execution_payload", common.ExecutionPayloadType(spec)},
 	})
 }

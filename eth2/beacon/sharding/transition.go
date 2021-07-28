@@ -3,6 +3,7 @@ package sharding
 import (
 	"context"
 	"fmt"
+	"github.com/protolambda/zrnt/eth2/beacon/altair"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/merge"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
@@ -34,13 +35,16 @@ func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spe
 	just := phase0.JustificationStakeData{
 		CurrentEpoch:                  epc.CurrentEpoch.Epoch,
 		TotalActiveStake:              epc.TotalActiveStake,
-		PrevEpochUnslashedTargetStake: attesterData.PrevEpochUnslashedStake.TargetStake,
-		CurrEpochUnslashedTargetStake: attesterData.CurrEpochUnslashedTargetStake,
+		PrevEpochUnslashedTargetStake: attesterData.Altair.PrevEpochUnslashedStake.TargetStake,
+		CurrEpochUnslashedTargetStake: attesterData.Altair.CurrEpochUnslashedTargetStake,
 	}
 	if err := phase0.ProcessEpochJustification(ctx, spec, &just, state); err != nil {
 		return err
 	}
-	if err := phase0.ProcessEpochRewardsAndPenalties(ctx, spec, epc, attesterData, state); err != nil {
+	if err := altair.ProcessInactivityUpdates(ctx, spec, &attesterData.Altair, state); err != nil {
+		return err
+	}
+	if err := ProcessEpochRewardsAndPenalties(ctx, spec, epc, &attesterData.Altair, state); err != nil {
 		return err
 	}
 	if err := phase0.ProcessEpochRegistryUpdates(ctx, spec, epc, flats, state); err != nil {
@@ -49,7 +53,6 @@ func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spe
 	if err := phase0.ProcessEpochSlashings(ctx, spec, epc, flats, state); err != nil {
 		return err
 	}
-
 	if err := phase0.ProcessEth1DataReset(ctx, spec, epc, state); err != nil {
 		return err
 	}
@@ -65,10 +68,10 @@ func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spe
 	if err := phase0.ProcessHistoricalRootsUpdate(ctx, spec, epc, state); err != nil {
 		return err
 	}
-	if err := ProcessParticipationRecordUpdates(ctx, spec, epc, state); err != nil {
+	if err := altair.ProcessParticipationFlagUpdates(ctx, spec, state); err != nil {
 		return err
 	}
-	if err := ProcessShardEpochIncrement(ctx, spec, epc, state); err != nil {
+	if err := altair.ProcessSyncCommitteeUpdates(ctx, spec, epc, state); err != nil {
 		return err
 	}
 	return nil
@@ -80,15 +83,12 @@ func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spe
 		return fmt.Errorf("unexpected block type %T in Merge ProcessBlock", benv.SignedBlock)
 	}
 	block := &signedBlock.Message
-	slot, err := state.Slot()
+	header := block.Header(spec)
+	expectedProposer, err := epc.GetBeaconProposer(block.Slot)
 	if err != nil {
 		return err
 	}
-	proposerIndex, err := epc.GetBeaconProposer(slot)
-	if err != nil {
-		return err
-	}
-	if err := common.ProcessHeader(ctx, spec, state, block.Header(spec), proposerIndex); err != nil {
+	if err := common.ProcessHeader(ctx, spec, state, header, expectedProposer); err != nil {
 		return err
 	}
 	body := &block.Body
@@ -126,6 +126,9 @@ func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spe
 		return err
 	}
 	if err := phase0.ProcessVoluntaryExits(ctx, spec, epc, state, body.VoluntaryExits); err != nil {
+		return err
+	}
+	if err := altair.ProcessSyncAggregate(ctx, spec, epc, state, &body.SyncAggregate); err != nil {
 		return err
 	}
 	if err := merge.ProcessExecutionPayload(ctx, spec, state, &body.ExecutionPayload, spec.ExecutionEngine); err != nil {

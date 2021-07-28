@@ -38,6 +38,16 @@ func (li Balances) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root 
 	}, length, spec.VALIDATOR_REGISTRY_LIMIT)
 }
 
+func (li Balances) View(limit uint64) (*RegistryBalancesView, error) {
+	// TODO: bad copy, converting to a tree more directly somehow would be nice.
+	tmp := make([]BasicView, len(li), len(li))
+	for i, bal := range li {
+		tmp[i] = Uint64View(bal)
+	}
+	typ := BasicListType(common.GweiType, limit)
+	return AsRegistryBalances(typ.FromElements(tmp...))
+}
+
 func RegistryBalancesType(spec *common.Spec) *BasicListTypeDef {
 	return BasicListType(common.GweiType, spec.VALIDATOR_REGISTRY_LIMIT)
 }
@@ -46,7 +56,7 @@ type RegistryBalancesView struct {
 	*BasicListView
 }
 
-var _ common.Balances = (*RegistryBalancesView)(nil)
+var _ common.BalancesRegistry = (*RegistryBalancesView)(nil)
 
 func AsRegistryBalances(v View, err error) (*RegistryBalancesView, error) {
 	c, err := AsBasicList(v, err)
@@ -59,6 +69,10 @@ func (v *RegistryBalancesView) GetBalance(index common.ValidatorIndex) (common.G
 
 func (v *RegistryBalancesView) SetBalance(index common.ValidatorIndex, bal common.Gwei) error {
 	return v.Set(uint64(index), Uint64View(bal))
+}
+
+func (v *RegistryBalancesView) AppendBalance(bal common.Gwei) error {
+	return v.Append(Uint64View(bal))
 }
 
 func (v *RegistryBalancesView) AllBalances() ([]common.Gwei, error) {

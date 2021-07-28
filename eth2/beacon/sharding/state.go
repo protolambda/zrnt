@@ -298,12 +298,17 @@ func (state *BeaconStateView) Validators() (common.ValidatorRegistry, error) {
 	return phase0.AsValidatorsRegistry(state.Get(_stateValidators))
 }
 
-func (state *BeaconStateView) Balances() (common.Balances, error) {
+func (state *BeaconStateView) Balances() (common.BalancesRegistry, error) {
 	return phase0.AsRegistryBalances(state.Get(_stateBalances))
 }
 
-func (state *BeaconStateView) SetBalances(balances *phase0.RegistryBalancesView) error {
-	return state.Set(_stateBalances, balances)
+func (state *BeaconStateView) SetBalances(balances []common.Gwei) error {
+	typ := state.Fields[_stateBalances].Type.(*BasicListTypeDef)
+	balancesView, err := phase0.Balances(balances).View(typ.ListLimit)
+	if err != nil {
+		return err
+	}
+	return state.Set(_stateBalances, balancesView)
 }
 
 func (state *BeaconStateView) AddValidator(spec *common.Spec, pub common.BLSPubkey, withdrawalCreds common.Root, balance common.Gwei) error {
@@ -327,11 +332,11 @@ func (state *BeaconStateView) AddValidator(spec *common.Spec, pub common.BLSPubk
 	if err := validators.Append(validatorRaw.View()); err != nil {
 		return err
 	}
-	bals, err := phase0.AsRegistryBalances(state.Get(_stateBalances))
+	bals, err := state.Balances()
 	if err != nil {
 		return err
 	}
-	if err := bals.Append(Uint64View(balance)); err != nil {
+	if err := bals.AppendBalance(balance); err != nil {
 		return err
 	}
 	return nil

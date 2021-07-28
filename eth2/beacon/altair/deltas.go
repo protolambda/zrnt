@@ -3,7 +3,6 @@ package altair
 import (
 	"context"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
-	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 )
 
 func ComputeFlagDeltas(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, attesterData *EpochAttesterData,
@@ -83,7 +82,7 @@ func NewRewardsAndPenalties(validatorCount uint64) *RewardsAndPenalties {
 }
 
 func AttestationRewardsAndPenalties(ctx context.Context, spec *common.Spec, epc *common.EpochsContext,
-	attesterData *EpochAttesterData, state *BeaconStateView) (*RewardsAndPenalties, error) {
+	attesterData *EpochAttesterData, state AltairLikeBeaconState) (*RewardsAndPenalties, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -126,7 +125,7 @@ func AttestationRewardsAndPenalties(ctx context.Context, spec *common.Spec, epc 
 }
 
 func ProcessEpochRewardsAndPenalties(ctx context.Context, spec *common.Spec, epc *common.EpochsContext,
-	attesterData *EpochAttesterData, state *BeaconStateView) error {
+	attesterData *EpochAttesterData, state AltairLikeBeaconState) error {
 	currentEpoch := epc.CurrentEpoch.Epoch
 	if currentEpoch == common.GENESIS_EPOCH {
 		return nil
@@ -143,13 +142,9 @@ func ProcessEpochRewardsAndPenalties(ctx context.Context, spec *common.Spec, epc
 	sum.Add(rewAndPenalties.Target)
 	sum.Add(rewAndPenalties.Head)
 	sum.Add(rewAndPenalties.Inactivity)
-	balancesElements, err := common.ApplyDeltas(state, sum)
+	balances, err := common.ApplyDeltas(state, sum)
 	if err != nil {
 		return err
 	}
-	balancesView, err := phase0.AsRegistryBalances(phase0.RegistryBalancesType(spec).FromElements(balancesElements...))
-	if err != nil {
-		return err
-	}
-	return state.SetBalances(balancesView)
+	return state.SetBalances(balances)
 }

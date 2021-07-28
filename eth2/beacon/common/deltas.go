@@ -4,7 +4,6 @@ import (
 	"errors"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
-	"github.com/protolambda/ztyp/view"
 )
 
 type GweiList []Gwei
@@ -79,7 +78,7 @@ func (deltas *Deltas) Add(other *Deltas) {
 	}
 }
 
-func IncreaseBalance(v Balances, index ValidatorIndex, delta Gwei) error {
+func IncreaseBalance(v BalancesRegistry, index ValidatorIndex, delta Gwei) error {
 	bal, err := v.GetBalance(index)
 	if err != nil {
 		return err
@@ -88,7 +87,7 @@ func IncreaseBalance(v Balances, index ValidatorIndex, delta Gwei) error {
 	return v.SetBalance(index, bal)
 }
 
-func DecreaseBalance(v Balances, index ValidatorIndex, delta Gwei) error {
+func DecreaseBalance(v BalancesRegistry, index ValidatorIndex, delta Gwei) error {
 	bal, err := v.GetBalance(index)
 	if err != nil {
 		return err
@@ -104,7 +103,7 @@ func DecreaseBalance(v Balances, index ValidatorIndex, delta Gwei) error {
 
 // Applies deltas to the balances in the state, returns the resulting balances,
 // ready to overwrite the state balances subtree with.
-func ApplyDeltas(state BeaconState, deltas *Deltas) ([]view.BasicView, error) {
+func ApplyDeltas(state BeaconState, deltas *Deltas) ([]Gwei, error) {
 	balances, err := state.Balances()
 	if err != nil {
 		return nil, err
@@ -116,7 +115,7 @@ func ApplyDeltas(state BeaconState, deltas *Deltas) ([]view.BasicView, error) {
 	if uint64(len(deltas.Penalties)) != length || uint64(len(deltas.Rewards)) != length {
 		return nil, errors.New("cannot apply deltas to balances list with different length")
 	}
-	balancesElements := make([]view.BasicView, 0, length)
+	balancesOut := make([]Gwei, 0, length)
 	balIterNext := balances.Iter()
 	i := ValidatorIndex(0)
 	for {
@@ -133,8 +132,8 @@ func ApplyDeltas(state BeaconState, deltas *Deltas) ([]view.BasicView, error) {
 		} else {
 			bal = 0
 		}
-		balancesElements = append(balancesElements, view.Uint64View(bal))
+		balancesOut = append(balancesOut, bal)
 		i++
 	}
-	return balancesElements, nil
+	return balancesOut, nil
 }

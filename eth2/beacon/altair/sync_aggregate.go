@@ -144,7 +144,7 @@ func AsSyncAggregate(v View, err error) (*SyncAggregateView, error) {
 	return &SyncAggregateView{c}, err
 }
 
-func ProcessSyncAggregate(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView, agg *SyncAggregate) error {
+func ProcessSyncAggregate(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, agg *SyncAggregate) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}

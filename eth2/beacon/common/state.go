@@ -52,9 +52,10 @@ type ValidatorRegistry interface {
 	HashTreeRoot(fn tree.HashFn) Root
 }
 
-type Balances interface {
+type BalancesRegistry interface {
 	GetBalance(index ValidatorIndex) (Gwei, error)
 	SetBalance(index ValidatorIndex, bal Gwei) error
+	AppendBalance(bal Gwei) error
 	Iter() (next func() (bal Gwei, ok bool, err error))
 	AllBalances() ([]Gwei, error)
 	Length() (uint64, error)
@@ -106,7 +107,9 @@ type BeaconState interface {
 	IncrementDepositIndex() error
 
 	Validators() (ValidatorRegistry, error)
-	Balances() (Balances, error)
+
+	Balances() (BalancesRegistry, error)
+	SetBalances(balances []Gwei) error
 
 	AddValidator(spec *Spec, pub BLSPubkey, withdrawalCreds Root, balance Gwei) error
 

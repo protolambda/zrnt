@@ -1,12 +1,14 @@
 package sharding
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
+	"gopkg.in/yaml.v3"
 )
 
 const SHARD_WORK_UNCONFIRMED = 0
@@ -16,7 +18,7 @@ const SHARD_WORK_PENDING = 2
 func ShardWorkStatusType(spec *common.Spec) *UnionTypeDef {
 	return UnionType([]TypeDef{
 		nil,
-		DataCommitmentType,
+		AttestedDataCommitmentType,
 		PendingShardHeadersType(spec),
 	})
 }
@@ -28,8 +30,60 @@ func AsShardWorkStatus(v View, err error) (*ShardWorkStatusView, error) {
 
 type ShardWorkStatus struct {
 	Selector uint8 `json:"selector" yaml:"selector"`
-	// Either nil, *DataCommitment or *PendingShardHeaders
+	// Either nil, *AttestedDataCommitment or *PendingShardHeaders
 	Value interface{} `json:"value" yaml:"value"`
+}
+
+type selectorJson struct {
+	Selector uint8 `json:"selector" yaml:"selector"`
+}
+
+type valueJson struct {
+	Value interface{} `json:"value" yaml:"value"`
+}
+
+func (h *ShardWorkStatus) UnmarshalJSON(b []byte) error {
+	var sel selectorJson
+	if err := json.Unmarshal(b, &sel); err != nil {
+		return err
+	}
+	var val valueJson
+	switch sel.Selector {
+	case SHARD_WORK_UNCONFIRMED:
+		// nil
+	case SHARD_WORK_CONFIRMED:
+		val.Value = new(AttestedDataCommitment)
+	case SHARD_WORK_PENDING:
+		val.Value = new(PendingShardHeaders)
+	}
+	if err := json.Unmarshal(b, &val); err != nil {
+		return err
+	}
+	h.Selector = sel.Selector
+	h.Value = val.Value
+	return nil
+}
+
+func (h *ShardWorkStatus) UnmarshalYAML(value *yaml.Node) error {
+	var sel selectorJson
+	if err := value.Decode(&sel); err != nil {
+		return err
+	}
+	var val valueJson
+	switch sel.Selector {
+	case SHARD_WORK_UNCONFIRMED:
+		// nil
+	case SHARD_WORK_CONFIRMED:
+		val.Value = new(AttestedDataCommitment)
+	case SHARD_WORK_PENDING:
+		val.Value = new(PendingShardHeaders)
+	}
+	if err := value.Decode(&val); err != nil {
+		return err
+	}
+	h.Selector = sel.Selector
+	h.Value = val.Value
+	return nil
 }
 
 func (h *ShardWorkStatus) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
@@ -39,7 +93,7 @@ func (h *ShardWorkStatus) Deserialize(spec *common.Spec, dr *codec.DecodingReade
 		case SHARD_WORK_UNCONFIRMED:
 			return nil, nil
 		case SHARD_WORK_CONFIRMED:
-			dat := new(DataCommitment)
+			dat := new(AttestedDataCommitment)
 			h.Value = dat
 			return dat, nil
 		case SHARD_WORK_PENDING:
@@ -57,11 +111,11 @@ func (h *ShardWorkStatus) Serialize(spec *common.Spec, w *codec.EncodingWriter) 
 	case SHARD_WORK_UNCONFIRMED:
 		return w.Union(SHARD_WORK_UNCONFIRMED, nil)
 	case SHARD_WORK_CONFIRMED:
-		commitment, ok := h.Value.(*DataCommitment)
+		attested, ok := h.Value.(*AttestedDataCommitment)
 		if !ok {
 			return fmt.Errorf("invalid value type for SHARD_WORK_CONFIRMED selector: %T", h.Value)
 		}
-		return w.Union(SHARD_WORK_CONFIRMED, commitment)
+		return w.Union(SHARD_WORK_CONFIRMED, attested)
 	case SHARD_WORK_PENDING:
 		headers, ok := h.Value.(*PendingShardHeaders)
 		if !ok {
@@ -78,11 +132,11 @@ func (h *ShardWorkStatus) ByteLength(spec *common.Spec) uint64 {
 	case SHARD_WORK_UNCONFIRMED:
 		return 1
 	case SHARD_WORK_CONFIRMED:
-		commitment, ok := h.Value.(*DataCommitment)
+		attested, ok := h.Value.(*AttestedDataCommitment)
 		if !ok {
 			panic(fmt.Errorf("invalid value type for SHARD_WORK_CONFIRMED selector: %T", h.Value))
 		}
-		return commitment.ByteLength()
+		return attested.ByteLength()
 	case SHARD_WORK_PENDING:
 		headers, ok := h.Value.(*PendingShardHeaders)
 		if !ok {
@@ -102,9 +156,9 @@ func (h *ShardWorkStatus) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) commo
 	if h.Selector == SHARD_WORK_UNCONFIRMED {
 		return hFn.Union(h.Selector, nil)
 	}
-	commitment, ok := h.Value.(*DataCommitment)
+	attested, ok := h.Value.(*AttestedDataCommitment)
 	if ok {
-		return hFn.Union(h.Selector, commitment)
+		return hFn.Union(h.Selector, attested)
 	}
 	headers, ok := h.Value.(*PendingShardHeaders)
 	if !ok {
@@ -118,11 +172,11 @@ func (h *ShardWorkStatus) View(spec *common.Spec) (*ShardWorkStatusView, error) 
 	case SHARD_WORK_UNCONFIRMED:
 		return AsShardWorkStatus(ShardWorkStatusType(spec).FromView(SHARD_WORK_UNCONFIRMED, nil))
 	case SHARD_WORK_CONFIRMED:
-		commitment, ok := h.Value.(*DataCommitment)
+		attested, ok := h.Value.(*AttestedDataCommitment)
 		if !ok {
 			return nil, fmt.Errorf("invalid value type for SHARD_WORK_CONFIRMED selector: %T", h.Value)
 		}
-		return AsShardWorkStatus(ShardWorkStatusType(spec).FromView(SHARD_WORK_CONFIRMED, commitment.View()))
+		return AsShardWorkStatus(ShardWorkStatusType(spec).FromView(SHARD_WORK_CONFIRMED, attested.View()))
 	case SHARD_WORK_PENDING:
 		headers, ok := h.Value.(*PendingShardHeaders)
 		if !ok {

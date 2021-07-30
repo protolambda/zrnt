@@ -45,10 +45,12 @@ type BeaconState struct {
 	NextSyncCommittee    common.SyncCommittee `json:"next_sync_committee" yaml:"next_sync_committee"`
 	// Execution-layer
 	LatestExecutionPayloadHeader common.ExecutionPayloadHeader `json:"latest_execution_payload_header" yaml:"latest_execution_payload_header"`
-	// Sharding
+	// Blob builder registry.
+	BlobBuilders BuilderRegistry `json:"blob_builders" yaml:"blob_builders"`
+	BlobBuilderBalances BuilderBalances `json:"blob_builder_balances" yaml:"blob_builder_balances"`
+	// A ring buffer of the latest slots, with information per active shard.
 	ShardBuffer            ShardBuffer  `json:"shard_buffer" yaml:"shard_buffer"`
-	ShardGasPrice          Uint64View   `json:"shard_gasprice" yaml:"shard_gasprice"`
-	CurrentEpochStartShard common.Shard `json:"current_epoch_start_shard" yaml:"current_epoch_start_shard"`
+	ShardSamplePrice          Uint64View   `json:"shard_sample_price" yaml:"shard_sample_price"`
 }
 
 func (v *BeaconState) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
@@ -65,9 +67,10 @@ func (v *BeaconState) Deserialize(spec *common.Spec, dr *codec.DecodingReader) e
 		spec.Wrap(&v.InactivityScores),
 		spec.Wrap(&v.CurrentSyncCommittee), spec.Wrap(&v.NextSyncCommittee),
 		&v.LatestExecutionPayloadHeader,
+		spec.Wrap(&v.BlobBuilders),
+		spec.Wrap(&v.BlobBuilderBalances),
 		spec.Wrap(&v.ShardBuffer),
-		&v.ShardGasPrice,
-		&v.CurrentEpochStartShard)
+		&v.ShardSamplePrice)
 }
 
 func (v *BeaconState) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
@@ -84,9 +87,10 @@ func (v *BeaconState) Serialize(spec *common.Spec, w *codec.EncodingWriter) erro
 		spec.Wrap(&v.InactivityScores),
 		spec.Wrap(&v.CurrentSyncCommittee), spec.Wrap(&v.NextSyncCommittee),
 		&v.LatestExecutionPayloadHeader,
+		spec.Wrap(&v.BlobBuilders),
+		spec.Wrap(&v.BlobBuilderBalances),
 		spec.Wrap(&v.ShardBuffer),
-		&v.ShardGasPrice,
-		&v.CurrentEpochStartShard)
+		&v.ShardSamplePrice)
 }
 
 func (v *BeaconState) ByteLength(spec *common.Spec) uint64 {
@@ -103,9 +107,10 @@ func (v *BeaconState) ByteLength(spec *common.Spec) uint64 {
 		spec.Wrap(&v.InactivityScores),
 		spec.Wrap(&v.CurrentSyncCommittee), spec.Wrap(&v.NextSyncCommittee),
 		&v.LatestExecutionPayloadHeader,
+		spec.Wrap(&v.BlobBuilders),
+		spec.Wrap(&v.BlobBuilderBalances),
 		spec.Wrap(&v.ShardBuffer),
-		&v.ShardGasPrice,
-		&v.CurrentEpochStartShard)
+		&v.ShardSamplePrice)
 }
 
 func (*BeaconState) FixedLength(*common.Spec) uint64 {
@@ -126,9 +131,10 @@ func (v *BeaconState) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Ro
 		spec.Wrap(&v.InactivityScores),
 		spec.Wrap(&v.CurrentSyncCommittee), spec.Wrap(&v.NextSyncCommittee),
 		&v.LatestExecutionPayloadHeader,
+		spec.Wrap(&v.BlobBuilders),
+		spec.Wrap(&v.BlobBuilderBalances),
 		spec.Wrap(&v.ShardBuffer),
-		&v.ShardGasPrice,
-		&v.CurrentEpochStartShard)
+		&v.ShardSamplePrice)
 }
 
 // Hack to make state fields consistent and verifiable without using many hardcoded indices
@@ -159,9 +165,10 @@ const (
 	_currentSyncCommittee
 	_nextSyncCommittee
 	_latestExecutionPayloadHeader
+	_blobBuilders
+	_blobBuilderBalances
 	_shardBuffer
-	_shardGasprice
-	_currentEpochStartShard
+	_shardSamplePrice
 )
 
 func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
@@ -203,9 +210,10 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 		// Execution-layer
 		{"latest_execution_payload_header", common.ExecutionPayloadHeaderType},
 		// Sharding
+		{"blob_builders", BuildersRegistryType(spec)},
+		{"blob_builder_balances", BuilderRegistryBalancesType(spec)},
 		{"shard_buffer", ShardBufferType(spec)},
-		{"shard_gasprice", Uint64Type},
-		{"current_epoch_start_shard", common.ShardType},
+		{"shard_sample_price", Uint64Type},
 	})
 }
 
@@ -514,24 +522,24 @@ func (state *BeaconStateView) SetLatestExecutionPayloadHeader(h *common.Executio
 	return state.Set(_latestExecutionPayloadHeader, h.View())
 }
 
+func (state *BeaconStateView) BlobBuilders() (common.BuilderRegistry, error) {
+	return AsBuildersRegistry(state.Get(_blobBuilders))
+}
+
+func (state *BeaconStateView) BlobBuilderBalances() (common.BuilderBalancesRegistry, error) {
+	return AsBuilderRegistryBalances(state.Get(_blobBuilders))
+}
+
 func (state *BeaconStateView) ShardBuffer() (*ShardBufferView, error) {
 	return AsShardBuffer(state.Get(_shardBuffer))
 }
 
-func (state *BeaconStateView) ShardGasPrice() (common.Gwei, error) {
-	return common.AsGwei(state.Get(_shardGasprice))
+func (state *BeaconStateView) ShardSamplePrice() (common.Gwei, error) {
+	return common.AsGwei(state.Get(_shardSamplePrice))
 }
 
 func (state *BeaconStateView) SetShardGasPrice(price common.Gwei) error {
-	return state.Set(_shardGasprice, Uint64View(price))
-}
-
-func (state *BeaconStateView) CurrentEpochStartShard() (common.Shard, error) {
-	return common.AsShard(state.Get(_currentEpochStartShard))
-}
-
-func (state *BeaconStateView) SetCurrentEpochStartShard(shard common.Shard) error {
-	return state.Set(_currentEpochStartShard, Uint64View(shard))
+	return state.Set(_shardSamplePrice, Uint64View(price))
 }
 
 func (state *BeaconStateView) ForkSettings(spec *common.Spec) *common.ForkSettings {

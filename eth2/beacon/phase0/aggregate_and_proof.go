@@ -70,7 +70,7 @@ func ValidateAggregateSelectionProof(spec *common.Spec, epc *common.EpochsContex
 	if err != nil {
 		return false, err
 	}
-	pub, ok := epc.PubkeyCache.Pubkey(aggregator)
+	pub, ok := epc.ValidatorPubkeyCache.Pubkey(aggregator)
 	if !ok {
 		return false, fmt.Errorf("could not fetch pubkey for aggregator %d", aggregator)
 	}

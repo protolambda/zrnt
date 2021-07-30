@@ -166,7 +166,7 @@ func ValidateAttestation(ctx context.Context, subnet uint64, att *phase0.Attesta
 
 	// We already know that the voter is part of the committee in the target epoch,
 	// we can just hit the cache without further checking the validator index.
-	pubkey, ok := targetEpc.PubkeyCache.Pubkey(voter)
+	pubkey, ok := targetEpc.ValidatorPubkeyCache.Pubkey(voter)
 	if !ok {
 		return GossipValidatorResult{IGNORE, errors.New("failed to find pubkey for voter, cache is wrong")}, nil
 	}

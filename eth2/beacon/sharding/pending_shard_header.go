@@ -26,7 +26,7 @@ func AsPendingShardHeader(v View, err error) (*PendingShardHeaderView, error) {
 	return &PendingShardHeaderView{c}, err
 }
 
-func (v *PendingShardHeaderView) Commitment() (*AttestedDataCommitmentView, error) {
+func (v *PendingShardHeaderView) Attested() (*AttestedDataCommitmentView, error) {
 	return AsAttestedDataCommitment(v.Get(0))
 }
 

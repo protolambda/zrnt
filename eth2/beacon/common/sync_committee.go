@@ -139,7 +139,7 @@ func ComputeNextSyncCommittee(spec *Spec, epc *EpochsContext, state BeaconState)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compute sync committee indices for next epoch: %d", epc.NextEpoch.Epoch)
 	}
-	return IndicesToSyncCommittee(indices, epc.PubkeyCache)
+	return IndicesToSyncCommittee(indices, epc.ValidatorPubkeyCache)
 }
 
 func IndicesToSyncCommittee(indices []ValidatorIndex, pubCache *PubkeyCache) (*SyncCommittee, error) {

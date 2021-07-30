@@ -69,7 +69,7 @@ func ValidateBeaconBlock(ctx context.Context, block *common.BeaconBlockEnvelope,
 		return GossipValidatorResult{IGNORE, fmt.Errorf("cannot find context for parent block %s", block.ParentRoot)}
 	}
 	// [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
-	pub, ok := parentEpc.PubkeyCache.Pubkey(block.ProposerIndex)
+	pub, ok := parentEpc.ValidatorPubkeyCache.Pubkey(block.ProposerIndex)
 	if !ok {
 		return GossipValidatorResult{IGNORE, fmt.Errorf("cannot find pubkey for proposer index %d", block.ProposerIndex)}
 	}

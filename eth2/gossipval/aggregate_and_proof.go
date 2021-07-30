@@ -137,7 +137,7 @@ func ValidateAggregateAndProof(ctx context.Context, signedAgg *phase0.SignedAggr
 		return GossipValidatorResult{IGNORE, err}
 	}
 	sigRoot := common.ComputeSigningRoot(signedAgg.Message.HashTreeRoot(spec, tree.GetHashFn()), dom)
-	pub, ok := epc.PubkeyCache.Pubkey(signedAgg.Message.AggregatorIndex)
+	pub, ok := epc.ValidatorPubkeyCache.Pubkey(signedAgg.Message.AggregatorIndex)
 	if !ok {
 		return GossipValidatorResult{IGNORE, fmt.Errorf("missing pubkey: %d", signedAgg.Message.AggregatorIndex)}
 	}

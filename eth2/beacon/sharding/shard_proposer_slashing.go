@@ -131,7 +131,7 @@ func ProcessShardProposerSlashing(spec *common.Spec, epc *common.EpochsContext, 
 	if err != nil {
 		return err
 	}
-	pubkey, ok := epc.PubkeyCache.Pubkey(ref1.ProposerIndex)
+	pubkey, ok := epc.ValidatorPubkeyCache.Pubkey(ref1.ProposerIndex)
 	if !ok {
 		return fmt.Errorf("could not find pubkey of proposer %d", ref1.ProposerIndex)
 	}

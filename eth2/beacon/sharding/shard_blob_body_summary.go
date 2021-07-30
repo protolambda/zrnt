@@ -23,14 +23,17 @@ type ShardBlobBodySummary struct {
 	DataRoot common.Root `json:"data_root" yaml:"data_root"`
 	// Latest block root of the Beacon Chain, before shard_blob.slot
 	BeaconBlockRoot common.Root `json:"beacon_block_root" yaml:"beacon_block_root"`
+	// fee payment fields (EIP 1559 like)
+	MaxPriorityFeePerSample common.Gwei `json:"max_priority_fee_per_sample" yaml:"max_priority_fee_per_sample"`
+	MaxFeePerSample common.Gwei `json:"max_fee_per_sample" yaml:"max_fee_per_sample"`
 }
 
 func (d *ShardBlobBodySummary) Deserialize(dr *codec.DecodingReader) error {
-	return dr.FixedLenContainer(&d.Commitment, &d.DegreeProof, &d.DataRoot, &d.BeaconBlockRoot)
+	return dr.FixedLenContainer(&d.Commitment, &d.DegreeProof, &d.DataRoot, &d.BeaconBlockRoot, &d.MaxPriorityFeePerSample, &d.MaxFeePerSample)
 }
 
 func (d *ShardBlobBodySummary) Serialize(w *codec.EncodingWriter) error {
-	return w.FixedLenContainer(&d.Commitment, &d.DegreeProof, &d.DataRoot, &d.BeaconBlockRoot)
+	return w.FixedLenContainer(&d.Commitment, &d.DegreeProof, &d.DataRoot, &d.BeaconBlockRoot, &d.MaxPriorityFeePerSample, &d.MaxFeePerSample)
 }
 
 func (a *ShardBlobBodySummary) ByteLength() uint64 {
@@ -42,5 +45,5 @@ func (a *ShardBlobBodySummary) FixedLength() uint64 {
 }
 
 func (d *ShardBlobBodySummary) HashTreeRoot(hFn tree.HashFn) common.Root {
-	return hFn.HashTreeRoot(&d.Commitment, &d.DegreeProof, &d.DataRoot, &d.BeaconBlockRoot)
+	return hFn.HashTreeRoot(&d.Commitment, &d.DegreeProof, &d.DataRoot, &d.BeaconBlockRoot, &d.MaxPriorityFeePerSample, &d.MaxFeePerSample)
 }

@@ -133,5 +133,5 @@ func ValidateIndexedAttestation(spec *common.Spec, epc *common.EpochsContext, st
 	if err != nil {
 		return err
 	}
-	return ValidateIndexedAttestationSignature(spec, dom, epc.PubkeyCache, indexedAttestation)
+	return ValidateIndexedAttestationSignature(spec, dom, epc.ValidatorPubkeyCache, indexedAttestation)
 }

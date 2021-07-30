@@ -120,7 +120,7 @@ func ProcessDeposit(spec *common.Spec, epc *common.EpochsContext, state common.B
 	if err != nil {
 		return err
 	}
-	valIndex, ok := epc.PubkeyCache.ValidatorIndex(dep.Data.Pubkey)
+	valIndex, ok := epc.ValidatorPubkeyCache.ValidatorIndex(dep.Data.Pubkey)
 	// it exists if: it exists in the pubkey cache AND the validator index is lower than the current validator count.
 	exists := ok && uint64(valIndex) < valCount
 	if !exists {
@@ -158,10 +158,10 @@ func ProcessDeposit(spec *common.Spec, epc *common.EpochsContext, state common.B
 		if err := state.AddValidator(spec, pubkey, withdrawalCreds, balance); err != nil {
 			return err
 		}
-		if pc, err := epc.PubkeyCache.AddValidator(valIndex, pubkey); err != nil {
+		if pc, err := epc.ValidatorPubkeyCache.AddValidator(valIndex, pubkey); err != nil {
 			return err
 		} else {
-			epc.PubkeyCache = pc
+			epc.ValidatorPubkeyCache = pc
 		}
 	} else {
 		// Increase balance by deposit amount

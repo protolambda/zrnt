@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	kbls "github.com/kilic/bls12-381"
 	blsu "github.com/protolambda/bls12-381-util"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
@@ -16,8 +17,9 @@ import (
 var ShardBlobHeaderType = ContainerType("ShardBlobHeader", []FieldDef{
 	{"slot", common.SlotType},
 	{"shard", common.ShardType},
-	{"body_summary", ShardBlobBodySummaryType},
+	{"builder_index", common.BuilderIndexType},
 	{"proposer_index", common.ValidatorIndexType},
+	{"body_summary", ShardBlobBodySummaryType},
 })
 
 type ShardBlobHeader struct {
@@ -25,20 +27,20 @@ type ShardBlobHeader struct {
 	Slot common.Slot `json:"slot" yaml:"slot"`
 	// Shard that this header is intended for
 	Shard common.Shard `json:"shard" yaml:"shard"`
-
-	// SSZ-summary of ShardBlobBody
-	BodySummary ShardBlobBodySummary `json:"body_summary" yaml:"body_summary"`
-
+	// Builder of the data, pays data-fee to proposer
+	BuilderIndex common.BuilderIndex `json:"builder_index" yaml:"builder_index"`
 	// Proposer of the shard-blob
 	ProposerIndex common.ValidatorIndex `json:"proposer_index" yaml:"proposer_index"`
+	// Blob contents, without the full data
+	BodySummary ShardBlobBodySummary `json:"body_summary" yaml:"body_summary"`
 }
 
 func (v *ShardBlobHeader) Deserialize(dr *codec.DecodingReader) error {
-	return dr.FixedLenContainer(&v.Slot, &v.Shard, &v.BodySummary, &v.ProposerIndex)
+	return dr.FixedLenContainer(&v.Slot, &v.Shard, &v.BuilderIndex, &v.ProposerIndex, &v.BodySummary)
 }
 
 func (v *ShardBlobHeader) Serialize(w *codec.EncodingWriter) error {
-	return w.FixedLenContainer(&v.Slot, &v.Shard, &v.BodySummary, &v.ProposerIndex)
+	return w.FixedLenContainer(&v.Slot, &v.Shard, &v.BuilderIndex, &v.ProposerIndex, &v.BodySummary)
 }
 
 func (v *ShardBlobHeader) ByteLength() uint64 {
@@ -50,7 +52,7 @@ func (*ShardBlobHeader) FixedLength() uint64 {
 }
 
 func (v *ShardBlobHeader) HashTreeRoot(hFn tree.HashFn) common.Root {
-	return hFn.HashTreeRoot(&v.Slot, &v.Shard, &v.BodySummary, &v.ProposerIndex)
+	return hFn.HashTreeRoot(&v.Slot, &v.Shard, &v.BuilderIndex, &v.ProposerIndex, &v.BodySummary)
 }
 
 var SignedShardBlobHeaderType = ContainerType("SignedShardBlobHeader", []FieldDef{
@@ -135,29 +137,46 @@ func ProcessShardHeaders(ctx context.Context, spec *common.Spec, epc *common.Epo
 
 func ProcessShardHeader(spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView, signedHeader *SignedShardBlobHeader) error {
 	header := &signedHeader.Message
+	slot := header.Slot
+	shard := header.Shard
+
 	// Verify the header is not 0, and not from the future.
-	if header.Slot == 0 {
+	if slot == 0 {
 		return errors.New("shard blob header slot must be non-zero")
 	}
-	slot, err := state.Slot()
+	stateSlot, err := state.Slot()
 	if err != nil {
 		return err
 	}
-	if header.Slot > slot {
-		return fmt.Errorf("shard blob header slot must not be from the future, got %d, expected <= %d", header.Slot, slot)
+	if slot > stateSlot {
+		return fmt.Errorf("shard blob header slot must not be from the future, got %d, expected <= %d", slot, stateSlot)
 	}
-	headerEpoch := spec.SlotToEpoch(header.Slot)
-	currentEpoch := spec.SlotToEpoch(slot)
+	headerEpoch := spec.SlotToEpoch(slot)
+	currentEpoch := spec.SlotToEpoch(stateSlot)
 	previousEpoch := currentEpoch.Previous()
 	// Verify that the header is within the processing time window
 	if headerEpoch != currentEpoch && headerEpoch != previousEpoch {
 		return fmt.Errorf("expected shard blob header to be of current (%d) or previous (%d) epoch, but got %d", currentEpoch, previousEpoch, headerEpoch)
 	}
 	// Verify that the shard is active
-	activeShardCount := spec.ActiveShardCount(headerEpoch)
-	if uint64(header.Shard) >= activeShardCount {
-		return fmt.Errorf("shard blob header shard field is out of bounds: %d, shard count is %d", header.Shard, activeShardCount)
+	shardCount := spec.ActiveShardCount(headerEpoch)
+	if uint64(header.Shard) >= shardCount {
+		return fmt.Errorf("shard blob header shard field is out of bounds: %d, shard count is %d", shard, shardCount)
 	}
+	// Verify that a committee is able to attest this (slot, shard)
+	startShard, err := epc.StartShard(slot)
+	if err != nil {
+		return fmt.Errorf("failed to get start shard: %v", err)
+	}
+	committeeIndex := (shardCount + uint64(shard) - uint64(startShard)) % shardCount
+	committeesPerSlot, err := epc.GetCommitteeCountPerSlot(headerEpoch)
+	if err != nil {
+		return fmt.Errorf("failed to get committees per slot: %v", err)
+	}
+	if committeeIndex >= committeesPerSlot {
+		return fmt.Errorf("no committee active for slot %d shard %d, would be committee %d, but only have %d", slot, shard, committeeIndex, committeesPerSlot)
+	}
+
 	// Verify that the block root matches,
 	// to ensure the header will only be included in this specific Beacon Chain sub-tree.
 	blockRoot, err := common.GetBlockRootAtSlot(spec, state, header.Slot-1)
@@ -191,6 +210,8 @@ func ProcessShardHeader(spec *common.Spec, epc *common.EpochsContext, state *Bea
 	if selector != SHARD_WORK_PENDING {
 		return fmt.Errorf("shard blob header at slot %d shard %d is not pending", header.Slot, header.Shard)
 	}
+
+	// Check that this header is not yet in the pending list
 	currentHeaders, err := AsPendingShardHeaders(workStatus.Value())
 	if err != nil {
 		return err
@@ -209,7 +230,11 @@ func ProcessShardHeader(spec *common.Spec, epc *common.EpochsContext, state *Bea
 		if err != nil {
 			return err
 		}
-		pendingHeaderRoot, err := pendingHeader.Root()
+		att, err := pendingHeader.Attested()
+		if err != nil {
+			return err
+		}
+		pendingHeaderRoot, err := att.Root()
 		if err != nil {
 			return err
 		}
@@ -218,7 +243,7 @@ func ProcessShardHeader(spec *common.Spec, epc *common.EpochsContext, state *Bea
 		}
 	}
 
-	// Verify proposer
+	// Verify proposer matches
 	expectedProposer, err := epc.GetShardProposer(header.Slot, header.Shard)
 	if err != nil {
 		return err
@@ -227,38 +252,111 @@ func ProcessShardHeader(spec *common.Spec, epc *common.EpochsContext, state *Bea
 		return fmt.Errorf("shard blob header proposer should be %d, but got %d", expectedProposer, header.ProposerIndex)
 	}
 
-	// Verify signature
+	// Verify builder and proposer aggregate signature
 	dom, err := common.GetDomain(state, common.DOMAIN_SHARD_PROPOSER, headerEpoch)
 	if err != nil {
 		return err
 	}
-	pubkey, ok := epc.PubkeyCache.Pubkey(header.ProposerIndex)
+	signingRoot := common.ComputeSigningRoot(header.HashTreeRoot(tree.GetHashFn()), dom)
+	builderPubkey, ok := epc.BuilderPubkeyCache.Pubkey(header.BuilderIndex)
+	if !ok {
+		return fmt.Errorf("could not find pubkey of shard blob builder %d", header.BuilderIndex)
+	}
+	proposerPubkey, ok := epc.ValidatorPubkeyCache.Pubkey(header.ProposerIndex)
 	if !ok {
 		return fmt.Errorf("could not find pubkey of shard blob proposer %d", header.ProposerIndex)
 	}
-	signingRoot := common.ComputeSigningRoot(header.HashTreeRoot(tree.GetHashFn()), dom)
-	blsPub, err := pubkey.Pubkey()
+
+	blsBuilderPub, err := builderPubkey.Pubkey()
 	if err != nil {
-		return fmt.Errorf("failed to deserialize cached pubkey: %v", err)
+		return fmt.Errorf("failed to deserialize cached builder pubkey: %v", err)
+	}
+	blsProposerPub, err := proposerPubkey.Pubkey()
+	if err != nil {
+		return fmt.Errorf("failed to deserialize cached validator pubkey: %v", err)
 	}
 	sig, err := signedHeader.Signature.Signature()
 	if err != nil {
 		return fmt.Errorf("failed to deserialize and sub-group check shard header signature: %v", err)
 	}
-	if !blsu.Verify(blsPub, signingRoot[:], sig) {
+	if !blsu.FastAggregateVerify([]*blsu.Pubkey{blsBuilderPub, blsProposerPub}, signingRoot[:], sig) {
 		return errors.New("shard blob header has invalid signature")
 	}
 
-	// TODO
-	//# Verify the length by verifying the degree.
-	//body_summary = header.body_summary
-	//if body_summary.commitment.length == 0:
-	//assert body_summary.degree_proof == G1_SETUP[0]
-	//assert (
-	//	bls.Pairing(body_summary.degree_proof, G2_SETUP[0])
-	//  == bls.Pairing(body_summary.commitment.point, G2_SETUP[-body_summary.commitment.length])
-	//)
+	// Verify the length by verifying the degree.
+	bodySummary := &header.BodySummary
+	if bodySummary.Commitment.Length == 0 {
+		if bodySummary.DegreeProof != spec.G1_SETUP.Serialized[0] {
+			return fmt.Errorf("degree proof for 0-length shard data should be first setup element, got: %s", bodySummary.DegreeProof.String())
+		}
+	}
+	{
+		engine := kbls.NewEngine()
+		degreeProof, err := bodySummary.DegreeProof.Pubkey()
+		if err != nil {
+			return fmt.Errorf("failed to deserialize shard blob degree proof: %v", err)
+		}
+		engine.AddPair((*kbls.PointG1)(degreeProof), &spec.G2_SETUP.Points[0])
+		commitment, err := bodySummary.Commitment.Point.Pubkey()
+		if err != nil {
+			return fmt.Errorf("failed to deserialize shard blob commitment: %v", err)
+		}
+		engine.AddPairInv((*kbls.PointG1)(commitment), &spec.G2_SETUP.Points[uint64(len(spec.G2_SETUP.Points)) - uint64(bodySummary.Commitment.Length)])
+		if !engine.Check() {
+			return fmt.Errorf("failed to verify shard blob commitment %s (length %d)", bodySummary.Commitment.Point, bodySummary.Commitment.Length)
+		}
+	}
 
+	// Charge EIP 1559 fee, builder pays for opportunity, and is responsible for later availability,
+	// or fail to publish at their own expense.
+	samples := bodySummary.Commitment.Length
+	// TODO: overflows, need bigger int type (see spec)
+	maxFee := bodySummary.MaxFeePerSample * common.Gwei(samples)
+
+	// Builder must have sufficient balance, even if max_fee is not completely utilized
+	builderBals, err := state.BlobBuilderBalances()
+	if err != nil {
+		return err
+	}
+	builderBalance, err := builderBals.GetBalance(header.BuilderIndex)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve builder (%d) balance: %v", header.BuilderIndex, err)
+	}
+	if builderBalance < maxFee {
+		return fmt.Errorf("builder does not have sufficient funds to pay for blob: got %d, max fee: %d", builderBalance, maxFee)
+	}
+
+	samplePrice, err := state.ShardSamplePrice()
+	if err != nil {
+		return err
+	}
+	baseFee := samplePrice * common.Gwei(samples)
+	// Base fee must be paid
+	if maxFee < baseFee {
+		return fmt.Errorf("base fee cannot be covered: base fee %d for sample data is higher than max fee %d in header", baseFee, maxFee)
+	}
+
+	// Remaining fee goes towards proposer for prioritizing, up to a maximum
+	maxPriorityFee := bodySummary.MaxPriorityFeePerSample * common.Gwei(samples)
+	priorityFee := maxFee - baseFee
+	if maxPriorityFee < priorityFee {
+		priorityFee = maxPriorityFee
+	}
+
+	// Burn base fee, take priority fee
+	// priority_fee <= max_fee - base_fee, thus priority_fee + base_fee <= max_fee, thus sufficient balance.
+	builderBals.SetBalance(header.BuilderIndex, builderBalance - (baseFee + priorityFee))
+
+	// Pay out priority fee
+	valBals, err := state.Balances()
+	if err != nil {
+		return err
+	}
+	if err := common.IncreaseBalance(valBals, header.ProposerIndex, priorityFee); err != nil {
+		return err
+	}
+
+	// Initialize the pending header
 	index, err := ComputeCommitteeIndexFromShard(spec, epc, header.Slot, header.Shard)
 	if err != nil {
 		return err
@@ -271,9 +369,16 @@ func ProcessShardHeader(spec *common.Spec, epc *common.EpochsContext, state *Bea
 	emptyBits := make(phase0.AttestationBits, (len(committee)/8)+1)
 	emptyBits[len(emptyBits)-1] = 1 << (uint8(len(committee)) & 7)
 
+	beaconProposer, err := epc.GetBeaconProposer(stateSlot)
+	if err != nil {
+		return err
+	}
 	pendingHeader := PendingShardHeader{
-		Commitment: header.BodySummary.Commitment,
-		Root:       common.Root{},
+		Attested: AttestedDataCommitment{
+			Commitment:    header.BodySummary.Commitment,
+			Root:          headerRoot,
+			IncluderIndex: beaconProposer,
+		},
 		Votes:      emptyBits,
 		Weight:     0,
 		UpdateSlot: header.Slot,

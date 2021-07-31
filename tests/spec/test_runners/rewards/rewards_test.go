@@ -60,7 +60,7 @@ func (c *RewardsTest) Load(t *testing.T, forkName test_util.ForkName, readPart t
 	} else {
 		t.Fatalf("failed to load head_deltas")
 	}
-	if forkName != "altair" {
+	if forkName == "phase0" {
 		inclusionDelayDeltas := new(common.Deltas)
 		if test_util.LoadSpecObj(t, "inclusion_delay_deltas", inclusionDelayDeltas, readPart) {
 			c.Input.InclusionDelay = inclusionDelayDeltas
@@ -108,11 +108,6 @@ func (c *RewardsTest) Check(t *testing.T) {
 	diffDeltas("inactivity", c.Output.Inactivity, c.Input.Inactivity)
 }
 
-type phase0LikeRewards interface {
-	phase0.Phase0PendingAttestationsBeaconState
-	phase0.BalancesBeaconState
-}
-
 func (c *RewardsTest) Run() error {
 	epc, err := common.NewEpochsContext(c.Spec, c.Pre)
 	if err != nil {
@@ -127,7 +122,7 @@ func (c *RewardsTest) Run() error {
 		return err
 	}
 
-	if s, ok := c.Pre.(phase0LikeRewards); ok {
+	if s, ok := c.Pre.(phase0.Phase0PendingAttestationsBeaconState); ok {
 		attesterData, err := phase0.ComputeEpochAttesterData(context.Background(), c.Spec, epc, flats, s)
 		if err != nil {
 			return err
@@ -141,7 +136,7 @@ func (c *RewardsTest) Run() error {
 		c.Output.Head = deltas.Head
 		c.Output.InclusionDelay = deltas.InclusionDelay
 		c.Output.Inactivity = deltas.Inactivity
-	} else if s, ok := c.Pre.(*altair.BeaconStateView); ok {
+	} else if s, ok := c.Pre.(altair.AltairLikeBeaconState); ok {
 		attesterData, err := altair.ComputeEpochAttesterData(context.Background(), c.Spec, epc, flats, s)
 		if err != nil {
 			return err

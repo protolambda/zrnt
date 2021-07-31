@@ -26,7 +26,7 @@ func (c *AttestationTestCase) Run() error {
 	}
 	if s, ok := c.Pre.(phase0.Phase0PendingAttestationsBeaconState); ok {
 		return phase0.ProcessAttestation(c.Spec, epc, s, &c.Attestation)
-	} else if s, ok := c.Pre.(*altair.BeaconStateView); ok {
+	} else if s, ok := c.Pre.(altair.AltairLikeBeaconState); ok {
 		return altair.ProcessAttestation(c.Spec, epc, s, &c.Attestation)
 	} else {
 		return fmt.Errorf("unrecognized state type: %T", s)

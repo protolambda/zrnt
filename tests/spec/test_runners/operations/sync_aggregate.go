@@ -24,7 +24,7 @@ func (c *SyncAggregateTestCase) Run() error {
 	if err != nil {
 		return err
 	}
-	s, ok := c.Pre.(*altair.BeaconStateView)
+	s, ok := c.Pre.(altair.AltairLikeBeaconState)
 	if !ok {
 		return fmt.Errorf("unrecognized state type: %T", c.Pre)
 	}

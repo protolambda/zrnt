@@ -139,13 +139,15 @@ func init() {
 	objs["altair"]["BeaconState"] = func() interface{} { return new(altair.BeaconState) }
 	objs["altair"]["SignedBeaconBlock"] = func() interface{} { return new(altair.SignedBeaconBlock) }
 	objs["altair"]["SyncAggregate"] = func() interface{} { return new(altair.SyncAggregate) }
-	//objs["altair"]["LightClientSnapshot"] = func() interface{} { return new(altair.LightClientSnapshot) }
-	//objs["altair"]["LightClientUpdate"] = func() interface{} { return new(altair.LightClientUpdate) }
-	//objs["altair"]["ContributionAndProof"] = func() interface{} { return new(altair.ContributionAndProof) }
-	//objs["altair"]["SignedContributionAndProof"] = func() interface{} { return new(altair.SignedContributionAndProof) }
-	//objs["altair"]["SyncAggregatorSelectionData"] = func() interface{} { return new(altair.SyncAggregatorSelectionData) }
-	//objs["altair"]["SyncCommittee"] = func() interface{} { return new(altair.SyncCommittee) }
-	//objs["altair"]["SyncCommitteeSignature"] = func() interface{} { return new(altair.SyncCommitteeSignature) }
+
+	objs["altair"]["LightClientSnapshot"] = func() interface{} { return new(altair.LightClientSnapshot) }
+	objs["altair"]["LightClientUpdate"] = func() interface{} { return new(altair.LightClientUpdate) }
+	objs["altair"]["SyncAggregatorSelectionData"] = func() interface{} { return new(altair.SyncAggregatorSelectionData) }
+	objs["altair"]["SyncCommitteeContribution"] = func() interface{} { return new(altair.SyncCommitteeContribution) }
+	objs["altair"]["ContributionAndProof"] = func() interface{} { return new(altair.ContributionAndProof) }
+	objs["altair"]["SignedContributionAndProof"] = func() interface{} { return new(altair.SignedContributionAndProof) }
+	objs["altair"]["SyncCommitteeMessage"] = func() interface{} { return new(altair.SyncCommitteeMessage) }
+	objs["altair"]["SyncCommittee"] = func() interface{} { return new(common.SyncCommittee) }
 
 	objs["merge"]["BeaconBlockBody"] = func() interface{} { return new(merge.BeaconBlockBody) }
 	objs["merge"]["BeaconBlock"] = func() interface{} { return new(merge.BeaconBlock) }

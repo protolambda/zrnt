@@ -193,7 +193,7 @@ func (v *ParticipationRegistryView) FillZeroes(length uint64) error {
 	return v.SetBacking(tree.NewPairNode(contents, lengthNode))
 }
 
-func ProcessParticipationFlagUpdates(ctx context.Context, spec *common.Spec, state *BeaconStateView) error {
+func ProcessParticipationFlagUpdates(ctx context.Context, spec *common.Spec, state AltairLikeBeaconState) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}

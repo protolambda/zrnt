@@ -2,6 +2,7 @@ package merge
 
 import (
 	"fmt"
+	"github.com/protolambda/zrnt/eth2/beacon/altair"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/ztyp/codec"
@@ -122,6 +123,8 @@ type BeaconBlockBody struct {
 	Deposits          phase0.Deposits          `json:"deposits" yaml:"deposits"`
 	VoluntaryExits    phase0.VoluntaryExits    `json:"voluntary_exits" yaml:"voluntary_exits"`
 
+	SyncAggregate altair.SyncAggregate `json:"sync_aggregate" yaml:"sync_aggregate"`
+
 	ExecutionPayload common.ExecutionPayload `json:"execution_payload" yaml:"execution_payload"`
 }
 
@@ -131,7 +134,7 @@ func (b *BeaconBlockBody) Deserialize(spec *common.Spec, dr *codec.DecodingReade
 		&b.Graffiti, spec.Wrap(&b.ProposerSlashings),
 		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
-		spec.Wrap(&b.ExecutionPayload),
+		spec.Wrap(&b.SyncAggregate), spec.Wrap(&b.ExecutionPayload),
 	)
 }
 
@@ -141,7 +144,7 @@ func (b *BeaconBlockBody) Serialize(spec *common.Spec, w *codec.EncodingWriter) 
 		&b.Graffiti, spec.Wrap(&b.ProposerSlashings),
 		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
-		spec.Wrap(&b.ExecutionPayload),
+		spec.Wrap(&b.SyncAggregate), spec.Wrap(&b.ExecutionPayload),
 	)
 }
 
@@ -151,7 +154,7 @@ func (b *BeaconBlockBody) ByteLength(spec *common.Spec) uint64 {
 		&b.Graffiti, spec.Wrap(&b.ProposerSlashings),
 		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
-		spec.Wrap(&b.ExecutionPayload),
+		spec.Wrap(&b.SyncAggregate), spec.Wrap(&b.ExecutionPayload),
 	)
 }
 
@@ -165,7 +168,7 @@ func (b *BeaconBlockBody) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) commo
 		b.Graffiti, spec.Wrap(&b.ProposerSlashings),
 		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
-		spec.Wrap(&b.ExecutionPayload),
+		spec.Wrap(&b.SyncAggregate), spec.Wrap(&b.ExecutionPayload),
 	)
 }
 
@@ -203,7 +206,8 @@ func BeaconBlockBodyType(spec *common.Spec) *ContainerTypeDef {
 		{"attestations", phase0.BlockAttestationsType(spec)},
 		{"deposits", phase0.BlockDepositsType(spec)},
 		{"voluntary_exits", phase0.BlockVoluntaryExitsType(spec)},
+		{"sync_aggregate", altair.SyncAggregateType(spec)},
 		// Merge
-		{"execution_payload", common.ExecutionPayloadType},
+		{"execution_payload", common.ExecutionPayloadType(spec)},
 	})
 }

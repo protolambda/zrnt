@@ -10,8 +10,7 @@ import (
 
 func PendingShardHeaderType(spec *common.Spec) *ContainerTypeDef {
 	return ContainerType("PendingShardHeader", []FieldDef{
-		{"commitment", DataCommitmentType},
-		{"root", RootType},
+		{"attested", AttestedDataCommitmentType},
 		{"votes", phase0.AttestationBitsType(spec)},
 		{"weight", common.GweiType},
 		{"update_slot", common.SlotType},
@@ -27,43 +26,37 @@ func AsPendingShardHeader(v View, err error) (*PendingShardHeaderView, error) {
 	return &PendingShardHeaderView{c}, err
 }
 
-func (v *PendingShardHeaderView) Commitment() (*DataCommitmentView, error) {
-	return AsDataCommitment(v.Get(0))
-}
-
-func (v *PendingShardHeaderView) Root() (common.Root, error) {
-	return AsRoot(v.Get(1))
+func (v *PendingShardHeaderView) Attested() (*AttestedDataCommitmentView, error) {
+	return AsAttestedDataCommitment(v.Get(0))
 }
 
 func (v *PendingShardHeaderView) Votes() (*phase0.AttestationBitsView, error) {
-	return phase0.AsAttestationBits(v.Get(2))
+	return phase0.AsAttestationBits(v.Get(1))
 }
 
 func (v *PendingShardHeaderView) SetVotes(bits *phase0.AttestationBitsView) error {
-	return v.Set(2, bits)
+	return v.Set(1, bits)
 }
 
 func (v *PendingShardHeaderView) Weight() (common.Gwei, error) {
-	return common.AsGwei(v.Get(3))
+	return common.AsGwei(v.Get(2))
 }
 
 func (v *PendingShardHeaderView) SetWeight(w common.Gwei) error {
-	return v.Set(3, Uint64View(w))
+	return v.Set(2, Uint64View(w))
 }
 
 func (v *PendingShardHeaderView) UpdateSlot() (common.Slot, error) {
-	return common.AsSlot(v.Get(4))
+	return common.AsSlot(v.Get(3))
 }
 
 func (v *PendingShardHeaderView) SetUpdateSlot(slot common.Slot) error {
-	return v.Set(4, Uint64View(slot))
+	return v.Set(3, Uint64View(slot))
 }
 
 type PendingShardHeader struct {
-	// KZG10 commitment to the data
-	Commitment DataCommitment `json:"commitment" yaml:"commitment"`
-	// hash_tree_root of the ShardHeader (stored so that attestations can be checked against it)
-	Root common.Root `json:"root" yaml:"root"`
+	// The commitment that is attested
+	Attested AttestedDataCommitment `json:"attested" yaml:"attested"`
 	// Who voted for the header
 	Votes phase0.AttestationBits `json:"votes" yaml:"votes"`
 	// Sum of effective balances of votes
@@ -73,15 +66,15 @@ type PendingShardHeader struct {
 }
 
 func (h *PendingShardHeader) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
-	return dr.Container(&h.Commitment, &h.Root, spec.Wrap(&h.Votes), &h.Weight, &h.UpdateSlot)
+	return dr.Container(&h.Attested, spec.Wrap(&h.Votes), &h.Weight, &h.UpdateSlot)
 }
 
 func (h *PendingShardHeader) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
-	return w.Container(&h.Commitment, &h.Root, spec.Wrap(&h.Votes), &h.Weight, &h.UpdateSlot)
+	return w.Container(&h.Attested, spec.Wrap(&h.Votes), &h.Weight, &h.UpdateSlot)
 }
 
 func (h *PendingShardHeader) ByteLength(spec *common.Spec) uint64 {
-	return codec.ContainerLength(&h.Commitment, &h.Root, spec.Wrap(&h.Votes), &h.Weight, &h.UpdateSlot)
+	return codec.ContainerLength(&h.Attested, spec.Wrap(&h.Votes), &h.Weight, &h.UpdateSlot)
 }
 
 func (h *PendingShardHeader) FixedLength(spec *common.Spec) uint64 {
@@ -89,14 +82,12 @@ func (h *PendingShardHeader) FixedLength(spec *common.Spec) uint64 {
 }
 
 func (h *PendingShardHeader) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
-	return hFn.HashTreeRoot(&h.Commitment, &h.Root, spec.Wrap(&h.Votes), &h.Weight, &h.UpdateSlot)
+	return hFn.HashTreeRoot(&h.Attested, spec.Wrap(&h.Votes), &h.Weight, &h.UpdateSlot)
 }
 
 func (h *PendingShardHeader) View(spec *common.Spec) *PendingShardHeaderView {
-	r := RootView(h.Root)
 	psh, _ := AsPendingShardHeader(PendingShardHeaderType(spec).FromFields(
-		h.Commitment.View(),
-		&r,
+		h.Attested.View(),
 		h.Votes.View(spec),
 		Uint64View(h.Weight),
 		Uint64View(h.UpdateSlot)))

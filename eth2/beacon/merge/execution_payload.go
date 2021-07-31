@@ -35,13 +35,13 @@ func ProcessExecutionPayload(ctx context.Context, spec *common.Spec, state Execu
 			return fmt.Errorf("expected parent hash %s in execution payload, but got %s",
 				prevHash, executionPayload.ParentHash)
 		}
-		prevNumber, err := latestExecHeader.Number()
+		prevNumber, err := latestExecHeader.BlockNumber()
 		if err != nil {
 			return err
 		}
-		if executionPayload.Number != prevNumber+1 {
+		if executionPayload.BlockNumber != prevNumber+1 {
 			return fmt.Errorf("expected number %d in execution payload, but got %d",
-				prevNumber+1, executionPayload.Number)
+				prevNumber+1, executionPayload.BlockNumber)
 		}
 	}
 
@@ -62,10 +62,10 @@ func ProcessExecutionPayload(ctx context.Context, spec *common.Spec, state Execu
 
 	if success, err := engine.NewBlock(ctx, executionPayload); err != nil {
 		return fmt.Errorf("unexpected problem in execution engine when inserting block %s (height %d), err: %v",
-			executionPayload.BlockHash, executionPayload.Number, err)
+			executionPayload.BlockHash, executionPayload.BlockNumber, err)
 	} else if !success {
 		return fmt.Errorf("cannot process NewBlock in execution engine: %s (height %d)",
-			executionPayload.BlockHash, executionPayload.Number)
+			executionPayload.BlockHash, executionPayload.BlockNumber)
 	}
 
 	return state.SetLatestExecutionPayloadHeader(executionPayload.Header(spec))

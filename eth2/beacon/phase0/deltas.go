@@ -135,13 +135,8 @@ func AttestationRewardsAndPenalties(ctx context.Context, spec *common.Spec,
 	return res, nil
 }
 
-type BalancesBeaconState interface {
-	common.BeaconState
-	SetBalances(balances *RegistryBalancesView) error
-}
-
 func ProcessEpochRewardsAndPenalties(ctx context.Context, spec *common.Spec, epc *common.EpochsContext,
-	attesterData *EpochAttesterData, state BalancesBeaconState) error {
+	attesterData *EpochAttesterData, state common.BeaconState) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -160,13 +155,9 @@ func ProcessEpochRewardsAndPenalties(ctx context.Context, spec *common.Spec, epc
 	sum.Add(rewAndPenalties.Head)
 	sum.Add(rewAndPenalties.InclusionDelay)
 	sum.Add(rewAndPenalties.Inactivity)
-	balancesElements, err := common.ApplyDeltas(state, sum)
+	balances, err := common.ApplyDeltas(state, sum)
 	if err != nil {
 		return err
 	}
-	balancesView, err := AsRegistryBalances(RegistryBalancesType(spec).FromElements(balancesElements...))
-	if err != nil {
-		return err
-	}
-	return state.SetBalances(balancesView)
+	return state.SetBalances(balances)
 }

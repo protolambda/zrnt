@@ -98,7 +98,7 @@ func ProcessRandaoReveal(ctx context.Context, spec *common.Spec, epc *common.Epo
 	if err != nil {
 		return err
 	}
-	proposerPubkey, ok := epc.PubkeyCache.Pubkey(propIndex)
+	proposerPubkey, ok := epc.ValidatorPubkeyCache.Pubkey(propIndex)
 	if !ok {
 		return errors.New("could not find pubkey of proposer")
 	}

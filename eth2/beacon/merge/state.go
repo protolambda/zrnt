@@ -2,6 +2,7 @@ package merge
 
 import (
 	"bytes"
+	"github.com/protolambda/zrnt/eth2/beacon/altair"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/ztyp/codec"
@@ -29,14 +30,19 @@ type BeaconState struct {
 	Balances    phase0.Balances          `json:"balances" yaml:"balances"`
 	RandaoMixes phase0.RandaoMixes       `json:"randao_mixes" yaml:"randao_mixes"`
 	Slashings   phase0.SlashingsHistory  `json:"slashings" yaml:"slashings"`
-	// Attestations
-	PreviousEpochAttestations phase0.PendingAttestations `json:"previous_epoch_attestations" yaml:"previous_epoch_attestations"`
-	CurrentEpochAttestations  phase0.PendingAttestations `json:"current_epoch_attestations" yaml:"current_epoch_attestations"`
+	// Participation
+	PreviousEpochParticipation altair.ParticipationRegistry `json:"previous_epoch_participation" yaml:"previous_epoch_participation"`
+	CurrentEpochParticipation  altair.ParticipationRegistry `json:"current_epoch_participation" yaml:"current_epoch_participation"`
 	// Finality
 	JustificationBits           common.JustificationBits `json:"justification_bits" yaml:"justification_bits"`
 	PreviousJustifiedCheckpoint common.Checkpoint        `json:"previous_justified_checkpoint" yaml:"previous_justified_checkpoint"`
 	CurrentJustifiedCheckpoint  common.Checkpoint        `json:"current_justified_checkpoint" yaml:"current_justified_checkpoint"`
 	FinalizedCheckpoint         common.Checkpoint        `json:"finalized_checkpoint" yaml:"finalized_checkpoint"`
+	// Inactivity
+	InactivityScores altair.InactivityScores `json:"inactivity_scores" yaml:"inactivity_scores"`
+	// Light client sync committees
+	CurrentSyncCommittee common.SyncCommittee `json:"current_sync_committee" yaml:"current_sync_committee"`
+	NextSyncCommittee    common.SyncCommittee `json:"next_sync_committee" yaml:"next_sync_committee"`
 	// Execution-layer
 	LatestExecutionPayloadHeader common.ExecutionPayloadHeader `json:"latest_execution_payload_header" yaml:"latest_execution_payload_header"`
 }
@@ -48,10 +54,12 @@ func (v *BeaconState) Deserialize(spec *common.Spec, dr *codec.DecodingReader) e
 		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.DepositIndex,
 		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances),
 		spec.Wrap(&v.RandaoMixes), spec.Wrap(&v.Slashings),
-		spec.Wrap(&v.PreviousEpochAttestations), spec.Wrap(&v.CurrentEpochAttestations),
+		spec.Wrap(&v.PreviousEpochParticipation), spec.Wrap(&v.CurrentEpochParticipation),
 		&v.JustificationBits,
 		&v.PreviousJustifiedCheckpoint, &v.CurrentJustifiedCheckpoint,
 		&v.FinalizedCheckpoint,
+		spec.Wrap(&v.InactivityScores),
+		spec.Wrap(&v.CurrentSyncCommittee), spec.Wrap(&v.NextSyncCommittee),
 		&v.LatestExecutionPayloadHeader)
 }
 
@@ -62,10 +70,12 @@ func (v *BeaconState) Serialize(spec *common.Spec, w *codec.EncodingWriter) erro
 		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.DepositIndex,
 		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances),
 		spec.Wrap(&v.RandaoMixes), spec.Wrap(&v.Slashings),
-		spec.Wrap(&v.PreviousEpochAttestations), spec.Wrap(&v.CurrentEpochAttestations),
+		spec.Wrap(&v.PreviousEpochParticipation), spec.Wrap(&v.CurrentEpochParticipation),
 		&v.JustificationBits,
 		&v.PreviousJustifiedCheckpoint, &v.CurrentJustifiedCheckpoint,
 		&v.FinalizedCheckpoint,
+		spec.Wrap(&v.InactivityScores),
+		spec.Wrap(&v.CurrentSyncCommittee), spec.Wrap(&v.NextSyncCommittee),
 		&v.LatestExecutionPayloadHeader)
 }
 
@@ -76,10 +86,12 @@ func (v *BeaconState) ByteLength(spec *common.Spec) uint64 {
 		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.DepositIndex,
 		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances),
 		spec.Wrap(&v.RandaoMixes), spec.Wrap(&v.Slashings),
-		spec.Wrap(&v.PreviousEpochAttestations), spec.Wrap(&v.CurrentEpochAttestations),
+		spec.Wrap(&v.PreviousEpochParticipation), spec.Wrap(&v.CurrentEpochParticipation),
 		&v.JustificationBits,
 		&v.PreviousJustifiedCheckpoint, &v.CurrentJustifiedCheckpoint,
 		&v.FinalizedCheckpoint,
+		spec.Wrap(&v.InactivityScores),
+		spec.Wrap(&v.CurrentSyncCommittee), spec.Wrap(&v.NextSyncCommittee),
 		&v.LatestExecutionPayloadHeader)
 }
 
@@ -94,10 +106,12 @@ func (v *BeaconState) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Ro
 		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.DepositIndex,
 		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances),
 		spec.Wrap(&v.RandaoMixes), spec.Wrap(&v.Slashings),
-		spec.Wrap(&v.PreviousEpochAttestations), spec.Wrap(&v.CurrentEpochAttestations),
+		spec.Wrap(&v.PreviousEpochParticipation), spec.Wrap(&v.CurrentEpochParticipation),
 		&v.JustificationBits,
 		&v.PreviousJustifiedCheckpoint, &v.CurrentJustifiedCheckpoint,
 		&v.FinalizedCheckpoint,
+		spec.Wrap(&v.InactivityScores),
+		spec.Wrap(&v.CurrentSyncCommittee), spec.Wrap(&v.NextSyncCommittee),
 		&v.LatestExecutionPayloadHeader)
 }
 
@@ -119,12 +133,15 @@ const (
 	_stateBalances
 	_stateRandaoMixes
 	_stateSlashings
-	_statePreviousEpochAttestations
-	_stateCurrentEpochAttestations
+	_statePreviousEpochParticipation
+	_stateCurrentEpochParticipation
 	_stateJustificationBits
 	_statePreviousJustifiedCheckpoint
 	_stateCurrentJustifiedCheckpoint
 	_stateFinalizedCheckpoint
+	_inactivityScores
+	_currentSyncCommittee
+	_nextSyncCommittee
 	_latestExecutionPayloadHeader
 )
 
@@ -150,15 +167,20 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 		// Randomness
 		{"randao_mixes", phase0.RandaoMixesType(spec)},
 		// Slashings
-		{"slashings", phase0.SlashingsType(spec)}, // Per-epoch sums of slashed effective balances
-		// Attestations
-		{"previous_epoch_attestations", phase0.PendingAttestationsType(spec)},
-		{"current_epoch_attestations", phase0.PendingAttestationsType(spec)},
+		{"slashings", phase0.SlashingsType(spec)},
+		// Participation
+		{"previous_epoch_participation", altair.ParticipationRegistryType(spec)},
+		{"current_epoch_participation", altair.ParticipationRegistryType(spec)},
 		// Finality
-		{"justification_bits", common.JustificationBitsType},     // Bit set for every recent justified epoch
-		{"previous_justified_checkpoint", common.CheckpointType}, // Previous epoch snapshot
+		{"justification_bits", common.JustificationBitsType},
+		{"previous_justified_checkpoint", common.CheckpointType},
 		{"current_justified_checkpoint", common.CheckpointType},
 		{"finalized_checkpoint", common.CheckpointType},
+		// Inactivity
+		{"inactivity_scores", altair.InactivityScoresType(spec)},
+		// Sync
+		{"current_sync_committee", common.SyncCommitteeType(spec)},
+		{"next_sync_committee", common.SyncCommitteeType(spec)},
 		// Execution-layer
 		{"latest_execution_payload_header", common.ExecutionPayloadHeaderType},
 	})
@@ -275,12 +297,17 @@ func (state *BeaconStateView) Validators() (common.ValidatorRegistry, error) {
 	return phase0.AsValidatorsRegistry(state.Get(_stateValidators))
 }
 
-func (state *BeaconStateView) Balances() (common.Balances, error) {
+func (state *BeaconStateView) Balances() (common.BalancesRegistry, error) {
 	return phase0.AsRegistryBalances(state.Get(_stateBalances))
 }
 
-func (state *BeaconStateView) SetBalances(balances *phase0.RegistryBalancesView) error {
-	return state.Set(_stateBalances, balances)
+func (state *BeaconStateView) SetBalances(balances []common.Gwei) error {
+	typ := state.Fields[_stateBalances].Type.(*BasicListTypeDef)
+	balancesView, err := phase0.Balances(balances).View(typ.ListLimit)
+	if err != nil {
+		return err
+	}
+	return state.Set(_stateBalances, balancesView)
 }
 
 func (state *BeaconStateView) AddValidator(spec *common.Spec, pub common.BLSPubkey, withdrawalCreds common.Root, balance common.Gwei) error {
@@ -304,13 +331,36 @@ func (state *BeaconStateView) AddValidator(spec *common.Spec, pub common.BLSPubk
 	if err := validators.Append(validatorRaw.View()); err != nil {
 		return err
 	}
-	bals, err := phase0.AsRegistryBalances(state.Get(_stateBalances))
+	bals, err := state.Balances()
 	if err != nil {
 		return err
 	}
-	if err := bals.Append(Uint64View(balance)); err != nil {
+	if err := bals.AppendBalance(balance); err != nil {
 		return err
 	}
+	// New in Altair: init participation
+	prevPart, err := state.PreviousEpochParticipation()
+	if err != nil {
+		return err
+	}
+	if err := prevPart.Append(Uint8View(altair.ParticipationFlags(0))); err != nil {
+		return err
+	}
+	currPart, err := state.CurrentEpochParticipation()
+	if err != nil {
+		return err
+	}
+	if err := currPart.Append(Uint8View(altair.ParticipationFlags(0))); err != nil {
+		return err
+	}
+	inActivityScores, err := state.InactivityScores()
+	if err != nil {
+		return err
+	}
+	if err := inActivityScores.Append(Uint8View(0)); err != nil {
+		return err
+	}
+	// New in Altair: init inactivity score
 	return nil
 }
 
@@ -330,12 +380,12 @@ func (state *BeaconStateView) Slashings() (common.Slashings, error) {
 	return phase0.AsSlashings(state.Get(_stateSlashings))
 }
 
-func (state *BeaconStateView) PreviousEpochAttestations() (*phase0.PendingAttestationsView, error) {
-	return phase0.AsPendingAttestations(state.Get(_statePreviousEpochAttestations))
+func (state *BeaconStateView) PreviousEpochParticipation() (*altair.ParticipationRegistryView, error) {
+	return altair.AsParticipationRegistry(state.Get(_statePreviousEpochParticipation))
 }
 
-func (state *BeaconStateView) CurrentEpochAttestations() (*phase0.PendingAttestationsView, error) {
-	return phase0.AsPendingAttestations(state.Get(_stateCurrentEpochAttestations))
+func (state *BeaconStateView) CurrentEpochParticipation() (*altair.ParticipationRegistryView, error) {
+	return altair.AsParticipationRegistry(state.Get(_stateCurrentEpochParticipation))
 }
 
 func (state *BeaconStateView) JustificationBits() (common.JustificationBits, error) {
@@ -402,6 +452,37 @@ func (state *BeaconStateView) SetFinalizedCheckpoint(c common.Checkpoint) error 
 	return v.Set(&c)
 }
 
+func (state *BeaconStateView) InactivityScores() (*altair.InactivityScoresView, error) {
+	return altair.AsInactivityScores(state.Get(_inactivityScores))
+}
+
+func (state *BeaconStateView) CurrentSyncCommittee() (*common.SyncCommitteeView, error) {
+	return common.AsSyncCommittee(state.Get(_currentSyncCommittee))
+}
+
+func (state *BeaconStateView) SetCurrentSyncCommittee(v *common.SyncCommitteeView) error {
+	return state.Set(_currentSyncCommittee, v)
+}
+
+func (state *BeaconStateView) NextSyncCommittee() (*common.SyncCommitteeView, error) {
+	return common.AsSyncCommittee(state.Get(_nextSyncCommittee))
+}
+
+func (state *BeaconStateView) SetNextSyncCommittee(v *common.SyncCommitteeView) error {
+	return state.Set(_nextSyncCommittee, v)
+}
+
+func (state *BeaconStateView) RotateSyncCommittee(next *common.SyncCommitteeView) error {
+	v, err := state.Get(_nextSyncCommittee)
+	if err != nil {
+		return err
+	}
+	if err := state.Set(_currentSyncCommittee, v); err != nil {
+		return err
+	}
+	return state.Set(_nextSyncCommittee, next)
+}
+
 func (state *BeaconStateView) LatestExecutionPayloadHeader() (*common.ExecutionPayloadHeaderView, error) {
 	return common.AsExecutionPayloadHeader(state.Get(_latestExecutionPayloadHeader))
 }
@@ -412,10 +493,10 @@ func (state *BeaconStateView) SetLatestExecutionPayloadHeader(h *common.Executio
 
 func (state *BeaconStateView) ForkSettings(spec *common.Spec) *common.ForkSettings {
 	return &common.ForkSettings{
-		MinSlashingPenaltyQuotient:     spec.MIN_SLASHING_PENALTY_QUOTIENT,
-		ProportionalSlashingMultiplier: spec.PROPORTIONAL_SLASHING_MULTIPLIER,
+		MinSlashingPenaltyQuotient:     spec.MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR,
+		ProportionalSlashingMultiplier: spec.PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR,
 		CalcProposerShare: func(whistleblowerReward common.Gwei) common.Gwei {
-			return whistleblowerReward / common.Gwei(spec.PROPOSER_REWARD_QUOTIENT)
+			return whistleblowerReward * altair.PROPOSER_WEIGHT / altair.WEIGHT_DENOMINATOR
 		},
 	}
 }

@@ -59,18 +59,21 @@ type ShardBlobBody struct {
 	Data ShardData `json:"data" yaml:"data"`
 	// Latest block root of the Beacon Chain, before shard_blob.slot
 	BeaconBlockRoot common.Root `json:"beacon_block_root" yaml:"beacon_block_root"`
+	// fee payment fields (EIP 1559 like)
+	MaxPriorityFeePerSample common.Gwei `json:"max_priority_fee_per_sample" yaml:"max_priority_fee_per_sample"`
+	MaxFeePerSample         common.Gwei `json:"max_fee_per_sample" yaml:"max_fee_per_sample"`
 }
 
 func (b *ShardBlobBody) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
-	return dr.FixedLenContainer(&b.Commitment, &b.DegreeProof, spec.Wrap(&b.Data), &b.BeaconBlockRoot)
+	return dr.FixedLenContainer(&b.Commitment, &b.DegreeProof, spec.Wrap(&b.Data), &b.BeaconBlockRoot, &b.MaxPriorityFeePerSample, &b.MaxFeePerSample)
 }
 
 func (b *ShardBlobBody) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
-	return w.FixedLenContainer(&b.Commitment, &b.DegreeProof, spec.Wrap(&b.Data), &b.BeaconBlockRoot)
+	return w.FixedLenContainer(&b.Commitment, &b.DegreeProof, spec.Wrap(&b.Data), &b.BeaconBlockRoot, &b.MaxPriorityFeePerSample, &b.MaxFeePerSample)
 }
 
 func (b *ShardBlobBody) ByteLength(spec *common.Spec) uint64 {
-	return codec.ContainerLength(&b.Commitment, &b.DegreeProof, spec.Wrap(&b.Data), &b.BeaconBlockRoot)
+	return codec.ContainerLength(&b.Commitment, &b.DegreeProof, spec.Wrap(&b.Data), &b.BeaconBlockRoot, &b.MaxPriorityFeePerSample, &b.MaxFeePerSample)
 }
 
 func (b *ShardBlobBody) FixedLength(spec *common.Spec) uint64 {
@@ -79,5 +82,5 @@ func (b *ShardBlobBody) FixedLength(spec *common.Spec) uint64 {
 }
 
 func (b *ShardBlobBody) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
-	return hFn.HashTreeRoot(&b.Commitment, &b.DegreeProof, spec.Wrap(&b.Data), &b.BeaconBlockRoot)
+	return hFn.HashTreeRoot(&b.Commitment, &b.DegreeProof, spec.Wrap(&b.Data), &b.BeaconBlockRoot, &b.MaxPriorityFeePerSample, &b.MaxFeePerSample)
 }

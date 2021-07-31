@@ -164,7 +164,7 @@ func ValidateVoluntaryExit(spec *common.Spec, epc *common.EpochsContext, state c
 	if currentEpoch < registeredActivationEpoch+spec.SHARD_COMMITTEE_PERIOD {
 		return errors.New("exit is too soon")
 	}
-	pubkey, ok := epc.PubkeyCache.Pubkey(exit.ValidatorIndex)
+	pubkey, ok := epc.ValidatorPubkeyCache.Pubkey(exit.ValidatorIndex)
 	if !ok {
 		return errors.New("could not find index of exiting validator")
 	}

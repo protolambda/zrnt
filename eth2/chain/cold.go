@@ -398,7 +398,7 @@ func (f *FinalizedChain) entryGetEpochsContext(ctx context.Context, step Step) (
 	f.RLock()
 	defer f.RUnlock()
 	epc := &common.EpochsContext{
-		PubkeyCache: f.PubkeyCache,
+		ValidatorPubkeyCache: f.PubkeyCache,
 	}
 	// We do not store shuffling for older epochs
 	// TODO: maybe store it after all, for archive node functionality?

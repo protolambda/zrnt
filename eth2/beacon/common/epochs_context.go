@@ -13,9 +13,11 @@ type IndexedSyncCommittee struct {
 type EpochsContext struct {
 	Spec *Spec
 
-	// PubkeyCache may be replaced when a new forked-out cache takes over to process an alternative Eth1 deposit chain.
-	PubkeyCache *PubkeyCache
-	Proposers   *ProposersEpoch
+	// ValidatorPubkeyCache may be replaced when a new forked-out cache takes over to process an alternative Eth1 deposit chain.
+	ValidatorPubkeyCache *PubkeyCache
+	Proposers            *ProposersEpoch
+
+	BuilderPubkeyCache *BuilderPubkeyCache
 
 	PreviousEpoch *ShufflingEpoch
 	CurrentEpoch  *ShufflingEpoch
@@ -45,9 +47,21 @@ func NewEpochsContext(spec *Spec, state BeaconState) (*EpochsContext, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// nil if no builder data in the state (pre-sharding)
+	var bpc *BuilderPubkeyCache
+	if builderState, ok := state.(BuilderBeaconState); ok {
+		builders, err := builderState.BlobBuilders()
+		if err != nil {
+			return nil, err
+		}
+		bpc, err = NewBuilderPubkeyCache(builders)
+	}
+
 	epc := &EpochsContext{
-		Spec:        spec,
-		PubkeyCache: pc,
+		Spec:                 spec,
+		ValidatorPubkeyCache: pc,
+		BuilderPubkeyCache:   bpc,
 	}
 	if err := epc.LoadShuffling(state); err != nil {
 		return nil, err
@@ -236,12 +250,12 @@ func (epc *EpochsContext) hydrateSyncCommittee(view *SyncCommitteeView) (*Indexe
 	indices := make([]ValidatorIndex, len(pubs), len(pubs))
 	cachedPubs := make([]*CachedPubkey, len(pubs), len(pubs))
 	for i := 0; i < len(indices); i++ {
-		idx, ok := epc.PubkeyCache.ValidatorIndex(pubs[i])
+		idx, ok := epc.ValidatorPubkeyCache.ValidatorIndex(pubs[i])
 		if !ok {
 			return nil, fmt.Errorf("missing validator index for pubkey %d (%s) of sync committee", i, pubs[i])
 		}
 		indices[i] = idx
-		cachedPubkey, ok := epc.PubkeyCache.Pubkey(idx)
+		cachedPubkey, ok := epc.ValidatorPubkeyCache.Pubkey(idx)
 		if !ok {
 			return nil, fmt.Errorf("pubkey cache is inconsistent, sync committee member with validator index %d has no cached pubkey", idx)
 		}
@@ -302,16 +316,33 @@ func (epc *EpochsContext) GetBeaconProposer(slot Slot) (ValidatorIndex, error) {
 }
 
 func (epc *EpochsContext) GetShardProposer(slot Slot, shard Shard) (ValidatorIndex, error) {
-	// TODO
-	return 0, nil
+	return epc.Proposers.GetShardProposer(slot, shard)
 }
 
 func (epc *EpochsContext) StartShard(slot Slot) (Shard, error) {
-	// TODO
-	return 0, nil
+	epoch := epc.Spec.SlotToEpoch(slot)
+	activeShards := epc.Proposers.ActiveShards
+	if activeShards == 0 {
+		return 0, nil
+	}
+	committeesPerSlot, err := epc.GetCommitteeCountPerSlot(epoch)
+	if err != nil {
+		return 0, err
+	}
+	return Shard((committeesPerSlot * uint64(slot)) % activeShards), nil
 }
 
-func (epc *EpochsContext) ComputeShardFromCommitteeIndex(index CommitteeIndex) (Shard, error) {
-	// TODO
-	return 0, nil
+func (epc *EpochsContext) ComputeShardFromCommitteeIndex(slot Slot, index CommitteeIndex) (Shard, error) {
+	activeShards := epc.Proposers.ActiveShards
+	if activeShards == 0 {
+		return 0, nil
+	}
+	if uint64(index) >= activeShards {
+		return 0, fmt.Errorf("committee index %d cannot be higher than active shards count %d", index, activeShards)
+	}
+	start, err := epc.StartShard(slot)
+	if err != nil {
+		return 0, err
+	}
+	return Shard((uint64(index) + uint64(start)) % activeShards), nil
 }

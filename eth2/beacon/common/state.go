@@ -52,9 +52,31 @@ type ValidatorRegistry interface {
 	HashTreeRoot(fn tree.HashFn) Root
 }
 
-type Balances interface {
+type BalancesRegistry interface {
 	GetBalance(index ValidatorIndex) (Gwei, error)
 	SetBalance(index ValidatorIndex, bal Gwei) error
+	AppendBalance(bal Gwei) error
+	Iter() (next func() (bal Gwei, ok bool, err error))
+	AllBalances() ([]Gwei, error)
+	Length() (uint64, error)
+}
+
+type BuilderRegistry interface {
+	BuilderCount() (uint64, error)
+	Builder(index BuilderIndex) (Builder, error)
+	Iter() (next func() (val Builder, ok bool, err error))
+	IsValidIndex(index BuilderIndex) (valid bool, err error)
+	HashTreeRoot(fn tree.HashFn) Root
+}
+
+type Builder interface {
+	Pubkey() (BLSPubkey, error)
+}
+
+type BuilderBalancesRegistry interface {
+	GetBalance(index BuilderIndex) (Gwei, error)
+	SetBalance(index BuilderIndex, bal Gwei) error
+	AppendBalance(bal Gwei) error
 	Iter() (next func() (bal Gwei, ok bool, err error))
 	AllBalances() ([]Gwei, error)
 	Length() (uint64, error)
@@ -106,7 +128,9 @@ type BeaconState interface {
 	IncrementDepositIndex() error
 
 	Validators() (ValidatorRegistry, error)
-	Balances() (Balances, error)
+
+	Balances() (BalancesRegistry, error)
+	SetBalances(balances []Gwei) error
 
 	AddValidator(spec *Spec, pub BLSPubkey, withdrawalCreds Root, balance Gwei) error
 
@@ -151,4 +175,10 @@ type SyncCommitteeBeaconState interface {
 	SetCurrentSyncCommittee(v *SyncCommitteeView) error
 	SetNextSyncCommittee(v *SyncCommitteeView) error
 	RotateSyncCommittee(next *SyncCommitteeView) error
+}
+
+type BuilderBeaconState interface {
+	BeaconState
+	BlobBuilders() (BuilderRegistry, error)
+	BlobBuilderBalances() (BuilderBalancesRegistry, error)
 }

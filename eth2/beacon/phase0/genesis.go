@@ -65,8 +65,8 @@ func GenesisFromEth1(spec *common.Spec, eth1BlockHash common.Root, time common.T
 	}
 	// Create mostly empty epochs context. Just need the pubkey cache first
 	epc := &common.EpochsContext{
-		Spec:        spec,
-		PubkeyCache: pc,
+		Spec:                 spec,
+		ValidatorPubkeyCache: pc,
 	}
 
 	depRootsView := NewDepositRootsView()

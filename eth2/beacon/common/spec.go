@@ -4,6 +4,7 @@ package common
 
 import (
 	"encoding/json"
+	kbls "github.com/kilic/bls12-381"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	"gopkg.in/yaml.v3"
@@ -14,7 +15,7 @@ const RANDOM_SUBNETS_PER_VALIDATOR = 1
 const EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION = 256
 const BLS_WITHDRAWAL_PREFIX = 0
 const SYNC_COMMITTEE_SUBNET_COUNT = 4
-const TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE = 4
+const TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE = 16
 
 // Phase0
 var DOMAIN_BEACON_PROPOSER = BLSDomainType{0x00, 0x00, 0x00, 0x00}
@@ -31,8 +32,7 @@ var DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF = BLSDomainType{0x08, 0x00, 0x00, 0x00
 var DOMAIN_CONTRIBUTION_AND_PROOF = BLSDomainType{0x09, 0x00, 0x00, 0x00}
 
 // Sharding
-var DOMAIN_SHARD_PROPOSER = BLSDomainType{0x80, 0x00, 0x00, 0x00}
-var DOMAIN_SHARD_COMMITTEE = BLSDomainType{0x81, 0x00, 0x00, 0x00}
+var DOMAIN_SHARD_BLOB = BLSDomainType{0x80, 0x00, 0x00, 0x00}
 
 type Phase0Preset struct {
 	// Misc.
@@ -104,20 +104,21 @@ type MergePreset struct {
 
 type ShardingPreset struct {
 	// Misc.
-	MAX_SHARDS                      uint64 `yaml:"MAX_SHARDS" json:"MAX_SHARDS"`
-	INITIAL_ACTIVE_SHARDS           uint64 `yaml:"INITIAL_ACTIVE_SHARDS" json:"INITIAL_ACTIVE_SHARDS"`
-	GASPRICE_ADJUSTMENT_COEFFICIENT uint64 `yaml:"GASPRICE_ADJUSTMENT_COEFFICIENT" json:"GASPRICE_ADJUSTMENT_COEFFICIENT"`
-	MAX_SHARD_PROPOSER_SLASHINGS    uint64 `yaml:"MAX_SHARD_PROPOSER_SLASHINGS" json:"MAX_SHARD_PROPOSER_SLASHINGS"`
+	MAX_SHARDS                          uint64 `yaml:"MAX_SHARDS" json:"MAX_SHARDS"`
+	INITIAL_ACTIVE_SHARDS               uint64 `yaml:"INITIAL_ACTIVE_SHARDS" json:"INITIAL_ACTIVE_SHARDS"`
+	SAMPLE_PRICE_ADJUSTMENT_COEFFICIENT uint64 `yaml:"SAMPLE_PRICE_ADJUSTMENT_COEFFICIENT" json:"SAMPLE_PRICE_ADJUSTMENT_COEFFICIENT"`
+	MAX_SHARD_PROPOSER_SLASHINGS        uint64 `yaml:"MAX_SHARD_PROPOSER_SLASHINGS" json:"MAX_SHARD_PROPOSER_SLASHINGS"`
+	MAX_SHARD_HEADERS_PER_SHARD         uint64 `yaml:"MAX_SHARD_HEADERS_PER_SHARD" json:"MAX_SHARD_HEADERS_PER_SHARD"`
+	SHARD_STATE_MEMORY_SLOTS            Slot   `yaml:"SHARD_STATE_MEMORY_SLOTS" json:"SHARD_STATE_MEMORY_SLOTS"`
+	BLOB_BUILDER_REGISTRY_LIMIT         uint64 `yaml:"BLOB_BUILDER_REGISTRY_LIMIT" json:"BLOB_BUILDER_REGISTRY_LIMIT"`
 
-	// Shard block configs
-	MAX_SHARD_HEADERS_PER_SHARD uint64 `yaml:"MAX_SHARD_HEADERS_PER_SHARD" json:"MAX_SHARD_HEADERS_PER_SHARD"`
-	SHARD_STATE_MEMORY_SLOTS    Slot   `yaml:"SHARD_STATE_MEMORY_SLOTS" json:"SHARD_STATE_MEMORY_SLOTS"`
-	MAX_SAMPLES_PER_BLOCK       uint64 `yaml:"MAX_SAMPLES_PER_BLOCK" json:"MAX_SAMPLES_PER_BLOCK"`
-	TARGET_SAMPLES_PER_BLOCK    uint64 `yaml:"TARGET_SAMPLES_PER_BLOCK" json:"TARGET_SAMPLES_PER_BLOCK"`
+	// Shard blob samples
+	MAX_SAMPLES_PER_BLOCK    uint64 `yaml:"MAX_SAMPLES_PER_BLOCK" json:"MAX_SAMPLES_PER_BLOCK"`
+	TARGET_SAMPLES_PER_BLOCK uint64 `yaml:"TARGET_SAMPLES_PER_BLOCK" json:"TARGET_SAMPLES_PER_BLOCK"`
 
 	// Gwei values
-	MAX_GASPRICE Gwei `yaml:"MAX_GASPRICE" json:"MAX_GASPRICE"`
-	MIN_GASPRICE Gwei `yaml:"MIN_GASPRICE" json:"MIN_GASPRICE"`
+	MAX_SAMPLE_PRICE Gwei `yaml:"MAX_SAMPLE_PRICE" json:"MAX_SAMPLE_PRICE"`
+	MIN_SAMPLE_PRICE Gwei `yaml:"MIN_SAMPLE_PRICE" json:"MIN_SAMPLE_PRICE"`
 }
 
 type Config struct {
@@ -241,10 +242,27 @@ type Spec struct {
 	MergePreset    `yaml:",inline"`
 	ShardingPreset `yaml:",inline"`
 	Config         `yaml:",inline"`
-	//TrustedSetup   `yaml:",inline"`
+	Setup          `yaml:",inline"`
 
 	// Experimental, for merge purposes
 	ExecutionEngine `yaml:"-"`
+}
+
+type G1Setup struct {
+	Serialized [][48]byte
+	Points     []kbls.PointG1
+}
+
+// TODO: serialize/deserialize json and yaml
+
+type G2Setup struct {
+	Serialized [][96]byte
+	Points     []kbls.PointG2
+}
+
+type Setup struct {
+	G1_SETUP G1Setup `json:"G1_SETUP" yaml:"G1_SETUP"`
+	G2_SETUP G2Setup `json:"G2_SETUP" yaml:"G2_SETUP"`
 }
 
 // Wraps the object to parametrize with given spec. JSON and YAML functionality is proxied to the inner value.
@@ -270,27 +288,27 @@ func (spec *Spec) ActiveShardCount(epoch Epoch) uint64 {
 	return spec.INITIAL_ACTIVE_SHARDS
 }
 
-func (spec *Spec) ComputeUpdatedGasPrice(prevGasPrice Gwei, shardBlockLength uint64, adjustmentQuotient uint64) Gwei {
+func (spec *Spec) ComputeUpdatedSamplePrice(prevSamplePrice Gwei, shardBlockLength uint64, adjustmentQuotient uint64) Gwei {
 	if shardBlockLength > spec.TARGET_SAMPLES_PER_BLOCK {
-		delta := Gwei(uint64(prevGasPrice) * (shardBlockLength - spec.TARGET_SAMPLES_PER_BLOCK) /
+		delta := Gwei(uint64(prevSamplePrice) * (shardBlockLength - spec.TARGET_SAMPLES_PER_BLOCK) /
 			spec.TARGET_SAMPLES_PER_BLOCK / adjustmentQuotient)
 		if delta < 1 {
 			delta = 1
 		}
-		out := prevGasPrice + delta
-		if out > spec.MAX_GASPRICE {
-			out = spec.MAX_GASPRICE
+		out := prevSamplePrice + delta
+		if out > spec.MAX_SAMPLE_PRICE {
+			out = spec.MAX_SAMPLE_PRICE
 		}
 		return out
 	} else {
-		delta := Gwei(uint64(prevGasPrice) * (spec.TARGET_SAMPLES_PER_BLOCK - shardBlockLength) /
+		delta := Gwei(uint64(prevSamplePrice) * (spec.TARGET_SAMPLES_PER_BLOCK - shardBlockLength) /
 			spec.TARGET_SAMPLES_PER_BLOCK / adjustmentQuotient)
 		if delta < 1 {
 			delta = 1
 		}
-		out := spec.MIN_GASPRICE + delta
-		if out < prevGasPrice {
-			out = prevGasPrice
+		out := spec.MIN_SAMPLE_PRICE + delta
+		if out < prevSamplePrice {
+			out = prevSamplePrice
 		}
 		out -= delta
 		return out

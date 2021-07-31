@@ -61,7 +61,7 @@ func (v *InactivityScoresView) SetScore(index common.ValidatorIndex, score uint6
 	return v.Set(uint64(index), Uint64View(score))
 }
 
-func ProcessInactivityUpdates(ctx context.Context, spec *common.Spec, attesterData *EpochAttesterData, state *BeaconStateView) error {
+func ProcessInactivityUpdates(ctx context.Context, spec *common.Spec, attesterData *EpochAttesterData, state AltairLikeBeaconState) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}

@@ -135,7 +135,7 @@ func PostSlotTransition(ctx context.Context, spec *Spec, epc *EpochsContext, sta
 		if err != nil {
 			return err
 		}
-		pub, ok := epc.PubkeyCache.Pubkey(proposer)
+		pub, ok := epc.ValidatorPubkeyCache.Pubkey(proposer)
 		if !ok {
 			return fmt.Errorf("unknown pubkey for proposer %d", proposer)
 		}

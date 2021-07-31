@@ -77,7 +77,7 @@ func TestJustificationAndFinalization(t *testing.T) {
 					PrevEpochUnslashedTargetStake: attesterData.PrevEpochUnslashedStake.TargetStake,
 					CurrEpochUnslashedTargetStake: attesterData.CurrEpochUnslashedTargetStake,
 				}
-			} else if s, ok := state.(*altair.BeaconStateView); ok {
+			} else if s, ok := state.(altair.AltairLikeBeaconState); ok {
 				attesterData, err := altair.ComputeEpochAttesterData(context.Background(), spec, epc, flats, s)
 				if err != nil {
 					return err
@@ -96,7 +96,7 @@ func TestJustificationAndFinalization(t *testing.T) {
 }
 
 func TestParticipationRecordUpdates(t *testing.T) {
-	test_util.RunTransitionTest(t, []test_util.ForkName{"phase0", "merge"}, "epoch_processing", "participation_record_updates",
+	test_util.RunTransitionTest(t, []test_util.ForkName{"phase0"}, "epoch_processing", "participation_record_updates",
 		NewEpochTest(func(spec *common.Spec, state common.BeaconState, epc *common.EpochsContext, flats []common.FlatValidator) error {
 			if s, ok := state.(phase0.Phase0PendingAttestationsBeaconState); ok {
 				return phase0.ProcessParticipationRecordUpdates(context.Background(), spec, epc, s)
@@ -107,9 +107,9 @@ func TestParticipationRecordUpdates(t *testing.T) {
 }
 
 func TestParticipationFlagUpdates(t *testing.T) {
-	test_util.RunTransitionTest(t, []test_util.ForkName{"altair"}, "epoch_processing", "participation_flag_updates",
+	test_util.RunTransitionTest(t, []test_util.ForkName{"altair", "merge"}, "epoch_processing", "participation_flag_updates",
 		NewEpochTest(func(spec *common.Spec, state common.BeaconState, epc *common.EpochsContext, flats []common.FlatValidator) error {
-			if s, ok := state.(*altair.BeaconStateView); ok {
+			if s, ok := state.(altair.AltairLikeBeaconState); ok {
 				return altair.ProcessParticipationFlagUpdates(context.Background(), spec, s)
 			} else {
 				return fmt.Errorf("unrecognized state type: %T", state)
@@ -131,21 +131,16 @@ func TestRegistryUpdates(t *testing.T) {
 		}))
 }
 
-type phase0LikeRewards interface {
-	phase0.Phase0PendingAttestationsBeaconState
-	phase0.BalancesBeaconState
-}
-
 func TestRewardsPenalties(t *testing.T) {
 	test_util.RunTransitionTest(t, test_util.AllForks, "epoch_processing", "rewards_and_penalties",
 		NewEpochTest(func(spec *common.Spec, state common.BeaconState, epc *common.EpochsContext, flats []common.FlatValidator) error {
-			if s, ok := state.(phase0LikeRewards); ok {
+			if s, ok := state.(phase0.Phase0PendingAttestationsBeaconState); ok {
 				attesterData, err := phase0.ComputeEpochAttesterData(context.Background(), spec, epc, flats, s)
 				if err != nil {
 					return err
 				}
 				return phase0.ProcessEpochRewardsAndPenalties(context.Background(), spec, epc, attesterData, s)
-			} else if s, ok := state.(*altair.BeaconStateView); ok {
+			} else if s, ok := state.(altair.AltairLikeBeaconState); ok {
 				attesterData, err := altair.ComputeEpochAttesterData(context.Background(), spec, epc, flats, s)
 				if err != nil {
 					return err
@@ -172,7 +167,7 @@ func TestSlashingsReset(t *testing.T) {
 }
 
 func TestSyncCommitteeUpdates(t *testing.T) {
-	test_util.RunTransitionTest(t, []test_util.ForkName{"altair"}, "epoch_processing", "sync_committee_updates",
+	test_util.RunTransitionTest(t, []test_util.ForkName{"altair", "merge"}, "epoch_processing", "sync_committee_updates",
 		NewEpochTest(func(spec *common.Spec, state common.BeaconState, epc *common.EpochsContext, flats []common.FlatValidator) error {
 			if s, ok := state.(common.SyncCommitteeBeaconState); ok {
 				return altair.ProcessSyncCommitteeUpdates(context.Background(), spec, epc, s)

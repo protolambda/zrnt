@@ -9,7 +9,7 @@ import (
 	"github.com/protolambda/zrnt/eth2/util/math"
 )
 
-func ProcessAttestations(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView, ops []phase0.Attestation) error {
+func ProcessAttestations(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state AltairLikeBeaconState, ops []phase0.Attestation) error {
 	for i := range ops {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -21,7 +21,7 @@ func ProcessAttestations(ctx context.Context, spec *common.Spec, epc *common.Epo
 	return nil
 }
 
-func ProcessAttestation(spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView, attestation *phase0.Attestation) error {
+func ProcessAttestation(spec *common.Spec, epc *common.EpochsContext, state AltairLikeBeaconState, attestation *phase0.Attestation) error {
 	data := &attestation.Data
 
 	currentSlot, err := state.Slot()
@@ -133,7 +133,7 @@ func ProcessAttestation(spec *common.Spec, epc *common.EpochsContext, state *Bea
 }
 
 func GetApplicableAttestationParticipationFlags(
-	spec *common.Spec, state *BeaconStateView,
+	spec *common.Spec, state AltairLikeBeaconState,
 	data *phase0.AttestationData, inclusionDelay common.Slot) (out ParticipationFlags, err error) {
 
 	currentSlot, err := state.Slot()

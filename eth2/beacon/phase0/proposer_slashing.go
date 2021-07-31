@@ -143,7 +143,7 @@ func ValidateProposerSlashing(spec *common.Spec, epc *common.EpochsContext, stat
 	if err != nil {
 		return err
 	}
-	pubkey, ok := epc.PubkeyCache.Pubkey(proposerIndex)
+	pubkey, ok := epc.ValidatorPubkeyCache.Pubkey(proposerIndex)
 	if !ok {
 		return errors.New("could not find pubkey of proposer")
 	}

@@ -253,7 +253,7 @@ func ProcessShardHeader(spec *common.Spec, epc *common.EpochsContext, state *Bea
 	}
 
 	// Verify builder and proposer aggregate signature
-	dom, err := common.GetDomain(state, common.DOMAIN_SHARD_PROPOSER, headerEpoch)
+	dom, err := common.GetDomain(state, common.DOMAIN_SHARD_BLOB, headerEpoch)
 	if err != nil {
 		return err
 	}

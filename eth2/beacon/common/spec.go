@@ -32,8 +32,7 @@ var DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF = BLSDomainType{0x08, 0x00, 0x00, 0x00
 var DOMAIN_CONTRIBUTION_AND_PROOF = BLSDomainType{0x09, 0x00, 0x00, 0x00}
 
 // Sharding
-var DOMAIN_SHARD_PROPOSER = BLSDomainType{0x80, 0x00, 0x00, 0x00}
-var DOMAIN_SHARD_COMMITTEE = BLSDomainType{0x81, 0x00, 0x00, 0x00}
+var DOMAIN_SHARD_BLOB = BLSDomainType{0x80, 0x00, 0x00, 0x00}
 
 type Phase0Preset struct {
 	// Misc.
@@ -289,27 +288,27 @@ func (spec *Spec) ActiveShardCount(epoch Epoch) uint64 {
 	return spec.INITIAL_ACTIVE_SHARDS
 }
 
-func (spec *Spec) ComputeUpdatedGasPrice(prevGasPrice Gwei, shardBlockLength uint64, adjustmentQuotient uint64) Gwei {
+func (spec *Spec) ComputeUpdatedSamplePrice(prevSamplePrice Gwei, shardBlockLength uint64, adjustmentQuotient uint64) Gwei {
 	if shardBlockLength > spec.TARGET_SAMPLES_PER_BLOCK {
-		delta := Gwei(uint64(prevGasPrice) * (shardBlockLength - spec.TARGET_SAMPLES_PER_BLOCK) /
+		delta := Gwei(uint64(prevSamplePrice) * (shardBlockLength - spec.TARGET_SAMPLES_PER_BLOCK) /
 			spec.TARGET_SAMPLES_PER_BLOCK / adjustmentQuotient)
 		if delta < 1 {
 			delta = 1
 		}
-		out := prevGasPrice + delta
+		out := prevSamplePrice + delta
 		if out > spec.MAX_SAMPLE_PRICE {
 			out = spec.MAX_SAMPLE_PRICE
 		}
 		return out
 	} else {
-		delta := Gwei(uint64(prevGasPrice) * (spec.TARGET_SAMPLES_PER_BLOCK - shardBlockLength) /
+		delta := Gwei(uint64(prevSamplePrice) * (spec.TARGET_SAMPLES_PER_BLOCK - shardBlockLength) /
 			spec.TARGET_SAMPLES_PER_BLOCK / adjustmentQuotient)
 		if delta < 1 {
 			delta = 1
 		}
 		out := spec.MIN_SAMPLE_PRICE + delta
-		if out < prevGasPrice {
-			out = prevGasPrice
+		if out < prevSamplePrice {
+			out = prevSamplePrice
 		}
 		out -= delta
 		return out

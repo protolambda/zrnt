@@ -12,14 +12,38 @@ type ProposersEpoch struct {
 	Epoch Epoch
 	// Proposers is a slice of SLOTS_PER_EPOCH proposer indices for the epoch
 	Proposers []ValidatorIndex
+
+	// ShardProposers is a slice of SLOTS_PER_EPOCH slices, each slice committees-per-slot long
+	ShardProposers    [][]ValidatorIndex
+	CommitteesPerSlot uint64
 }
 
 func (epc *ProposersEpoch) GetBeaconProposer(slot Slot) (ValidatorIndex, error) {
 	epoch := epc.Spec.SlotToEpoch(slot)
 	if epoch != epc.Epoch {
-		return 0, fmt.Errorf("expected epoch %d for proposer lookup, but lookup was at slot %d (epoch %d)", epc.Epoch, slot, epoch)
+		return 0, fmt.Errorf("expected epoch %d for beacon proposer lookup, but lookup was at slot %d (epoch %d)", epc.Epoch, slot, epoch)
 	}
 	return epc.Proposers[slot%epc.Spec.SLOTS_PER_EPOCH], nil
+}
+
+func (epc *ProposersEpoch) GetShardProposer(slot Slot, shard Shard) (ValidatorIndex, error) {
+	epoch := epc.Spec.SlotToEpoch(slot)
+	if epoch != epc.Epoch {
+		return 0, fmt.Errorf("expected epoch %d for shard proposer lookup, but lookup was at slot %d (epoch %d)", epc.Epoch, slot, epoch)
+	}
+	slotShardProposers := epc.ShardProposers[slot%epc.Spec.SLOTS_PER_EPOCH]
+	shardCount := uint64(len(slotShardProposers))
+	if uint64(shard) >= shardCount {
+		return 0, fmt.Errorf("out of range shard %d, only %d active shards", shard, shardCount)
+	}
+	// start_shard = (committee_count * slot) % shard_count
+	startShard := (epc.CommitteesPerSlot * uint64(slot)) % shardCount
+	// committee_index = (shard_count + shard - start_shard) % shard_count
+	committeeIndex := (shardCount + uint64(shard) - startShard) % shardCount
+	if committeeIndex >= epc.CommitteesPerSlot {
+		return 0, fmt.Errorf("shard %d slot %d combination does not have a shard proposer, no committee", shard, shardCount)
+	}
+	return slotShardProposers[committeeIndex], nil
 }
 
 func ComputeProposers(spec *Spec, state BeaconState, epoch Epoch, active []ValidatorIndex) (*ProposersEpoch, error) {
@@ -31,11 +55,7 @@ func ComputeProposers(spec *Spec, state BeaconState, epoch Epoch, active []Valid
 	if err != nil {
 		return nil, err
 	}
-	epochSeed, err := GetSeed(spec, mixes, epoch, DOMAIN_BEACON_PROPOSER)
-	if err != nil {
-		return nil, err
-	}
-	slot, err := spec.EpochStartSlot(epoch)
+	startSlot, err := spec.EpochStartSlot(epoch)
 	if err != nil {
 		return nil, err
 	}
@@ -43,20 +63,74 @@ func ComputeProposers(spec *Spec, state BeaconState, epoch Epoch, active []Valid
 	if err != nil {
 		return nil, err
 	}
+
 	hFn := hashing.GetHashFn()
-	var buf [32 + 8]byte
-	copy(buf[0:32], epochSeed[:])
-	for i := Slot(0); i < spec.SLOTS_PER_EPOCH; i++ {
-		binary.LittleEndian.PutUint64(buf[32:], uint64(slot))
-		seed := hFn(buf[:])
-		proposer, err := ComputeProposerIndex(spec, vals, active, seed)
+	// compute beacon proposers
+	{
+		epochSeed, err := GetSeed(spec, mixes, epoch, DOMAIN_BEACON_PROPOSER)
 		if err != nil {
 			return nil, err
 		}
-		proposers[i] = proposer
-		slot++
+		var buf [32 + 8]byte
+		copy(buf[0:32], epochSeed[:])
+		for i := Slot(0); i < spec.SLOTS_PER_EPOCH; i++ {
+			binary.LittleEndian.PutUint64(buf[32:], uint64(startSlot+i))
+			seed := hFn(buf[:])
+			proposer, err := ComputeProposerIndex(spec, vals, active, seed)
+			if err != nil {
+				return nil, err
+			}
+			proposers[i] = proposer
+		}
 	}
-	return &ProposersEpoch{Spec: spec, Epoch: epoch, Proposers: proposers}, nil
+
+	validatorsPerSlot := uint64(len(active)) / uint64(spec.SLOTS_PER_EPOCH)
+	committeesPerSlot := validatorsPerSlot / spec.TARGET_COMMITTEE_SIZE
+
+	var shardProposers [][]ValidatorIndex
+	// compute shard proposers (if sharding pre-state)
+	if _, ok := state.(BuilderBeaconState); ok {
+		shardProposers = make([][]ValidatorIndex, spec.SLOTS_PER_EPOCH, spec.SLOTS_PER_EPOCH)
+		activeShards := spec.ActiveShardCount(epoch)
+
+		epochSeed, err := GetSeed(spec, mixes, epoch, DOMAIN_SHARD_BLOB)
+		if err != nil {
+			return nil, err
+		}
+		shard := Shard(0)
+
+		var buf [32 + 8 + 8]byte
+		copy(buf[0:32], epochSeed[:])
+
+		for i := Slot(0); i < spec.SLOTS_PER_EPOCH; i++ {
+			binary.LittleEndian.PutUint64(buf[32:32+8], uint64(startSlot+i))
+			shardProposers[i] = make([]ValidatorIndex, committeesPerSlot, committeesPerSlot)
+
+			for j := uint64(0); j < committeesPerSlot; j++ {
+				binary.LittleEndian.PutUint64(buf[32+8:], uint64(shard))
+
+				seed := hFn(buf[:])
+				proposer, err := ComputeProposerIndex(spec, vals, active, seed)
+				if err != nil {
+					return nil, err
+				}
+				shardProposers[i][j] = proposer
+
+				shard += 1
+				if uint64(shard) >= activeShards {
+					shard = 0
+				}
+			}
+		}
+	}
+
+	return &ProposersEpoch{
+		Spec:              spec,
+		Epoch:             epoch,
+		Proposers:         proposers,
+		ShardProposers:    shardProposers,
+		CommitteesPerSlot: committeesPerSlot,
+	}, nil
 }
 
 func ComputeProposerIndex(spec *Spec, registry ValidatorRegistry, active []ValidatorIndex, seed Root) (ValidatorIndex, error) {

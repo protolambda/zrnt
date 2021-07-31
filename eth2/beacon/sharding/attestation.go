@@ -330,7 +330,7 @@ func batchApplyParticipationFlag(spec *common.Spec, state *BeaconStateView, bits
 }
 
 func ProcessAttestedShardWork(spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView, attestation *Attestation) error {
-	attestationShard, err := epc.ComputeShardFromCommitteeIndex(attestation.Data.Index)
+	attestationShard, err := epc.ComputeShardFromCommitteeIndex(attestation.Data.Slot, attestation.Data.Index)
 	if err != nil {
 		return err
 	}

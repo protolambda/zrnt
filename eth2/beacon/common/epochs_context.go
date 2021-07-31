@@ -316,16 +316,33 @@ func (epc *EpochsContext) GetBeaconProposer(slot Slot) (ValidatorIndex, error) {
 }
 
 func (epc *EpochsContext) GetShardProposer(slot Slot, shard Shard) (ValidatorIndex, error) {
-	// TODO
-	return 0, nil
+	return epc.Proposers.GetShardProposer(slot, shard)
 }
 
 func (epc *EpochsContext) StartShard(slot Slot) (Shard, error) {
-	// TODO
-	return 0, nil
+	epoch := epc.Spec.SlotToEpoch(slot)
+	activeShards := epc.Proposers.ActiveShards
+	if activeShards == 0 {
+		return 0, nil
+	}
+	committeesPerSlot, err := epc.GetCommitteeCountPerSlot(epoch)
+	if err != nil {
+		return 0, err
+	}
+	return Shard((committeesPerSlot * uint64(slot)) % activeShards), nil
 }
 
-func (epc *EpochsContext) ComputeShardFromCommitteeIndex(index CommitteeIndex) (Shard, error) {
-	// TODO
-	return 0, nil
+func (epc *EpochsContext) ComputeShardFromCommitteeIndex(slot Slot, index CommitteeIndex) (Shard, error) {
+	activeShards := epc.Proposers.ActiveShards
+	if activeShards == 0 {
+		return 0, nil
+	}
+	if uint64(index) >= activeShards {
+		return 0, fmt.Errorf("committee index %d cannot be higher than active shards count %d", index, activeShards)
+	}
+	start, err := epc.StartShard(slot)
+	if err != nil {
+		return 0, err
+	}
+	return Shard((uint64(index) + uint64(start)) % activeShards), nil
 }

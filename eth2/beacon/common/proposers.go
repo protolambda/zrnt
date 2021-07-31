@@ -16,6 +16,7 @@ type ProposersEpoch struct {
 	// ShardProposers is a slice of SLOTS_PER_EPOCH slices, each slice committees-per-slot long
 	ShardProposers    [][]ValidatorIndex
 	CommitteesPerSlot uint64
+	ActiveShards      uint64
 }
 
 func (epc *ProposersEpoch) GetBeaconProposer(slot Slot) (ValidatorIndex, error) {
@@ -32,16 +33,15 @@ func (epc *ProposersEpoch) GetShardProposer(slot Slot, shard Shard) (ValidatorIn
 		return 0, fmt.Errorf("expected epoch %d for shard proposer lookup, but lookup was at slot %d (epoch %d)", epc.Epoch, slot, epoch)
 	}
 	slotShardProposers := epc.ShardProposers[slot%epc.Spec.SLOTS_PER_EPOCH]
-	shardCount := uint64(len(slotShardProposers))
-	if uint64(shard) >= shardCount {
-		return 0, fmt.Errorf("out of range shard %d, only %d active shards", shard, shardCount)
+	if uint64(shard) >= epc.ActiveShards {
+		return 0, fmt.Errorf("out of range shard %d, only %d active shards", shard, epc.ActiveShards)
 	}
 	// start_shard = (committee_count * slot) % shard_count
-	startShard := (epc.CommitteesPerSlot * uint64(slot)) % shardCount
+	startShard := (epc.CommitteesPerSlot * uint64(slot)) % epc.ActiveShards
 	// committee_index = (shard_count + shard - start_shard) % shard_count
-	committeeIndex := (shardCount + uint64(shard) - startShard) % shardCount
+	committeeIndex := (epc.ActiveShards + uint64(shard) - startShard) % epc.ActiveShards
 	if committeeIndex >= epc.CommitteesPerSlot {
-		return 0, fmt.Errorf("shard %d slot %d combination does not have a shard proposer, no committee", shard, shardCount)
+		return 0, fmt.Errorf("shard %d slot %d combination does not have a shard proposer, no committee", shard, epc.ActiveShards)
 	}
 	return slotShardProposers[committeeIndex], nil
 }
@@ -84,6 +84,8 @@ func ComputeProposers(spec *Spec, state BeaconState, epoch Epoch, active []Valid
 		}
 	}
 
+	activeShards := uint64(0)
+
 	validatorsPerSlot := uint64(len(active)) / uint64(spec.SLOTS_PER_EPOCH)
 	committeesPerSlot := validatorsPerSlot / spec.TARGET_COMMITTEE_SIZE
 
@@ -91,7 +93,7 @@ func ComputeProposers(spec *Spec, state BeaconState, epoch Epoch, active []Valid
 	// compute shard proposers (if sharding pre-state)
 	if _, ok := state.(BuilderBeaconState); ok {
 		shardProposers = make([][]ValidatorIndex, spec.SLOTS_PER_EPOCH, spec.SLOTS_PER_EPOCH)
-		activeShards := spec.ActiveShardCount(epoch)
+		activeShards = spec.ActiveShardCount(epoch)
 
 		epochSeed, err := GetSeed(spec, mixes, epoch, DOMAIN_SHARD_BLOB)
 		if err != nil {
@@ -130,6 +132,7 @@ func ComputeProposers(spec *Spec, state BeaconState, epoch Epoch, active []Valid
 		Proposers:         proposers,
 		ShardProposers:    shardProposers,
 		CommitteesPerSlot: committeesPerSlot,
+		ActiveShards:      activeShards,
 	}, nil
 }
 

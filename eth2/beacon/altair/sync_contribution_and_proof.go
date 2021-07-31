@@ -21,43 +21,43 @@ func ContributionAndProofType(spec *common.Spec) *ContainerTypeDef {
 	})
 }
 
-func (agg *ContributionAndProof) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
+func (cnp *ContributionAndProof) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
 	return dr.FixedLenContainer(
-		&agg.AggregatorIndex,
-		spec.Wrap(&agg.Contribution),
-		&agg.SelectionProof,
+		&cnp.AggregatorIndex,
+		spec.Wrap(&cnp.Contribution),
+		&cnp.SelectionProof,
 	)
 }
 
-func (agg *ContributionAndProof) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
+func (cnp *ContributionAndProof) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
 	return w.FixedLenContainer(
-		&agg.AggregatorIndex,
-		spec.Wrap(&agg.Contribution),
-		&agg.SelectionProof,
+		&cnp.AggregatorIndex,
+		spec.Wrap(&cnp.Contribution),
+		&cnp.SelectionProof,
 	)
 }
 
-func (agg *ContributionAndProof) ByteLength(spec *common.Spec) uint64 {
+func (cnp *ContributionAndProof) ByteLength(spec *common.Spec) uint64 {
 	return codec.ContainerLength(
-		&agg.AggregatorIndex,
-		spec.Wrap(&agg.Contribution),
-		&agg.SelectionProof,
+		&cnp.AggregatorIndex,
+		spec.Wrap(&cnp.Contribution),
+		&cnp.SelectionProof,
 	)
 }
 
-func (agg *ContributionAndProof) FixedLength(spec *common.Spec) uint64 {
+func (cnp *ContributionAndProof) FixedLength(spec *common.Spec) uint64 {
 	return codec.ContainerLength(
-		&agg.AggregatorIndex,
-		spec.Wrap(&agg.Contribution),
-		&agg.SelectionProof,
+		&cnp.AggregatorIndex,
+		spec.Wrap(&cnp.Contribution),
+		&cnp.SelectionProof,
 	)
 }
 
-func (agg *ContributionAndProof) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
+func (cnp *ContributionAndProof) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
 	return hFn.HashTreeRoot(
-		&agg.AggregatorIndex,
-		spec.Wrap(&agg.Contribution),
-		&agg.SelectionProof,
+		&cnp.AggregatorIndex,
+		spec.Wrap(&cnp.Contribution),
+		&cnp.SelectionProof,
 	)
 }
 

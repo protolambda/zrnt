@@ -25,48 +25,48 @@ var SyncCommitteeMessageType = ContainerType("SyncCommitteeMessage", []FieldDef{
 	{"signature", common.BLSSignatureType},
 })
 
-func (agg *SyncCommitteeMessage) Deserialize(dr *codec.DecodingReader) error {
+func (msg *SyncCommitteeMessage) Deserialize(dr *codec.DecodingReader) error {
 	return dr.FixedLenContainer(
-		&agg.Slot,
-		&agg.BeaconBlockRoot,
-		&agg.ValidatorIndex,
-		&agg.Signature,
+		&msg.Slot,
+		&msg.BeaconBlockRoot,
+		&msg.ValidatorIndex,
+		&msg.Signature,
 	)
 }
 
-func (agg *SyncCommitteeMessage) Serialize(w *codec.EncodingWriter) error {
+func (msg *SyncCommitteeMessage) Serialize(w *codec.EncodingWriter) error {
 	return w.FixedLenContainer(
-		&agg.Slot,
-		&agg.BeaconBlockRoot,
-		&agg.ValidatorIndex,
-		&agg.Signature,
+		&msg.Slot,
+		&msg.BeaconBlockRoot,
+		&msg.ValidatorIndex,
+		&msg.Signature,
 	)
 }
 
-func (agg *SyncCommitteeMessage) ByteLength() uint64 {
+func (msg *SyncCommitteeMessage) ByteLength() uint64 {
 	return codec.ContainerLength(
-		&agg.Slot,
-		&agg.BeaconBlockRoot,
-		&agg.ValidatorIndex,
-		&agg.Signature,
+		&msg.Slot,
+		&msg.BeaconBlockRoot,
+		&msg.ValidatorIndex,
+		&msg.Signature,
 	)
 }
 
-func (agg *SyncCommitteeMessage) FixedLength() uint64 {
+func (msg *SyncCommitteeMessage) FixedLength() uint64 {
 	return codec.ContainerLength(
-		&agg.Slot,
-		&agg.BeaconBlockRoot,
-		&agg.ValidatorIndex,
-		&agg.Signature,
+		&msg.Slot,
+		&msg.BeaconBlockRoot,
+		&msg.ValidatorIndex,
+		&msg.Signature,
 	)
 }
 
-func (agg *SyncCommitteeMessage) HashTreeRoot(hFn tree.HashFn) common.Root {
+func (msg *SyncCommitteeMessage) HashTreeRoot(hFn tree.HashFn) common.Root {
 	return hFn.HashTreeRoot(
-		&agg.Slot,
-		&agg.BeaconBlockRoot,
-		&agg.ValidatorIndex,
-		&agg.Signature,
+		&msg.Slot,
+		&msg.BeaconBlockRoot,
+		&msg.ValidatorIndex,
+		&msg.Signature,
 	)
 }
 

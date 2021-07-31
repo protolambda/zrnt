@@ -31,53 +31,53 @@ func SyncCommitteeContributionType(spec *common.Spec) *ContainerTypeDef {
 	})
 }
 
-func (agg *SyncCommitteeContribution) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
+func (sc *SyncCommitteeContribution) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
 	return dr.FixedLenContainer(
-		&agg.Slot,
-		&agg.BeaconBlockRoot,
-		&agg.SubcommitteeIndex,
-		spec.Wrap(&agg.AggregationBits),
-		&agg.Signature,
+		&sc.Slot,
+		&sc.BeaconBlockRoot,
+		&sc.SubcommitteeIndex,
+		spec.Wrap(&sc.AggregationBits),
+		&sc.Signature,
 	)
 }
 
-func (agg *SyncCommitteeContribution) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
+func (sc *SyncCommitteeContribution) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
 	return w.FixedLenContainer(
-		&agg.Slot,
-		&agg.BeaconBlockRoot,
-		&agg.SubcommitteeIndex,
-		spec.Wrap(&agg.AggregationBits),
-		&agg.Signature,
+		&sc.Slot,
+		&sc.BeaconBlockRoot,
+		&sc.SubcommitteeIndex,
+		spec.Wrap(&sc.AggregationBits),
+		&sc.Signature,
 	)
 }
 
-func (agg *SyncCommitteeContribution) ByteLength(spec *common.Spec) uint64 {
+func (sc *SyncCommitteeContribution) ByteLength(spec *common.Spec) uint64 {
 	return codec.ContainerLength(
-		&agg.Slot,
-		&agg.BeaconBlockRoot,
-		&agg.SubcommitteeIndex,
-		spec.Wrap(&agg.AggregationBits),
-		&agg.Signature,
+		&sc.Slot,
+		&sc.BeaconBlockRoot,
+		&sc.SubcommitteeIndex,
+		spec.Wrap(&sc.AggregationBits),
+		&sc.Signature,
 	)
 }
 
-func (agg *SyncCommitteeContribution) FixedLength(spec *common.Spec) uint64 {
+func (sc *SyncCommitteeContribution) FixedLength(spec *common.Spec) uint64 {
 	return codec.ContainerLength(
-		&agg.Slot,
-		&agg.BeaconBlockRoot,
-		&agg.SubcommitteeIndex,
-		spec.Wrap(&agg.AggregationBits),
-		&agg.Signature,
+		&sc.Slot,
+		&sc.BeaconBlockRoot,
+		&sc.SubcommitteeIndex,
+		spec.Wrap(&sc.AggregationBits),
+		&sc.Signature,
 	)
 }
 
-func (agg *SyncCommitteeContribution) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
+func (sc *SyncCommitteeContribution) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
 	return hFn.HashTreeRoot(
-		&agg.Slot,
-		&agg.BeaconBlockRoot,
-		&agg.SubcommitteeIndex,
-		spec.Wrap(&agg.AggregationBits),
-		&agg.Signature,
+		&sc.Slot,
+		&sc.BeaconBlockRoot,
+		&sc.SubcommitteeIndex,
+		spec.Wrap(&sc.AggregationBits),
+		&sc.Signature,
 	)
 }
 

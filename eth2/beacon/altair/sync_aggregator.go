@@ -12,31 +12,31 @@ type SyncAggregatorSelectionData struct {
 	SubcommitteeIndex Uint64View  `yaml:"subcommittee_index" json:"subcommittee_index"`
 }
 
-func (agg *SyncAggregatorSelectionData) Deserialize(dr *codec.DecodingReader) error {
+func (sd *SyncAggregatorSelectionData) Deserialize(dr *codec.DecodingReader) error {
 	return dr.FixedLenContainer(
-		&agg.Slot,
-		&agg.SubcommitteeIndex,
+		&sd.Slot,
+		&sd.SubcommitteeIndex,
 	)
 }
 
-func (agg *SyncAggregatorSelectionData) Serialize(w *codec.EncodingWriter) error {
+func (sd *SyncAggregatorSelectionData) Serialize(w *codec.EncodingWriter) error {
 	return w.FixedLenContainer(
-		&agg.Slot,
-		&agg.SubcommitteeIndex,
+		&sd.Slot,
+		&sd.SubcommitteeIndex,
 	)
 }
 
-func (agg *SyncAggregatorSelectionData) ByteLength() uint64 {
+func (sd *SyncAggregatorSelectionData) ByteLength() uint64 {
 	return 8 + 8
 }
 
-func (agg *SyncAggregatorSelectionData) FixedLength() uint64 {
+func (sd *SyncAggregatorSelectionData) FixedLength() uint64 {
 	return 8 + 8
 }
 
-func (agg *SyncAggregatorSelectionData) HashTreeRoot(hFn tree.HashFn) common.Root {
+func (sd *SyncAggregatorSelectionData) HashTreeRoot(hFn tree.HashFn) common.Root {
 	return hFn.HashTreeRoot(
-		&agg.Slot,
-		&agg.SubcommitteeIndex,
+		&sd.Slot,
+		&sd.SubcommitteeIndex,
 	)
 }

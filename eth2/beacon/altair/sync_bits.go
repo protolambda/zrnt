@@ -24,15 +24,15 @@ func (li *SyncCommitteeSubnetBits) Deserialize(spec *common.Spec, dr *codec.Deco
 	return dr.BitVector((*[]byte)(li), spec.SYNC_COMMITTEE_SIZE/common.SYNC_COMMITTEE_SUBNET_COUNT)
 }
 
-func (a SyncCommitteeSubnetBits) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
-	return w.BitVector(a[:])
+func (li SyncCommitteeSubnetBits) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
+	return w.BitVector(li[:])
 }
 
-func (a SyncCommitteeSubnetBits) ByteLength(spec *common.Spec) uint64 {
+func (li SyncCommitteeSubnetBits) ByteLength(spec *common.Spec) uint64 {
 	return (spec.SYNC_COMMITTEE_SIZE + 7) / 8
 }
 
-func (a *SyncCommitteeSubnetBits) FixedLength(spec *common.Spec) uint64 {
+func (li *SyncCommitteeSubnetBits) FixedLength(spec *common.Spec) uint64 {
 	return (spec.SYNC_COMMITTEE_SIZE + 7) / 8
 }
 
@@ -40,24 +40,24 @@ func (li SyncCommitteeSubnetBits) HashTreeRoot(spec *common.Spec, hFn tree.HashF
 	return hFn.BitVectorHTR(li)
 }
 
-func (cb SyncCommitteeSubnetBits) MarshalText() ([]byte, error) {
-	return conv.BytesMarshalText(cb[:])
+func (li SyncCommitteeSubnetBits) MarshalText() ([]byte, error) {
+	return conv.BytesMarshalText(li[:])
 }
 
-func (cb *SyncCommitteeSubnetBits) UnmarshalText(text []byte) error {
-	return conv.DynamicBytesUnmarshalText((*[]byte)(cb), text)
+func (li *SyncCommitteeSubnetBits) UnmarshalText(text []byte) error {
+	return conv.DynamicBytesUnmarshalText((*[]byte)(li), text)
 }
 
-func (cb SyncCommitteeSubnetBits) String() string {
-	return conv.BytesString(cb[:])
+func (li SyncCommitteeSubnetBits) String() string {
+	return conv.BytesString(li[:])
 }
 
-func (cb SyncCommitteeSubnetBits) GetBit(i uint64) bool {
-	return bitfields.GetBit(cb, i)
+func (li SyncCommitteeSubnetBits) GetBit(i uint64) bool {
+	return bitfields.GetBit(li, i)
 }
 
-func (cb SyncCommitteeSubnetBits) SetBit(i uint64, v bool) {
-	bitfields.SetBit(cb, i, v)
+func (li SyncCommitteeSubnetBits) SetBit(i uint64, v bool) {
+	bitfields.SetBit(li, i, v)
 }
 
 type SyncCommitteeSubnetBitsView struct {
@@ -100,15 +100,15 @@ func (li *SyncCommitteeBits) Deserialize(spec *common.Spec, dr *codec.DecodingRe
 	return dr.BitVector((*[]byte)(li), spec.SYNC_COMMITTEE_SIZE)
 }
 
-func (a SyncCommitteeBits) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
-	return w.BitVector(a[:])
+func (li SyncCommitteeBits) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
+	return w.BitVector(li[:])
 }
 
-func (a SyncCommitteeBits) ByteLength(spec *common.Spec) uint64 {
+func (li SyncCommitteeBits) ByteLength(spec *common.Spec) uint64 {
 	return (spec.SYNC_COMMITTEE_SIZE + 7) / 8
 }
 
-func (a *SyncCommitteeBits) FixedLength(spec *common.Spec) uint64 {
+func (li *SyncCommitteeBits) FixedLength(spec *common.Spec) uint64 {
 	return (spec.SYNC_COMMITTEE_SIZE + 7) / 8
 }
 
@@ -116,24 +116,24 @@ func (li SyncCommitteeBits) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) com
 	return hFn.BitVectorHTR(li)
 }
 
-func (cb SyncCommitteeBits) MarshalText() ([]byte, error) {
-	return conv.BytesMarshalText(cb[:])
+func (li SyncCommitteeBits) MarshalText() ([]byte, error) {
+	return conv.BytesMarshalText(li[:])
 }
 
-func (cb *SyncCommitteeBits) UnmarshalText(text []byte) error {
-	return conv.DynamicBytesUnmarshalText((*[]byte)(cb), text)
+func (li *SyncCommitteeBits) UnmarshalText(text []byte) error {
+	return conv.DynamicBytesUnmarshalText((*[]byte)(li), text)
 }
 
-func (cb SyncCommitteeBits) String() string {
-	return conv.BytesString(cb[:])
+func (li SyncCommitteeBits) String() string {
+	return conv.BytesString(li[:])
 }
 
-func (cb SyncCommitteeBits) GetBit(i uint64) bool {
-	return bitfields.GetBit(cb, i)
+func (li SyncCommitteeBits) GetBit(i uint64) bool {
+	return bitfields.GetBit(li, i)
 }
 
-func (cb SyncCommitteeBits) SetBit(i uint64, v bool) {
-	bitfields.SetBit(cb, i, v)
+func (li SyncCommitteeBits) SetBit(i uint64, v bool) {
+	bitfields.SetBit(li, i, v)
 }
 
 type SyncCommitteeBitsView struct {

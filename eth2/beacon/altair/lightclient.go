@@ -14,43 +14,43 @@ type LightClientSnapshot struct {
 	NextSyncCommittee    common.SyncCommittee `yaml:"next_sync_committee" json:"next_sync_committee"`
 }
 
-func (agg *LightClientSnapshot) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
+func (lcs *LightClientSnapshot) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
 	return dr.FixedLenContainer(
-		&agg.Header,
-		spec.Wrap(&agg.CurrentSyncCommittee),
-		spec.Wrap(&agg.NextSyncCommittee),
+		&lcs.Header,
+		spec.Wrap(&lcs.CurrentSyncCommittee),
+		spec.Wrap(&lcs.NextSyncCommittee),
 	)
 }
 
-func (agg *LightClientSnapshot) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
+func (lcs *LightClientSnapshot) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
 	return w.FixedLenContainer(
-		&agg.Header,
-		spec.Wrap(&agg.CurrentSyncCommittee),
-		spec.Wrap(&agg.NextSyncCommittee),
+		&lcs.Header,
+		spec.Wrap(&lcs.CurrentSyncCommittee),
+		spec.Wrap(&lcs.NextSyncCommittee),
 	)
 }
 
-func (agg *LightClientSnapshot) ByteLength(spec *common.Spec) uint64 {
+func (lcs *LightClientSnapshot) ByteLength(spec *common.Spec) uint64 {
 	return codec.ContainerLength(
-		&agg.Header,
-		spec.Wrap(&agg.CurrentSyncCommittee),
-		spec.Wrap(&agg.NextSyncCommittee),
+		&lcs.Header,
+		spec.Wrap(&lcs.CurrentSyncCommittee),
+		spec.Wrap(&lcs.NextSyncCommittee),
 	)
 }
 
-func (agg *LightClientSnapshot) FixedLength(spec *common.Spec) uint64 {
+func (lcs *LightClientSnapshot) FixedLength(spec *common.Spec) uint64 {
 	return codec.ContainerLength(
-		&agg.Header,
-		spec.Wrap(&agg.CurrentSyncCommittee),
-		spec.Wrap(&agg.NextSyncCommittee),
+		&lcs.Header,
+		spec.Wrap(&lcs.CurrentSyncCommittee),
+		spec.Wrap(&lcs.NextSyncCommittee),
 	)
 }
 
-func (agg *LightClientSnapshot) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
+func (lcs *LightClientSnapshot) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
 	return hFn.HashTreeRoot(
-		&agg.Header,
-		spec.Wrap(&agg.CurrentSyncCommittee),
-		spec.Wrap(&agg.NextSyncCommittee),
+		&lcs.Header,
+		spec.Wrap(&lcs.CurrentSyncCommittee),
+		spec.Wrap(&lcs.NextSyncCommittee),
 	)
 }
 
@@ -62,27 +62,27 @@ const NEXT_SYNC_COMMITTEE_INDEX = tree.Gindex64((1 << syncCommitteeProofLen) | _
 
 type SyncCommitteeProofBranch [syncCommitteeProofLen]common.Root
 
-func (a *SyncCommitteeProofBranch) Deserialize(dr *codec.DecodingReader) error {
-	roots := a[:]
+func (sb *SyncCommitteeProofBranch) Deserialize(dr *codec.DecodingReader) error {
+	roots := sb[:]
 	return tree.ReadRoots(dr, &roots, syncCommitteeProofLen)
 }
 
-func (a SyncCommitteeProofBranch) Serialize(w *codec.EncodingWriter) error {
-	return tree.WriteRoots(w, a[:])
+func (sb SyncCommitteeProofBranch) Serialize(w *codec.EncodingWriter) error {
+	return tree.WriteRoots(w, sb[:])
 }
 
-func (a SyncCommitteeProofBranch) ByteLength() (out uint64) {
+func (sb SyncCommitteeProofBranch) ByteLength() (out uint64) {
 	return syncCommitteeProofLen * 32
 }
 
-func (a *SyncCommitteeProofBranch) FixedLength() uint64 {
+func (sb *SyncCommitteeProofBranch) FixedLength() uint64 {
 	return syncCommitteeProofLen * 32
 }
 
-func (li SyncCommitteeProofBranch) HashTreeRoot(hFn tree.HashFn) common.Root {
+func (sb SyncCommitteeProofBranch) HashTreeRoot(hFn tree.HashFn) common.Root {
 	return hFn.ComplexVectorHTR(func(i uint64) tree.HTR {
 		if i < syncCommitteeProofLen {
-			return &li[i]
+			return &sb[i]
 		}
 		return nil
 	}, syncCommitteeProofLen)
@@ -95,27 +95,27 @@ const FINALIZED_ROOT_INDEX = tree.Gindex64((1 << finalizedRootProofLen) | (_stat
 
 type FinalizedRootProofBranch [finalizedRootProofLen]common.Root
 
-func (a *FinalizedRootProofBranch) Deserialize(dr *codec.DecodingReader) error {
-	roots := a[:]
+func (fb *FinalizedRootProofBranch) Deserialize(dr *codec.DecodingReader) error {
+	roots := fb[:]
 	return tree.ReadRoots(dr, &roots, finalizedRootProofLen)
 }
 
-func (a FinalizedRootProofBranch) Serialize(w *codec.EncodingWriter) error {
-	return tree.WriteRoots(w, a[:])
+func (fb FinalizedRootProofBranch) Serialize(w *codec.EncodingWriter) error {
+	return tree.WriteRoots(w, fb[:])
 }
 
-func (a FinalizedRootProofBranch) ByteLength() (out uint64) {
+func (fb FinalizedRootProofBranch) ByteLength() (out uint64) {
 	return finalizedRootProofLen * 32
 }
 
-func (a *FinalizedRootProofBranch) FixedLength() uint64 {
+func (fb *FinalizedRootProofBranch) FixedLength() uint64 {
 	return finalizedRootProofLen * 32
 }
 
-func (li FinalizedRootProofBranch) HashTreeRoot(hFn tree.HashFn) common.Root {
+func (fb FinalizedRootProofBranch) HashTreeRoot(hFn tree.HashFn) common.Root {
 	return hFn.ComplexVectorHTR(func(i uint64) tree.HTR {
 		if i < finalizedRootProofLen {
-			return &li[i]
+			return &fb[i]
 		}
 		return nil
 	}, finalizedRootProofLen)
@@ -137,67 +137,67 @@ type LightClientUpdate struct {
 	ForkVersion common.Version `yaml:"fork_version" json:"fork_version"`
 }
 
-func (agg *LightClientUpdate) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
+func (lcu *LightClientUpdate) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
 	return dr.FixedLenContainer(
-		&agg.Header,
-		spec.Wrap(&agg.NextSyncCommittee),
-		&agg.NextSyncCommitteeBranch,
-		&agg.FinalityHeader,
-		&agg.FinalityBranch,
-		spec.Wrap(&agg.SyncCommitteeBits),
-		&agg.SyncCommitteeSignature,
-		&agg.ForkVersion,
+		&lcu.Header,
+		spec.Wrap(&lcu.NextSyncCommittee),
+		&lcu.NextSyncCommitteeBranch,
+		&lcu.FinalityHeader,
+		&lcu.FinalityBranch,
+		spec.Wrap(&lcu.SyncCommitteeBits),
+		&lcu.SyncCommitteeSignature,
+		&lcu.ForkVersion,
 	)
 }
 
-func (agg *LightClientUpdate) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
+func (lcu *LightClientUpdate) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
 	return w.FixedLenContainer(
-		&agg.Header,
-		spec.Wrap(&agg.NextSyncCommittee),
-		&agg.NextSyncCommitteeBranch,
-		&agg.FinalityHeader,
-		&agg.FinalityBranch,
-		spec.Wrap(&agg.SyncCommitteeBits),
-		&agg.SyncCommitteeSignature,
-		&agg.ForkVersion,
+		&lcu.Header,
+		spec.Wrap(&lcu.NextSyncCommittee),
+		&lcu.NextSyncCommitteeBranch,
+		&lcu.FinalityHeader,
+		&lcu.FinalityBranch,
+		spec.Wrap(&lcu.SyncCommitteeBits),
+		&lcu.SyncCommitteeSignature,
+		&lcu.ForkVersion,
 	)
 }
 
-func (agg *LightClientUpdate) ByteLength(spec *common.Spec) uint64 {
+func (lcu *LightClientUpdate) ByteLength(spec *common.Spec) uint64 {
 	return codec.ContainerLength(
-		&agg.Header,
-		spec.Wrap(&agg.NextSyncCommittee),
-		&agg.NextSyncCommitteeBranch,
-		&agg.FinalityHeader,
-		&agg.FinalityBranch,
-		spec.Wrap(&agg.SyncCommitteeBits),
-		&agg.SyncCommitteeSignature,
-		&agg.ForkVersion,
+		&lcu.Header,
+		spec.Wrap(&lcu.NextSyncCommittee),
+		&lcu.NextSyncCommitteeBranch,
+		&lcu.FinalityHeader,
+		&lcu.FinalityBranch,
+		spec.Wrap(&lcu.SyncCommitteeBits),
+		&lcu.SyncCommitteeSignature,
+		&lcu.ForkVersion,
 	)
 }
 
-func (agg *LightClientUpdate) FixedLength(spec *common.Spec) uint64 {
+func (lcu *LightClientUpdate) FixedLength(spec *common.Spec) uint64 {
 	return codec.ContainerLength(
-		&agg.Header,
-		spec.Wrap(&agg.NextSyncCommittee),
-		&agg.NextSyncCommitteeBranch,
-		&agg.FinalityHeader,
-		&agg.FinalityBranch,
-		spec.Wrap(&agg.SyncCommitteeBits),
-		&agg.SyncCommitteeSignature,
-		&agg.ForkVersion,
+		&lcu.Header,
+		spec.Wrap(&lcu.NextSyncCommittee),
+		&lcu.NextSyncCommitteeBranch,
+		&lcu.FinalityHeader,
+		&lcu.FinalityBranch,
+		spec.Wrap(&lcu.SyncCommitteeBits),
+		&lcu.SyncCommitteeSignature,
+		&lcu.ForkVersion,
 	)
 }
 
-func (agg *LightClientUpdate) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
+func (lcu *LightClientUpdate) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
 	return hFn.HashTreeRoot(
-		&agg.Header,
-		spec.Wrap(&agg.NextSyncCommittee),
-		&agg.NextSyncCommitteeBranch,
-		&agg.FinalityHeader,
-		&agg.FinalityBranch,
-		spec.Wrap(&agg.SyncCommitteeBits),
-		&agg.SyncCommitteeSignature,
-		&agg.ForkVersion,
+		&lcu.Header,
+		spec.Wrap(&lcu.NextSyncCommittee),
+		&lcu.NextSyncCommitteeBranch,
+		&lcu.FinalityHeader,
+		&lcu.FinalityBranch,
+		spec.Wrap(&lcu.SyncCommitteeBits),
+		&lcu.SyncCommitteeSignature,
+		&lcu.ForkVersion,
 	)
 }

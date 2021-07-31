@@ -61,7 +61,7 @@ type ShardBlobBody struct {
 	BeaconBlockRoot common.Root `json:"beacon_block_root" yaml:"beacon_block_root"`
 	// fee payment fields (EIP 1559 like)
 	MaxPriorityFeePerSample common.Gwei `json:"max_priority_fee_per_sample" yaml:"max_priority_fee_per_sample"`
-	MaxFeePerSample common.Gwei `json:"max_fee_per_sample" yaml:"max_fee_per_sample"`
+	MaxFeePerSample         common.Gwei `json:"max_fee_per_sample" yaml:"max_fee_per_sample"`
 }
 
 func (b *ShardBlobBody) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {

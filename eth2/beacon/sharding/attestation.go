@@ -295,12 +295,51 @@ func (attestation *Attestation) ConvertToIndexed(spec *common.Spec, committee []
 	}, nil
 }
 
-// TODO
+const TIMELY_SHARD_FLAG_INDEX uint8 = 3
+
+const TIMELY_SHARD_FLAG altair.ParticipationFlags = 1 << TIMELY_SHARD_FLAG_INDEX
+
+func batchApplyParticipationFlag(spec *common.Spec, state *BeaconStateView, bits phase0.AttestationBits, epoch common.Epoch, fullCommittee common.CommitteeIndices, flag altair.ParticipationFlags) error {
+	slot, err := state.Slot()
+	if err != nil {
+		return err
+	}
+	currentEpoch := spec.SlotToEpoch(slot)
+	var epochParticipation *altair.ParticipationRegistryView
+	if epoch == currentEpoch {
+		epochParticipation, err = state.CurrentEpochParticipation()
+		if err != nil {
+			return err
+		}
+	} else {
+		epochParticipation, err = state.PreviousEpochParticipation()
+		if err != nil {
+			return err
+		}
+	}
+	for i, index := range fullCommittee {
+		if bits.GetBit(uint64(i)) {
+			prev, err := epochParticipation.GetFlags(index)
+			if err != nil {
+				return err
+			}
+			epochParticipation.SetFlags(index, prev|flag)
+		}
+	}
+	return nil
+}
+
 func ProcessAttestedShardWork(spec *common.Spec, epc *common.EpochsContext, state *BeaconStateView, attestation *Attestation) error {
 	attestationShard, err := epc.ComputeShardFromCommitteeIndex(attestation.Data.Index)
 	if err != nil {
 		return err
 	}
+
+	fullCommittee, err := epc.GetBeaconCommittee(attestation.Data.Slot, attestation.Data.Index)
+	if err != nil {
+		return err
+	}
+
 	bufferIndex := uint64(attestation.Data.Slot % spec.SHARD_STATE_MEMORY_SLOTS)
 	// Check that this data is still pending
 	buffer, err := state.ShardBuffer()
@@ -323,17 +362,33 @@ func ProcessAttestedShardWork(spec *common.Spec, epc *common.EpochsContext, stat
 	if err != nil {
 		return err
 	}
+	// Skip attestation vote accounting if the header is not pending
 	if selector != SHARD_WORK_PENDING {
-		// Attestation doesn't need to be processed, shard/slot pair is unconfirmable or already confirmed
+		// If the data was already confirmed, check if this matches, to apply the flag to the attesters.
+		if selector == SHARD_WORK_CONFIRMED {
+			attested, err := AsAttestedDataCommitment(workStatus.Value())
+			if err != nil {
+				return err
+			}
+			attestedRoot, err := attested.Root()
+			if err != nil {
+				return err
+			}
+			if attestedRoot == attestation.Data.ShardBlobRoot {
+				batchApplyParticipationFlag(spec, state,
+					attestation.AggregationBits, attestation.Data.Target.Epoch,
+					fullCommittee, TIMELY_SHARD_FLAG)
+			}
+		}
 		return nil
 	}
+
 	currentHeaders, err := AsPendingShardHeaders(workStatus.Value())
 	if err != nil {
 		return err
 	}
 	// Find the corresponding header, abort if it cannot be found
 	headerIndex := uint64(0)
-	found := false
 	iter := currentHeaders.Iter()
 	for {
 		elem, ok, err := iter.Next()
@@ -355,21 +410,21 @@ func ProcessAttestedShardWork(spec *common.Spec, epc *common.EpochsContext, stat
 		if err != nil {
 			return err
 		}
-		if attestedHeaderRoot == attestation.Data.ShardHeaderRoot {
-			found = true
+		if attestedHeaderRoot == attestation.Data.ShardBlobRoot {
 			break
 		}
 		headerIndex++
 	}
-	if !found {
-		return fmt.Errorf("attestation for unknown shard header is invalid, header root: %s", attestation.Data.ShardHeaderRoot)
-	}
-
-	pendingHeader, err := AsPendingShardHeader(currentHeaders.Get(headerIndex))
+	currentHeadersLen, err := currentHeaders.Length()
 	if err != nil {
 		return err
 	}
-	fullCommittee, err := epc.GetBeaconCommittee(attestation.Data.Slot, attestation.Data.Index)
+	if headerIndex == currentHeadersLen {
+		// Not an error, the attestation may be early (header not included yet), or too late (too many headers, attested header did not make it in)
+		return nil
+	}
+
+	pendingHeader, err := AsPendingShardHeader(currentHeaders.Get(headerIndex))
 	if err != nil {
 		return err
 	}
@@ -384,15 +439,15 @@ func ProcessAttestedShardWork(spec *common.Spec, epc *common.EpochsContext, stat
 		if err != nil {
 			return err
 		}
-		pendingBitsView, err := pendingHeader.Votes()
-		if err != nil {
-			return err
-		}
-		pendingBits, err := pendingBitsView.Raw()
-		if err != nil {
-			return err
-		}
 		if spec.SlotToEpoch(updateSlot) < epc.CurrentEpoch.Epoch {
+			pendingBitsView, err := pendingHeader.Votes()
+			if err != nil {
+				return err
+			}
+			pendingBits, err := pendingBitsView.Raw()
+			if err != nil {
+				return err
+			}
 			weight := common.Gwei(0)
 			for i, valIndex := range fullCommittee {
 				if pendingBits.GetBit(uint64(i)) {
@@ -446,6 +501,10 @@ func ProcessAttestedShardWork(spec *common.Spec, epc *common.EpochsContext, stat
 
 	// Check if the PendingShardHeader is eligible for expedited confirmation, requiring 2/3 of balance attesting
 	if weight*3 > fullCommitteeBalance*2 {
+		// participants of the winning header are remembered with participation flags
+		batchApplyParticipationFlag(spec, state, pendingBits, attestation.Data.Target.Epoch,
+			fullCommittee, TIMELY_SHARD_FLAG)
+
 		attView, err := pendingHeader.Attested()
 		if err != nil {
 			return err

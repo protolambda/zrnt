@@ -46,11 +46,11 @@ type BeaconState struct {
 	// Execution-layer
 	LatestExecutionPayloadHeader common.ExecutionPayloadHeader `json:"latest_execution_payload_header" yaml:"latest_execution_payload_header"`
 	// Blob builder registry.
-	BlobBuilders BuilderRegistry `json:"blob_builders" yaml:"blob_builders"`
+	BlobBuilders        BuilderRegistry `json:"blob_builders" yaml:"blob_builders"`
 	BlobBuilderBalances BuilderBalances `json:"blob_builder_balances" yaml:"blob_builder_balances"`
 	// A ring buffer of the latest slots, with information per active shard.
-	ShardBuffer            ShardBuffer  `json:"shard_buffer" yaml:"shard_buffer"`
-	ShardSamplePrice          Uint64View   `json:"shard_sample_price" yaml:"shard_sample_price"`
+	ShardBuffer      ShardBuffer `json:"shard_buffer" yaml:"shard_buffer"`
+	ShardSamplePrice Uint64View  `json:"shard_sample_price" yaml:"shard_sample_price"`
 }
 
 func (v *BeaconState) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {

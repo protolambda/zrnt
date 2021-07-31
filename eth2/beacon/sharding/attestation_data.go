@@ -19,15 +19,15 @@ type AttestationData struct {
 	Target common.Checkpoint `json:"target" yaml:"target"`
 
 	// Shard header root
-	ShardHeaderRoot common.Root `json:"shard_header_root" yaml:"shard_header_root"`
+	ShardBlobRoot common.Root `json:"shard_blob_root" yaml:"shard_blob_root"`
 }
 
 func (a *AttestationData) Deserialize(dr *codec.DecodingReader) error {
-	return dr.FixedLenContainer(&a.Slot, &a.Index, &a.BeaconBlockRoot, &a.Source, &a.Target, &a.ShardHeaderRoot)
+	return dr.FixedLenContainer(&a.Slot, &a.Index, &a.BeaconBlockRoot, &a.Source, &a.Target, &a.ShardBlobRoot)
 }
 
 func (a *AttestationData) Serialize(w *codec.EncodingWriter) error {
-	return w.FixedLenContainer(a.Slot, a.Index, &a.BeaconBlockRoot, &a.Source, &a.Target, &a.ShardHeaderRoot)
+	return w.FixedLenContainer(a.Slot, a.Index, &a.BeaconBlockRoot, &a.Source, &a.Target, &a.ShardBlobRoot)
 }
 
 func (a *AttestationData) ByteLength() uint64 {
@@ -39,12 +39,12 @@ func (*AttestationData) FixedLength() uint64 {
 }
 
 func (p *AttestationData) HashTreeRoot(hFn tree.HashFn) common.Root {
-	return hFn.HashTreeRoot(p.Slot, p.Index, p.BeaconBlockRoot, &p.Source, &p.Target, &p.ShardHeaderRoot)
+	return hFn.HashTreeRoot(p.Slot, p.Index, p.BeaconBlockRoot, &p.Source, &p.Target, &p.ShardBlobRoot)
 }
 
 func (data *AttestationData) View() *AttestationDataView {
 	brv := RootView(data.BeaconBlockRoot)
-	srv := RootView(data.ShardHeaderRoot)
+	srv := RootView(data.ShardBlobRoot)
 	c, _ := AttestationDataType.FromFields(
 		Uint64View(data.Slot),
 		Uint64View(data.Index),
@@ -95,7 +95,7 @@ func (v *AttestationDataView) Raw() (*AttestationData, error) {
 		BeaconBlockRoot: root,
 		Source:          rawSource,
 		Target:          rawTarget,
-		ShardHeaderRoot: shardHeaderRoot,
+		ShardBlobRoot:   shardHeaderRoot,
 	}, nil
 }
 

@@ -301,7 +301,7 @@ func ProcessShardHeader(spec *common.Spec, epc *common.EpochsContext, state *Bea
 		if err != nil {
 			return fmt.Errorf("failed to deserialize shard blob commitment: %v", err)
 		}
-		engine.AddPairInv((*kbls.PointG1)(commitment), &spec.G2_SETUP.Points[uint64(len(spec.G2_SETUP.Points)) - uint64(bodySummary.Commitment.Length)])
+		engine.AddPairInv((*kbls.PointG1)(commitment), &spec.G2_SETUP.Points[uint64(len(spec.G2_SETUP.Points))-uint64(bodySummary.Commitment.Length)])
 		if !engine.Check() {
 			return fmt.Errorf("failed to verify shard blob commitment %s (length %d)", bodySummary.Commitment.Point, bodySummary.Commitment.Length)
 		}
@@ -345,7 +345,7 @@ func ProcessShardHeader(spec *common.Spec, epc *common.EpochsContext, state *Bea
 
 	// Burn base fee, take priority fee
 	// priority_fee <= max_fee - base_fee, thus priority_fee + base_fee <= max_fee, thus sufficient balance.
-	builderBals.SetBalance(header.BuilderIndex, builderBalance - (baseFee + priorityFee))
+	builderBals.SetBalance(header.BuilderIndex, builderBalance-(baseFee+priorityFee))
 
 	// Pay out priority fee
 	valBals, err := state.Balances()

@@ -61,7 +61,7 @@ func NewEpochsContext(spec *Spec, state BeaconState) (*EpochsContext, error) {
 	epc := &EpochsContext{
 		Spec:                 spec,
 		ValidatorPubkeyCache: pc,
-		BuilderPubkeyCache: bpc,
+		BuilderPubkeyCache:   bpc,
 	}
 	if err := epc.LoadShuffling(state); err != nil {
 		return nil, err

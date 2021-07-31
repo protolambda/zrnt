@@ -4,7 +4,16 @@ import (
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
+	. "github.com/protolambda/ztyp/view"
 )
+
+func LightClientSnapshotType(spec *common.Spec) *ContainerTypeDef {
+	return ContainerType("SyncCommittee", []FieldDef{
+		{"header", common.BeaconBlockHeaderType},
+		{"current_sync_committee", common.SyncCommitteeType(spec)},
+		{"next_sync_committee", common.SyncCommitteeType(spec)},
+	})
+}
 
 type LightClientSnapshot struct {
 	// Beacon block header
@@ -60,6 +69,8 @@ const syncCommitteeProofLen = 5
 
 const NEXT_SYNC_COMMITTEE_INDEX = tree.Gindex64((1 << syncCommitteeProofLen) | _nextSyncCommittee)
 
+var SyncCommitteeProofBranchType = VectorType(RootType, syncCommitteeProofLen)
+
 type SyncCommitteeProofBranch [syncCommitteeProofLen]common.Root
 
 func (sb *SyncCommitteeProofBranch) Deserialize(dr *codec.DecodingReader) error {
@@ -93,6 +104,8 @@ const finalizedRootProofLen = 5 + 1
 
 const FINALIZED_ROOT_INDEX = tree.Gindex64((1 << finalizedRootProofLen) | (_stateFinalizedCheckpoint << 1) | 1)
 
+var FinalizedRootProofBranchType = VectorType(RootType, finalizedRootProofLen)
+
 type FinalizedRootProofBranch [finalizedRootProofLen]common.Root
 
 func (fb *FinalizedRootProofBranch) Deserialize(dr *codec.DecodingReader) error {
@@ -119,6 +132,19 @@ func (fb FinalizedRootProofBranch) HashTreeRoot(hFn tree.HashFn) common.Root {
 		}
 		return nil
 	}, finalizedRootProofLen)
+}
+
+func LightClientUpdateType(spec *common.Spec) *ContainerTypeDef {
+	return ContainerType("SyncCommittee", []FieldDef{
+		{"header", common.BeaconBlockHeaderType},
+		{"next_sync_committee", common.SyncCommitteeType(spec)},
+		{"next_sync_committee_branch", SyncCommitteeProofBranchType},
+		{"finality_header", common.BeaconBlockHeaderType},
+		{"finality_branch", FinalizedRootProofBranchType},
+		{"sync_committee_bits", SyncCommitteeBitsType(spec)},
+		{"sync_committee_signature", common.BLSSignatureType},
+		{"fork_version", common.VersionType},
+	})
 }
 
 type LightClientUpdate struct {

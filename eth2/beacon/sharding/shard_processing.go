@@ -167,8 +167,7 @@ func ResetPendingShardWork(ctx context.Context, spec *common.Spec, epc *common.E
 				Selector: SHARD_WORK_PENDING,
 				Value: PendingShardHeaders{
 					PendingShardHeader{
-						Commitment: DataCommitment{},
-						Root:       common.Root{},
+						Attested:   AttestedDataCommitment{},
 						Votes:      emptyBits,
 						Weight:     0,
 						UpdateSlot: slot,

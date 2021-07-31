@@ -7,6 +7,11 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
+var SyncAggregatorSelectionDataType = ContainerType("SyncAggregatorSelectionData", []FieldDef{
+	{"slot", common.SlotType},
+	{"subcommittee_index", Uint64Type},
+})
+
 type SyncAggregatorSelectionData struct {
 	Slot              common.Slot `yaml:"slot" json:"slot"`
 	SubcommitteeIndex Uint64View  `yaml:"subcommittee_index" json:"subcommittee_index"`

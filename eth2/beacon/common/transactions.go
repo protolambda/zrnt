@@ -149,7 +149,7 @@ func (h *Transaction) ByteLength(spec *Spec) uint64 {
 		if !ok {
 			panic(fmt.Errorf("invalid value type for 0 (opaque transaction) selector: %T", h.Value))
 		}
-		return otx.ByteLength(spec)
+		return 1 + otx.ByteLength(spec)
 	default:
 		panic(errors.New("bad selector value"))
 	}
@@ -160,11 +160,19 @@ func (h *Transaction) FixedLength(spec *Spec) uint64 {
 }
 
 func (h *Transaction) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
-	otx, ok := h.Value.(*OpaqueTransaction)
-	if !ok {
+	switch h.Selector {
+	case 0:
+		if h.Value == nil {
+			return hFn.Union(h.Selector, spec.Wrap(&OpaqueTransaction{}))
+		}
+		otx, ok := h.Value.(*OpaqueTransaction)
+		if !ok {
+			panic(fmt.Errorf("invalid value type for 0 (opaque transaction) selector: %T", h.Value))
+		}
 		return hFn.Union(h.Selector, spec.Wrap(otx))
+	default:
+		panic(errors.New("bad selector value"))
 	}
-	return Root{}
 }
 
 func (h *Transaction) View(spec *Spec) (*TransactionView, error) {

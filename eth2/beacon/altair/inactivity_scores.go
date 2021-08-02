@@ -1,6 +1,7 @@
 package altair
 
 import (
+	"bytes"
 	"context"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/codec"
@@ -37,6 +38,17 @@ func (li InactivityScores) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) comm
 	return hFn.Uint64ListHTR(func(i uint64) uint64 {
 		return uint64(li[i])
 	}, length, spec.VALIDATOR_REGISTRY_LIMIT)
+}
+
+func (li InactivityScores) View(spec *common.Spec) (*ParticipationRegistryView, error) {
+	typ := InactivityScoresType(spec)
+	var buf bytes.Buffer
+	if err := li.Serialize(spec, codec.NewEncodingWriter(&buf)); err != nil {
+		return nil, err
+	}
+	data := buf.Bytes()
+	dec := codec.NewDecodingReader(bytes.NewReader(data), uint64(len(data)))
+	return AsParticipationRegistry(typ.Deserialize(dec))
 }
 
 func InactivityScoresType(spec *common.Spec) *BasicListTypeDef {

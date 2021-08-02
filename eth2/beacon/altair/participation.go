@@ -1,6 +1,7 @@
 package altair
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"encoding/json"
@@ -136,6 +137,17 @@ func (r ParticipationRegistry) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) 
 	return hFn.Uint8ListHTR(func(i uint64) uint8 {
 		return uint8(r[i])
 	}, uint64(len(r)), spec.VALIDATOR_REGISTRY_LIMIT)
+}
+
+func (r ParticipationRegistry) View(spec *common.Spec) (*ParticipationRegistryView, error) {
+	typ := ParticipationRegistryType(spec)
+	var buf bytes.Buffer
+	if err := r.Serialize(spec, codec.NewEncodingWriter(&buf)); err != nil {
+		return nil, err
+	}
+	data := buf.Bytes()
+	dec := codec.NewDecodingReader(bytes.NewReader(data), uint64(len(data)))
+	return AsParticipationRegistry(typ.Deserialize(dec))
 }
 
 func ParticipationRegistryType(spec *common.Spec) *BasicListTypeDef {

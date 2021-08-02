@@ -58,7 +58,7 @@ func ProcessDeposits(ctx context.Context, spec *common.Spec, epc *common.EpochsC
 	if err != nil {
 		return err
 	}
-	depIndex, err := state.DepositIndex()
+	depIndex, err := state.Eth1DepositIndex()
 	if err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func ProcessDeposits(ctx context.Context, spec *common.Spec, epc *common.EpochsC
 
 // Process an Eth1 deposit, registering a validator or increasing its balance.
 func ProcessDeposit(spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, dep *common.Deposit, ignoreSignatureAndProof bool) error {
-	depositIndex, err := state.DepositIndex()
+	depositIndex, err := state.Eth1DepositIndex()
 	if err != nil {
 		return err
 	}

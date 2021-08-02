@@ -66,6 +66,11 @@ func (jb *JustificationBits) String() string {
 	return conv.BytesString(jb[:])
 }
 
+func (jb *JustificationBits) View() *JustificationBitsView {
+	v, _ := JustificationBitsType.ViewFromBacking(&Root{0: jb[0]}, nil)
+	return &JustificationBitsView{v.(*BitVectorView)}
+}
+
 var JustificationBitsType = BitVectorType(JUSTIFICATION_BITS_LENGTH)
 
 type JustificationBitsView struct {

@@ -28,9 +28,9 @@ type BeaconState struct {
 	StateRoots        phase0.HistoricalBatchRoots `json:"state_roots" yaml:"state_roots"`
 	HistoricalRoots   phase0.HistoricalRoots      `json:"historical_roots" yaml:"historical_roots"`
 	// Eth1
-	Eth1Data      common.Eth1Data      `json:"eth1_data" yaml:"eth1_data"`
-	Eth1DataVotes phase0.Eth1DataVotes `json:"eth1_data_votes" yaml:"eth1_data_votes"`
-	DepositIndex  common.DepositIndex  `json:"eth1_deposit_index" yaml:"eth1_deposit_index"`
+	Eth1Data         common.Eth1Data      `json:"eth1_data" yaml:"eth1_data"`
+	Eth1DataVotes    phase0.Eth1DataVotes `json:"eth1_data_votes" yaml:"eth1_data_votes"`
+	Eth1DepositIndex common.DepositIndex  `json:"eth1_deposit_index" yaml:"eth1_deposit_index"`
 	// Registry
 	Validators  phase0.ValidatorRegistry `json:"validators" yaml:"validators"`
 	Balances    phase0.Balances          `json:"balances" yaml:"balances"`
@@ -55,7 +55,7 @@ func (v *BeaconState) Deserialize(spec *common.Spec, dr *codec.DecodingReader) e
 	return dr.Container(&v.GenesisTime, &v.GenesisValidatorsRoot,
 		&v.Slot, &v.Fork, &v.LatestBlockHeader,
 		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), spec.Wrap(&v.HistoricalRoots),
-		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.DepositIndex,
+		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.Eth1DepositIndex,
 		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances),
 		spec.Wrap(&v.RandaoMixes), spec.Wrap(&v.Slashings),
 		spec.Wrap(&v.PreviousEpochParticipation), spec.Wrap(&v.CurrentEpochParticipation),
@@ -71,7 +71,7 @@ func (v *BeaconState) Serialize(spec *common.Spec, w *codec.EncodingWriter) erro
 	return w.Container(&v.GenesisTime, &v.GenesisValidatorsRoot,
 		&v.Slot, &v.Fork, &v.LatestBlockHeader,
 		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), spec.Wrap(&v.HistoricalRoots),
-		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.DepositIndex,
+		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.Eth1DepositIndex,
 		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances),
 		spec.Wrap(&v.RandaoMixes), spec.Wrap(&v.Slashings),
 		spec.Wrap(&v.PreviousEpochParticipation), spec.Wrap(&v.CurrentEpochParticipation),
@@ -87,7 +87,7 @@ func (v *BeaconState) ByteLength(spec *common.Spec) uint64 {
 	return codec.ContainerLength(&v.GenesisTime, &v.GenesisValidatorsRoot,
 		&v.Slot, &v.Fork, &v.LatestBlockHeader,
 		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), spec.Wrap(&v.HistoricalRoots),
-		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.DepositIndex,
+		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.Eth1DepositIndex,
 		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances),
 		spec.Wrap(&v.RandaoMixes), spec.Wrap(&v.Slashings),
 		spec.Wrap(&v.PreviousEpochParticipation), spec.Wrap(&v.CurrentEpochParticipation),
@@ -107,7 +107,7 @@ func (v *BeaconState) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Ro
 	return hFn.HashTreeRoot(&v.GenesisTime, &v.GenesisValidatorsRoot,
 		&v.Slot, &v.Fork, &v.LatestBlockHeader,
 		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), spec.Wrap(&v.HistoricalRoots),
-		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.DepositIndex,
+		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.Eth1DepositIndex,
 		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances),
 		spec.Wrap(&v.RandaoMixes), spec.Wrap(&v.Slashings),
 		spec.Wrap(&v.PreviousEpochParticipation), spec.Wrap(&v.CurrentEpochParticipation),
@@ -132,7 +132,7 @@ const (
 	_stateHistoricalRoots
 	_stateEth1Data
 	_stateEth1DataVotes
-	_stateDepositIndex
+	_stateEth1DepositIndex
 	_stateValidators
 	_stateBalances
 	_stateRandaoMixes
@@ -282,16 +282,16 @@ func (state *BeaconStateView) Eth1DataVotes() (common.Eth1DataVotes, error) {
 	return phase0.AsEth1DataVotes(state.Get(_stateEth1DataVotes))
 }
 
-func (state *BeaconStateView) DepositIndex() (common.DepositIndex, error) {
-	return common.AsDepositIndex(state.Get(_stateDepositIndex))
+func (state *BeaconStateView) Eth1DepositIndex() (common.DepositIndex, error) {
+	return common.AsDepositIndex(state.Get(_stateEth1DepositIndex))
 }
 
 func (state *BeaconStateView) IncrementDepositIndex() error {
-	depIndex, err := state.DepositIndex()
+	depIndex, err := state.Eth1DepositIndex()
 	if err != nil {
 		return err
 	}
-	return state.Set(_stateDepositIndex, Uint64View(depIndex+1))
+	return state.Set(_stateEth1DepositIndex, Uint64View(depIndex+1))
 }
 
 func (state *BeaconStateView) Validators() (common.ValidatorRegistry, error) {

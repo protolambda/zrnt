@@ -124,7 +124,7 @@ type BeaconState interface {
 	Eth1Data() (Eth1Data, error)
 	SetEth1Data(v Eth1Data) error
 	Eth1DataVotes() (Eth1DataVotes, error)
-	DepositIndex() (DepositIndex, error)
+	Eth1DepositIndex() (DepositIndex, error)
 	IncrementDepositIndex() error
 
 	Validators() (ValidatorRegistry, error)

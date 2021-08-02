@@ -59,10 +59,14 @@ func (s *StandardUpgradeableBeaconState) UpgradeMaybe(ctx context.Context, spec 
 	if err != nil {
 		return err
 	}
-	switch pre.(type) {
+	switch tpre := pre.(type) {
 	case *phase0.BeaconStateView:
 		if slot == common.Slot(spec.ALTAIR_FORK_EPOCH)*spec.SLOTS_PER_EPOCH {
-			// TODO: upgrade
+			post, err := altair.UpgradeToAltair(spec, epc, tpre)
+			if err != nil {
+				return fmt.Errorf("failed to upgrade phase0 to altair state: %v", err)
+			}
+			s.BeaconState = post
 		}
 		return nil
 	case *altair.BeaconStateView:

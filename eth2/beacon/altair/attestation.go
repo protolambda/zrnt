@@ -133,7 +133,7 @@ func ProcessAttestation(spec *common.Spec, epc *common.EpochsContext, state Alta
 }
 
 func GetApplicableAttestationParticipationFlags(
-	spec *common.Spec, state AltairLikeBeaconState,
+	spec *common.Spec, state common.BeaconState,
 	data *phase0.AttestationData, inclusionDelay common.Slot) (out ParticipationFlags, err error) {
 
 	currentSlot, err := state.Slot()

@@ -54,34 +54,28 @@ type StandardUpgradeableBeaconState struct {
 }
 
 func (s *StandardUpgradeableBeaconState) UpgradeMaybe(ctx context.Context, spec *common.Spec, epc *common.EpochsContext) error {
-	pre := s.BeaconState
-	slot, err := pre.Slot()
+	slot, err := s.BeaconState.Slot()
 	if err != nil {
 		return err
 	}
-	switch tpre := pre.(type) {
-	case *phase0.BeaconStateView:
-		if slot == common.Slot(spec.ALTAIR_FORK_EPOCH)*spec.SLOTS_PER_EPOCH {
-			post, err := altair.UpgradeToAltair(spec, epc, tpre)
-			if err != nil {
-				return fmt.Errorf("failed to upgrade phase0 to altair state: %v", err)
-			}
-			s.BeaconState = post
+	if tpre, ok := s.BeaconState.(*phase0.BeaconStateView); ok && slot == common.Slot(spec.ALTAIR_FORK_EPOCH)*spec.SLOTS_PER_EPOCH {
+		post, err := altair.UpgradeToAltair(spec, epc, tpre)
+		if err != nil {
+			return fmt.Errorf("failed to upgrade phase0 to altair state: %v", err)
 		}
-		return nil
-	case *altair.BeaconStateView:
-		if slot == common.Slot(spec.MERGE_FORK_EPOCH)*spec.SLOTS_PER_EPOCH {
-			// TODO: upgrade
-		}
-		return nil
-	case *merge.BeaconStateView:
-		if slot == common.Slot(spec.SHARDING_FORK_EPOCH)*spec.SLOTS_PER_EPOCH {
-			// TODO: upgrade
-		}
-		return nil
-	default:
-		return nil
+		s.BeaconState = post
 	}
+	if tpre, ok := s.BeaconState.(*altair.BeaconStateView); ok && slot == common.Slot(spec.MERGE_FORK_EPOCH)*spec.SLOTS_PER_EPOCH {
+		post, err := merge.UpgradeToMerge(spec, epc, tpre)
+		if err != nil {
+			return fmt.Errorf("failed to upgrade atalir to merge state: %v", err)
+		}
+		s.BeaconState = post
+	}
+	if slot == common.Slot(spec.SHARDING_FORK_EPOCH)*spec.SLOTS_PER_EPOCH {
+		// TODO: upgrade
+	}
+	return nil
 }
 
 var _ common.UpgradeableBeaconState = (*StandardUpgradeableBeaconState)(nil)

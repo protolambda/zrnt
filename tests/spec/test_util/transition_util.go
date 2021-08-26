@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/golang/snappy"
 	"github.com/protolambda/messagediff"
+	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/merge"
@@ -13,6 +14,7 @@ import (
 	"github.com/protolambda/zrnt/eth2/configs"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
+	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"testing"
 )
@@ -88,6 +90,70 @@ func (c *BaseTransitionTest) Check(t *testing.T) {
 			t.Errorf("end result does not match expectation!\n%s", diff)
 		}
 	}
+}
+
+type BlocksTestCase struct {
+	BaseTransitionTest
+	Blocks []*common.BeaconBlockEnvelope
+}
+
+type BlocksCountMeta struct {
+	BlocksCount uint64 `yaml:"blocks_count"`
+}
+
+func (c *BlocksTestCase) Load(t *testing.T, forkName ForkName, readPart TestPartReader) {
+	c.BaseTransitionTest.Load(t, forkName, readPart)
+	p := readPart.Part("meta.yaml")
+	dec := yaml.NewDecoder(p)
+	m := &BlocksCountMeta{}
+	Check(t, dec.Decode(&m))
+	Check(t, p.Close())
+	valRoot, err := c.Pre.GenesisValidatorsRoot()
+	if err != nil {
+		t.Fatalf("failed to get pre-state genesis validators root: %v", err)
+	}
+	loadBlock := func(i uint64) *common.BeaconBlockEnvelope {
+		switch forkName {
+		case "phase0":
+			dst := new(phase0.SignedBeaconBlock)
+			LoadSpecObj(t, fmt.Sprintf("blocks_%d", i), dst, readPart)
+			digest := common.ComputeForkDigest(c.Spec.GENESIS_FORK_VERSION, valRoot)
+			return dst.Envelope(c.Spec, digest)
+		case "altair":
+			dst := new(altair.SignedBeaconBlock)
+			LoadSpecObj(t, fmt.Sprintf("blocks_%d", i), dst, readPart)
+			digest := common.ComputeForkDigest(c.Spec.ALTAIR_FORK_VERSION, valRoot)
+			return dst.Envelope(c.Spec, digest)
+		case "merge":
+			dst := new(merge.SignedBeaconBlock)
+			LoadSpecObj(t, fmt.Sprintf("blocks_%d", i), dst, readPart)
+			digest := common.ComputeForkDigest(c.Spec.MERGE_FORK_VERSION, valRoot)
+			return dst.Envelope(c.Spec, digest)
+		default:
+			t.Fatalf("unrecognized fork name: %s", forkName)
+			return nil
+		}
+	}
+	for i := uint64(0); i < m.BlocksCount; i++ {
+		c.Blocks = append(c.Blocks, loadBlock(i))
+	}
+}
+
+func (c *BlocksTestCase) Run() error {
+	epc, err := common.NewEpochsContext(c.Spec, c.Pre)
+	if err != nil {
+		return err
+	}
+	state := &beacon.StandardUpgradeableBeaconState{BeaconState: c.Pre}
+	defer func() {
+		c.Pre = state.BeaconState
+	}()
+	for _, b := range c.Blocks {
+		if err := common.StateTransition(context.Background(), c.Spec, epc, state, b, true); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func encodeStateForDiff(spec *common.Spec, state common.BeaconState) (interface{}, error) {

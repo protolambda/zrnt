@@ -2,6 +2,7 @@ package phase0
 
 import (
 	"errors"
+	kbls "github.com/kilic/bls12-381"
 	blsu "github.com/protolambda/bls12-381-util"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 )
@@ -16,6 +17,7 @@ type KickstartValidatorData struct {
 func KickStartState(spec *common.Spec, eth1BlockHash common.Root, time common.Timestamp, validators []KickstartValidatorData) (*BeaconStateView, *common.EpochsContext, error) {
 	deps := make([]common.Deposit, len(validators), len(validators))
 
+	placeholderSig := common.BLSSignature((*blsu.Signature)(kbls.NewG2().One()).Serialize())
 	for i := range validators {
 		v := &validators[i]
 		d := &deps[i]
@@ -23,7 +25,7 @@ func KickStartState(spec *common.Spec, eth1BlockHash common.Root, time common.Ti
 			Pubkey:                v.Pubkey,
 			WithdrawalCredentials: v.WithdrawalCredentials,
 			Amount:                v.Balance,
-			Signature:             common.BLSSignature{},
+			Signature:             placeholderSig,
 		}
 	}
 

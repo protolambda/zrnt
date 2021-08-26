@@ -237,15 +237,15 @@ func (s *specObj) MarshalYAML() (interface{}, error) {
 }
 
 type Spec struct {
-	Phase0Preset   `yaml:",inline"`
-	AltairPreset   `yaml:",inline"`
-	MergePreset    `yaml:",inline"`
-	ShardingPreset `yaml:",inline"`
-	Config         `yaml:",inline"`
-	Setup          `yaml:",inline"`
+	Phase0Preset   `json:",inline" yaml:",inline"`
+	AltairPreset   `json:",inline" yaml:",inline"`
+	MergePreset    `json:",inline" yaml:",inline"`
+	ShardingPreset `json:",inline" yaml:",inline"`
+	Config         `json:",inline" yaml:",inline"`
+	Setup          `json:",inline" yaml:",inline"`
 
 	// Experimental, for merge purposes
-	ExecutionEngine `yaml:"-"`
+	ExecutionEngine `json:"-" yaml:"-"`
 }
 
 type G1Setup struct {

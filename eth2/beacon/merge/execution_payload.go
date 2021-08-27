@@ -14,6 +14,12 @@ func ProcessExecutionPayload(ctx context.Context, spec *common.Spec, state Execu
 	if engine == nil {
 		return errors.New("nil execution engine")
 	}
+
+	slot, err := state.Slot()
+	if err != nil {
+		return err
+	}
+
 	completed := true
 	if s, ok := state.(ExecutionUpgradeBeaconState); ok {
 		var err error
@@ -27,28 +33,35 @@ func ProcessExecutionPayload(ctx context.Context, spec *common.Spec, state Execu
 		if err != nil {
 			return err
 		}
-		prevHash, err := latestExecHeader.BlockHash()
+		parent, err := latestExecHeader.Raw()
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to read previous header: %v", err)
 		}
-		if executionPayload.ParentHash != prevHash {
+		if executionPayload.ParentHash != parent.BlockHash {
 			return fmt.Errorf("expected parent hash %s in execution payload, but got %s",
-				prevHash, executionPayload.ParentHash)
+				parent.BlockHash, executionPayload.ParentHash)
 		}
-		prevNumber, err := latestExecHeader.BlockNumber()
+		if executionPayload.BlockNumber != parent.BlockNumber+1 {
+			return fmt.Errorf("expected number %d in execution payload, but got %d",
+				parent.BlockNumber+1, executionPayload.BlockNumber)
+		}
+		mixes, err := state.RandaoMixes()
 		if err != nil {
 			return err
 		}
-		if executionPayload.BlockNumber != prevNumber+1 {
-			return fmt.Errorf("expected number %d in execution payload, but got %d",
-				prevNumber+1, executionPayload.BlockNumber)
+		expectedMix, err := mixes.GetRandomMix(spec.SlotToEpoch(slot))
+		if err != nil {
+			return err
+		}
+		if executionPayload.Random != expectedMix {
+			return fmt.Errorf("invalid random data %s, expected %s", executionPayload.Random, expectedMix)
+		}
+
+		if !executionPayload.IsValidGasLimit(parent) {
+			return fmt.Errorf("invalid gas limit: %d (parent limit: %d)", executionPayload.GasLimit, parent.GasLimit)
 		}
 	}
 
-	slot, err := state.Slot()
-	if err != nil {
-		return err
-	}
 	genesisTime, err := state.GenesisTime()
 	if err != nil {
 		return err

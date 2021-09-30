@@ -233,7 +233,7 @@ func RunTransitionTest(t *testing.T, forks []ForkName, runnerName string, handle
 
 type NoOpExecutionEngine struct{}
 
-func (m *NoOpExecutionEngine) NewBlock(ctx context.Context, executionPayload *common.ExecutionPayload) (success bool, err error) {
+func (m *NoOpExecutionEngine) ExecutePayload(ctx context.Context, executionPayload *common.ExecutionPayload) (valid bool, err error) {
 	return true, nil
 }
 

@@ -45,24 +45,25 @@ func ProcessExecutionPayload(ctx context.Context, spec *common.Spec, state Execu
 			return fmt.Errorf("expected number %d in execution payload, but got %d",
 				parent.BlockNumber+1, executionPayload.BlockNumber)
 		}
-		// TODO
-		//mixes, err := state.RandaoMixes()
-		//if err != nil {
-		//	return err
-		//}
-		//expectedMix, err := mixes.GetRandomMix(spec.SlotToEpoch(slot))
-		//if err != nil {
-		//	return err
-		//}
-		//if executionPayload.Random != expectedMix {
-		//	return fmt.Errorf("invalid random data %s, expected %s", executionPayload.Random, expectedMix)
-		//}
-
 		if !executionPayload.IsValidGasLimit(parent) {
 			return fmt.Errorf("invalid gas limit: %d (parent limit: %d)", executionPayload.GasLimit, parent.GasLimit)
 		}
 	}
 
+	// verify random
+	mixes, err := state.RandaoMixes()
+	if err != nil {
+		return err
+	}
+	expectedMix, err := mixes.GetRandomMix(spec.SlotToEpoch(slot))
+	if err != nil {
+		return err
+	}
+	if executionPayload.Random != expectedMix {
+		return fmt.Errorf("invalid random data %s, expected %s", executionPayload.Random, expectedMix)
+	}
+
+	// verify timestamp
 	genesisTime, err := state.GenesisTime()
 	if err != nil {
 		return err
@@ -74,11 +75,11 @@ func ProcessExecutionPayload(ctx context.Context, spec *common.Spec, state Execu
 			slot, genesisTime, expectedTime, executionPayload.Timestamp)
 	}
 
-	if success, err := engine.NewBlock(ctx, executionPayload); err != nil {
+	if valid, err := engine.ExecutePayload(ctx, executionPayload); err != nil {
 		return fmt.Errorf("unexpected problem in execution engine when inserting block %s (height %d), err: %v",
 			executionPayload.BlockHash, executionPayload.BlockNumber, err)
-	} else if !success {
-		return fmt.Errorf("cannot process NewBlock in execution engine: %s (height %d)",
+	} else if !valid {
+		return fmt.Errorf("execution engine says payload is invalid: %s (height %d)",
 			executionPayload.BlockHash, executionPayload.BlockNumber)
 	}
 

@@ -177,15 +177,6 @@ func ProcessShardHeader(spec *common.Spec, epc *common.EpochsContext, state *Bea
 		return fmt.Errorf("no committee active for slot %d shard %d, would be committee %d, but only have %d", slot, shard, committeeIndex, committeesPerSlot)
 	}
 
-	// Verify that the block root matches,
-	// to ensure the header will only be included in this specific Beacon Chain sub-tree.
-	blockRoot, err := common.GetBlockRootAtSlot(spec, state, header.Slot-1)
-	if err != nil {
-		return err
-	}
-	if header.BodySummary.BeaconBlockRoot != blockRoot {
-		return fmt.Errorf("shard blob header anchored at %s beacon block root, but expected %s", header.BodySummary.BeaconBlockRoot, blockRoot)
-	}
 	// Check that this data is still pending
 	buffer, err := state.ShardBuffer()
 	if err != nil {

@@ -374,7 +374,7 @@ func (ep *ExecutionPayload) Header(spec *Spec) *ExecutionPayloadHeader {
 }
 
 type ExecutionEngine interface {
-	NewBlock(ctx context.Context, executionPayload *ExecutionPayload) (success bool, err error)
+	ExecutePayload(ctx context.Context, executionPayload *ExecutionPayload) (valid bool, err error)
 	// TODO: remaining interface parts
 }
 

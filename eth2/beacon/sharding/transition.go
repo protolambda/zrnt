@@ -89,6 +89,9 @@ func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spe
 		return err
 	}
 	body := &block.Body
+	if err := merge.ProcessExecutionPayload(ctx, spec, state, &body.ExecutionPayload, spec.ExecutionEngine); err != nil {
+		return err
+	}
 	if err := phase0.ProcessRandaoReveal(ctx, spec, epc, state, body.RandaoReveal); err != nil {
 		return err
 	}
@@ -126,9 +129,6 @@ func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spe
 		return err
 	}
 	if err := altair.ProcessSyncAggregate(ctx, spec, epc, state, &body.SyncAggregate); err != nil {
-		return err
-	}
-	if err := merge.ProcessExecutionPayload(ctx, spec, state, &body.ExecutionPayload, spec.ExecutionEngine); err != nil {
 		return err
 	}
 	return nil

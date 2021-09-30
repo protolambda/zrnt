@@ -190,23 +190,25 @@ func (s *ExecutionPayloadHeader) View() *ExecutionPayloadHeaderView {
 }
 
 func (s *ExecutionPayloadHeader) Deserialize(dr *codec.DecodingReader) error {
-	return dr.FixedLenContainer(&s.ParentHash, &s.CoinBase, &s.StateRoot,
+	return dr.Container(&s.ParentHash, &s.CoinBase, &s.StateRoot,
 		&s.ReceiptRoot, &s.LogsBloom, &s.Random, &s.BlockNumber, &s.GasLimit,
 		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot)
 }
 
 func (s *ExecutionPayloadHeader) Serialize(w *codec.EncodingWriter) error {
-	return w.FixedLenContainer(&s.ParentHash, &s.CoinBase, &s.StateRoot,
+	return w.Container(&s.ParentHash, &s.CoinBase, &s.StateRoot,
 		&s.ReceiptRoot, &s.LogsBloom, &s.Random, &s.BlockNumber, &s.GasLimit,
 		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot)
 }
 
 func (s *ExecutionPayloadHeader) ByteLength() uint64 {
-	return ExecutionPayloadHeaderType.TypeByteLength()
+	return codec.ContainerLength(&s.ParentHash, &s.CoinBase, &s.StateRoot,
+		&s.ReceiptRoot, &s.LogsBloom, &s.Random, &s.BlockNumber, &s.GasLimit,
+		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot)
 }
 
 func (b *ExecutionPayloadHeader) FixedLength() uint64 {
-	return ExecutionPayloadHeaderType.TypeByteLength()
+	return 0
 }
 
 func (s *ExecutionPayloadHeader) HashTreeRoot(hFn tree.HashFn) Root {

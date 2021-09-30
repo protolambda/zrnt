@@ -45,17 +45,18 @@ func ProcessExecutionPayload(ctx context.Context, spec *common.Spec, state Execu
 			return fmt.Errorf("expected number %d in execution payload, but got %d",
 				parent.BlockNumber+1, executionPayload.BlockNumber)
 		}
-		mixes, err := state.RandaoMixes()
-		if err != nil {
-			return err
-		}
-		expectedMix, err := mixes.GetRandomMix(spec.SlotToEpoch(slot))
-		if err != nil {
-			return err
-		}
-		if executionPayload.Random != expectedMix {
-			return fmt.Errorf("invalid random data %s, expected %s", executionPayload.Random, expectedMix)
-		}
+		// TODO
+		//mixes, err := state.RandaoMixes()
+		//if err != nil {
+		//	return err
+		//}
+		//expectedMix, err := mixes.GetRandomMix(spec.SlotToEpoch(slot))
+		//if err != nil {
+		//	return err
+		//}
+		//if executionPayload.Random != expectedMix {
+		//	return fmt.Errorf("invalid random data %s, expected %s", executionPayload.Random, expectedMix)
+		//}
 
 		if !executionPayload.IsValidGasLimit(parent) {
 			return fmt.Errorf("invalid gas limit: %d (parent limit: %d)", executionPayload.GasLimit, parent.GasLimit)

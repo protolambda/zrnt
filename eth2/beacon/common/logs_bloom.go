@@ -21,7 +21,7 @@ func (v *LogsBloomView) Raw() (*LogsBloom, error) {
 	var out LogsBloom
 	buf := codec.NewEncodingWriter(bytes.NewBuffer(out[:]))
 	if err := v.Serialize(buf); err != nil {
-		return &out, nil
+		return nil, err
 	}
 	if x := buf.Written(); x != BYTES_PER_LOGS_BLOOM {
 		return nil, fmt.Errorf("unexpected logs bloom tree view, got %d bytes", x)

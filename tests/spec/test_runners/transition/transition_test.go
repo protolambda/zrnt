@@ -13,17 +13,16 @@ import (
 	"testing"
 )
 
-
 type TransitionTestCase struct {
 	test_util.BaseTransitionTest
 	Blocks []*common.BeaconBlockEnvelope
 }
 
 type TransitionMeta struct {
-	PostFork string `yaml:"post_fork"`
-	ForkEpoch uint64 `yaml:"fork_epoch"`
-	ForkBlock *uint64 `yaml:"fork_block"`
-	BlocksCount uint64 `yaml:"blocks_count"`
+	PostFork    string  `yaml:"post_fork"`
+	ForkEpoch   uint64  `yaml:"fork_epoch"`
+	ForkBlock   *uint64 `yaml:"fork_block"`
+	BlocksCount uint64  `yaml:"blocks_count"`
 }
 
 func (c *TransitionTestCase) Load(t *testing.T, testFork test_util.ForkName, readPart test_util.TestPartReader) {
@@ -68,7 +67,6 @@ func (c *TransitionTestCase) Load(t *testing.T, testFork test_util.ForkName, rea
 	} else {
 		t.Fatalf("failed to load post state")
 	}
-
 
 	loadBlock := func(i uint64) *common.BeaconBlockEnvelope {
 		forkName := preForkName

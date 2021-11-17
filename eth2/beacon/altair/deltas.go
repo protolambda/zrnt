@@ -48,9 +48,9 @@ func ComputeFlagDeltas(ctx context.Context, spec *common.Spec, epc *common.Epoch
 }
 
 func ComputeInactivityPenaltyDeltas(ctx context.Context, spec *common.Spec, epc *common.EpochsContext,
-	attesterData *EpochAttesterData, inactivityScores *InactivityScoresView) (*common.Deltas, error) {
+	attesterData *EpochAttesterData, inactivityScores *InactivityScoresView, inactivityPenaltyQuotient uint64) (*common.Deltas, error) {
 	out := common.NewDeltas(uint64(len(attesterData.Flats)))
-	penaltyDenominator := common.Gwei(spec.INACTIVITY_SCORE_BIAS * spec.INACTIVITY_PENALTY_QUOTIENT_ALTAIR)
+	penaltyDenominator := common.Gwei(spec.INACTIVITY_SCORE_BIAS * inactivityPenaltyQuotient)
 	for _, vi := range attesterData.EligibleIndices {
 		if !(!attesterData.Flats[vi].Slashed && (attesterData.PrevParticipation[vi]&TIMELY_TARGET_FLAG != 0)) {
 			score, err := inactivityScores.GetScore(vi)
@@ -112,7 +112,9 @@ func AttestationRewardsAndPenalties(ctx context.Context, spec *common.Spec, epc 
 	if err != nil {
 		return nil, err
 	}
-	inactivityPenalties, err := ComputeInactivityPenaltyDeltas(ctx, spec, epc, attesterData, inactivityScores)
+	settings := state.ForkSettings(spec)
+	inactivityPenalties, err := ComputeInactivityPenaltyDeltas(
+		ctx, spec, epc, attesterData, inactivityScores, settings.InactivityPenaltyQuotient)
 	if err != nil {
 		return nil, err
 	}

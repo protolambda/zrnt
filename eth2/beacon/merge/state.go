@@ -493,8 +493,9 @@ func (state *BeaconStateView) SetLatestExecutionPayloadHeader(h *common.Executio
 
 func (state *BeaconStateView) ForkSettings(spec *common.Spec) *common.ForkSettings {
 	return &common.ForkSettings{
-		MinSlashingPenaltyQuotient:     spec.MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR,
-		ProportionalSlashingMultiplier: spec.PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR,
+		MinSlashingPenaltyQuotient:     spec.MIN_SLASHING_PENALTY_QUOTIENT_MERGE,
+		ProportionalSlashingMultiplier: spec.PROPORTIONAL_SLASHING_MULTIPLIER_MERGE,
+		InactivityPenaltyQuotient:      spec.INACTIVITY_PENALTY_QUOTIENT_MERGE,
 		CalcProposerShare: func(whistleblowerReward common.Gwei) common.Gwei {
 			return whistleblowerReward * altair.PROPOSER_WEIGHT / altair.WEIGHT_DENOMINATOR
 		},

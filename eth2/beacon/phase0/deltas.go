@@ -48,6 +48,8 @@ func AttestationRewardsAndPenalties(ctx context.Context, spec *common.Spec,
 	}
 	finalityDelay := previousEpoch - finalized.Epoch
 
+	settings := state.ForkSettings(spec)
+
 	// All summed effective balances are normalized to effective-balance increments, to avoid overflows.
 	totalBalance /= spec.EFFECTIVE_BALANCE_INCREMENT
 	prevEpochSourceStake /= spec.EFFECTIVE_BALANCE_INCREMENT
@@ -126,7 +128,7 @@ func AttestationRewardsAndPenalties(ctx context.Context, spec *common.Spec,
 				proposerReward := baseReward / common.Gwei(spec.PROPOSER_REWARD_QUOTIENT)
 				res.Inactivity.Penalties[i] += common.BASE_REWARDS_PER_EPOCH*baseReward - proposerReward
 				if !status.Flags.HasMarkers(PrevTargetAttester | UnslashedAttester) {
-					res.Inactivity.Penalties[i] += effBalance * common.Gwei(finalityDelay) / common.Gwei(spec.INACTIVITY_PENALTY_QUOTIENT)
+					res.Inactivity.Penalties[i] += effBalance * common.Gwei(finalityDelay) / common.Gwei(settings.InactivityPenaltyQuotient)
 				}
 			}
 		}

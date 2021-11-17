@@ -12,13 +12,6 @@ import (
 	. "github.com/protolambda/ztyp/view"
 )
 
-const GAS_LIMIT_DENOMINATOR = uint64(1024)
-const MIN_GAS_LIMIT = uint64(5000)
-
-const GENESIS_GAS_LIMIT = uint64(30000000)
-
-var GENESIS_BASE_FEE_PER_GAS = [32]byte{0: 00, 1: 0xca, 2: 0x9a, 3: 0x3b}
-
 type Hash32 = Root
 
 const Hash32Type = RootType
@@ -376,24 +369,4 @@ func (ep *ExecutionPayload) Header(spec *Spec) *ExecutionPayloadHeader {
 type ExecutionEngine interface {
 	ExecutePayload(ctx context.Context, executionPayload *ExecutionPayload) (valid bool, err error)
 	// TODO: remaining interface parts
-}
-
-func (payload *ExecutionPayload) IsValidGasLimit(parent *ExecutionPayloadHeader) bool {
-	parentGasLimit := uint64(parent.GasLimit)
-	// Check if the payload used too much gas
-	if payload.GasUsed > payload.GasLimit {
-		return false
-	}
-	// Check if the payload changed the gas limit too much
-	if uint64(payload.GasLimit) >= parentGasLimit+parentGasLimit/GAS_LIMIT_DENOMINATOR {
-		return false
-	}
-	if uint64(payload.GasLimit) <= parentGasLimit-parentGasLimit/GAS_LIMIT_DENOMINATOR {
-		return false
-	}
-	// Check if the gas limit is at least the minimum gas limit
-	if uint64(payload.GasLimit) < MIN_GAS_LIMIT {
-		return false
-	}
-	return true
 }

@@ -100,6 +100,7 @@ type Slashings interface {
 type ForkSettings struct {
 	MinSlashingPenaltyQuotient     uint64
 	ProportionalSlashingMultiplier uint64
+	InactivityPenaltyQuotient      uint64
 	CalcProposerShare              func(whistleblowerReward Gwei) Gwei
 }
 

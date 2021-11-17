@@ -41,13 +41,6 @@ func ProcessExecutionPayload(ctx context.Context, spec *common.Spec, state Execu
 			return fmt.Errorf("expected parent hash %s in execution payload, but got %s",
 				parent.BlockHash, executionPayload.ParentHash)
 		}
-		if executionPayload.BlockNumber != parent.BlockNumber+1 {
-			return fmt.Errorf("expected number %d in execution payload, but got %d",
-				parent.BlockNumber+1, executionPayload.BlockNumber)
-		}
-		if !executionPayload.IsValidGasLimit(parent) {
-			return fmt.Errorf("invalid gas limit: %d (parent limit: %d)", executionPayload.GasLimit, parent.GasLimit)
-		}
 	}
 
 	// verify random

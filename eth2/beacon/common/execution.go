@@ -18,7 +18,7 @@ const Hash32Type = RootType
 
 var ExecutionPayloadHeaderType = ContainerType("ExecutionPayloadHeader", []FieldDef{
 	{"parent_hash", Hash32Type},
-	{"coinbase", Eth1AddressType},
+	{"fee_recipient", Eth1AddressType},
 	{"state_root", Bytes32Type},
 	{"receipt_root", Bytes32Type},
 	{"logs_bloom", LogsBloomType},
@@ -46,7 +46,7 @@ func (v *ExecutionPayloadHeaderView) Raw() (*ExecutionPayloadHeader, error) {
 		return nil, fmt.Errorf("unexpected number of execution payload header fields: %d", len(values))
 	}
 	parentHash, err := AsRoot(values[0], err)
-	coinbase, err := AsEth1Address(values[1], err)
+	feeRecipient, err := AsEth1Address(values[1], err)
 	stateRoot, err := AsRoot(values[2], err)
 	receiptRoot, err := AsRoot(values[3], err)
 	logsBloomView, err := AsLogsBloom(values[4], err)
@@ -72,7 +72,7 @@ func (v *ExecutionPayloadHeaderView) Raw() (*ExecutionPayloadHeader, error) {
 	}
 	return &ExecutionPayloadHeader{
 		ParentHash:       parentHash,
-		CoinBase:         coinbase,
+		FeeRecipient:     feeRecipient,
 		StateRoot:        stateRoot,
 		ReceiptRoot:      receiptRoot,
 		LogsBloom:        *logsBloom,
@@ -92,7 +92,7 @@ func (v *ExecutionPayloadHeaderView) ParentHash() (Hash32, error) {
 	return AsRoot(v.Get(0))
 }
 
-func (v *ExecutionPayloadHeaderView) Coinbase() (Eth1Address, error) {
+func (v *ExecutionPayloadHeaderView) FeeRecipient() (Eth1Address, error) {
 	return AsEth1Address(v.Get(1))
 }
 
@@ -151,7 +151,7 @@ func AsExecutionPayloadHeader(v View, err error) (*ExecutionPayloadHeaderView, e
 
 type ExecutionPayloadHeader struct {
 	ParentHash       Hash32      `json:"parent_hash" yaml:"parent_hash"`
-	CoinBase         Eth1Address `json:"coinbase" yaml:"coinbase"`
+	FeeRecipient     Eth1Address `json:"fee_recipient" yaml:"fee_recipient"`
 	StateRoot        Bytes32     `json:"state_root" yaml:"state_root"`
 	ReceiptRoot      Bytes32     `json:"receipt_root" yaml:"receipt_root"`
 	LogsBloom        LogsBloom   `json:"logs_bloom" yaml:"logs_bloom"`
@@ -171,7 +171,7 @@ func (s *ExecutionPayloadHeader) View() *ExecutionPayloadHeaderView {
 	if err != nil {
 		panic(err)
 	}
-	pr, cb, sr, rr := (*RootView)(&s.ParentHash), s.CoinBase.View(), (*RootView)(&s.StateRoot), (*RootView)(&s.ReceiptRoot)
+	pr, cb, sr, rr := (*RootView)(&s.ParentHash), s.FeeRecipient.View(), (*RootView)(&s.StateRoot), (*RootView)(&s.ReceiptRoot)
 	lb, rng, nr, gl, gu := s.LogsBloom.View(), (*RootView)(&s.Random), s.BlockNumber, s.GasLimit, s.GasUsed
 	ts, bf, bh, tr := Uint64View(s.Timestamp), (*RootView)(&s.BaseFeePerGas), (*RootView)(&s.BlockHash), (*RootView)(&s.TransactionsRoot)
 
@@ -183,19 +183,19 @@ func (s *ExecutionPayloadHeader) View() *ExecutionPayloadHeaderView {
 }
 
 func (s *ExecutionPayloadHeader) Deserialize(dr *codec.DecodingReader) error {
-	return dr.Container(&s.ParentHash, &s.CoinBase, &s.StateRoot,
+	return dr.Container(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptRoot, &s.LogsBloom, &s.Random, &s.BlockNumber, &s.GasLimit,
 		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot)
 }
 
 func (s *ExecutionPayloadHeader) Serialize(w *codec.EncodingWriter) error {
-	return w.Container(&s.ParentHash, &s.CoinBase, &s.StateRoot,
+	return w.Container(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptRoot, &s.LogsBloom, &s.Random, &s.BlockNumber, &s.GasLimit,
 		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot)
 }
 
 func (s *ExecutionPayloadHeader) ByteLength() uint64 {
-	return codec.ContainerLength(&s.ParentHash, &s.CoinBase, &s.StateRoot,
+	return codec.ContainerLength(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptRoot, &s.LogsBloom, &s.Random, &s.BlockNumber, &s.GasLimit,
 		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot)
 }
@@ -205,7 +205,7 @@ func (b *ExecutionPayloadHeader) FixedLength() uint64 {
 }
 
 func (s *ExecutionPayloadHeader) HashTreeRoot(hFn tree.HashFn) Root {
-	return hFn.HashTreeRoot(&s.ParentHash, &s.CoinBase, &s.StateRoot,
+	return hFn.HashTreeRoot(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptRoot, &s.LogsBloom, &s.Random, &s.BlockNumber, &s.GasLimit,
 		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot)
 }
@@ -213,7 +213,7 @@ func (s *ExecutionPayloadHeader) HashTreeRoot(hFn tree.HashFn) Root {
 func ExecutionPayloadType(spec *Spec) *ContainerTypeDef {
 	return ContainerType("ExecutionPayload", []FieldDef{
 		{"parent_hash", Hash32Type},
-		{"coinbase", Eth1AddressType},
+		{"fee_recipient", Eth1AddressType},
 		{"state_root", Bytes32Type},
 		{"receipt_root", Bytes32Type},
 		{"logs_bloom", LogsBloomType},
@@ -303,7 +303,7 @@ func (v *ExtraDataView) Raw() (ExtraData, error) {
 
 type ExecutionPayload struct {
 	ParentHash    Hash32              `json:"parent_hash" yaml:"parent_hash"`
-	CoinBase      Eth1Address         `json:"coinbase" yaml:"coinbase"`
+	FeeRecipient  Eth1Address         `json:"fee_recipient" yaml:"fee_recipient"`
 	StateRoot     Bytes32             `json:"state_root" yaml:"state_root"`
 	ReceiptRoot   Bytes32             `json:"receipt_root" yaml:"receipt_root"`
 	LogsBloom     LogsBloom           `json:"logs_bloom" yaml:"logs_bloom"`
@@ -319,19 +319,19 @@ type ExecutionPayload struct {
 }
 
 func (s *ExecutionPayload) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
-	return dr.Container(&s.ParentHash, &s.CoinBase, &s.StateRoot,
+	return dr.Container(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptRoot, &s.LogsBloom, &s.Random, &s.BlockNumber, &s.GasLimit,
 		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions))
 }
 
 func (s *ExecutionPayload) Serialize(spec *Spec, w *codec.EncodingWriter) error {
-	return w.Container(&s.ParentHash, &s.CoinBase, &s.StateRoot,
+	return w.Container(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptRoot, &s.LogsBloom, &s.Random, &s.BlockNumber, &s.GasLimit,
 		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions))
 }
 
 func (s *ExecutionPayload) ByteLength(spec *Spec) uint64 {
-	return codec.ContainerLength(&s.ParentHash, &s.CoinBase, &s.StateRoot,
+	return codec.ContainerLength(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptRoot, &s.LogsBloom, &s.Random, &s.BlockNumber, &s.GasLimit,
 		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions))
 }
@@ -342,7 +342,7 @@ func (a *ExecutionPayload) FixedLength(*Spec) uint64 {
 }
 
 func (s *ExecutionPayload) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
-	return hFn.HashTreeRoot(&s.ParentHash, &s.CoinBase, &s.StateRoot,
+	return hFn.HashTreeRoot(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptRoot, &s.LogsBloom, &s.Random, &s.BlockNumber, &s.GasLimit,
 		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions))
 }
@@ -350,7 +350,7 @@ func (s *ExecutionPayload) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
 func (ep *ExecutionPayload) Header(spec *Spec) *ExecutionPayloadHeader {
 	return &ExecutionPayloadHeader{
 		ParentHash:       ep.ParentHash,
-		CoinBase:         ep.CoinBase,
+		FeeRecipient:     ep.FeeRecipient,
 		StateRoot:        ep.StateRoot,
 		ReceiptRoot:      ep.ReceiptRoot,
 		LogsBloom:        ep.LogsBloom,

@@ -113,6 +113,11 @@ func (li *SyncCommitteeBits) FixedLength(spec *common.Spec) uint64 {
 }
 
 func (li SyncCommitteeBits) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
+	if li == nil {
+		// By default, we should initialize the full bits.
+		// We can't do that in the struct case dynamically based on preset, but we can at least output the correct HTR.
+		return SyncCommitteeBitsType(spec).New().HashTreeRoot(hFn)
+	}
 	return hFn.BitVectorHTR(li)
 }
 

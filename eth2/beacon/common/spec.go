@@ -1,5 +1,3 @@
-//go:generate go run ../../../presets/cmd/main.go --presets-dir=../../../presets/configs --output-dir=../../presets/generated
-
 package common
 
 import (
@@ -150,7 +148,9 @@ type Config struct {
 	SHARDING_FORK_EPOCH   Epoch   `yaml:"SHARDING_FORK_EPOCH" json:"SHARDING_FORK_EPOCH"`
 
 	// Merge transition
-	MIN_ANCHOR_POW_BLOCK_DIFFICULTY uint64 `yaml:"MIN_ANCHOR_POW_BLOCK_DIFFICULTY" json:"MIN_ANCHOR_POW_BLOCK_DIFFICULTY"`
+	TERMINAL_TOTAL_DIFFICULTY            U256      `yaml:"TERMINAL_TOTAL_DIFFICULTY" json:"TERMINAL_TOTAL_DIFFICULTY"`
+	TERMINAL_BLOCK_HASH                  Bytes32   `yaml:"TERMINAL_BLOCK_HASH" json:"TERMINAL_BLOCK_HASH"`
+	TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH Timestamp `yaml:"TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH" json:"TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH"`
 
 	// Time parameters
 	SECONDS_PER_SLOT                    Timestamp `yaml:"SECONDS_PER_SLOT" json:"SECONDS_PER_SLOT"`

@@ -38,6 +38,15 @@ func (e U256) String() string {
 	return new(big.Int).SetBytes(e[:]).String()
 }
 
+func (e U256) Big() *big.Int {
+	return new(big.Int).SetBytes(e[:])
+}
+
+func MustU256FromBig(v *big.Int) (out U256) {
+	v.FillBytes(out[:])
+	return
+}
+
 func MustU256(v string) (out U256) {
 	err := out.UnmarshalText([]byte(v))
 	if err != nil {

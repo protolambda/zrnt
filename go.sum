@@ -1,5 +1,7 @@
 github.com/golang/snappy v0.0.3 h1:fHPg5GQYlCeLIPB9BZqMVR5nR9A+IM5zcgeTdjMYmLA=
 github.com/golang/snappy v0.0.3/go.mod h1:/XxbfmMg8lxefKM7IXC3fBNl/7bRcc72aCRzEWrmP2Q=
+github.com/holiman/uint256 v1.2.0 h1:gpSYcPLWGv4sG43I2mVLiDZCNDh/EpGjSk8tmtxitHM=
+github.com/holiman/uint256 v1.2.0/go.mod h1:y4ga/t+u+Xwd7CpDgZESaRcWy0I7XMlTMA25ApIH5Jw=
 github.com/kilic/bls12-381 v0.1.0 h1:encrdjqKMEvabVQ7qYOKu1OvhqpK4s47wDYtNiPtlp4=
 github.com/kilic/bls12-381 v0.1.0/go.mod h1:vDTTHJONJ6G+P2R74EhnyotQDTliQDnFEwhdmfzw1ig=
 github.com/minio/sha256-simd v0.1.0 h1:U41/2erhAKcmSI14xh/ZTUdBPOzDOIfS93ibzUSl8KM=
@@ -8,8 +10,8 @@ github.com/protolambda/bls12-381-util v0.0.0-20210720105258-a772f2aac13e h1:ugvw
 github.com/protolambda/bls12-381-util v0.0.0-20210720105258-a772f2aac13e/go.mod h1:MPZvj2Pr0N8/dXyTPS5REeg2sdLG7t8DRzC1rLv925w=
 github.com/protolambda/messagediff v1.4.0 h1:fk6gxK7WybJCaeOFK1yuh2Ldplx7qYMLibiMwWFcSZY=
 github.com/protolambda/messagediff v1.4.0/go.mod h1:LboJp0EwIbJsePYpzh5Op/9G1/4mIztMRYzzwR0dR2M=
-github.com/protolambda/ztyp v0.1.8 h1:G7ViZLK2aEi2EaqNbeP/0v9/OW1denunBKZLESL6Ftc=
-github.com/protolambda/ztyp v0.1.8/go.mod h1:u9yT4ioIokwlHrOfiZ52ezHfKdza3phxhTJix01vGgU=
+github.com/protolambda/ztyp v0.2.1 h1:+rfw75/Zh8EopNlG652TGDXlLgJflj6XWxJ9yCVpJws=
+github.com/protolambda/ztyp v0.2.1/go.mod h1:9bYgKGqg3wJqT9ac1gI2hnVb0STQq7p/1lapqrqY1dU=
 golang.org/x/sys v0.0.0-20201101102859-da207088b7d1 h1:a/mKvvZr9Jcc8oKfcmgzyp7OwF73JPWsQLvH1z2Kxck=
 golang.org/x/sys v0.0.0-20201101102859-da207088b7d1/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=

@@ -10,7 +10,6 @@ import (
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 	"gopkg.in/yaml.v3"
-	"strings"
 )
 
 const ParticipationFlagsType = Uint8Type
@@ -42,6 +41,14 @@ func (t ParticipationFlags) HashTreeRoot(hFn tree.HashFn) common.Root {
 	return Uint8View(t).HashTreeRoot(hFn)
 }
 
+func (e ParticipationFlags) MarshalJSON() ([]byte, error) {
+	return Uint8View(e).MarshalJSON()
+}
+
+func (e *ParticipationFlags) UnmarshalJSON(b []byte) error {
+	return ((*Uint8View)(e)).UnmarshalJSON(b)
+}
+
 func (e ParticipationFlags) String() string {
 	return Uint8View(e).String()
 }
@@ -71,28 +78,9 @@ const (
 
 type ParticipationRegistry []ParticipationFlags
 
-func (r ParticipationRegistry) MarshalText() ([]byte, error) {
-	return []byte(r.String()), nil
-}
-
 func (r ParticipationRegistry) String() string {
-	var out strings.Builder
-	out.WriteRune('[')
-	if len(r) > 0 {
-		out.WriteString(r[0].String())
-		if len(r) > 1 {
-			for i := range r[1:] {
-				out.WriteRune(',')
-				out.WriteString(r[1+i].String())
-			}
-		}
-	}
-	out.WriteRune(']')
-	return out.String()
-}
-
-func (r *ParticipationRegistry) UnmarshalText(text []byte) error {
-	return json.Unmarshal(text, (*[]ParticipationFlags)(r))
+	out, _ := json.Marshal([]ParticipationFlags(r))
+	return string(out)
 }
 
 func (r *ParticipationRegistry) UnmarshalJSON(data []byte) error {
@@ -100,7 +88,7 @@ func (r *ParticipationRegistry) UnmarshalJSON(data []byte) error {
 }
 
 func (r ParticipationRegistry) MarshalJSON() ([]byte, error) {
-	return r.MarshalText()
+	return json.Marshal([]ParticipationFlags(r))
 }
 
 func (r *ParticipationRegistry) UnmarshalYAML(value *yaml.Node) error {

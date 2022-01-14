@@ -5,6 +5,7 @@ import (
 	kbls "github.com/kilic/bls12-381"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
+	"github.com/protolambda/ztyp/view"
 	"gopkg.in/yaml.v3"
 )
 
@@ -148,9 +149,9 @@ type Config struct {
 	SHARDING_FORK_EPOCH   Epoch   `yaml:"SHARDING_FORK_EPOCH" json:"SHARDING_FORK_EPOCH"`
 
 	// Merge transition
-	TERMINAL_TOTAL_DIFFICULTY            U256      `yaml:"TERMINAL_TOTAL_DIFFICULTY" json:"TERMINAL_TOTAL_DIFFICULTY"`
-	TERMINAL_BLOCK_HASH                  Bytes32   `yaml:"TERMINAL_BLOCK_HASH" json:"TERMINAL_BLOCK_HASH"`
-	TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH Timestamp `yaml:"TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH" json:"TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH"`
+	TERMINAL_TOTAL_DIFFICULTY            view.Uint256View `yaml:"TERMINAL_TOTAL_DIFFICULTY" json:"TERMINAL_TOTAL_DIFFICULTY"`
+	TERMINAL_BLOCK_HASH                  Bytes32          `yaml:"TERMINAL_BLOCK_HASH" json:"TERMINAL_BLOCK_HASH"`
+	TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH Timestamp        `yaml:"TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH" json:"TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH"`
 
 	// Time parameters
 	SECONDS_PER_SLOT                    Timestamp `yaml:"SECONDS_PER_SLOT" json:"SECONDS_PER_SLOT"`

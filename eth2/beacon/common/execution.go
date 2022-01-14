@@ -28,7 +28,7 @@ var ExecutionPayloadHeaderType = ContainerType("ExecutionPayloadHeader", []Field
 	{"gas_used", Uint64Type},
 	{"timestamp", TimestampType},
 	{"extra_data", ExtraDataType},
-	{"base_fee_per_gas", Bytes32Type},
+	{"base_fee_per_gas", Uint256Type},
 	{"block_hash", Hash32Type},
 	{"transactions_root", RootType},
 })
@@ -56,7 +56,7 @@ func (v *ExecutionPayloadHeaderView) Raw() (*ExecutionPayloadHeader, error) {
 	gasUsed, err := AsUint64(values[8], err)
 	timestamp, err := AsTimestamp(values[9], err)
 	extraDataView, err := AsExtraData(values[10], err)
-	baseFeePerGas, err := AsRoot(values[11], err)
+	baseFeePerGas, err := AsUint256(values[11], err)
 	blockHash, err := AsRoot(values[12], err)
 	transactionsRoot, err := AsRoot(values[13], err)
 	if err != nil {
@@ -132,8 +132,8 @@ func (v *ExecutionPayloadHeaderView) Timestamp() (Timestamp, error) {
 	return AsTimestamp(v.Get(9))
 }
 
-func (v *ExecutionPayloadHeaderView) BaseFeePerGas() (Bytes32, error) {
-	return AsRoot(v.Get(10))
+func (v *ExecutionPayloadHeaderView) BaseFeePerGas() (Uint256View, error) {
+	return AsUint256(v.Get(10))
 }
 
 func (v *ExecutionPayloadHeaderView) BlockHash() (Hash32, error) {
@@ -161,7 +161,7 @@ type ExecutionPayloadHeader struct {
 	GasUsed          Uint64View  `json:"gas_used" yaml:"gas_used"`
 	Timestamp        Timestamp   `json:"timestamp" yaml:"timestamp"`
 	ExtraData        ExtraData   `json:"extra_data" yaml:"extra_data"`
-	BaseFeePerGas    Bytes32     `json:"base_fee_per_gas" yaml:"base_fee_per_gas"`
+	BaseFeePerGas    Uint256View `json:"base_fee_per_gas" yaml:"base_fee_per_gas"`
 	BlockHash        Hash32      `json:"block_hash" yaml:"block_hash"`
 	TransactionsRoot Root        `json:"transactions_root" yaml:"transactions_root"`
 }
@@ -173,7 +173,7 @@ func (s *ExecutionPayloadHeader) View() *ExecutionPayloadHeaderView {
 	}
 	pr, cb, sr, rr := (*RootView)(&s.ParentHash), s.FeeRecipient.View(), (*RootView)(&s.StateRoot), (*RootView)(&s.ReceiptRoot)
 	lb, rng, nr, gl, gu := s.LogsBloom.View(), (*RootView)(&s.Random), s.BlockNumber, s.GasLimit, s.GasUsed
-	ts, bf, bh, tr := Uint64View(s.Timestamp), (*RootView)(&s.BaseFeePerGas), (*RootView)(&s.BlockHash), (*RootView)(&s.TransactionsRoot)
+	ts, bf, bh, tr := Uint64View(s.Timestamp), &s.BaseFeePerGas, (*RootView)(&s.BlockHash), (*RootView)(&s.TransactionsRoot)
 
 	v, err := AsExecutionPayloadHeader(ExecutionPayloadHeaderType.FromFields(pr, cb, sr, rr, lb, rng, nr, gl, gu, ts, ed, bf, bh, tr))
 	if err != nil {
@@ -223,7 +223,7 @@ func ExecutionPayloadType(spec *Spec) *ContainerTypeDef {
 		{"gas_used", Uint64Type},
 		{"timestamp", TimestampType},
 		{"extra_data", ExtraDataType},
-		{"base_fee_per_gas", Bytes32Type},
+		{"base_fee_per_gas", Uint256Type},
 		{"block_hash", Hash32Type},
 		{"transactions", PayloadTransactionsType(spec)},
 	})
@@ -313,7 +313,7 @@ type ExecutionPayload struct {
 	GasUsed       Uint64View          `json:"gas_used" yaml:"gas_used"`
 	Timestamp     Timestamp           `json:"timestamp" yaml:"timestamp"`
 	ExtraData     ExtraData           `json:"extra_data" yaml:"extra_data"`
-	BaseFeePerGas Bytes32             `json:"base_fee_per_gas" yaml:"base_fee_per_gas"`
+	BaseFeePerGas Uint256View         `json:"base_fee_per_gas" yaml:"base_fee_per_gas"`
 	BlockHash     Hash32              `json:"block_hash" yaml:"block_hash"`
 	Transactions  PayloadTransactions `json:"transactions" yaml:"transactions"`
 }

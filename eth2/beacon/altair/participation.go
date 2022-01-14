@@ -5,12 +5,15 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
 	"gopkg.in/yaml.v3"
-	"strings"
 )
 
 const ParticipationFlagsType = Uint8Type
@@ -92,11 +95,43 @@ func (r ParticipationRegistry) String() string {
 }
 
 func (r *ParticipationRegistry) UnmarshalText(text []byte) error {
-	return json.Unmarshal(text, (*[]ParticipationFlags)(r))
+	var vals []string
+	if err := json.Unmarshal(text, &vals); err != nil {
+		return err
+	}
+	flags := make([]ParticipationFlags, len(vals))
+	for i := range vals {
+		f, err := strconv.Atoi(vals[i])
+		if err != nil {
+			return err
+		}
+		if i > 255 {
+			return fmt.Errorf("participation flag too large")
+		}
+		flags[i] = ParticipationFlags(f)
+	}
+	*r = flags
+	return nil
 }
 
 func (r *ParticipationRegistry) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, (*[]ParticipationFlags)(r))
+	var vals []string
+	if err := json.Unmarshal(data, &vals); err != nil {
+		return err
+	}
+	flags := make([]ParticipationFlags, len(vals))
+	for i := range vals {
+		f, err := strconv.Atoi(vals[i])
+		if err != nil {
+			return err
+		}
+		if i > 255 {
+			return fmt.Errorf("participation flag too large")
+		}
+		flags[i] = ParticipationFlags(f)
+	}
+	*r = flags
+	return nil
 }
 
 func (r ParticipationRegistry) MarshalJSON() ([]byte, error) {

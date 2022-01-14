@@ -2,6 +2,7 @@ package configs
 
 import (
 	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/ztyp/view"
 )
 
 var Mainnet = &common.Spec{
@@ -82,7 +83,7 @@ var Mainnet = &common.Spec{
 		MERGE_FORK_EPOCH:                     ^common.Epoch(0),
 		SHARDING_FORK_VERSION:                common.Version{0x03, 0x00, 0x00, 0x00},
 		SHARDING_FORK_EPOCH:                  ^common.Epoch(0),
-		TERMINAL_TOTAL_DIFFICULTY:            common.MustU256("115792089237316195423570985008687907853269984665640564039457584007913129638912"),
+		TERMINAL_TOTAL_DIFFICULTY:            view.MustUint256("115792089237316195423570985008687907853269984665640564039457584007913129638912"),
 		TERMINAL_BLOCK_HASH:                  common.Bytes32{},
 		TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH: ^common.Timestamp(0),
 		SECONDS_PER_SLOT:                     12,

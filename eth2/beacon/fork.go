@@ -4,28 +4,28 @@ import (
 	"context"
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
+	"github.com/protolambda/zrnt/eth2/beacon/bellatrix"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
-	"github.com/protolambda/zrnt/eth2/beacon/merge"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/eth2/beacon/sharding"
 )
 
 type ForkDecoder struct {
-	Spec     *common.Spec
-	Genesis  common.ForkDigest
-	Altair   common.ForkDigest
-	Merge    common.ForkDigest
-	Sharding common.ForkDigest
+	Spec      *common.Spec
+	Genesis   common.ForkDigest
+	Altair    common.ForkDigest
+	Bellatrix common.ForkDigest
+	Sharding  common.ForkDigest
 	// TODO more forks
 }
 
 func NewForkDecoder(spec *common.Spec, genesisValRoot common.Root) *ForkDecoder {
 	return &ForkDecoder{
-		Spec:     spec,
-		Genesis:  common.ComputeForkDigest(spec.GENESIS_FORK_VERSION, genesisValRoot),
-		Altair:   common.ComputeForkDigest(spec.ALTAIR_FORK_VERSION, genesisValRoot),
-		Merge:    common.ComputeForkDigest(spec.MERGE_FORK_VERSION, genesisValRoot),
-		Sharding: common.ComputeForkDigest(spec.SHARDING_FORK_VERSION, genesisValRoot),
+		Spec:      spec,
+		Genesis:   common.ComputeForkDigest(spec.GENESIS_FORK_VERSION, genesisValRoot),
+		Altair:    common.ComputeForkDigest(spec.ALTAIR_FORK_VERSION, genesisValRoot),
+		Bellatrix: common.ComputeForkDigest(spec.BELLATRIX_FORK_VERSION, genesisValRoot),
+		Sharding:  common.ComputeForkDigest(spec.SHARDING_FORK_VERSION, genesisValRoot),
 	}
 }
 
@@ -40,8 +40,8 @@ func (d *ForkDecoder) AllocBlock(digest common.ForkDigest) (OpaqueBlock, error) 
 		return new(phase0.SignedBeaconBlock), nil
 	case d.Altair:
 		return new(altair.SignedBeaconBlock), nil
-	case d.Merge:
-		return new(merge.SignedBeaconBlock), nil
+	case d.Bellatrix:
+		return new(bellatrix.SignedBeaconBlock), nil
 	case d.Sharding:
 		return new(sharding.SignedBeaconBlock), nil
 	default:
@@ -68,10 +68,10 @@ func (s *StandardUpgradeableBeaconState) UpgradeMaybe(ctx context.Context, spec 
 		}
 		s.BeaconState = post
 	}
-	if tpre, ok := s.BeaconState.(*altair.BeaconStateView); ok && slot == common.Slot(spec.MERGE_FORK_EPOCH)*spec.SLOTS_PER_EPOCH {
-		post, err := merge.UpgradeToMerge(spec, epc, tpre)
+	if tpre, ok := s.BeaconState.(*altair.BeaconStateView); ok && slot == common.Slot(spec.BELLATRIX_FORK_EPOCH)*spec.SLOTS_PER_EPOCH {
+		post, err := bellatrix.UpgradeToBellatrix(spec, epc, tpre)
 		if err != nil {
-			return fmt.Errorf("failed to upgrade atalir to merge state: %v", err)
+			return fmt.Errorf("failed to upgrade atalir to bellatrix state: %v", err)
 		}
 		s.BeaconState = post
 	}

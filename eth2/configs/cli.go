@@ -11,23 +11,23 @@ type SpecOptions struct {
 	LegacyConfig        string `ask:"--legacy-config" help:"Eth2 legacy configuration (combined config and presets), name or path to YAML"`
 	LegacyConfigChanged bool   `changed:"legacy-config"`
 
-	Config         string `ask:"--config" help:"Eth2 spec configuration, name or path to YAML"`
-	Phase0Preset   string `ask:"--preset-phase0" help:"Eth2 phase0 spec preset, name or path to YAML"`
-	AltairPreset   string `ask:"--preset-altair" help:"Eth2 altair spec preset, name or path to YAML"`
-	MergePreset    string `ask:"--preset-merge" help:"Eth2 merge spec preset, name or path to YAML"`
-	ShardingPreset string `ask:"--preset-sharding" help:"Eth2 sharding spec preset, name or path to YAML"`
+	Config          string `ask:"--config" help:"Eth2 spec configuration, name or path to YAML"`
+	Phase0Preset    string `ask:"--preset-phase0" help:"Eth2 phase0 spec preset, name or path to YAML"`
+	AltairPreset    string `ask:"--preset-altair" help:"Eth2 altair spec preset, name or path to YAML"`
+	BellatrixPreset string `ask:"--preset-bellatrix" help:"Eth2 bellatrix spec preset, name or path to YAML"`
+	ShardingPreset  string `ask:"--preset-sharding" help:"Eth2 sharding spec preset, name or path to YAML"`
 
-	// TODO: execution engine config for Merge
+	// TODO: execution engine config for Bellatrix
 	// TODO: trusted setup config for Sharding
 }
 
 type LegacyConfig struct {
-	CONFIG_NAME           string `yaml:"CONFIG_NAME"`
-	common.Phase0Preset   `yaml:",inline"`
-	common.AltairPreset   `yaml:",inline"`
-	common.MergePreset    `yaml:",inline"`
-	common.ShardingPreset `yaml:",inline"`
-	common.Config         `yaml:",inline"`
+	CONFIG_NAME            string `yaml:"CONFIG_NAME"`
+	common.Phase0Preset    `yaml:",inline"`
+	common.AltairPreset    `yaml:",inline"`
+	common.BellatrixPreset `yaml:",inline"`
+	common.ShardingPreset  `yaml:",inline"`
+	common.Config          `yaml:",inline"`
 }
 
 func (c *SpecOptions) Spec() (*common.Spec, error) {
@@ -52,7 +52,7 @@ func (c *SpecOptions) Spec() (*common.Spec, error) {
 			spec.PRESET_BASE = legacy.CONFIG_NAME
 			spec.Phase0Preset = legacy.Phase0Preset
 			spec.AltairPreset = legacy.AltairPreset
-			spec.MergePreset = legacy.MergePreset
+			spec.BellatrixPreset = legacy.BellatrixPreset
 			spec.ShardingPreset = legacy.ShardingPreset
 			spec.Config = legacy.Config
 		}
@@ -106,19 +106,19 @@ func (c *SpecOptions) Spec() (*common.Spec, error) {
 		}
 	}
 
-	switch c.MergePreset {
+	switch c.BellatrixPreset {
 	case "mainnet":
-		spec.MergePreset = Mainnet.MergePreset
+		spec.BellatrixPreset = Mainnet.BellatrixPreset
 	case "minimal":
-		spec.MergePreset = Minimal.MergePreset
+		spec.BellatrixPreset = Minimal.BellatrixPreset
 	default:
-		f, err := os.Open(c.MergePreset)
+		f, err := os.Open(c.BellatrixPreset)
 		if err != nil {
-			return nil, fmt.Errorf("failed to open merge preset file: %v", err)
+			return nil, fmt.Errorf("failed to open bellatrix preset file: %v", err)
 		}
 		dec := yaml.NewDecoder(f)
-		if err := dec.Decode(&spec.MergePreset); err != nil {
-			return nil, fmt.Errorf("failed to decode merge preset: %v", err)
+		if err := dec.Decode(&spec.BellatrixPreset); err != nil {
+			return nil, fmt.Errorf("failed to decode bellatrix preset: %v", err)
 		}
 	}
 
@@ -145,6 +145,6 @@ func (c *SpecOptions) Default() {
 	c.Config = "mainnet"
 	c.Phase0Preset = "mainnet"
 	c.AltairPreset = "mainnet"
-	c.MergePreset = "mainnet"
+	c.BellatrixPreset = "mainnet"
 	c.ShardingPreset = "mainnet"
 }

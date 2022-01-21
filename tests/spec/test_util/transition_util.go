@@ -8,8 +8,8 @@ import (
 	"github.com/protolambda/messagediff"
 	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
+	"github.com/protolambda/zrnt/eth2/beacon/bellatrix"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
-	"github.com/protolambda/zrnt/eth2/beacon/merge"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/eth2/configs"
 	"github.com/protolambda/ztyp/codec"
@@ -22,7 +22,7 @@ import (
 // Fork where the test is organized, and thus the state/block/etc. types default to.
 type ForkName string
 
-var AllForks = []ForkName{"phase0", "altair", "merge"}
+var AllForks = []ForkName{"phase0", "altair", "bellatrix"}
 
 type BaseTransitionTest struct {
 	Spec *common.Spec
@@ -51,8 +51,8 @@ func LoadState(t *testing.T, fork ForkName, name string, readPart TestPartReader
 			state, err = phase0.AsBeaconStateView(phase0.BeaconStateType(spec).Deserialize(decodingReader))
 		case "altair":
 			state, err = altair.AsBeaconStateView(altair.BeaconStateType(spec).Deserialize(decodingReader))
-		case "merge":
-			state, err = merge.AsBeaconStateView(merge.BeaconStateType(spec).Deserialize(decodingReader))
+		case "bellatrix":
+			state, err = bellatrix.AsBeaconStateView(bellatrix.BeaconStateType(spec).Deserialize(decodingReader))
 		default:
 			t.Fatalf("unrecognized fork name: %s", fork)
 			return nil
@@ -124,10 +124,10 @@ func (c *BlocksTestCase) Load(t *testing.T, forkName ForkName, readPart TestPart
 			LoadSpecObj(t, fmt.Sprintf("blocks_%d", i), dst, readPart)
 			digest := common.ComputeForkDigest(c.Spec.ALTAIR_FORK_VERSION, valRoot)
 			return dst.Envelope(c.Spec, digest)
-		case "merge":
-			dst := new(merge.SignedBeaconBlock)
+		case "bellatrix":
+			dst := new(bellatrix.SignedBeaconBlock)
 			LoadSpecObj(t, fmt.Sprintf("blocks_%d", i), dst, readPart)
-			digest := common.ComputeForkDigest(c.Spec.MERGE_FORK_VERSION, valRoot)
+			digest := common.ComputeForkDigest(c.Spec.BELLATRIX_FORK_VERSION, valRoot)
 			return dst.Envelope(c.Spec, digest)
 		default:
 			t.Fatalf("unrecognized fork name: %s", forkName)
@@ -162,7 +162,7 @@ func encodeStateForDiff(spec *common.Spec, state common.BeaconState) (interface{
 		return s.Raw(spec)
 	case *altair.BeaconStateView:
 		return s.Raw(spec)
-	case *merge.BeaconStateView:
+	case *bellatrix.BeaconStateView:
 		return s.Raw(spec)
 	default:
 		return nil, fmt.Errorf("unrecognized beacon state type: %T", s)

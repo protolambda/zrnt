@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
+	"github.com/protolambda/zrnt/eth2/beacon/bellatrix"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
-	"github.com/protolambda/zrnt/eth2/beacon/merge"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"gopkg.in/yaml.v3"
@@ -44,10 +44,10 @@ func (c *FinalityTestCase) Load(t *testing.T, forkName test_util.ForkName, readP
 			test_util.LoadSpecObj(t, fmt.Sprintf("blocks_%d", i), dst, readPart)
 			digest := common.ComputeForkDigest(c.Spec.ALTAIR_FORK_VERSION, valRoot)
 			return dst.Envelope(c.Spec, digest)
-		case "merge":
-			dst := new(merge.SignedBeaconBlock)
+		case "bellatrix":
+			dst := new(bellatrix.SignedBeaconBlock)
 			test_util.LoadSpecObj(t, fmt.Sprintf("blocks_%d", i), dst, readPart)
-			digest := common.ComputeForkDigest(c.Spec.MERGE_FORK_VERSION, valRoot)
+			digest := common.ComputeForkDigest(c.Spec.BELLATRIX_FORK_VERSION, valRoot)
 			return dst.Envelope(c.Spec, digest)
 		default:
 			t.Fatal(fmt.Errorf("unrecognized fork name: %s", forkName))

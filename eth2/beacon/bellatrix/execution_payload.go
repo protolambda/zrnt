@@ -1,4 +1,4 @@
-package merge
+package bellatrix
 
 import (
 	"context"

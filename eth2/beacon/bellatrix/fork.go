@@ -1,4 +1,4 @@
-package merge
+package bellatrix
 
 import (
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
@@ -6,7 +6,7 @@ import (
 	"github.com/protolambda/ztyp/view"
 )
 
-func UpgradeToMerge(spec *common.Spec, epc *common.EpochsContext, pre *altair.BeaconStateView) (*BeaconStateView, error) {
+func UpgradeToBellatrix(spec *common.Spec, epc *common.EpochsContext, pre *altair.BeaconStateView) (*BeaconStateView, error) {
 	// yes, super ugly code, but it does transfer compatible subtrees without duplicating data or breaking caches
 	slot, err := pre.Slot()
 	if err != nil {
@@ -27,7 +27,7 @@ func UpgradeToMerge(spec *common.Spec, epc *common.EpochsContext, pre *altair.Be
 	}
 	fork := common.Fork{
 		PreviousVersion: preFork.CurrentVersion,
-		CurrentVersion:  spec.MERGE_FORK_VERSION,
+		CurrentVersion:  spec.BELLATRIX_FORK_VERSION,
 		Epoch:           epoch,
 	}
 	latestBlockHeader, err := pre.LatestBlockHeader()

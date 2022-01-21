@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"github.com/golang/snappy"
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
+	"github.com/protolambda/zrnt/eth2/beacon/bellatrix"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
-	"github.com/protolambda/zrnt/eth2/beacon/merge"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/eth2/configs"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
@@ -30,8 +30,8 @@ func runCase(t *testing.T, forkName test_util.ForkName, readPart test_util.TestP
 		genesisState, err = phase0.AsBeaconStateView(phase0.BeaconStateType(spec).Deserialize(decodingReader))
 	case "altair":
 		genesisState, err = altair.AsBeaconStateView(altair.BeaconStateType(spec).Deserialize(decodingReader))
-	case "merge":
-		genesisState, err = merge.AsBeaconStateView(merge.BeaconStateType(spec).Deserialize(decodingReader))
+	case "bellatrix":
+		genesisState, err = bellatrix.AsBeaconStateView(bellatrix.BeaconStateType(spec).Deserialize(decodingReader))
 	default:
 		t.Fatalf("unrecognized fork name: %s", forkName)
 	}

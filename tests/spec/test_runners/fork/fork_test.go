@@ -3,8 +3,8 @@ package finality
 import (
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
+	"github.com/protolambda/zrnt/eth2/beacon/bellatrix"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
-	"github.com/protolambda/zrnt/eth2/beacon/merge"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"gopkg.in/yaml.v3"
@@ -36,7 +36,7 @@ func (c *ForkTestCase) Load(t *testing.T, forkName test_util.ForkName, readPart 
 	switch c.PostFork {
 	case "altair":
 		preFork = "phase0"
-	case "merge":
+	case "bellatrix":
 		preFork = "altair"
 	default:
 		t.Fatalf("unrecognized fork: %s", c.PostFork)
@@ -66,8 +66,8 @@ func (c *ForkTestCase) Run() error {
 			return err
 		}
 		c.Pre = out
-	case "merge":
-		out, err := merge.UpgradeToMerge(c.Spec, epc, c.Pre.(*altair.BeaconStateView))
+	case "bellatrix":
+		out, err := bellatrix.UpgradeToBellatrix(c.Spec, epc, c.Pre.(*altair.BeaconStateView))
 		if err != nil {
 			return err
 		}
@@ -93,7 +93,7 @@ func (c *ForkTestCase) Check(t *testing.T) {
 }
 
 func TestFork(t *testing.T) {
-	// TODO: test altair->merge transition
-	test_util.RunTransitionTest(t, []test_util.ForkName{"altair", "merge"}, "fork", "fork",
+	// TODO: test altair->bellatrix transition
+	test_util.RunTransitionTest(t, []test_util.ForkName{"altair", "bellatrix"}, "fork", "fork",
 		func() test_util.TransitionTest { return new(ForkTestCase) })
 }

@@ -1,4 +1,4 @@
-package merge
+package bellatrix
 
 import (
 	"fmt"
@@ -207,7 +207,7 @@ func BeaconBlockBodyType(spec *common.Spec) *ContainerTypeDef {
 		{"deposits", phase0.BlockDepositsType(spec)},
 		{"voluntary_exits", phase0.BlockVoluntaryExitsType(spec)},
 		{"sync_aggregate", altair.SyncAggregateType(spec)},
-		// Merge
+		// Bellatrix
 		{"execution_payload", common.ExecutionPayloadType(spec)},
 	})
 }

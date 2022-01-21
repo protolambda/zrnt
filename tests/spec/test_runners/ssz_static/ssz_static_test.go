@@ -5,8 +5,8 @@ import (
 	"encoding/hex"
 	"github.com/golang/snappy"
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
+	"github.com/protolambda/zrnt/eth2/beacon/bellatrix"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
-	"github.com/protolambda/zrnt/eth2/beacon/merge"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/eth2/configs"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
@@ -94,9 +94,9 @@ func (testCase *SSZStaticTestCase) Run(t *testing.T) {
 type ObjAllocator func() interface{}
 
 var objs = map[test_util.ForkName]map[string]ObjAllocator{
-	"phase0": {},
-	"altair": {},
-	"merge":  {},
+	"phase0":    {},
+	"altair":    {},
+	"bellatrix": {},
 }
 
 func init() {
@@ -127,7 +127,7 @@ func init() {
 	for k, v := range base {
 		objs["phase0"][k] = v
 		objs["altair"][k] = v
-		objs["merge"][k] = v
+		objs["bellatrix"][k] = v
 	}
 	objs["phase0"]["BeaconBlockBody"] = func() interface{} { return new(phase0.BeaconBlockBody) }
 	objs["phase0"]["BeaconBlock"] = func() interface{} { return new(phase0.BeaconBlock) }
@@ -149,13 +149,13 @@ func init() {
 	objs["altair"]["SyncCommitteeMessage"] = func() interface{} { return new(altair.SyncCommitteeMessage) }
 	objs["altair"]["SyncCommittee"] = func() interface{} { return new(common.SyncCommittee) }
 
-	objs["merge"]["BeaconBlockBody"] = func() interface{} { return new(merge.BeaconBlockBody) }
-	objs["merge"]["BeaconBlock"] = func() interface{} { return new(merge.BeaconBlock) }
-	objs["merge"]["BeaconState"] = func() interface{} { return new(merge.BeaconState) }
-	objs["merge"]["SignedBeaconBlock"] = func() interface{} { return new(merge.SignedBeaconBlock) }
-	objs["merge"]["ExecutionPayload"] = func() interface{} { return new(common.ExecutionPayload) }
-	objs["merge"]["ExecutionPayloadHeader"] = func() interface{} { return new(common.ExecutionPayloadHeader) }
-	//objs["merge"]["PowBlock"] = func() interface{} { return new(merge.PowBlock) }
+	objs["bellatrix"]["BeaconBlockBody"] = func() interface{} { return new(bellatrix.BeaconBlockBody) }
+	objs["bellatrix"]["BeaconBlock"] = func() interface{} { return new(bellatrix.BeaconBlock) }
+	objs["bellatrix"]["BeaconState"] = func() interface{} { return new(bellatrix.BeaconState) }
+	objs["bellatrix"]["SignedBeaconBlock"] = func() interface{} { return new(bellatrix.SignedBeaconBlock) }
+	objs["bellatrix"]["ExecutionPayload"] = func() interface{} { return new(common.ExecutionPayload) }
+	objs["bellatrix"]["ExecutionPayloadHeader"] = func() interface{} { return new(common.ExecutionPayloadHeader) }
+	//objs["bellatrix"]["PowBlock"] = func() interface{} { return new(bellatrix.PowBlock) }
 
 }
 

@@ -136,94 +136,87 @@ func (fb FinalizedRootProofBranch) HashTreeRoot(hFn tree.HashFn) common.Root {
 
 func LightClientUpdateType(spec *common.Spec) *ContainerTypeDef {
 	return ContainerType("SyncCommittee", []FieldDef{
-		{"header", common.BeaconBlockHeaderType},
+		{"attested_header", common.BeaconBlockHeaderType},
 		{"next_sync_committee", common.SyncCommitteeType(spec)},
 		{"next_sync_committee_branch", SyncCommitteeProofBranchType},
-		{"finality_header", common.BeaconBlockHeaderType},
+		{"finalized_header", common.BeaconBlockHeaderType},
 		{"finality_branch", FinalizedRootProofBranchType},
-		{"sync_committee_bits", SyncCommitteeBitsType(spec)},
-		{"sync_committee_signature", common.BLSSignatureType},
+		{"sync_aggregate", SyncAggregateType(spec)},
 		{"fork_version", common.VersionType},
 	})
 }
 
 type LightClientUpdate struct {
 	// Update beacon block header
-	Header common.BeaconBlockHeader `yaml:"header" json:"header"`
+	AttestedHeader common.BeaconBlockHeader `yaml:"attested_header" json:"attested_header"`
 	// Next sync committee corresponding to the header
 	NextSyncCommittee       common.SyncCommittee     `yaml:"next_sync_committee" json:"next_sync_committee"`
 	NextSyncCommitteeBranch SyncCommitteeProofBranch `yaml:"next_sync_committee_branch" json:"next_sync_committee_branch"`
 	// Finality proof for the update header
-	FinalityHeader common.BeaconBlockHeader `yaml:"finality_header" json:"finality_header"`
-	FinalityBranch FinalizedRootProofBranch `yaml:"finality_branch" json:"finality_branch"`
+	FinalizedHeader common.BeaconBlockHeader `yaml:"finalized_header" json:"finalized_header"`
+	FinalityBranch  FinalizedRootProofBranch `yaml:"finality_branch" json:"finality_branch"`
 	// Sync committee aggregate signature
-	SyncCommitteeBits      SyncCommitteeBits   `yaml:"sync_committee_bits" json:"sync_committee_bits"`
-	SyncCommitteeSignature common.BLSSignature `yaml:"sync_committee_signature" json:"sync_committee_signature"`
+	SyncAggregate SyncAggregate `yaml:"sync_aggregate" json:"sync_aggregate"`
 	// Fork version for the aggregate signature
 	ForkVersion common.Version `yaml:"fork_version" json:"fork_version"`
 }
 
 func (lcu *LightClientUpdate) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
 	return dr.FixedLenContainer(
-		&lcu.Header,
+		&lcu.AttestedHeader,
 		spec.Wrap(&lcu.NextSyncCommittee),
 		&lcu.NextSyncCommitteeBranch,
-		&lcu.FinalityHeader,
+		&lcu.FinalizedHeader,
 		&lcu.FinalityBranch,
-		spec.Wrap(&lcu.SyncCommitteeBits),
-		&lcu.SyncCommitteeSignature,
+		spec.Wrap(&lcu.SyncAggregate),
 		&lcu.ForkVersion,
 	)
 }
 
 func (lcu *LightClientUpdate) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
 	return w.FixedLenContainer(
-		&lcu.Header,
+		&lcu.AttestedHeader,
 		spec.Wrap(&lcu.NextSyncCommittee),
 		&lcu.NextSyncCommitteeBranch,
-		&lcu.FinalityHeader,
+		&lcu.FinalizedHeader,
 		&lcu.FinalityBranch,
-		spec.Wrap(&lcu.SyncCommitteeBits),
-		&lcu.SyncCommitteeSignature,
+		spec.Wrap(&lcu.SyncAggregate),
 		&lcu.ForkVersion,
 	)
 }
 
 func (lcu *LightClientUpdate) ByteLength(spec *common.Spec) uint64 {
 	return codec.ContainerLength(
-		&lcu.Header,
+		&lcu.AttestedHeader,
 		spec.Wrap(&lcu.NextSyncCommittee),
 		&lcu.NextSyncCommitteeBranch,
-		&lcu.FinalityHeader,
+		&lcu.FinalizedHeader,
 		&lcu.FinalityBranch,
-		spec.Wrap(&lcu.SyncCommitteeBits),
-		&lcu.SyncCommitteeSignature,
+		spec.Wrap(&lcu.SyncAggregate),
 		&lcu.ForkVersion,
 	)
 }
 
 func (lcu *LightClientUpdate) FixedLength(spec *common.Spec) uint64 {
 	return codec.ContainerLength(
-		&lcu.Header,
+		&lcu.AttestedHeader,
 		spec.Wrap(&lcu.NextSyncCommittee),
 		&lcu.NextSyncCommitteeBranch,
-		&lcu.FinalityHeader,
+		&lcu.FinalizedHeader,
 		&lcu.FinalityBranch,
-		spec.Wrap(&lcu.SyncCommitteeBits),
-		&lcu.SyncCommitteeSignature,
+		spec.Wrap(&lcu.SyncAggregate),
 		&lcu.ForkVersion,
 	)
 }
 
 func (lcu *LightClientUpdate) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
 	return hFn.HashTreeRoot(
-		&lcu.Header,
+		&lcu.AttestedHeader,
 		spec.Wrap(&lcu.NextSyncCommittee),
 		&lcu.NextSyncCommitteeBranch,
-		&lcu.FinalityHeader,
+		&lcu.FinalizedHeader,
 		&lcu.FinalityBranch,
-		spec.Wrap(&lcu.SyncCommitteeBits),
-		&lcu.SyncCommitteeSignature,
+		spec.Wrap(&lcu.SyncAggregate),
 		&lcu.ForkVersion,
 	)
 }

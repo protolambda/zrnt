@@ -3,8 +3,8 @@ package operations
 import (
 	"context"
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
+	"github.com/protolambda/zrnt/eth2/beacon/bellatrix"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
-	"github.com/protolambda/zrnt/eth2/beacon/merge"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"testing"
@@ -26,8 +26,8 @@ func (c *BlockHeaderTestCase) Load(t *testing.T, forkName test_util.ForkName, re
 		var block altair.BeaconBlock
 		test_util.LoadSpecObj(t, "block", &block, readPart)
 		c.Header = block.Header(c.Spec)
-	case "merge":
-		var block merge.BeaconBlock
+	case "bellatrix":
+		var block bellatrix.BeaconBlock
 		test_util.LoadSpecObj(t, "block", &block, readPart)
 		c.Header = block.Header(c.Spec)
 	default:

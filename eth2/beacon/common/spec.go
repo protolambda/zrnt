@@ -98,14 +98,14 @@ type AltairPreset struct {
 	MIN_SYNC_COMMITTEE_PARTICIPANTS uint64 `yaml:"MIN_SYNC_COMMITTEE_PARTICIPANTS" json:"MIN_SYNC_COMMITTEE_PARTICIPANTS"`
 }
 
-type MergePreset struct {
-	INACTIVITY_PENALTY_QUOTIENT_MERGE      uint64 `yaml:"INACTIVITY_PENALTY_QUOTIENT_MERGE" json:"INACTIVITY_PENALTY_QUOTIENT_MERGE"`
-	MIN_SLASHING_PENALTY_QUOTIENT_MERGE    uint64 `yaml:"MIN_SLASHING_PENALTY_QUOTIENT_MERGE" json:"MIN_SLASHING_PENALTY_QUOTIENT_MERGE"`
-	PROPORTIONAL_SLASHING_MULTIPLIER_MERGE uint64 `yaml:"PROPORTIONAL_SLASHING_MULTIPLIER_MERGE" json:"PROPORTIONAL_SLASHING_MULTIPLIER_MERGE"`
-	MAX_BYTES_PER_TRANSACTION              uint64 `yaml:"MAX_BYTES_PER_TRANSACTION" json:"MAX_BYTES_PER_TRANSACTION"`
-	MAX_TRANSACTIONS_PER_PAYLOAD           uint64 `yaml:"MAX_TRANSACTIONS_PER_PAYLOAD" json:"MAX_TRANSACTIONS_PER_PAYLOAD"`
-	BYTES_PER_LOGS_BLOOM                   uint64 `yaml:"BYTES_PER_LOGS_BLOOM" json:"BYTES_PER_LOGS_BLOOM"`
-	MAX_EXTRA_DATA_BYTES                   uint64 `yaml:"MAX_EXTRA_DATA_BYTES" json:"MAX_EXTRA_DATA_BYTES"`
+type BellatrixPreset struct {
+	INACTIVITY_PENALTY_QUOTIENT_BELLATRIX      uint64 `yaml:"INACTIVITY_PENALTY_QUOTIENT_BELLATRIX" json:"INACTIVITY_PENALTY_QUOTIENT_BELLATRIX"`
+	MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX    uint64 `yaml:"MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX" json:"MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX"`
+	PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX uint64 `yaml:"PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX" json:"PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX"`
+	MAX_BYTES_PER_TRANSACTION                  uint64 `yaml:"MAX_BYTES_PER_TRANSACTION" json:"MAX_BYTES_PER_TRANSACTION"`
+	MAX_TRANSACTIONS_PER_PAYLOAD               uint64 `yaml:"MAX_TRANSACTIONS_PER_PAYLOAD" json:"MAX_TRANSACTIONS_PER_PAYLOAD"`
+	BYTES_PER_LOGS_BLOOM                       uint64 `yaml:"BYTES_PER_LOGS_BLOOM" json:"BYTES_PER_LOGS_BLOOM"`
+	MAX_EXTRA_DATA_BYTES                       uint64 `yaml:"MAX_EXTRA_DATA_BYTES" json:"MAX_EXTRA_DATA_BYTES"`
 }
 
 type ShardingPreset struct {
@@ -140,9 +140,9 @@ type Config struct {
 	ALTAIR_FORK_VERSION Version `yaml:"ALTAIR_FORK_VERSION" json:"ALTAIR_FORK_VERSION"`
 	ALTAIR_FORK_EPOCH   Epoch   `yaml:"ALTAIR_FORK_EPOCH" json:"ALTAIR_FORK_EPOCH"`
 
-	// Merge
-	MERGE_FORK_VERSION Version `yaml:"MERGE_FORK_VERSION" json:"MERGE_FORK_VERSION"`
-	MERGE_FORK_EPOCH   Epoch   `yaml:"MERGE_FORK_EPOCH" json:"MERGE_FORK_EPOCH"`
+	// Bellatrix
+	BELLATRIX_FORK_VERSION Version `yaml:"BELLATRIX_FORK_VERSION" json:"BELLATRIX_FORK_VERSION"`
+	BELLATRIX_FORK_EPOCH   Epoch   `yaml:"BELLATRIX_FORK_EPOCH" json:"BELLATRIX_FORK_EPOCH"`
 
 	// Sharding
 	SHARDING_FORK_VERSION Version `yaml:"SHARDING_FORK_VERSION" json:"SHARDING_FORK_VERSION"`
@@ -166,6 +166,9 @@ type Config struct {
 	EJECTION_BALANCE               Gwei   `yaml:"EJECTION_BALANCE" json:"EJECTION_BALANCE"`
 	MIN_PER_EPOCH_CHURN_LIMIT      uint64 `yaml:"MIN_PER_EPOCH_CHURN_LIMIT" json:"MIN_PER_EPOCH_CHURN_LIMIT"`
 	CHURN_LIMIT_QUOTIENT           uint64 `yaml:"CHURN_LIMIT_QUOTIENT" json:"CHURN_LIMIT_QUOTIENT"`
+
+	// Fork choice
+	PROPOSER_SCORE_BOOST uint64 `yaml:"PROPOSER_SCORE_BOOST" json:"PROPOSER_SCORE_BOOST"`
 
 	// Deposit contract
 	DEPOSIT_CHAIN_ID         uint64      `yaml:"DEPOSIT_CHAIN_ID" json:"DEPOSIT_CHAIN_ID"`
@@ -245,14 +248,14 @@ func (s *specObj) MarshalYAML() (interface{}, error) {
 }
 
 type Spec struct {
-	Phase0Preset   `json:",inline" yaml:",inline"`
-	AltairPreset   `json:",inline" yaml:",inline"`
-	MergePreset    `json:",inline" yaml:",inline"`
-	ShardingPreset `json:",inline" yaml:",inline"`
-	Config         `json:",inline" yaml:",inline"`
-	Setup          `json:",inline" yaml:",inline"`
+	Phase0Preset    `json:",inline" yaml:",inline"`
+	AltairPreset    `json:",inline" yaml:",inline"`
+	BellatrixPreset `json:",inline" yaml:",inline"`
+	ShardingPreset  `json:",inline" yaml:",inline"`
+	Config          `json:",inline" yaml:",inline"`
+	Setup           `json:",inline" yaml:",inline"`
 
-	// Experimental, for merge purposes
+	// Experimental, for bellatrix
 	ExecutionEngine `json:"-" yaml:"-"`
 }
 
@@ -282,10 +285,10 @@ func (spec *Spec) ForkVersion(slot Slot) Version {
 	epoch := spec.SlotToEpoch(slot)
 	if epoch < spec.ALTAIR_FORK_EPOCH {
 		return spec.GENESIS_FORK_VERSION
-	} else if epoch < spec.MERGE_FORK_EPOCH {
+	} else if epoch < spec.BELLATRIX_FORK_EPOCH {
 		return spec.ALTAIR_FORK_VERSION
 	} else if epoch < spec.SHARDING_FORK_EPOCH {
-		return spec.MERGE_FORK_VERSION
+		return spec.BELLATRIX_FORK_VERSION
 	} else {
 		return spec.SHARDING_FORK_VERSION
 	}

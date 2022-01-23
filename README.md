@@ -11,7 +11,7 @@ The goal of this project is to have a Go version of the Python based spec,
 
 The beacon package covers the Beacon Chain spec, but optimized for performance.
 
-It is split into packages per fork (`phase0`, `altair`, `merge`, etc.),
+It is split into packages per fork (`phase0`, `altair`, `bellatrix`, etc.),
 that all follow the same functions/naming patterns.
 
 Globals are split up as following:

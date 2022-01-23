@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
+	"github.com/protolambda/zrnt/eth2/beacon/bellatrix"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
-	"github.com/protolambda/zrnt/eth2/beacon/merge"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 )
 
@@ -77,7 +77,7 @@ func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spe
 func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, benv *common.BeaconBlockEnvelope) error {
 	signedBlock, ok := benv.SignedBlock.(*SignedBeaconBlock)
 	if !ok {
-		return fmt.Errorf("unexpected block type %T in Merge ProcessBlock", benv.SignedBlock)
+		return fmt.Errorf("unexpected block type %T in Sharding ProcessBlock", benv.SignedBlock)
 	}
 	block := &signedBlock.Message
 	header := block.Header(spec)
@@ -89,7 +89,7 @@ func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spe
 		return err
 	}
 	body := &block.Body
-	if err := merge.ProcessExecutionPayload(ctx, spec, state, &body.ExecutionPayload, spec.ExecutionEngine); err != nil {
+	if err := bellatrix.ProcessExecutionPayload(ctx, spec, state, &body.ExecutionPayload, spec.ExecutionEngine); err != nil {
 		return err
 	}
 	if err := phase0.ProcessRandaoReveal(ctx, spec, epc, state, body.RandaoReveal); err != nil {

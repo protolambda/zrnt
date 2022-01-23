@@ -57,13 +57,13 @@ func TestYamlDecodingMainnetAltair(t *testing.T) {
 	}
 }
 
-func TestYamlDecodingMainnetMerge(t *testing.T) {
-	var conf common.MergePreset
-	if err := yaml.Unmarshal(mustLoad("presets", "mainnet", "merge"), &conf); err != nil {
+func TestYamlDecodingMainnetBellatrix(t *testing.T) {
+	var conf common.BellatrixPreset
+	if err := yaml.Unmarshal(mustLoad("presets", "mainnet", "bellatrix"), &conf); err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(conf, Mainnet.MergePreset) {
-		t.Fatal("Failed to load mainnet merge preset")
+	if !reflect.DeepEqual(conf, Mainnet.BellatrixPreset) {
+		t.Fatal("Failed to load mainnet bellatrix preset")
 	}
 }
 
@@ -97,13 +97,13 @@ func TestYamlDecodingMinimalAltair(t *testing.T) {
 	}
 }
 
-func TestYamlDecodingMinimalMerge(t *testing.T) {
-	var conf common.MergePreset
-	if err := yaml.Unmarshal(mustLoad("presets", "minimal", "merge"), &conf); err != nil {
+func TestYamlDecodingMinimalBellatrix(t *testing.T) {
+	var conf common.BellatrixPreset
+	if err := yaml.Unmarshal(mustLoad("presets", "minimal", "bellatrix"), &conf); err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(conf, Minimal.MergePreset) {
-		t.Fatal("Failed to load minimal merge preset")
+	if !reflect.DeepEqual(conf, Minimal.BellatrixPreset) {
+		t.Fatal("Failed to load minimal bellatrix preset")
 	}
 }
 

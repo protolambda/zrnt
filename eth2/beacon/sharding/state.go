@@ -2,6 +2,7 @@ package sharding
 
 import (
 	"bytes"
+
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
@@ -544,9 +545,9 @@ func (state *BeaconStateView) SetShardGasPrice(price common.Gwei) error {
 
 func (state *BeaconStateView) ForkSettings(spec *common.Spec) *common.ForkSettings {
 	return &common.ForkSettings{
-		MinSlashingPenaltyQuotient:     spec.MIN_SLASHING_PENALTY_QUOTIENT_MERGE,
-		ProportionalSlashingMultiplier: spec.PROPORTIONAL_SLASHING_MULTIPLIER_MERGE,
-		InactivityPenaltyQuotient:      spec.INACTIVITY_PENALTY_QUOTIENT_MERGE,
+		MinSlashingPenaltyQuotient:     spec.MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX,
+		ProportionalSlashingMultiplier: spec.PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX,
+		InactivityPenaltyQuotient:      spec.INACTIVITY_PENALTY_QUOTIENT_BELLATRIX,
 		CalcProposerShare: func(whistleblowerReward common.Gwei) common.Gwei {
 			return whistleblowerReward * altair.PROPOSER_WEIGHT / altair.WEIGHT_DENOMINATOR
 		},

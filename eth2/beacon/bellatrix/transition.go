@@ -1,4 +1,4 @@
-package merge
+package bellatrix
 
 import (
 	"context"
@@ -71,7 +71,7 @@ func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spe
 func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, benv *common.BeaconBlockEnvelope) error {
 	signedBlock, ok := benv.SignedBlock.(*SignedBeaconBlock)
 	if !ok {
-		return fmt.Errorf("unexpected block type %T in Merge ProcessBlock", benv.SignedBlock)
+		return fmt.Errorf("unexpected block type %T in Bellatrix ProcessBlock", benv.SignedBlock)
 	}
 	block := &signedBlock.Message
 	header := block.Header(spec)

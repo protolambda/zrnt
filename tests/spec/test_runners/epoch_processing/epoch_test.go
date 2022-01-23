@@ -107,7 +107,7 @@ func TestParticipationRecordUpdates(t *testing.T) {
 }
 
 func TestParticipationFlagUpdates(t *testing.T) {
-	test_util.RunTransitionTest(t, []test_util.ForkName{"altair", "merge"}, "epoch_processing", "participation_flag_updates",
+	test_util.RunTransitionTest(t, []test_util.ForkName{"altair", "bellatrix"}, "epoch_processing", "participation_flag_updates",
 		NewEpochTest(func(spec *common.Spec, state common.BeaconState, epc *common.EpochsContext, flats []common.FlatValidator) error {
 			if s, ok := state.(altair.AltairLikeBeaconState); ok {
 				return altair.ProcessParticipationFlagUpdates(context.Background(), spec, s)
@@ -167,7 +167,7 @@ func TestSlashingsReset(t *testing.T) {
 }
 
 func TestSyncCommitteeUpdates(t *testing.T) {
-	test_util.RunTransitionTest(t, []test_util.ForkName{"altair", "merge"}, "epoch_processing", "sync_committee_updates",
+	test_util.RunTransitionTest(t, []test_util.ForkName{"altair", "bellatrix"}, "epoch_processing", "sync_committee_updates",
 		NewEpochTest(func(spec *common.Spec, state common.BeaconState, epc *common.EpochsContext, flats []common.FlatValidator) error {
 			if s, ok := state.(common.SyncCommitteeBeaconState); ok {
 				return altair.ProcessSyncCommitteeUpdates(context.Background(), spec, epc, s)

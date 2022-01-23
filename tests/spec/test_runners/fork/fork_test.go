@@ -93,7 +93,6 @@ func (c *ForkTestCase) Check(t *testing.T) {
 }
 
 func TestFork(t *testing.T) {
-	// TODO: test altair->bellatrix transition
 	test_util.RunTransitionTest(t, []test_util.ForkName{"altair", "bellatrix"}, "fork", "fork",
 		func() test_util.TransitionTest { return new(ForkTestCase) })
 }

@@ -26,11 +26,11 @@ func (p *BLSPubkey) Serialize(w *codec.EncodingWriter) error {
 }
 
 func (BLSPubkey) ByteLength() uint64 {
-	return 96
+	return 48
 }
 
 func (BLSPubkey) FixedLength() uint64 {
-	return 96
+	return 48
 }
 
 func (p BLSPubkey) HashTreeRoot(hFn tree.HashFn) tree.Root {

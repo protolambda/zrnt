@@ -689,7 +689,7 @@ func (pr *ProtoArray) maybeUpdateBestChildAndDescendant(parentIndex NodeIndex, c
 				// The best child leads to a viable head, but the child doesn't.
 				// *No change*
 			} else if child.Weight == bestChild.Weight {
-				// Tie-breaker of equal weights by root.
+				// Tie-breaker of equal weights by root. (smaller hash wins)
 				if bytes.Compare(child.Ref.Root[:], bestChild.Ref.Root[:]) > 0 {
 					changeToChild()
 				}

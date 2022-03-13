@@ -79,7 +79,7 @@ func LighthouseTestDef() *ForkChoiceTestDef {
 		FinalizedEpoch: 0,
 	})
 
-	// Ensure that the head changed to 1, because of bad tiebreaking based on parent-root (TODO)
+	// Ensure that the head is 2 (tie-break on higher root)
 	//
 	//          0
 	//         / \
@@ -87,7 +87,7 @@ func LighthouseTestDef() *ForkChoiceTestDef {
 	//        |
 	//        2
 	add(&OpHead{
-		ExpectedHead: forkchoice.NodeRef{Root: hash(1), Slot: 1},
+		ExpectedHead: forkchoice.NodeRef{Root: hash(2), Slot: 2},
 		Ok:           true,
 	})
 

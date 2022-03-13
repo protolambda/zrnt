@@ -411,12 +411,15 @@ func (pr *ProtoArray) ProcessBlock(parent Root, blockRoot Root, blockSlot Slot, 
 		return true
 	}
 	// cannot add block if parent already exists, or parent is after the block
-	if slot, ok := pr.blockSlots[parent]; !ok || slot >= blockSlot {
+	parentBlockSlot, ok := pr.blockSlots[parent]
+	if !ok || parentBlockSlot >= blockSlot {
 		return false
 	}
 	pr.ProcessSlot(parent, blockSlot, justifiedEpoch, finalizedEpoch)
+
 	// If the parent node is not known, we cannot add the block.
-	forkchoiceParentIndex, ok := pr.indices[NodeRef{Slot: blockSlot - 1, Root: parent}]
+	// Note: the forkchoice graph here only considers blocks, not any empty slots. This is legacy and might change.
+	forkchoiceParentIndex, ok := pr.indices[NodeRef{Slot: parentBlockSlot, Root: parent}]
 	if !ok {
 		return false
 	}

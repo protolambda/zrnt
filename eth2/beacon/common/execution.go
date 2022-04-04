@@ -20,9 +20,9 @@ var ExecutionPayloadHeaderType = ContainerType("ExecutionPayloadHeader", []Field
 	{"parent_hash", Hash32Type},
 	{"fee_recipient", Eth1AddressType},
 	{"state_root", Bytes32Type},
-	{"receipt_root", Bytes32Type},
+	{"receipts_root", Bytes32Type},
 	{"logs_bloom", LogsBloomType},
-	{"random", Bytes32Type},
+	{"prev_randao", Bytes32Type},
 	{"block_number", Uint64Type},
 	{"gas_limit", Uint64Type},
 	{"gas_used", Uint64Type},
@@ -48,9 +48,9 @@ func (v *ExecutionPayloadHeaderView) Raw() (*ExecutionPayloadHeader, error) {
 	parentHash, err := AsRoot(values[0], err)
 	feeRecipient, err := AsEth1Address(values[1], err)
 	stateRoot, err := AsRoot(values[2], err)
-	receiptRoot, err := AsRoot(values[3], err)
+	receiptsRoot, err := AsRoot(values[3], err)
 	logsBloomView, err := AsLogsBloom(values[4], err)
-	random, err := AsRoot(values[5], err)
+	prevRandao, err := AsRoot(values[5], err)
 	blockNumber, err := AsUint64(values[6], err)
 	gasLimit, err := AsUint64(values[7], err)
 	gasUsed, err := AsUint64(values[8], err)
@@ -74,9 +74,9 @@ func (v *ExecutionPayloadHeaderView) Raw() (*ExecutionPayloadHeader, error) {
 		ParentHash:       parentHash,
 		FeeRecipient:     feeRecipient,
 		StateRoot:        stateRoot,
-		ReceiptRoot:      receiptRoot,
+		ReceiptsRoot:     receiptsRoot,
 		LogsBloom:        *logsBloom,
-		Random:           random,
+		PrevRandao:       prevRandao,
 		BlockNumber:      blockNumber,
 		GasLimit:         gasLimit,
 		GasUsed:          gasUsed,
@@ -153,9 +153,9 @@ type ExecutionPayloadHeader struct {
 	ParentHash       Hash32      `json:"parent_hash" yaml:"parent_hash"`
 	FeeRecipient     Eth1Address `json:"fee_recipient" yaml:"fee_recipient"`
 	StateRoot        Bytes32     `json:"state_root" yaml:"state_root"`
-	ReceiptRoot      Bytes32     `json:"receipt_root" yaml:"receipt_root"`
+	ReceiptsRoot     Bytes32     `json:"receipts_root" yaml:"receipts_root"`
 	LogsBloom        LogsBloom   `json:"logs_bloom" yaml:"logs_bloom"`
-	Random           Bytes32     `json:"random" yaml:"random"`
+	PrevRandao       Bytes32     `json:"prev_randao" yaml:"prev_randao"`
 	BlockNumber      Uint64View  `json:"block_number" yaml:"block_number"`
 	GasLimit         Uint64View  `json:"gas_limit" yaml:"gas_limit"`
 	GasUsed          Uint64View  `json:"gas_used" yaml:"gas_used"`
@@ -171,8 +171,8 @@ func (s *ExecutionPayloadHeader) View() *ExecutionPayloadHeaderView {
 	if err != nil {
 		panic(err)
 	}
-	pr, cb, sr, rr := (*RootView)(&s.ParentHash), s.FeeRecipient.View(), (*RootView)(&s.StateRoot), (*RootView)(&s.ReceiptRoot)
-	lb, rng, nr, gl, gu := s.LogsBloom.View(), (*RootView)(&s.Random), s.BlockNumber, s.GasLimit, s.GasUsed
+	pr, cb, sr, rr := (*RootView)(&s.ParentHash), s.FeeRecipient.View(), (*RootView)(&s.StateRoot), (*RootView)(&s.ReceiptsRoot)
+	lb, rng, nr, gl, gu := s.LogsBloom.View(), (*RootView)(&s.PrevRandao), s.BlockNumber, s.GasLimit, s.GasUsed
 	ts, bf, bh, tr := Uint64View(s.Timestamp), &s.BaseFeePerGas, (*RootView)(&s.BlockHash), (*RootView)(&s.TransactionsRoot)
 
 	v, err := AsExecutionPayloadHeader(ExecutionPayloadHeaderType.FromFields(pr, cb, sr, rr, lb, rng, nr, gl, gu, ts, ed, bf, bh, tr))
@@ -184,19 +184,19 @@ func (s *ExecutionPayloadHeader) View() *ExecutionPayloadHeaderView {
 
 func (s *ExecutionPayloadHeader) Deserialize(dr *codec.DecodingReader) error {
 	return dr.Container(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
-		&s.ReceiptRoot, &s.LogsBloom, &s.Random, &s.BlockNumber, &s.GasLimit,
+		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
 		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot)
 }
 
 func (s *ExecutionPayloadHeader) Serialize(w *codec.EncodingWriter) error {
 	return w.Container(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
-		&s.ReceiptRoot, &s.LogsBloom, &s.Random, &s.BlockNumber, &s.GasLimit,
+		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
 		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot)
 }
 
 func (s *ExecutionPayloadHeader) ByteLength() uint64 {
 	return codec.ContainerLength(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
-		&s.ReceiptRoot, &s.LogsBloom, &s.Random, &s.BlockNumber, &s.GasLimit,
+		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
 		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot)
 }
 
@@ -206,7 +206,7 @@ func (b *ExecutionPayloadHeader) FixedLength() uint64 {
 
 func (s *ExecutionPayloadHeader) HashTreeRoot(hFn tree.HashFn) Root {
 	return hFn.HashTreeRoot(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
-		&s.ReceiptRoot, &s.LogsBloom, &s.Random, &s.BlockNumber, &s.GasLimit,
+		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
 		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot)
 }
 
@@ -215,9 +215,9 @@ func ExecutionPayloadType(spec *Spec) *ContainerTypeDef {
 		{"parent_hash", Hash32Type},
 		{"fee_recipient", Eth1AddressType},
 		{"state_root", Bytes32Type},
-		{"receipt_root", Bytes32Type},
+		{"receipts_root", Bytes32Type},
 		{"logs_bloom", LogsBloomType},
-		{"random", Bytes32Type},
+		{"prev_randao", Bytes32Type},
 		{"block_number", Uint64Type},
 		{"gas_limit", Uint64Type},
 		{"gas_used", Uint64Type},
@@ -305,9 +305,9 @@ type ExecutionPayload struct {
 	ParentHash    Hash32              `json:"parent_hash" yaml:"parent_hash"`
 	FeeRecipient  Eth1Address         `json:"fee_recipient" yaml:"fee_recipient"`
 	StateRoot     Bytes32             `json:"state_root" yaml:"state_root"`
-	ReceiptRoot   Bytes32             `json:"receipt_root" yaml:"receipt_root"`
+	ReceiptsRoot  Bytes32             `json:"receipts_root" yaml:"receipts_root"`
 	LogsBloom     LogsBloom           `json:"logs_bloom" yaml:"logs_bloom"`
-	Random        Bytes32             `json:"random" yaml:"random"`
+	PrevRandao    Bytes32             `json:"prev_randao" yaml:"prev_randao"`
 	BlockNumber   Uint64View          `json:"block_number" yaml:"block_number"`
 	GasLimit      Uint64View          `json:"gas_limit" yaml:"gas_limit"`
 	GasUsed       Uint64View          `json:"gas_used" yaml:"gas_used"`
@@ -320,19 +320,19 @@ type ExecutionPayload struct {
 
 func (s *ExecutionPayload) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
 	return dr.Container(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
-		&s.ReceiptRoot, &s.LogsBloom, &s.Random, &s.BlockNumber, &s.GasLimit,
+		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
 		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions))
 }
 
 func (s *ExecutionPayload) Serialize(spec *Spec, w *codec.EncodingWriter) error {
 	return w.Container(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
-		&s.ReceiptRoot, &s.LogsBloom, &s.Random, &s.BlockNumber, &s.GasLimit,
+		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
 		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions))
 }
 
 func (s *ExecutionPayload) ByteLength(spec *Spec) uint64 {
 	return codec.ContainerLength(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
-		&s.ReceiptRoot, &s.LogsBloom, &s.Random, &s.BlockNumber, &s.GasLimit,
+		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
 		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions))
 }
 
@@ -343,7 +343,7 @@ func (a *ExecutionPayload) FixedLength(*Spec) uint64 {
 
 func (s *ExecutionPayload) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
 	return hFn.HashTreeRoot(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
-		&s.ReceiptRoot, &s.LogsBloom, &s.Random, &s.BlockNumber, &s.GasLimit,
+		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
 		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions))
 }
 
@@ -352,9 +352,9 @@ func (ep *ExecutionPayload) Header(spec *Spec) *ExecutionPayloadHeader {
 		ParentHash:       ep.ParentHash,
 		FeeRecipient:     ep.FeeRecipient,
 		StateRoot:        ep.StateRoot,
-		ReceiptRoot:      ep.ReceiptRoot,
+		ReceiptsRoot:     ep.ReceiptsRoot,
 		LogsBloom:        ep.LogsBloom,
-		Random:           ep.Random,
+		PrevRandao:       ep.PrevRandao,
 		BlockNumber:      ep.BlockNumber,
 		GasLimit:         ep.GasLimit,
 		GasUsed:          ep.GasUsed,

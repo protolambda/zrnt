@@ -52,8 +52,8 @@ func ProcessExecutionPayload(ctx context.Context, spec *common.Spec, state Execu
 	if err != nil {
 		return err
 	}
-	if executionPayload.Random != expectedMix {
-		return fmt.Errorf("invalid random data %s, expected %s", executionPayload.Random, expectedMix)
+	if executionPayload.PrevRandao != expectedMix {
+		return fmt.Errorf("invalid random data %s, expected %s", executionPayload.PrevRandao, expectedMix)
 	}
 
 	// verify timestamp

@@ -93,9 +93,9 @@ func ValidateAggregateAndProof(ctx context.Context, signedAgg *phase0.SignedAggr
 		if unknown, inSubtree := ch.InSubtree(fin.Root, att.Data.BeaconBlockRoot); unknown {
 			return GossipValidatorResult{IGNORE, errors.New("unknown block, cannot check if in subtree")}
 		} else if !inSubtree {
-			return GossipValidatorResult{REJECT, errors.New("block not in subtree of finalized root")}
+			return GossipValidatorResult{IGNORE, errors.New("block not in subtree of finalized root")}
 		}
-	} else if fin.Epoch >= att.Data.Target.Epoch {
+	} else if fin.Epoch > att.Data.Target.Epoch {
 		return GossipValidatorResult{REJECT, errors.New("cannot vote for finalized root as target")}
 	}
 

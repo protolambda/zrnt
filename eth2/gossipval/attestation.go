@@ -93,7 +93,7 @@ func ValidateAttestation(ctx context.Context, subnet uint64, att *phase0.Attesta
 		return GossipValidatorResult{REJECT, errors.New("block not in subtree of target")}, nil
 	}
 
-	// [REJECT] The current finalized_checkpoint is an ancestor of the block defined
+	// [IGNORE] The current finalized_checkpoint is an ancestor of the block defined
 	// by attestation.data.beacon_block_root --
 	// i.e. get_ancestor(store, attestation.data.beacon_block_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch))
 	//        == store.finalized_checkpoint.root
@@ -102,9 +102,9 @@ func ValidateAttestation(ctx context.Context, subnet uint64, att *phase0.Attesta
 		if unknown, inSubtree := ch.InSubtree(fin.Root, att.Data.BeaconBlockRoot); unknown {
 			return GossipValidatorResult{IGNORE, errors.New("unknown block, cannot check if in subtree")}, nil
 		} else if !inSubtree {
-			return GossipValidatorResult{REJECT, errors.New("block not in subtree of finalized root")}, nil
+			return GossipValidatorResult{IGNORE, errors.New("block not in subtree of finalized root")}, nil
 		}
-	} else if fin.Epoch >= att.Data.Target.Epoch {
+	} else if fin.Epoch > att.Data.Target.Epoch {
 		return GossipValidatorResult{REJECT, errors.New("cannot vote for finalized root as target")}, nil
 	}
 

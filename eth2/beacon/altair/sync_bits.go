@@ -60,6 +60,10 @@ func (li SyncCommitteeSubnetBits) SetBit(i uint64, v bool) {
 	bitfields.SetBit(li, i, v)
 }
 
+func (li SyncCommitteeSubnetBits) OnesCount() uint64 {
+	return bitfields.BitlistOnesCount(li)
+}
+
 type SyncCommitteeSubnetBitsView struct {
 	*BitVectorView
 }

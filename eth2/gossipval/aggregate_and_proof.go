@@ -35,16 +35,8 @@ func ValidateAggregateAndProof(ctx context.Context, signedAgg *phase0.SignedAggr
 	// i.e. aggregate.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= current_slot >= aggregate.data.slot
 	// overflow check
 	att := &signedAgg.Message.Aggregate
-	if att.Data.Slot+ATTESTATION_PROPAGATION_SLOT_RANGE < att.Data.Slot {
-		return GossipValidatorResult{REJECT, fmt.Errorf("attestation slot overflow: %d", att.Data.Slot)}
-	}
-	// check minimum, with account for clock disparity
-	if minSlot := aggVal.SlotAfter(-MAXIMUM_GOSSIP_CLOCK_DISPARITY); att.Data.Slot+ATTESTATION_PROPAGATION_SLOT_RANGE < minSlot {
-		return GossipValidatorResult{IGNORE, fmt.Errorf("attestation slot %d is too old, minimum slot is %d", att.Data.Slot, minSlot)}
-	}
-	// check maximum, with account for clock disparity
-	if maxSlot := aggVal.SlotAfter(MAXIMUM_GOSSIP_CLOCK_DISPARITY); att.Data.Slot > maxSlot {
-		return GossipValidatorResult{IGNORE, fmt.Errorf("attestation slot %d is too new, maximum slot is %d", att.Data.Slot, maxSlot)}
+	if err := CheckSlotSpan(aggVal.SlotAfter, att.Data.Slot, ATTESTATION_PROPAGATION_SLOT_RANGE); err != nil {
+		return GossipValidatorResult{IGNORE, fmt.Errorf("aggregate attestation not within slot range: %v", err)}
 	}
 
 	// [REJECT] The aggregate attestation's epoch matches its target --

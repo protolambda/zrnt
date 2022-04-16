@@ -1,6 +1,9 @@
 package altair
 
 import (
+	"errors"
+	"fmt"
+	blsu "github.com/protolambda/bls12-381-util"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
@@ -79,6 +82,32 @@ func (sc *SyncCommitteeContribution) HashTreeRoot(spec *common.Spec, hFn tree.Ha
 		spec.Wrap(&sc.AggregationBits),
 		&sc.Signature,
 	)
+}
+
+func (sc *SyncCommitteeContribution) VerifySignature(spec *common.Spec, subcommitteePubkeys []*common.CachedPubkey, domFn common.BLSDomainFn) error {
+	pubkeys := make([]*blsu.Pubkey, 0, len(subcommitteePubkeys))
+	for i, pub := range subcommitteePubkeys {
+		if sc.AggregationBits.GetBit(uint64(i)) {
+			p, err := pub.Pubkey()
+			if err != nil {
+				return fmt.Errorf("found invalid pubkey in cache")
+			}
+			pubkeys = append(pubkeys, p)
+		}
+	}
+	dom, err := domFn(common.DOMAIN_SYNC_COMMITTEE, spec.SlotToEpoch(sc.Slot))
+	if err != nil {
+		return err
+	}
+	signingRoot := common.ComputeSigningRoot(sc.BeaconBlockRoot, dom)
+	sig, err := sc.Signature.Signature()
+	if err != nil {
+		return fmt.Errorf("failed to deserialize and sub-group check sync committee contribution signature: %v", err)
+	}
+	if !blsu.Eth2FastAggregateVerify(pubkeys, signingRoot[:], sig) {
+		return errors.New("could not verify BLS signature for sync committee contribution")
+	}
+	return nil
 }
 
 type SyncCommitteeContributionView struct {

@@ -42,17 +42,8 @@ func ValidateAttestation(ctx context.Context, subnet uint64, att *phase0.Attesta
 	// (within a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance) --
 	// i.e. attestation.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= current_slot >= attestation.data.slot
 
-	// overflow check
-	if att.Data.Slot+ATTESTATION_PROPAGATION_SLOT_RANGE < att.Data.Slot {
-		return GossipValidatorResult{REJECT, fmt.Errorf("attestation slot overflow: %d", att.Data.Slot)}, nil
-	}
-	// check minimum, with account for clock disparity
-	if minSlot := attVal.SlotAfter(-MAXIMUM_GOSSIP_CLOCK_DISPARITY); att.Data.Slot+ATTESTATION_PROPAGATION_SLOT_RANGE < minSlot {
-		return GossipValidatorResult{IGNORE, fmt.Errorf("attestation slot %d is too old, minimum slot is %d", att.Data.Slot, minSlot)}, nil
-	}
-	// check maximum, with account for clock disparity
-	if maxSlot := attVal.SlotAfter(MAXIMUM_GOSSIP_CLOCK_DISPARITY); att.Data.Slot > maxSlot {
-		return GossipValidatorResult{IGNORE, fmt.Errorf("attestation slot %d is too new, maximum slot is %d", att.Data.Slot, maxSlot)}, nil
+	if err := CheckSlotSpan(attVal.SlotAfter, att.Data.Slot, ATTESTATION_PROPAGATION_SLOT_RANGE); err != nil {
+		return GossipValidatorResult{IGNORE, fmt.Errorf("individual attestation not within slot range: %v", err)}, nil
 	}
 
 	// [REJECT] The attestation's epoch matches its target --

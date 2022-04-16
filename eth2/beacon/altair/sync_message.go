@@ -1,6 +1,9 @@
 package altair
 
 import (
+	"errors"
+	"fmt"
+	blsu "github.com/protolambda/bls12-381-util"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
@@ -68,6 +71,30 @@ func (msg *SyncCommitteeMessage) HashTreeRoot(hFn tree.HashFn) common.Root {
 		&msg.ValidatorIndex,
 		&msg.Signature,
 	)
+}
+
+func (msg *SyncCommitteeMessage) VerifySignature(spec *common.Spec, epc *common.EpochsContext, domFn common.BLSDomainFn) error {
+	pub, ok := epc.ValidatorPubkeyCache.Pubkey(msg.ValidatorIndex)
+	if !ok {
+		return fmt.Errorf("could not fetch pubkey for sync committee member %d", msg.ValidatorIndex)
+	}
+	blsPub, err := pub.Pubkey()
+	if err != nil {
+		return err
+	}
+	dom, err := domFn(common.DOMAIN_SYNC_COMMITTEE, spec.SlotToEpoch(msg.Slot))
+	if err != nil {
+		return err
+	}
+	signingRoot := common.ComputeSigningRoot(msg.BeaconBlockRoot, dom)
+	sig, err := msg.Signature.Signature()
+	if err != nil {
+		return fmt.Errorf("failed to deserialize and sub-group check individual sync committee contribution signature: %v", err)
+	}
+	if !blsu.Verify(blsPub, signingRoot[:], sig) {
+		return errors.New("could not verify BLS signature for individual sync committee contribution")
+	}
+	return nil
 }
 
 type SyncCommitteeMessageView struct {

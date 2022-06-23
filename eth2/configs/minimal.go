@@ -60,7 +60,7 @@ var Minimal = &common.Spec{
 	},
 	CapellaPreset: common.CapellaPreset{
 		MAX_PARTIAL_WITHDRAWALS_PER_EPOCH: 16,
-		WITHDRAWALS_QUEUE_LIMIT:           1099511627776,
+		WITHDRAWAL_QUEUE_LIMIT:            1099511627776,
 		MAX_BLS_TO_EXECUTION_CHANGES:      16,
 		MAX_WITHDRAWALS_PER_PAYLOAD:       16,
 	},

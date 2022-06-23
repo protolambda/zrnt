@@ -59,7 +59,10 @@ var Minimal = &common.Spec{
 		MAX_EXTRA_DATA_BYTES:                       32,
 	},
 	CapellaPreset: common.CapellaPreset{
-		// TODO
+		MAX_PARTIAL_WITHDRAWALS_PER_EPOCH: 16,
+		WITHDRAWALS_QUEUE_LIMIT:           1099511627776,
+		MAX_BLS_TO_EXECUTION_CHANGES:      16,
+		MAX_WITHDRAWALS_PER_PAYLOAD:       16,
 	},
 	ShardingPreset: common.ShardingPreset{
 		MAX_SHARDS:                          8,

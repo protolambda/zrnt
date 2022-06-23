@@ -58,6 +58,9 @@ var Mainnet = &common.Spec{
 		BYTES_PER_LOGS_BLOOM:                       256,
 		MAX_EXTRA_DATA_BYTES:                       32,
 	},
+	CapellaPreset: common.CapellaPreset{
+		// TODO
+	},
 	ShardingPreset: common.ShardingPreset{
 		MAX_SHARDS:                          1024,
 		INITIAL_ACTIVE_SHARDS:               64,
@@ -81,7 +84,9 @@ var Mainnet = &common.Spec{
 		ALTAIR_FORK_EPOCH:                    common.Epoch(74240),
 		BELLATRIX_FORK_VERSION:               common.Version{0x02, 0x00, 0x00, 0x00},
 		BELLATRIX_FORK_EPOCH:                 ^common.Epoch(0),
-		SHARDING_FORK_VERSION:                common.Version{0x03, 0x00, 0x00, 0x00},
+		CAPELLA_FORK_VERSION:                 common.Version{0x03, 0x00, 0x00, 0x00},
+		CAPELLA_FORK_EPOCH:                   ^common.Epoch(0),
+		SHARDING_FORK_VERSION:                common.Version{0x04, 0x00, 0x00, 0x00},
 		SHARDING_FORK_EPOCH:                  ^common.Epoch(0),
 		TERMINAL_TOTAL_DIFFICULTY:            view.MustUint256("115792089237316195423570985008687907853269984665640564039457584007913129638912"),
 		TERMINAL_BLOCK_HASH:                  common.Bytes32{},

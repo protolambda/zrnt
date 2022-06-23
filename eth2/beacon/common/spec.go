@@ -110,6 +110,9 @@ type BellatrixPreset struct {
 	MAX_EXTRA_DATA_BYTES                       Uint64View `yaml:"MAX_EXTRA_DATA_BYTES" json:"MAX_EXTRA_DATA_BYTES"`
 }
 
+type CapellaPreset struct {
+}
+
 type ShardingPreset struct {
 	// Misc.
 	MAX_SHARDS                          Uint64View `yaml:"MAX_SHARDS" json:"MAX_SHARDS"`
@@ -145,6 +148,10 @@ type Config struct {
 	// Bellatrix
 	BELLATRIX_FORK_VERSION Version `yaml:"BELLATRIX_FORK_VERSION" json:"BELLATRIX_FORK_VERSION"`
 	BELLATRIX_FORK_EPOCH   Epoch   `yaml:"BELLATRIX_FORK_EPOCH" json:"BELLATRIX_FORK_EPOCH"`
+
+	// Capella
+	CAPELLA_FORK_VERSION Version `yaml:"CAPELLA_FORK_VERSION" json:"CAPELLA_FORK_VERSION"`
+	CAPELLA_FORK_EPOCH   Epoch   `yaml:"CAPELLA_FORK_EPOCH" json:"CAPELLA_FORK_EPOCH"`
 
 	// Sharding
 	SHARDING_FORK_VERSION Version `yaml:"SHARDING_FORK_VERSION" json:"SHARDING_FORK_VERSION"`
@@ -253,6 +260,7 @@ type Spec struct {
 	Phase0Preset    `json:",inline" yaml:",inline"`
 	AltairPreset    `json:",inline" yaml:",inline"`
 	BellatrixPreset `json:",inline" yaml:",inline"`
+	CapellaPreset   `json:",inline" yaml:",inline"`
 	ShardingPreset  `json:",inline" yaml:",inline"`
 	Config          `json:",inline" yaml:",inline"`
 	Setup           `json:",inline" yaml:",inline"`
@@ -289,8 +297,10 @@ func (spec *Spec) ForkVersion(slot Slot) Version {
 		return spec.GENESIS_FORK_VERSION
 	} else if epoch < spec.BELLATRIX_FORK_EPOCH {
 		return spec.ALTAIR_FORK_VERSION
-	} else if epoch < spec.SHARDING_FORK_EPOCH {
+	} else if epoch < spec.CAPELLA_FORK_EPOCH {
 		return spec.BELLATRIX_FORK_VERSION
+	} else if epoch < spec.SHARDING_FORK_EPOCH {
+		return spec.CAPELLA_FORK_VERSION
 	} else {
 		return spec.SHARDING_FORK_VERSION
 	}

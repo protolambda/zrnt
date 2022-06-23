@@ -15,6 +15,7 @@ type ForkDecoder struct {
 	Genesis   common.ForkDigest
 	Altair    common.ForkDigest
 	Bellatrix common.ForkDigest
+	Capella   common.ForkDigest
 	Sharding  common.ForkDigest
 	// TODO more forks
 }
@@ -25,6 +26,7 @@ func NewForkDecoder(spec *common.Spec, genesisValRoot common.Root) *ForkDecoder 
 		Genesis:   common.ComputeForkDigest(spec.GENESIS_FORK_VERSION, genesisValRoot),
 		Altair:    common.ComputeForkDigest(spec.ALTAIR_FORK_VERSION, genesisValRoot),
 		Bellatrix: common.ComputeForkDigest(spec.BELLATRIX_FORK_VERSION, genesisValRoot),
+		Capella:   common.ComputeForkDigest(spec.CAPELLA_FORK_VERSION, genesisValRoot),
 		Sharding:  common.ComputeForkDigest(spec.SHARDING_FORK_VERSION, genesisValRoot),
 	}
 }
@@ -42,6 +44,9 @@ func (d *ForkDecoder) BlockAllocator(digest common.ForkDigest) (func() OpaqueBlo
 		return func() OpaqueBlock { return new(altair.SignedBeaconBlock) }, nil
 	case d.Bellatrix:
 		return func() OpaqueBlock { return new(bellatrix.SignedBeaconBlock) }, nil
+	case d.Capella:
+		// TODO: Implement
+		return nil, fmt.Errorf("capella not implemented: %s", digest)
 	//case d.Sharding:
 	//	return new(sharding.SignedBeaconBlock), nil
 	default:
@@ -86,6 +91,9 @@ func (s *StandardUpgradeableBeaconState) UpgradeMaybe(ctx context.Context, spec 
 			return fmt.Errorf("failed to upgrade atalir to bellatrix state: %v", err)
 		}
 		s.BeaconState = post
+	}
+	if slot == common.Slot(spec.CAPELLA_FORK_EPOCH)*spec.SLOTS_PER_EPOCH {
+		// TODO: upgrade
 	}
 	//if slot == common.Slot(spec.SHARDING_FORK_EPOCH)*spec.SLOTS_PER_EPOCH {
 	// TODO: upgrade

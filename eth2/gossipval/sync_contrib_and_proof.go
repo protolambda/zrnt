@@ -15,8 +15,8 @@ type SyncContribAndProofValBackend interface {
 	SlotAfter
 	DomainGetter
 
-	SeenContribution(aggregator common.ValidatorIndex, slot common.Slot, commIndex uint64) bool
-	MarkContribution(aggregator common.ValidatorIndex, slot common.Slot, commIndex uint64)
+	SeenContribution(aggregator common.ValidatorIndex, slot common.Slot, subnet uint64) bool
+	MarkContribution(aggregator common.ValidatorIndex, slot common.Slot, subnet uint64)
 }
 
 func ValidateSyncContribAndProof(ctx context.Context, signedContribAndProof *altair.SignedContributionAndProof,

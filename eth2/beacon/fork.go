@@ -34,18 +34,30 @@ type OpaqueBlock interface {
 	common.EnvelopeBuilder
 }
 
-func (d *ForkDecoder) AllocBlock(digest common.ForkDigest) (OpaqueBlock, error) {
+func (d *ForkDecoder) BlockAllocator(digest common.ForkDigest) (func() OpaqueBlock, error) {
 	switch digest {
 	case d.Genesis:
-		return new(phase0.SignedBeaconBlock), nil
+		return func() OpaqueBlock { return new(phase0.SignedBeaconBlock) }, nil
 	case d.Altair:
-		return new(altair.SignedBeaconBlock), nil
+		return func() OpaqueBlock { return new(altair.SignedBeaconBlock) }, nil
 	case d.Bellatrix:
-		return new(bellatrix.SignedBeaconBlock), nil
+		return func() OpaqueBlock { return new(bellatrix.SignedBeaconBlock) }, nil
 	//case d.Sharding:
 	//	return new(sharding.SignedBeaconBlock), nil
 	default:
 		return nil, fmt.Errorf("unrecognized fork digest: %s", digest)
+	}
+}
+
+func (d *ForkDecoder) ForkDigest(epoch common.Epoch) common.ForkDigest {
+	if epoch < d.Spec.ALTAIR_FORK_EPOCH {
+		return d.Genesis
+	} else if epoch < d.Spec.BELLATRIX_FORK_EPOCH {
+		return d.Altair
+	} else if epoch < d.Spec.SHARDING_FORK_EPOCH {
+		return d.Bellatrix
+	} else {
+		return d.Sharding
 	}
 }
 

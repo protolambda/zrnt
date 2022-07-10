@@ -32,6 +32,11 @@ type SearchEntry struct {
 	Canonical bool
 }
 
+type GenesisInfo struct {
+	Time           common.Timestamp
+	ValidatorsRoot common.Root
+}
+
 type Chain interface {
 	// Get the chain entry for the given state root (post slot processing or post block processing)
 	ByStateRoot(root common.Root) (entry ChainEntry, ok bool)
@@ -64,6 +69,7 @@ type Chain interface {
 	// A strict context should be provided to avoid costly long transitions.
 	// An error is also returned if the fromBlockRoot is past the requested toSlot.
 	Towards(ctx context.Context, fromBlockRoot common.Root, toSlot common.Slot) (ChainEntry, error)
+	Genesis() GenesisInfo
 }
 
 type ChainIter interface {

@@ -82,3 +82,43 @@ func (s *StandardUpgradeableBeaconState) UpgradeMaybe(ctx context.Context, spec 
 }
 
 var _ common.UpgradeableBeaconState = (*StandardUpgradeableBeaconState)(nil)
+
+func EnvelopeToSignedBeaconBlock(benv *common.BeaconBlockEnvelope) (common.SpecObj, error) {
+	switch x := benv.Body.(type) {
+	case *phase0.BeaconBlockBody:
+		return &phase0.SignedBeaconBlock{
+			Message: phase0.BeaconBlock{
+				Slot:          benv.Slot,
+				ProposerIndex: benv.ProposerIndex,
+				ParentRoot:    benv.ParentRoot,
+				StateRoot:     benv.StateRoot,
+				Body:          *x,
+			},
+			Signature: benv.Signature,
+		}, nil
+	case *altair.BeaconBlockBody:
+		return &altair.SignedBeaconBlock{
+			Message: altair.BeaconBlock{
+				Slot:          benv.Slot,
+				ProposerIndex: benv.ProposerIndex,
+				ParentRoot:    benv.ParentRoot,
+				StateRoot:     benv.StateRoot,
+				Body:          *x,
+			},
+			Signature: benv.Signature,
+		}, nil
+	case *bellatrix.BeaconBlockBody:
+		return &bellatrix.SignedBeaconBlock{
+			Message: bellatrix.BeaconBlock{
+				Slot:          benv.Slot,
+				ProposerIndex: benv.ProposerIndex,
+				ParentRoot:    benv.ParentRoot,
+				StateRoot:     benv.StateRoot,
+				Body:          *x,
+			},
+			Signature: benv.Signature,
+		}, nil
+	default:
+		return nil, fmt.Errorf("cannot convert beacon block envelope to full signed block, unrecognized body type: %T", x)
+	}
+}

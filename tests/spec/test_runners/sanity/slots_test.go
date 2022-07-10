@@ -2,10 +2,11 @@ package sanity
 
 import (
 	"context"
+	"testing"
+
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"gopkg.in/yaml.v3"
-	"testing"
 )
 
 type SlotsTestCase struct {

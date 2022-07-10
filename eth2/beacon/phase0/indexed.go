@@ -3,12 +3,13 @@ package phase0
 import (
 	"errors"
 	"fmt"
+	"sort"
+
 	blsu "github.com/protolambda/bls12-381-util"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
-	"sort"
 )
 
 type IndexedAttestation struct {

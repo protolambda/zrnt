@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	blsu "github.com/protolambda/bls12-381-util"
 
 	"github.com/protolambda/zrnt/eth2/beacon/common"
@@ -53,7 +54,7 @@ var _ common.RandaoMixes = (*RandaoMixesView)(nil)
 
 func AsRandaoMixes(v View, err error) (*RandaoMixesView, error) {
 	c, err := AsComplexVector(v, err)
-	return &RandaoMixesView{c}, nil
+	return &RandaoMixesView{c}, err
 }
 
 // Provides a source of randomness for the state, for e.g. shuffling

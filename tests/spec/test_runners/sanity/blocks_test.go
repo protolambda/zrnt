@@ -1,8 +1,9 @@
 package sanity
 
 import (
-	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"testing"
+
+	"github.com/protolambda/zrnt/tests/spec/test_util"
 )
 
 func TestBlocks(t *testing.T) {

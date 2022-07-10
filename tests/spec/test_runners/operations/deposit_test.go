@@ -1,10 +1,11 @@
 package operations
 
 import (
+	"testing"
+
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
-	"testing"
 )
 
 type DepositTestCase struct {

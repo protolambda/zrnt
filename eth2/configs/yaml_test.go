@@ -1,12 +1,13 @@
 package configs
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon/common"
-	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"gopkg.in/yaml.v3"
 )
 
 func mustLoad(path ...string) []byte {

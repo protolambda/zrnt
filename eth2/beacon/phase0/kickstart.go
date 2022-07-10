@@ -2,6 +2,7 @@ package phase0
 
 import (
 	"errors"
+
 	kbls "github.com/kilic/bls12-381"
 	blsu "github.com/protolambda/bls12-381-util"
 	"github.com/protolambda/zrnt/eth2/beacon/common"

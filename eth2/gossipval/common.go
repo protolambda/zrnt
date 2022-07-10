@@ -2,8 +2,9 @@ package gossipval
 
 import (
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"time"
+
+	"github.com/protolambda/zrnt/eth2/beacon/common"
 )
 
 // CheckSlotSpan checks if the slot is within the span of slots, with MAXIMUM_GOSSIP_CLOCK_DISPARITY margin in time.

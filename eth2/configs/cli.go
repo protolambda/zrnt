@@ -2,9 +2,10 @@ package configs
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"gopkg.in/yaml.v3"
-	"os"
 )
 
 type SpecOptions struct {

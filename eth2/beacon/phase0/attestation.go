@@ -5,11 +5,12 @@ import (
 	"errors"
 	"fmt"
 
+	"sort"
+
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
-	"sort"
 )
 
 func BlockAttestationsType(spec *common.Spec) ListTypeDef {

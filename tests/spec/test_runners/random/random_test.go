@@ -1,8 +1,9 @@
 package random
 
 import (
-	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"testing"
+
+	"github.com/protolambda/zrnt/tests/spec/test_util"
 )
 
 func TestRandomBlocks(t *testing.T) {

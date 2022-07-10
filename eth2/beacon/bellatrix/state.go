@@ -2,6 +2,7 @@ package bellatrix
 
 import (
 	"bytes"
+
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"

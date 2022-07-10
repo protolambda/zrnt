@@ -2,6 +2,7 @@ package phase0
 
 import (
 	"errors"
+
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
@@ -120,6 +121,9 @@ func GenesisFromEth1(spec *common.Spec, eth1BlockHash common.Root, time common.T
 			return nil, nil, err
 		}
 		balance, err := bals.GetBalance(common.ValidatorIndex(i))
+		if err != nil {
+			return nil, nil, err
+		}
 		vEff := balance - (balance % spec.EFFECTIVE_BALANCE_INCREMENT)
 		if vEff > spec.MAX_EFFECTIVE_BALANCE {
 			vEff = spec.MAX_EFFECTIVE_BALANCE

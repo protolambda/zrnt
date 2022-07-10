@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+
 	"github.com/protolambda/zrnt/eth2/util/math"
 )
 
@@ -87,6 +88,9 @@ func NewEpochsContext(spec *Spec, state BeaconState) (*EpochsContext, error) {
 			return nil, err
 		}
 		bpc, err = NewBuilderPubkeyCache(builders)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	epc := &EpochsContext{

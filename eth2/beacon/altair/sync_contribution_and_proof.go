@@ -3,6 +3,7 @@ package altair
 import (
 	"encoding/binary"
 	"fmt"
+
 	blsu "github.com/protolambda/bls12-381-util"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/util/hashing"

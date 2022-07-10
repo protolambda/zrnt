@@ -57,7 +57,7 @@ var _ common.Slashings = (*SlashingsView)(nil)
 
 func AsSlashings(v View, err error) (*SlashingsView, error) {
 	c, err := AsBasicVector(v, err)
-	return &SlashingsView{c}, nil
+	return &SlashingsView{c}, err
 }
 
 func (sl *SlashingsView) GetSlashingsValue(epoch common.Epoch) (common.Gwei, error) {

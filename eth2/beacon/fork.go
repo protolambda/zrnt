@@ -3,11 +3,11 @@ package beacon
 import (
 	"context"
 	"fmt"
+
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
 	"github.com/protolambda/zrnt/eth2/beacon/bellatrix"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
-	"github.com/protolambda/zrnt/eth2/beacon/sharding"
 )
 
 type ForkDecoder struct {
@@ -42,8 +42,8 @@ func (d *ForkDecoder) AllocBlock(digest common.ForkDigest) (OpaqueBlock, error) 
 		return new(altair.SignedBeaconBlock), nil
 	case d.Bellatrix:
 		return new(bellatrix.SignedBeaconBlock), nil
-	case d.Sharding:
-		return new(sharding.SignedBeaconBlock), nil
+	//case d.Sharding:
+	//	return new(sharding.SignedBeaconBlock), nil
 	default:
 		return nil, fmt.Errorf("unrecognized fork digest: %s", digest)
 	}
@@ -75,9 +75,9 @@ func (s *StandardUpgradeableBeaconState) UpgradeMaybe(ctx context.Context, spec 
 		}
 		s.BeaconState = post
 	}
-	if slot == common.Slot(spec.SHARDING_FORK_EPOCH)*spec.SLOTS_PER_EPOCH {
-		// TODO: upgrade
-	}
+	//if slot == common.Slot(spec.SHARDING_FORK_EPOCH)*spec.SLOTS_PER_EPOCH {
+	// TODO: upgrade
+	//}
 	return nil
 }
 

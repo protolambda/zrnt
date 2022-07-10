@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+
 	"github.com/protolambda/zrnt/eth2/util/hashing"
 )
 

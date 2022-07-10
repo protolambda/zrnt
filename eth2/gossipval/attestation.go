@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	blsu "github.com/protolambda/bls12-381-util"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 
-	"github.com/protolambda/ztyp/tree"
 	"time"
+
+	"github.com/protolambda/ztyp/tree"
 )
 
 const MAXIMUM_GOSSIP_CLOCK_DISPARITY = 500 * time.Millisecond
@@ -117,7 +119,7 @@ func ValidateAttestation(ctx context.Context, subnet uint64, att *phase0.Attesta
 	// i.e. data.index < get_committee_count_per_slot(state, data.target.epoch).
 	committeeCountPerSlot, err := targetEpc.GetCommitteeCountPerSlot(att.Data.Target.Epoch)
 	if err != nil {
-		return nil, GossipValidatorResult{REJECT, fmt.Errorf("cannot get commitee count for slot %d: %w", att.Data.Slot, err)}
+		return nil, GossipValidatorResult{REJECT, fmt.Errorf("cannot get committee count for slot %d: %w", att.Data.Slot, err)}
 	}
 	if uint64(att.Data.Index) >= committeeCountPerSlot {
 		return nil, GossipValidatorResult{REJECT, fmt.Errorf("committee index %d out of range %d", att.Data.Index, committeeCountPerSlot)}

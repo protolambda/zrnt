@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 )
 

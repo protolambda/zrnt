@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/conv"
 	"github.com/protolambda/ztyp/tree"

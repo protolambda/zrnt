@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
@@ -132,7 +133,7 @@ var ForkDataType = ContainerType("ForkData", []FieldDef{
 })
 
 type ForkData struct {
-	CurrentVersion        Version `json:"curent_version" yaml:"curent_version"`
+	CurrentVersion        Version `json:"current_version" yaml:"current_version"`
 	GenesisValidatorsRoot Root    `json:"genesis_validators_root" yaml:"genesis_validators_root"`
 }
 

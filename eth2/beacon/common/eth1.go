@@ -3,6 +3,7 @@ package common
 import (
 	"encoding/hex"
 	"errors"
+
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/conv"
 	"github.com/protolambda/ztyp/tree"

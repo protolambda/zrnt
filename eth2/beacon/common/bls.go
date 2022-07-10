@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+
 	blsu "github.com/protolambda/bls12-381-util"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"

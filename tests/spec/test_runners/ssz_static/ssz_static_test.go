@@ -3,6 +3,9 @@ package ssz_static
 import (
 	"bytes"
 	"encoding/hex"
+	"io/ioutil"
+	"testing"
+
 	"github.com/golang/snappy"
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
 	"github.com/protolambda/zrnt/eth2/beacon/bellatrix"
@@ -13,8 +16,6 @@ import (
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	"gopkg.in/yaml.v3"
-	"io/ioutil"
-	"testing"
 )
 
 type SSZStaticTestCase struct {

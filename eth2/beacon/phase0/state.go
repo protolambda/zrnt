@@ -2,6 +2,7 @@ package phase0
 
 import (
 	"bytes"
+
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"

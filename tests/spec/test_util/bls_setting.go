@@ -1,8 +1,9 @@
 package test_util
 
 import (
-	"gopkg.in/yaml.v3"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 const (

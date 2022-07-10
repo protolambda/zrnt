@@ -2,15 +2,16 @@ package test_util
 
 import (
 	"bytes"
-	"github.com/golang/snappy"
-	"github.com/protolambda/zrnt/eth2/beacon/common"
-	"github.com/protolambda/ztyp/codec"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
+
+	"github.com/golang/snappy"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/ztyp/codec"
 )
 
 type TestPart interface {

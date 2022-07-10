@@ -2,9 +2,10 @@ package phase0
 
 import (
 	"encoding/json"
+	"testing"
+
 	"github.com/protolambda/zrnt/eth2/configs"
 	"gopkg.in/yaml.v3"
-	"testing"
 )
 
 func TestWrapperJSONProxy(t *testing.T) {

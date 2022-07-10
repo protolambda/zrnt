@@ -2,6 +2,7 @@ package common
 
 import (
 	"encoding/json"
+
 	kbls "github.com/kilic/bls12-381"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"

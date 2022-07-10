@@ -2,10 +2,11 @@ package common
 
 import (
 	"fmt"
+	"sort"
+
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
-	"sort"
 )
 
 const ValidatorIndexType = Uint64Type

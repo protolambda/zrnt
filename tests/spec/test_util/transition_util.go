@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io/ioutil"
+	"testing"
+
 	"github.com/golang/snappy"
 	"github.com/protolambda/messagediff"
 	"github.com/protolambda/zrnt/eth2/beacon"
@@ -15,8 +18,6 @@ import (
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	"gopkg.in/yaml.v3"
-	"io/ioutil"
-	"testing"
 )
 
 // Fork where the test is organized, and thus the state/block/etc. types default to.

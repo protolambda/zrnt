@@ -3,10 +3,11 @@ package pool
 import (
 	"context"
 	"fmt"
+	"sync"
+
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/ztyp/tree"
-	"sync"
 )
 
 type AttesterSlashingPool struct {

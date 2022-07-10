@@ -3,11 +3,12 @@ package benches
 import (
 	"bytes"
 	"encoding/gob"
+	"testing"
+
 	"github.com/minio/sha256-simd"
 	"github.com/protolambda/zrnt/eth2/configs"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
-	"testing"
 )
 
 const stateValidatorFill = 30000

@@ -3,8 +3,9 @@ package forkchoice
 import (
 	"context"
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"sync"
+
+	"github.com/protolambda/zrnt/eth2/beacon/common"
 )
 
 type ProtoForkChoice struct {
@@ -175,7 +176,7 @@ func (fc *ProtoForkChoice) Finalized() Checkpoint {
 
 func (fc *ProtoForkChoice) ProcessAttestation(index ValidatorIndex, blockRoot Root, headSlot Slot) (ok bool) {
 	fc.mu.Lock()
-	fc.mu.Unlock()
+	defer fc.mu.Unlock()
 	// only add the vote if we can. Don't add if it's not within view.
 	blockSlot, ok := fc.protoArray.GetSlot(blockRoot)
 	if !ok || blockSlot < headSlot {
@@ -187,7 +188,7 @@ func (fc *ProtoForkChoice) ProcessAttestation(index ValidatorIndex, blockRoot Ro
 func (fc *ProtoForkChoice) CanonicalChain(anchorRoot Root, anchorSlot Slot) ([]ExtendedNodeRef, error) {
 	fc.mu.Lock()
 	defer fc.mu.Unlock()
-	return fc.CanonicalChain(anchorRoot, anchorSlot)
+	return fc.protoArray.CanonicalChain(anchorRoot, anchorSlot)
 }
 
 func (fc *ProtoForkChoice) ProcessSlot(parentRoot Root, slot Slot, justifiedEpoch Epoch, finalizedEpoch Epoch) {

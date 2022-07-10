@@ -2,6 +2,7 @@ package common
 
 import (
 	"bytes"
+
 	blsu "github.com/protolambda/bls12-381-util"
 )
 

@@ -3,9 +3,10 @@ package proto
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/protolambda/zrnt/eth2/forkchoice"
 	"github.com/protolambda/zrnt/eth2/forkchoice/internal/fctest"
-	"testing"
 )
 
 func TestProtoArray(t *testing.T) {

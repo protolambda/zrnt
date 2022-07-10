@@ -3,6 +3,7 @@ package gossipval
 import (
 	"context"
 	"fmt"
+
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 )

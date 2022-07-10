@@ -3,6 +3,8 @@ package transition
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
 	"github.com/protolambda/zrnt/eth2/beacon/bellatrix"
@@ -10,7 +12,6 @@ import (
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"gopkg.in/yaml.v3"
-	"testing"
 )
 
 type TransitionTestCase struct {

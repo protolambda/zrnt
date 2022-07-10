@@ -3,12 +3,13 @@ package epoch_processing
 import (
 	"context"
 	"fmt"
+	"strings"
+	"testing"
+
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
-	"strings"
-	"testing"
 )
 
 type RewardsTest struct {

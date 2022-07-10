@@ -3,11 +3,12 @@ package epoch_processing
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
-	"testing"
 )
 
 type stateFn func(spec *common.Spec, state common.BeaconState, epc *common.EpochsContext, flats []common.FlatValidator) error

@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	. "github.com/protolambda/zrnt/eth2/forkchoice"
 )
@@ -603,7 +604,7 @@ func (pr *ProtoArray) OnPrune(ctx context.Context, anchorRoot Root, anchorSlot S
 		}
 	}
 	// Send pruned nodes to the node sink (empty if no sink). Continue until it fails.
-	// Only prune what we sucessfully sent to the sink.
+	// Only prune what we successfully sent to the sink.
 	prunedUpTo := 0
 	for _, p := range pruned {
 		if err = pr.sink.OnPrunedNode(ctx, p.node.Ref, p.canonical); err != nil {
@@ -706,10 +707,11 @@ func (pr *ProtoArray) maybeUpdateBestChildAndDescendant(parentIndex NodeIndex, c
 		if childLeadsToViableHead {
 			// There is no current best-child and the child is viable.
 			changeToChild()
-		} else {
-			// There is no current best-child but the child is not viable.
-			// *No change*
 		}
+		// else {
+		// There is no current best-child but the child is not viable.
+		// *No change*
+		// }
 	}
 	return nil
 }

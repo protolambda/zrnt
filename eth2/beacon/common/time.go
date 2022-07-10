@@ -3,6 +3,7 @@ package common
 import (
 	"errors"
 	"fmt"
+
 	"github.com/protolambda/zrnt/eth2/util/math"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"

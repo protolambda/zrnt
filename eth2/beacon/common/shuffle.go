@@ -2,6 +2,7 @@ package common
 
 import (
 	"encoding/binary"
+
 	. "github.com/protolambda/zrnt/eth2/util/hashing"
 )
 

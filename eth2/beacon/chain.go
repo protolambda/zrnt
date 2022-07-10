@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 )
 

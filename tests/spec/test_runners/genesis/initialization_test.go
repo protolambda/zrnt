@@ -3,14 +3,15 @@ package sanity
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
+	"testing"
+
 	"github.com/golang/snappy"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"github.com/protolambda/ztyp/codec"
 	"gopkg.in/yaml.v3"
-	"io/ioutil"
-	"testing"
 )
 
 type InitializationTestCase struct {

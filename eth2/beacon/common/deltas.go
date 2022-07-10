@@ -2,6 +2,7 @@ package common
 
 import (
 	"errors"
+
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 )

@@ -2,6 +2,7 @@ package fctest
 
 import (
 	"encoding/binary"
+
 	"github.com/protolambda/zrnt/eth2/configs"
 	"github.com/protolambda/zrnt/eth2/forkchoice"
 )

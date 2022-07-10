@@ -2,6 +2,9 @@ package sanity
 
 import (
 	"bytes"
+	"io/ioutil"
+	"testing"
+
 	"github.com/golang/snappy"
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
 	"github.com/protolambda/zrnt/eth2/beacon/bellatrix"
@@ -11,8 +14,6 @@ import (
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 	"github.com/protolambda/ztyp/codec"
 	"gopkg.in/yaml.v3"
-	"io/ioutil"
-	"testing"
 )
 
 func runCase(t *testing.T, forkName test_util.ForkName, readPart test_util.TestPartReader) {

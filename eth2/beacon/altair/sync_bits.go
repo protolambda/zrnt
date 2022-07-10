@@ -3,6 +3,7 @@ package altair
 import (
 	"bytes"
 	"fmt"
+
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/bitfields"
 	"github.com/protolambda/ztyp/codec"

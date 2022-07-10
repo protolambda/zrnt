@@ -3,6 +3,7 @@ package phase0
 import (
 	"context"
 	"fmt"
+
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 )
 

@@ -83,7 +83,7 @@ type ValidatorsRegistryView struct{ *ComplexListView }
 
 func AsValidatorsRegistry(v View, err error) (*ValidatorsRegistryView, error) {
 	c, err := AsComplexList(v, err)
-	return &ValidatorsRegistryView{c}, nil
+	return &ValidatorsRegistryView{c}, err
 }
 
 func (registry *ValidatorsRegistryView) ValidatorCount() (uint64, error) {

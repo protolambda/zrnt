@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
-	"github.com/protolambda/zrnt/eth2/chain"
 	"time"
 )
 
@@ -67,15 +67,15 @@ type BadBlockValidator interface {
 }
 
 type HeadInfo interface {
-	HeadInfo(ctx context.Context) (chain.ChainEntry, *common.EpochsContext, common.BeaconState, error)
+	HeadInfo(ctx context.Context) (beacon.ChainEntry, *common.EpochsContext, common.BeaconState, error)
 }
 
 type Chain interface {
-	Chain() chain.FullChain
+	Chain() beacon.Chain
 }
 
 // RetrieveHeadInfo is a util to implement the HeadInfo interface
-func RetrieveHeadInfo(ctx context.Context, ch chain.FullChain) (chain.ChainEntry, *common.EpochsContext, common.BeaconState, error) {
+func RetrieveHeadInfo(ctx context.Context, ch beacon.Chain) (beacon.ChainEntry, *common.EpochsContext, common.BeaconState, error) {
 	headRef, err := ch.Head()
 	if err != nil {
 		return nil, nil, nil, errors.New("could not fetch head ref for validation")

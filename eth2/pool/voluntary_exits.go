@@ -1,6 +1,8 @@
 package pool
 
 import (
+	"context"
+	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"sync"
@@ -19,15 +21,15 @@ func NewVoluntaryExitPool(spec *common.Spec) *VoluntaryExitPool {
 	}
 }
 
-func (vep *VoluntaryExitPool) AddVoluntaryExit(exit *phase0.SignedVoluntaryExit) (exists bool) {
+func (vep *VoluntaryExitPool) AddVoluntaryExit(ctx context.Context, exit *phase0.SignedVoluntaryExit) error {
 	vep.Lock()
 	defer vep.Unlock()
 	key := exit.Message.ValidatorIndex
 	if _, ok := vep.exits[key]; ok {
-		return true
+		return fmt.Errorf("already have exit for validator %d", key)
 	}
 	vep.exits[key] = exit
-	return false
+	return nil
 }
 
 func (vep *VoluntaryExitPool) All() []*phase0.SignedVoluntaryExit {

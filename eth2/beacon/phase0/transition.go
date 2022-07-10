@@ -59,11 +59,10 @@ func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spe
 }
 
 func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, benv *common.BeaconBlockEnvelope) error {
-	signedBlock, ok := benv.SignedBlock.(*SignedBeaconBlock)
+	body, ok := benv.Body.(*BeaconBlockBody)
 	if !ok {
-		return fmt.Errorf("unexpected block type %T in phase0 ProcessBlock", benv.SignedBlock)
+		return fmt.Errorf("unexpected block type %T in phase0 ProcessBlock", benv.Body)
 	}
-	block := &signedBlock.Message
 	slot, err := state.Slot()
 	if err != nil {
 		return err
@@ -72,10 +71,9 @@ func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spe
 	if err != nil {
 		return err
 	}
-	if err := common.ProcessHeader(ctx, spec, state, block.Header(spec), proposerIndex); err != nil {
+	if err := common.ProcessHeader(ctx, spec, state, &benv.BeaconBlockHeader, proposerIndex); err != nil {
 		return err
 	}
-	body := &block.Body
 	if err := ProcessRandaoReveal(ctx, spec, epc, state, body.RandaoReveal); err != nil {
 		return err
 	}

@@ -9,17 +9,14 @@ type BeaconBlockEnvelope struct {
 	ForkDigest ForkDigest
 
 	// Block header details
-	Slot          Slot
-	ProposerIndex ValidatorIndex
-	ParentRoot    Root
-	StateRoot     Root
-	// TODO: maybe add body-root?
+	BeaconBlockHeader
 
-	// Fork-specific block container
-	SignedBlock SpecObj
+	// Fork-specific block body
+	Body SpecObj
 
 	// Cached block root (hash-tree-root of Message)
 	BlockRoot Root
+
 	// Block signature
 	Signature BLSSignature
 }

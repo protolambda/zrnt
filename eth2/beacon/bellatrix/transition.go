@@ -69,20 +69,24 @@ func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spe
 }
 
 func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, benv *common.BeaconBlockEnvelope) error {
-	signedBlock, ok := benv.SignedBlock.(*SignedBeaconBlock)
+	body, ok := benv.Body.(*BeaconBlockBody)
 	if !ok {
-		return fmt.Errorf("unexpected block type %T in Bellatrix ProcessBlock", benv.SignedBlock)
+		return fmt.Errorf("unexpected block type %T in Bellatrix ProcessBlock", benv.Body)
 	}
-	block := &signedBlock.Message
-	header := block.Header(spec)
-	expectedProposer, err := epc.GetBeaconProposer(block.Slot)
+	expectedProposer, err := epc.GetBeaconProposer(benv.Slot)
 	if err != nil {
 		return err
 	}
-	if err := common.ProcessHeader(ctx, spec, state, header, expectedProposer); err != nil {
+	if err := common.ProcessHeader(ctx, spec, state, &benv.BeaconBlockHeader, expectedProposer); err != nil {
 		return err
 	}
-	body := &block.Body
+	block := &BeaconBlock{
+		Slot:          benv.Slot,
+		ProposerIndex: benv.ProposerIndex,
+		ParentRoot:    benv.ParentRoot,
+		StateRoot:     benv.StateRoot,
+		Body:          *body,
+	}
 	if enabled, err := state.IsExecutionEnabled(spec, block); err != nil {
 		return err
 	} else if enabled {

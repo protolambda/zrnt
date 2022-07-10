@@ -18,15 +18,13 @@ type SignedBeaconBlock struct {
 var _ common.EnvelopeBuilder = (*SignedBeaconBlock)(nil)
 
 func (b *SignedBeaconBlock) Envelope(spec *common.Spec, digest common.ForkDigest) *common.BeaconBlockEnvelope {
+	header := b.Message.Header(spec)
 	return &common.BeaconBlockEnvelope{
-		ForkDigest:    digest,
-		Slot:          b.Message.Slot,
-		ProposerIndex: b.Message.ProposerIndex,
-		ParentRoot:    b.Message.ParentRoot,
-		StateRoot:     b.Message.StateRoot,
-		SignedBlock:   b,
-		BlockRoot:     b.Message.HashTreeRoot(spec, tree.GetHashFn()),
-		Signature:     b.Signature,
+		ForkDigest:        digest,
+		BeaconBlockHeader: *header,
+		Body:              &b.Message.Body,
+		BlockRoot:         header.HashTreeRoot(tree.GetHashFn()),
+		Signature:         b.Signature,
 	}
 }
 

@@ -1,6 +1,8 @@
 package pool
 
 import (
+	"context"
+	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/ztyp/tree"
@@ -22,15 +24,15 @@ func NewAttesterSlashingPool(spec *common.Spec) *AttesterSlashingPool {
 
 // This does not filter slashings that are a subset of other slashings.
 // The pool merely collects them. Make sure to protect against spam elsewhere as a caller.
-func (asp *AttesterSlashingPool) AddAttesterSlashing(sl *phase0.AttesterSlashing) (exists bool) {
+func (asp *AttesterSlashingPool) AddAttesterSlashing(ctx context.Context, sl *phase0.AttesterSlashing) error {
 	root := sl.HashTreeRoot(asp.spec, tree.GetHashFn())
 	asp.Lock()
 	defer asp.Unlock()
 	if _, ok := asp.slashings[root]; ok {
-		return true
+		return fmt.Errorf("already have an attester slashing for message %s", root)
 	}
 	asp.slashings[root] = sl
-	return false
+	return nil
 }
 
 func (asp *AttesterSlashingPool) All() []*phase0.AttesterSlashing {

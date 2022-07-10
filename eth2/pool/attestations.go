@@ -67,7 +67,7 @@ func NewAttestationPool(spec *common.Spec) *AttestationPool {
 	}
 }
 
-func (ap *AttestationPool) AddAttestation(att *phase0.Attestation, committee common.CommitteeIndices) error {
+func (ap *AttestationPool) AddAttestation(ctx context.Context, att *phase0.Attestation, committee common.CommitteeIndices) error {
 	ap.Lock()
 	defer ap.Unlock()
 

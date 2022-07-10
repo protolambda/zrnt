@@ -2,6 +2,7 @@ package phase0
 
 import (
 	"context"
+	"fmt"
 	"sort"
 
 	"github.com/protolambda/zrnt/eth2/beacon/common"
@@ -126,7 +127,7 @@ type RegistryProcessData struct {
 	ChurnLimit        uint64
 }
 
-func ComputeRegistryProcessData(spec *common.Spec, flats []common.FlatValidator, currentEpoch common.Epoch) *RegistryProcessData {
+func ComputeRegistryProcessData(spec *common.Spec, flats []common.FlatValidator, currentEpoch common.Epoch) (*RegistryProcessData, error) {
 	var out RegistryProcessData
 
 	count := common.ValidatorIndex(len(flats))
@@ -168,12 +169,22 @@ func ComputeRegistryProcessData(spec *common.Spec, flats []common.FlatValidator,
 	exitQueueEnd := spec.ComputeActivationExitEpoch(currentEpoch)
 	exitQueueEndChurn := uint64(0)
 	for i := common.ValidatorIndex(0); i < count; i++ {
-		if flats[i].ExitEpoch == exitQueueEnd {
+		exit := flats[i].ExitEpoch
+		if exit == common.FAR_FUTURE_EPOCH {
+			continue
+		}
+		if exit > exitQueueEnd {
+			exitQueueEnd = exit
+		}
+		if exit == exitQueueEnd {
 			exitQueueEndChurn++
 		}
 	}
 	churnLimit := spec.GetChurnLimit(activeCount)
 	if exitQueueEndChurn >= churnLimit {
+		if exitQueueEnd == ^common.Epoch(0) { // practically impossible, but here for spec test introduced in consensus-specs#2887
+			return nil, fmt.Errorf("exitQueueEnd overflowing: %d", exitQueueEnd)
+		}
 		exitQueueEnd++
 		exitQueueEndChurn = 0
 	}
@@ -181,7 +192,7 @@ func ComputeRegistryProcessData(spec *common.Spec, flats []common.FlatValidator,
 	out.ExitQueueEnd = exitQueueEnd
 	out.ChurnLimit = churnLimit
 
-	return &out
+	return &out, nil
 }
 
 func ProcessEpochRegistryUpdates(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, flats []common.FlatValidator, state common.BeaconState) error {
@@ -193,7 +204,10 @@ func ProcessEpochRegistryUpdates(ctx context.Context, spec *common.Spec, epc *co
 		return err
 	}
 
-	registerData := ComputeRegistryProcessData(spec, flats, epc.CurrentEpoch.Epoch)
+	registerData, err := ComputeRegistryProcessData(spec, flats, epc.CurrentEpoch.Epoch)
+	if err != nil {
+		return fmt.Errorf("invalid ProcessEpochRegistryUpdates: %v", err)
+	}
 
 	// process ejections
 	{
@@ -207,7 +221,11 @@ func ProcessEpochRegistryUpdates(ctx context.Context, spec *common.Spec, epc *co
 			if err := val.SetExitEpoch(exitEnd); err != nil {
 				return err
 			}
-			if err := val.SetWithdrawableEpoch(exitEnd + spec.MIN_VALIDATOR_WITHDRAWABILITY_DELAY); err != nil {
+			withdrawEpoch := exitEnd + spec.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
+			if withdrawEpoch < exitEnd { // practically impossible, but here for spec test introduced in consensus-specs#2887
+				return fmt.Errorf("exit epoch overflow: %d + %d = %d", exitEnd, spec.MIN_VALIDATOR_WITHDRAWABILITY_DELAY, withdrawEpoch)
+			}
+			if err := val.SetWithdrawableEpoch(withdrawEpoch); err != nil {
 				return err
 			}
 			endChurn += 1

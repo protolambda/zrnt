@@ -18,15 +18,13 @@ type SignedBeaconBlock struct {
 var _ common.EnvelopeBuilder = (*SignedBeaconBlock)(nil)
 
 func (b *SignedBeaconBlock) Envelope(spec *common.Spec, digest common.ForkDigest) *common.BeaconBlockEnvelope {
+	header := b.Message.Header(spec)
 	return &common.BeaconBlockEnvelope{
-		ForkDigest:    digest,
-		Slot:          b.Message.Slot,
-		ProposerIndex: b.Message.ProposerIndex,
-		ParentRoot:    b.Message.ParentRoot,
-		StateRoot:     b.Message.StateRoot,
-		SignedBlock:   b,
-		BlockRoot:     b.Message.HashTreeRoot(spec, tree.GetHashFn()),
-		Signature:     b.Signature,
+		ForkDigest:        digest,
+		BeaconBlockHeader: *header,
+		Body:              &b.Message.Body,
+		BlockRoot:         header.HashTreeRoot(tree.GetHashFn()),
+		Signature:         b.Signature,
 	}
 }
 
@@ -172,7 +170,7 @@ func (b *BeaconBlockBody) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) commo
 	)
 }
 
-func (b BeaconBlockBody) CheckLimits(spec *common.Spec) error {
+func (b *BeaconBlockBody) CheckLimits(spec *common.Spec) error {
 	if x := uint64(len(b.ProposerSlashings)); x > spec.MAX_PROPOSER_SLASHINGS {
 		return fmt.Errorf("too many proposer slashings: %d", x)
 	}
@@ -195,6 +193,21 @@ func (b BeaconBlockBody) CheckLimits(spec *common.Spec) error {
 	return nil
 }
 
+func (b *BeaconBlockBody) Shallow(spec *common.Spec) *BeaconBlockBodyShallow {
+	return &BeaconBlockBodyShallow{
+		RandaoReveal:         b.RandaoReveal,
+		Eth1Data:             b.Eth1Data,
+		Graffiti:             b.Graffiti,
+		ProposerSlashings:    b.ProposerSlashings,
+		AttesterSlashings:    b.AttesterSlashings,
+		Attestations:         b.Attestations,
+		Deposits:             b.Deposits,
+		VoluntaryExits:       b.VoluntaryExits,
+		SyncAggregate:        b.SyncAggregate,
+		ExecutionPayloadRoot: b.ExecutionPayload.HashTreeRoot(spec, tree.GetHashFn()),
+	}
+}
+
 func BeaconBlockBodyType(spec *common.Spec) *ContainerTypeDef {
 	return ContainerType("BeaconBlockBody", []FieldDef{
 		{"randao_reveal", common.BLSSignatureType},
@@ -210,4 +223,83 @@ func BeaconBlockBodyType(spec *common.Spec) *ContainerTypeDef {
 		// Bellatrix
 		{"execution_payload", common.ExecutionPayloadType(spec)},
 	})
+}
+
+type BeaconBlockBodyShallow struct {
+	RandaoReveal common.BLSSignature `json:"randao_reveal" yaml:"randao_reveal"`
+	Eth1Data     common.Eth1Data     `json:"eth1_data" yaml:"eth1_data"`
+	Graffiti     common.Root         `json:"graffiti" yaml:"graffiti"`
+
+	ProposerSlashings phase0.ProposerSlashings `json:"proposer_slashings" yaml:"proposer_slashings"`
+	AttesterSlashings phase0.AttesterSlashings `json:"attester_slashings" yaml:"attester_slashings"`
+	Attestations      phase0.Attestations      `json:"attestations" yaml:"attestations"`
+	Deposits          phase0.Deposits          `json:"deposits" yaml:"deposits"`
+	VoluntaryExits    phase0.VoluntaryExits    `json:"voluntary_exits" yaml:"voluntary_exits"`
+
+	SyncAggregate altair.SyncAggregate `json:"sync_aggregate" yaml:"sync_aggregate"`
+
+	ExecutionPayloadRoot common.Root `json:"execution_payload_root" yaml:"execution_payload_root"`
+}
+
+func (b *BeaconBlockBodyShallow) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
+	return dr.Container(
+		&b.RandaoReveal, &b.Eth1Data,
+		&b.Graffiti, spec.Wrap(&b.ProposerSlashings),
+		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
+		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
+		spec.Wrap(&b.SyncAggregate), &b.ExecutionPayloadRoot,
+	)
+}
+
+func (b *BeaconBlockBodyShallow) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
+	return w.Container(
+		&b.RandaoReveal, &b.Eth1Data,
+		&b.Graffiti, spec.Wrap(&b.ProposerSlashings),
+		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
+		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
+		spec.Wrap(&b.SyncAggregate), &b.ExecutionPayloadRoot,
+	)
+}
+
+func (b *BeaconBlockBodyShallow) ByteLength(spec *common.Spec) uint64 {
+	return codec.ContainerLength(
+		&b.RandaoReveal, &b.Eth1Data,
+		&b.Graffiti, spec.Wrap(&b.ProposerSlashings),
+		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
+		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
+		spec.Wrap(&b.SyncAggregate), &b.ExecutionPayloadRoot,
+	)
+}
+
+func (a *BeaconBlockBodyShallow) FixedLength(*common.Spec) uint64 {
+	return 0
+}
+
+func (b *BeaconBlockBodyShallow) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
+	return hFn.HashTreeRoot(
+		b.RandaoReveal, &b.Eth1Data,
+		b.Graffiti, spec.Wrap(&b.ProposerSlashings),
+		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
+		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
+		spec.Wrap(&b.SyncAggregate), &b.ExecutionPayloadRoot,
+	)
+}
+
+func (b *BeaconBlockBodyShallow) WithExecutionPayload(spec *common.Spec, payload common.ExecutionPayload) (*BeaconBlockBody, error) {
+	payloadRoot := payload.HashTreeRoot(spec, tree.GetHashFn())
+	if b.ExecutionPayloadRoot != payloadRoot {
+		return nil, fmt.Errorf("payload does not match expected root: %s <> %s", b.ExecutionPayloadRoot, payloadRoot)
+	}
+	return &BeaconBlockBody{
+		RandaoReveal:      b.RandaoReveal,
+		Eth1Data:          b.Eth1Data,
+		Graffiti:          b.Graffiti,
+		ProposerSlashings: b.ProposerSlashings,
+		AttesterSlashings: b.AttesterSlashings,
+		Attestations:      b.Attestations,
+		Deposits:          b.Deposits,
+		VoluntaryExits:    b.VoluntaryExits,
+		SyncAggregate:     b.SyncAggregate,
+		ExecutionPayload:  payload,
+	}, nil
 }

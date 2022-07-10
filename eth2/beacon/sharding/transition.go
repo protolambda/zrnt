@@ -75,20 +75,17 @@ func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spe
 }
 
 func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, benv *common.BeaconBlockEnvelope) error {
-	signedBlock, ok := benv.SignedBlock.(*SignedBeaconBlock)
+	body, ok := benv.Body.(*BeaconBlockBody)
 	if !ok {
-		return fmt.Errorf("unexpected block type %T in Sharding ProcessBlock", benv.SignedBlock)
+		return fmt.Errorf("unexpected block type %T in Sharding ProcessBlock", benv.Body)
 	}
-	block := &signedBlock.Message
-	header := block.Header(spec)
-	expectedProposer, err := epc.GetBeaconProposer(block.Slot)
+	expectedProposer, err := epc.GetBeaconProposer(benv.Slot)
 	if err != nil {
 		return err
 	}
-	if err := common.ProcessHeader(ctx, spec, state, header, expectedProposer); err != nil {
+	if err := common.ProcessHeader(ctx, spec, state, &benv.BeaconBlockHeader, expectedProposer); err != nil {
 		return err
 	}
-	body := &block.Body
 	if err := bellatrix.ProcessExecutionPayload(ctx, spec, state, &body.ExecutionPayload, spec.ExecutionEngine); err != nil {
 		return err
 	}

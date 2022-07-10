@@ -1,6 +1,8 @@
 package pool
 
 import (
+	"context"
+	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"sync"
@@ -19,16 +21,16 @@ func NewProposerSlashingPool(spec *common.Spec) *ProposerSlashingPool {
 	}
 }
 
-func (psp *ProposerSlashingPool) AddProposerSlashing(sl *phase0.ProposerSlashing) (exists bool) {
+func (psp *ProposerSlashingPool) AddProposerSlashing(ctx context.Context, sl *phase0.ProposerSlashing) error {
 	psp.Lock()
 	defer psp.Unlock()
 	// maybe use pubkey instead?
 	key := sl.SignedHeader1.Message.ProposerIndex
 	if _, ok := psp.slashings[key]; ok {
-		return true
+		return fmt.Errorf("proposer %d is already getting slashed", key)
 	}
 	psp.slashings[key] = sl
-	return false
+	return nil
 }
 
 func (psp *ProposerSlashingPool) All() []*phase0.ProposerSlashing {

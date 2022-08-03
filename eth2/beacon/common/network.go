@@ -45,7 +45,6 @@ type AttnetBits [attnetByteLen]byte
 func (ab *AttnetBits) BitLen() uint64 {
 	return ATTESTATION_SUBNET_COUNT
 }
-
 func (p *AttnetBits) Deserialize(dr *codec.DecodingReader) error {
 	if p == nil {
 		return errors.New("nil attnet bits")
@@ -87,6 +86,61 @@ func (p *AttnetBits) UnmarshalText(text []byte) error {
 		text = text[2:]
 	}
 	if len(text) != attnetByteLen*2 {
+		return fmt.Errorf("unexpected length string '%s'", string(text))
+	}
+	_, err := hex.Decode(p[:], text)
+	return err
+}
+
+const syncnetByteLen = (SYNC_COMMITTEE_SUBNET_COUNT + 7) / 8
+
+type SyncnetBits [syncnetByteLen]byte
+
+func (ab *SyncnetBits) BitLen() uint64 {
+	return SYNC_COMMITTEE_SUBNET_COUNT
+}
+
+func (p *SyncnetBits) Deserialize(dr *codec.DecodingReader) error {
+	if p == nil {
+		return errors.New("nil syncnet bits")
+	}
+	_, err := dr.Read(p[:])
+	return err
+}
+
+func (p SyncnetBits) Serialize(w *codec.EncodingWriter) error {
+	return w.Write(p[:])
+}
+
+func (p SyncnetBits) ByteLength() uint64 {
+	return syncnetByteLen
+}
+
+func (SyncnetBits) FixedLength() uint64 {
+	return syncnetByteLen
+}
+
+func (p SyncnetBits) HashTreeRoot(_ tree.HashFn) (out Root) {
+	copy(out[:], p[:])
+	return
+}
+
+func (p SyncnetBits) MarshalText() ([]byte, error) {
+	return []byte("0x" + hex.EncodeToString(p[:])), nil
+}
+
+func (p SyncnetBits) String() string {
+	return "0x" + hex.EncodeToString(p[:])
+}
+
+func (p *SyncnetBits) UnmarshalText(text []byte) error {
+	if p == nil {
+		return errors.New("cannot decode into nil SyncnetBits")
+	}
+	if len(text) >= 2 && text[0] == '0' && (text[1] == 'x' || text[1] == 'X') {
+		text = text[2:]
+	}
+	if len(text) != syncnetByteLen*2 {
 		return fmt.Errorf("unexpected length string '%s'", string(text))
 	}
 	_, err := hex.Decode(p[:], text)
@@ -196,26 +250,28 @@ func (i Pong) String() string {
 }
 
 type MetaData struct {
-	SeqNumber SeqNr      `json:"seq_number" yaml:"seq_number"`
-	Attnets   AttnetBits `json:"attnets" yaml:"attnets"`
+	SeqNumber SeqNr       `json:"seq_number" yaml:"seq_number"`
+	Attnets   AttnetBits  `json:"attnets" yaml:"attnets"`
+	Syncnets  SyncnetBits `json:"syncnets" yaml:"syncnets"`
 }
 
 func (m *MetaData) Data() map[string]interface{} {
 	return map[string]interface{}{
 		"seq_number": m.SeqNumber,
 		"attnets":    hex.EncodeToString(m.Attnets[:]),
+		"syncnets":   hex.EncodeToString(m.Syncnets[:]),
 	}
 }
 
 func (d *MetaData) Deserialize(dr *codec.DecodingReader) error {
-	return dr.FixedLenContainer(&d.SeqNumber, &d.Attnets)
+	return dr.FixedLenContainer(&d.SeqNumber, &d.Attnets, &d.Syncnets)
 }
 
 func (d *MetaData) Serialize(w *codec.EncodingWriter) error {
-	return w.FixedLenContainer(&d.SeqNumber, &d.Attnets)
+	return w.FixedLenContainer(&d.SeqNumber, &d.Attnets, &d.Syncnets)
 }
 
-const MetadataByteLen = 8 + attnetByteLen
+const MetadataByteLen = 8 + attnetByteLen + syncnetByteLen
 
 func (d MetaData) ByteLength() uint64 {
 	return MetadataByteLen
@@ -226,11 +282,11 @@ func (*MetaData) FixedLength() uint64 {
 }
 
 func (d *MetaData) HashTreeRoot(hFn tree.HashFn) Root {
-	return hFn.HashTreeRoot(&d.SeqNumber, &d.Attnets)
+	return hFn.HashTreeRoot(&d.SeqNumber, &d.Attnets, &d.Syncnets)
 }
 
 func (m *MetaData) String() string {
-	return fmt.Sprintf("MetaData(seq: %d, bits: %08b)", m.SeqNumber, m.Attnets)
+	return fmt.Sprintf("MetaData(seq: %d, attnet bits: %08b, syncnet bits: %08b)", m.SeqNumber, m.Attnets, m.Syncnets)
 }
 
 type Status struct {

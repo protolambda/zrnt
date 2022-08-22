@@ -13,7 +13,7 @@ import (
 )
 
 func SyncCommitteePubkeysType(spec *Spec) *ComplexVectorTypeDef {
-	return ComplexVectorType(BLSPubkeyType, spec.SYNC_COMMITTEE_SIZE)
+	return ComplexVectorType(BLSPubkeyType, uint64(spec.SYNC_COMMITTEE_SIZE))
 }
 
 type SyncCommitteePubkeys []BLSPubkey
@@ -22,27 +22,27 @@ func (li *SyncCommitteePubkeys) Deserialize(spec *Spec, dr *codec.DecodingReader
 	*li = make([]BLSPubkey, spec.SYNC_COMMITTEE_SIZE, spec.SYNC_COMMITTEE_SIZE)
 	return dr.Vector(func(i uint64) codec.Deserializable {
 		return &(*li)[i]
-	}, BLSPubkeyType.Size, spec.SYNC_COMMITTEE_SIZE)
+	}, BLSPubkeyType.Size, uint64(spec.SYNC_COMMITTEE_SIZE))
 }
 
 func (a SyncCommitteePubkeys) Serialize(spec *Spec, w *codec.EncodingWriter) error {
 	return w.Vector(func(i uint64) codec.Serializable {
 		return &a[i]
-	}, BLSPubkeyType.Size, spec.SYNC_COMMITTEE_SIZE)
+	}, BLSPubkeyType.Size, uint64(spec.SYNC_COMMITTEE_SIZE))
 }
 
 func (a SyncCommitteePubkeys) ByteLength(spec *Spec) uint64 {
-	return spec.SYNC_COMMITTEE_SIZE * BLSPubkeyType.Size
+	return uint64(spec.SYNC_COMMITTEE_SIZE) * BLSPubkeyType.Size
 }
 
 func (a *SyncCommitteePubkeys) FixedLength(spec *Spec) uint64 {
-	return spec.SYNC_COMMITTEE_SIZE * BLSPubkeyType.Size
+	return uint64(spec.SYNC_COMMITTEE_SIZE) * BLSPubkeyType.Size
 }
 
 func (li SyncCommitteePubkeys) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
 	return hFn.ComplexVectorHTR(func(i uint64) tree.HTR {
 		return &li[i]
-	}, spec.SYNC_COMMITTEE_SIZE)
+	}, uint64(spec.SYNC_COMMITTEE_SIZE))
 }
 
 type SyncCommitteePubkeysView struct {
@@ -95,11 +95,11 @@ func (a *SyncCommittee) Serialize(spec *Spec, w *codec.EncodingWriter) error {
 }
 
 func (a *SyncCommittee) ByteLength(spec *Spec) uint64 {
-	return (spec.SYNC_COMMITTEE_SIZE + 1) * BLSPubkeyType.Size
+	return (uint64(spec.SYNC_COMMITTEE_SIZE) + 1) * BLSPubkeyType.Size
 }
 
 func (*SyncCommittee) FixedLength(spec *Spec) uint64 {
-	return (spec.SYNC_COMMITTEE_SIZE + 1) * BLSPubkeyType.Size
+	return (uint64(spec.SYNC_COMMITTEE_SIZE) + 1) * BLSPubkeyType.Size
 }
 
 func (p *SyncCommittee) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
@@ -202,8 +202,8 @@ func ComputeSyncCommitteeIndices(spec *Spec, state BeaconState, baseEpoch Epoch,
 	copy(buf[0:32], periodSeed[:])
 	var h [32]byte
 	i := ValidatorIndex(0)
-	for uint64(len(syncCommitteeIndices)) < spec.SYNC_COMMITTEE_SIZE {
-		shuffledIndex := PermuteIndex(spec.SHUFFLE_ROUND_COUNT, i%ValidatorIndex(len(active)),
+	for uint64(len(syncCommitteeIndices)) < uint64(spec.SYNC_COMMITTEE_SIZE) {
+		shuffledIndex := PermuteIndex(uint8(spec.SHUFFLE_ROUND_COUNT), i%ValidatorIndex(len(active)),
 			uint64(len(active)), periodSeed)
 		candidateIndex := active[shuffledIndex]
 		validator, err := vals.Validator(candidateIndex)

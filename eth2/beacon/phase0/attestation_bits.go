@@ -21,7 +21,7 @@ func (li AttestationBits) View(spec *common.Spec) *AttestationBitsView {
 }
 
 func (li *AttestationBits) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
-	return dr.BitList((*[]byte)(li), spec.MAX_VALIDATORS_PER_COMMITTEE)
+	return dr.BitList((*[]byte)(li), uint64(spec.MAX_VALIDATORS_PER_COMMITTEE))
 }
 
 func (a AttestationBits) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
@@ -37,7 +37,7 @@ func (a *AttestationBits) FixedLength(*common.Spec) uint64 {
 }
 
 func (li AttestationBits) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
-	return hFn.BitListHTR(li, spec.MAX_VALIDATORS_PER_COMMITTEE)
+	return hFn.BitListHTR(li, uint64(spec.MAX_VALIDATORS_PER_COMMITTEE))
 }
 
 func (cb AttestationBits) MarshalText() ([]byte, error) {
@@ -146,7 +146,7 @@ func (cb AttestationBits) Copy() AttestationBits {
 }
 
 func AttestationBitsType(spec *common.Spec) *BitListTypeDef {
-	return BitListType(spec.MAX_VALIDATORS_PER_COMMITTEE)
+	return BitListType(uint64(spec.MAX_VALIDATORS_PER_COMMITTEE))
 }
 
 type AttestationBitsView struct {

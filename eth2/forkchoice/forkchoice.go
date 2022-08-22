@@ -151,7 +151,8 @@ func (fc *ProtoForkChoice) updateJustified(finalized Checkpoint, justified Check
 }
 
 // TODO: skip based on time (like rate limiting) or based on amount of changes
-//  (if not bigger than previous difference between head-node contenders)
+//
+//	(if not bigger than previous difference between head-node contenders)
 func (fc *ProtoForkChoice) updateVotesMaybe() error {
 	if !fc.voteStore.HasChanges() {
 		return nil

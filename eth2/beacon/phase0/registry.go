@@ -18,7 +18,7 @@ func (p *RegistryIndices) Deserialize(spec *common.Spec, dr *codec.DecodingReade
 		i := len(*p)
 		*p = append(*p, common.ValidatorIndex(0))
 		return &((*p)[i])
-	}, common.ValidatorIndexType.TypeByteLength(), spec.VALIDATOR_REGISTRY_LIMIT)
+	}, common.ValidatorIndexType.TypeByteLength(), uint64(spec.VALIDATOR_REGISTRY_LIMIT))
 }
 
 func (a RegistryIndices) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
@@ -38,7 +38,7 @@ func (*RegistryIndices) FixedLength() uint64 {
 func (p RegistryIndices) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
 	return hFn.Uint64ListHTR(func(i uint64) uint64 {
 		return uint64(p[i])
-	}, uint64(len(p)), spec.VALIDATOR_REGISTRY_LIMIT)
+	}, uint64(len(p)), uint64(spec.VALIDATOR_REGISTRY_LIMIT))
 }
 
 type ValidatorRegistry []*Validator
@@ -48,7 +48,7 @@ func (a *ValidatorRegistry) Deserialize(spec *common.Spec, dr *codec.DecodingRea
 		i := len(*a)
 		*a = append(*a, &Validator{})
 		return (*a)[i]
-	}, ValidatorType.TypeByteLength(), spec.VALIDATOR_REGISTRY_LIMIT)
+	}, ValidatorType.TypeByteLength(), uint64(spec.VALIDATOR_REGISTRY_LIMIT))
 }
 
 func (a ValidatorRegistry) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
@@ -72,11 +72,11 @@ func (li ValidatorRegistry) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) com
 			return li[i]
 		}
 		return nil
-	}, length, spec.VALIDATOR_REGISTRY_LIMIT)
+	}, length, uint64(spec.VALIDATOR_REGISTRY_LIMIT))
 }
 
 func ValidatorsRegistryType(spec *common.Spec) ListTypeDef {
-	return ComplexListType(ValidatorType, spec.VALIDATOR_REGISTRY_LIMIT)
+	return ComplexListType(ValidatorType, uint64(spec.VALIDATOR_REGISTRY_LIMIT))
 }
 
 type ValidatorsRegistryView struct{ *ComplexListView }

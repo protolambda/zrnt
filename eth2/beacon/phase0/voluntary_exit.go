@@ -13,7 +13,7 @@ import (
 )
 
 func BlockVoluntaryExitsType(spec *common.Spec) ListTypeDef {
-	return ListType(SignedVoluntaryExitType, spec.MAX_VOLUNTARY_EXITS)
+	return ListType(SignedVoluntaryExitType, uint64(spec.MAX_VOLUNTARY_EXITS))
 }
 
 type VoluntaryExits []SignedVoluntaryExit
@@ -23,7 +23,7 @@ func (a *VoluntaryExits) Deserialize(spec *common.Spec, dr *codec.DecodingReader
 		i := len(*a)
 		*a = append(*a, SignedVoluntaryExit{})
 		return &(*a)[i]
-	}, SignedVoluntaryExitType.TypeByteLength(), spec.MAX_VOLUNTARY_EXITS)
+	}, SignedVoluntaryExitType.TypeByteLength(), uint64(spec.MAX_VOLUNTARY_EXITS))
 }
 
 func (a VoluntaryExits) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
@@ -47,7 +47,7 @@ func (li VoluntaryExits) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common
 			return &li[i]
 		}
 		return nil
-	}, length, spec.MAX_VOLUNTARY_EXITS)
+	}, length, uint64(spec.MAX_VOLUNTARY_EXITS))
 }
 
 func ProcessVoluntaryExits(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, ops []SignedVoluntaryExit) error {

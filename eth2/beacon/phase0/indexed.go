@@ -51,7 +51,7 @@ func ValidateIndexedAttestationIndicesSet(spec *common.Spec, indexedAttestation 
 	indices := common.ValidatorSet(indexedAttestation.AttestingIndices)
 
 	// Verify max number of indices
-	if count := uint64(len(indices)); count > spec.MAX_VALIDATORS_PER_COMMITTEE {
+	if count := uint64(len(indices)); count > uint64(spec.MAX_VALIDATORS_PER_COMMITTEE) {
 		return nil, fmt.Errorf("invalid indices count in indexed attestation: %d", count)
 	}
 

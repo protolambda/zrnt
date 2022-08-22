@@ -14,7 +14,7 @@ import (
 )
 
 func BlockAttestationsType(spec *common.Spec) ListTypeDef {
-	return ListType(AttestationType(spec), spec.MAX_ATTESTATIONS)
+	return ListType(AttestationType(spec), uint64(spec.MAX_ATTESTATIONS))
 }
 
 func AttestationType(spec *common.Spec) *ContainerTypeDef {
@@ -58,7 +58,7 @@ func (a *Attestations) Deserialize(spec *common.Spec, dr *codec.DecodingReader) 
 		i := len(*a)
 		*a = append(*a, Attestation{})
 		return spec.Wrap(&((*a)[i]))
-	}, 0, spec.MAX_ATTESTATIONS)
+	}, 0, uint64(spec.MAX_ATTESTATIONS))
 }
 
 func (a Attestations) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
@@ -85,7 +85,7 @@ func (li Attestations) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.R
 			return spec.Wrap(&li[i])
 		}
 		return nil
-	}, length, spec.MAX_ATTESTATIONS)
+	}, length, uint64(spec.MAX_ATTESTATIONS))
 }
 
 func ProcessAttestations(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state Phase0PendingAttestationsBeaconState, ops []Attestation) error {

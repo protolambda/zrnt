@@ -185,5 +185,5 @@ func IsValidGenesisState(spec *common.Spec, state common.BeaconState) (bool, err
 			}
 		}
 	}
-	return activeCount >= spec.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, nil
+	return activeCount >= uint64(spec.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT), nil
 }

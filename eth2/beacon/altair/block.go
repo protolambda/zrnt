@@ -169,19 +169,19 @@ func (b *BeaconBlockBody) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) commo
 }
 
 func (b *BeaconBlockBody) CheckLimits(spec *common.Spec) error {
-	if x := uint64(len(b.ProposerSlashings)); x > spec.MAX_PROPOSER_SLASHINGS {
+	if x := uint64(len(b.ProposerSlashings)); x > uint64(spec.MAX_PROPOSER_SLASHINGS) {
 		return fmt.Errorf("too many proposer slashings: %d", x)
 	}
-	if x := uint64(len(b.AttesterSlashings)); x > spec.MAX_ATTESTER_SLASHINGS {
+	if x := uint64(len(b.AttesterSlashings)); x > uint64(spec.MAX_ATTESTER_SLASHINGS) {
 		return fmt.Errorf("too many attester slashings: %d", x)
 	}
-	if x := uint64(len(b.Attestations)); x > spec.MAX_ATTESTATIONS {
+	if x := uint64(len(b.Attestations)); x > uint64(spec.MAX_ATTESTATIONS) {
 		return fmt.Errorf("too many attestations: %d", x)
 	}
-	if x := uint64(len(b.Deposits)); x > spec.MAX_DEPOSITS {
+	if x := uint64(len(b.Deposits)); x > uint64(spec.MAX_DEPOSITS) {
 		return fmt.Errorf("too many deposits: %d", x)
 	}
-	if x := uint64(len(b.VoluntaryExits)); x > spec.MAX_VOLUNTARY_EXITS {
+	if x := uint64(len(b.VoluntaryExits)); x > uint64(spec.MAX_VOLUNTARY_EXITS) {
 		return fmt.Errorf("too many voluntary exits: %d", x)
 	}
 	return nil

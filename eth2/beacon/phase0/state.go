@@ -157,7 +157,7 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 
 // To load a state:
 //
-//     state, err := beacon.AsBeaconStateView(beacon.BeaconStateType.Deserialize(codec.NewDecodingReader(reader, size)))
+//	state, err := beacon.AsBeaconStateView(beacon.BeaconStateType.Deserialize(codec.NewDecodingReader(reader, size)))
 func AsBeaconStateView(v View, err error) (*BeaconStateView, error) {
 	c, err := AsContainer(v, err)
 	return &BeaconStateView{c}, err
@@ -400,9 +400,9 @@ func (state *BeaconStateView) SetFinalizedCheckpoint(c common.Checkpoint) error 
 
 func (state *BeaconStateView) ForkSettings(spec *common.Spec) *common.ForkSettings {
 	return &common.ForkSettings{
-		MinSlashingPenaltyQuotient:     spec.MIN_SLASHING_PENALTY_QUOTIENT,
-		ProportionalSlashingMultiplier: spec.PROPORTIONAL_SLASHING_MULTIPLIER,
-		InactivityPenaltyQuotient:      spec.INACTIVITY_PENALTY_QUOTIENT,
+		MinSlashingPenaltyQuotient:     uint64(spec.MIN_SLASHING_PENALTY_QUOTIENT),
+		ProportionalSlashingMultiplier: uint64(spec.PROPORTIONAL_SLASHING_MULTIPLIER),
+		InactivityPenaltyQuotient:      uint64(spec.INACTIVITY_PENALTY_QUOTIENT),
 		CalcProposerShare: func(whistleblowerReward common.Gwei) common.Gwei {
 			return whistleblowerReward / common.Gwei(spec.PROPOSER_REWARD_QUOTIENT)
 		},

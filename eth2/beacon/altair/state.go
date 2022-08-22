@@ -190,7 +190,7 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 
 // To load a state:
 //
-//     state, err := beacon.AsBeaconStateView(beacon.BeaconStateType.Deserialize(codec.NewDecodingReader(reader, size)))
+//	state, err := beacon.AsBeaconStateView(beacon.BeaconStateType.Deserialize(codec.NewDecodingReader(reader, size)))
 func AsBeaconStateView(v View, err error) (*BeaconStateView, error) {
 	c, err := AsContainer(v, err)
 	return &BeaconStateView{c}, err
@@ -487,9 +487,9 @@ func (state *BeaconStateView) RotateSyncCommittee(next *common.SyncCommitteeView
 
 func (state *BeaconStateView) ForkSettings(spec *common.Spec) *common.ForkSettings {
 	return &common.ForkSettings{
-		MinSlashingPenaltyQuotient:     spec.MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR,
-		ProportionalSlashingMultiplier: spec.PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR,
-		InactivityPenaltyQuotient:      spec.INACTIVITY_PENALTY_QUOTIENT_ALTAIR,
+		MinSlashingPenaltyQuotient:     uint64(spec.MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR),
+		ProportionalSlashingMultiplier: uint64(spec.PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR),
+		InactivityPenaltyQuotient:      uint64(spec.INACTIVITY_PENALTY_QUOTIENT_ALTAIR),
 		CalcProposerShare: func(whistleblowerReward common.Gwei) common.Gwei {
 			return whistleblowerReward * PROPOSER_WEIGHT / WEIGHT_DENOMINATOR
 		},

@@ -15,7 +15,7 @@ func (isc *IndexedSyncCommittee) Subcommittee(spec *Spec, subnet uint64) (pubs [
 	if subnet >= SYNC_COMMITTEE_SUBNET_COUNT {
 		return nil, nil, fmt.Errorf("invalid sync committee subnet: %d", subnet)
 	}
-	subComSize := spec.SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT
+	subComSize := uint64(spec.SYNC_COMMITTEE_SIZE) / SYNC_COMMITTEE_SUBNET_COUNT
 	i := subComSize * subnet
 	return isc.CachedPubkeys[i : i+subComSize], isc.Indices[i : i+subComSize], nil
 }
@@ -23,7 +23,7 @@ func (isc *IndexedSyncCommittee) Subcommittee(spec *Spec, subnet uint64) (pubs [
 func (isc *IndexedSyncCommittee) Subnets(spec *Spec, valIndex ValidatorIndex) (out []uint64) {
 	for i, commValIndex := range isc.Indices {
 		if commValIndex == valIndex {
-			subnet := uint64(i) / (spec.SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT)
+			subnet := uint64(i) / (uint64(spec.SYNC_COMMITTEE_SIZE) / SYNC_COMMITTEE_SUBNET_COUNT)
 			out = append(out, subnet)
 		}
 	}
@@ -33,7 +33,7 @@ func (isc *IndexedSyncCommittee) Subnets(spec *Spec, valIndex ValidatorIndex) (o
 func (isc *IndexedSyncCommittee) InSubnet(spec *Spec, valIndex ValidatorIndex, subnet uint64) bool {
 	for i, commValIndex := range isc.Indices {
 		if commValIndex == valIndex {
-			valSubnet := uint64(i) / (spec.SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT)
+			valSubnet := uint64(i) / (uint64(spec.SYNC_COMMITTEE_SIZE) / SYNC_COMMITTEE_SUBNET_COUNT)
 			if valSubnet == subnet {
 				return true
 			}

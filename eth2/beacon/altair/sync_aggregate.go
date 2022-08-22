@@ -48,7 +48,7 @@ func (agg *SyncAggregate) ByteLength(spec *common.Spec) uint64 {
 
 func (agg *SyncAggregate) FixedLength(spec *common.Spec) uint64 {
 	// bitvector + signature
-	return (spec.SYNC_COMMITTEE_SIZE+7)/8 + 96
+	return (uint64(spec.SYNC_COMMITTEE_SIZE)+7)/8 + 96
 }
 
 func (agg *SyncAggregate) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
@@ -75,7 +75,7 @@ func ProcessSyncAggregate(ctx context.Context, spec *common.Spec, epc *common.Ep
 	if err != nil {
 		return err
 	}
-	if err := bitfields.BitvectorCheck(agg.SyncCommitteeBits, spec.SYNC_COMMITTEE_SIZE); err != nil {
+	if err := bitfields.BitvectorCheck(agg.SyncCommitteeBits, uint64(spec.SYNC_COMMITTEE_SIZE)); err != nil {
 		return fmt.Errorf("input bypassed deserialization checks, sanity check on sync committee bitvector length failed: %v", err)
 	}
 
@@ -84,7 +84,7 @@ func ProcessSyncAggregate(ctx context.Context, spec *common.Spec, epc *common.Ep
 	}
 
 	participantPubkeys := make([]*blsu.Pubkey, 0, spec.SYNC_COMMITTEE_SIZE)
-	for i := uint64(0); i < spec.SYNC_COMMITTEE_SIZE; i++ {
+	for i := uint64(0); i < uint64(spec.SYNC_COMMITTEE_SIZE); i++ {
 		if agg.SyncCommitteeBits.GetBit(i) {
 			pub, err := epc.CurrentSyncCommittee.CachedPubkeys[i].Pubkey()
 			if err != nil {
@@ -127,7 +127,7 @@ func ProcessSyncAggregate(ctx context.Context, spec *common.Spec, epc *common.Ep
 	}
 	// Note: the minimum effective balance of the proposer is sufficient
 	// to not result in differences from spec operations
-	for i := uint64(0); i < spec.SYNC_COMMITTEE_SIZE; i++ {
+	for i := uint64(0); i < uint64(spec.SYNC_COMMITTEE_SIZE); i++ {
 		validatorIndex := epc.CurrentSyncCommittee.Indices[i]
 		if agg.SyncCommitteeBits.GetBit(i) {
 			if err := common.IncreaseBalance(bals, validatorIndex, participantReward); err != nil {

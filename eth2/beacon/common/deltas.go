@@ -14,7 +14,7 @@ func (a *GweiList) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
 		i := len(*a)
 		*a = append(*a, Gwei(0))
 		return &(*a)[i]
-	}, GweiType.TypeByteLength(), spec.VALIDATOR_REGISTRY_LIMIT)
+	}, GweiType.TypeByteLength(), uint64(spec.VALIDATOR_REGISTRY_LIMIT))
 }
 
 func (a GweiList) Serialize(spec *Spec, w *codec.EncodingWriter) error {
@@ -35,7 +35,7 @@ func (li GweiList) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
 	length := uint64(len(li))
 	return hFn.Uint64ListHTR(func(i uint64) uint64 {
 		return uint64(li[i])
-	}, length, spec.VALIDATOR_REGISTRY_LIMIT)
+	}, length, uint64(spec.VALIDATOR_REGISTRY_LIMIT))
 }
 
 type Deltas struct {

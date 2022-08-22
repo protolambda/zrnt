@@ -17,7 +17,7 @@ func (a *InactivityScores) Deserialize(spec *common.Spec, dr *codec.DecodingRead
 		i := len(*a)
 		*a = append(*a, Uint64View(0))
 		return &(*a)[i]
-	}, Uint64Type.TypeByteLength(), spec.VALIDATOR_REGISTRY_LIMIT)
+	}, Uint64Type.TypeByteLength(), uint64(spec.VALIDATOR_REGISTRY_LIMIT))
 }
 
 func (a InactivityScores) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
@@ -38,7 +38,7 @@ func (li InactivityScores) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) comm
 	length := uint64(len(li))
 	return hFn.Uint64ListHTR(func(i uint64) uint64 {
 		return uint64(li[i])
-	}, length, spec.VALIDATOR_REGISTRY_LIMIT)
+	}, length, uint64(spec.VALIDATOR_REGISTRY_LIMIT))
 }
 
 func (li InactivityScores) View(spec *common.Spec) (*ParticipationRegistryView, error) {
@@ -53,7 +53,7 @@ func (li InactivityScores) View(spec *common.Spec) (*ParticipationRegistryView, 
 }
 
 func InactivityScoresType(spec *common.Spec) *BasicListTypeDef {
-	return BasicListType(Uint64Type, spec.VALIDATOR_REGISTRY_LIMIT)
+	return BasicListType(Uint64Type, uint64(spec.VALIDATOR_REGISTRY_LIMIT))
 }
 
 type InactivityScoresView struct {
@@ -106,15 +106,15 @@ func ProcessInactivityUpdates(ctx context.Context, spec *common.Spec, attesterDa
 				newScore -= 1
 			}
 		} else {
-			newScore += spec.INACTIVITY_SCORE_BIAS
+			newScore += uint64(spec.INACTIVITY_SCORE_BIAS)
 		}
 
 		// Decrease the inactivity score of all eligible validators during a leak-free epoch
 		if !isInactivityLeak {
-			if newScore < spec.INACTIVITY_SCORE_RECOVERY_RATE {
+			if newScore < uint64(spec.INACTIVITY_SCORE_RECOVERY_RATE) {
 				newScore = 0
 			} else {
-				newScore -= spec.INACTIVITY_SCORE_RECOVERY_RATE
+				newScore -= uint64(spec.INACTIVITY_SCORE_RECOVERY_RATE)
 			}
 		}
 

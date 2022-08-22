@@ -45,7 +45,7 @@ var ProposerSlashingType = ContainerType("ProposerSlashing", []FieldDef{
 })
 
 func BlockProposerSlashingsType(spec *common.Spec) ListTypeDef {
-	return ListType(ProposerSlashingType, spec.MAX_PROPOSER_SLASHINGS)
+	return ListType(ProposerSlashingType, uint64(spec.MAX_PROPOSER_SLASHINGS))
 }
 
 type ProposerSlashings []ProposerSlashing
@@ -55,7 +55,7 @@ func (a *ProposerSlashings) Deserialize(spec *common.Spec, dr *codec.DecodingRea
 		i := len(*a)
 		*a = append(*a, ProposerSlashing{})
 		return &((*a)[i])
-	}, ProposerSlashingType.TypeByteLength(), spec.MAX_PROPOSER_SLASHINGS)
+	}, ProposerSlashingType.TypeByteLength(), uint64(spec.MAX_PROPOSER_SLASHINGS))
 }
 
 func (a ProposerSlashings) Serialize(_ *common.Spec, w *codec.EncodingWriter) error {
@@ -79,7 +79,7 @@ func (li ProposerSlashings) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) com
 			return &li[i]
 		}
 		return nil
-	}, length, spec.MAX_PROPOSER_SLASHINGS)
+	}, length, uint64(spec.MAX_PROPOSER_SLASHINGS))
 }
 
 func ProcessProposerSlashings(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, ops []ProposerSlashing) error {

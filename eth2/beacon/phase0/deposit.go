@@ -15,7 +15,7 @@ import (
 )
 
 func BlockDepositsType(spec *common.Spec) ListTypeDef {
-	return ListType(common.DepositType, spec.MAX_DEPOSITS)
+	return ListType(common.DepositType, uint64(spec.MAX_DEPOSITS))
 }
 
 type Deposits []common.Deposit
@@ -25,7 +25,7 @@ func (a *Deposits) Deserialize(spec *common.Spec, dr *codec.DecodingReader) erro
 		i := len(*a)
 		*a = append(*a, common.Deposit{})
 		return &((*a)[i])
-	}, common.DepositType.TypeByteLength(), spec.MAX_DEPOSITS)
+	}, common.DepositType.TypeByteLength(), uint64(spec.MAX_DEPOSITS))
 }
 
 func (a Deposits) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
@@ -49,7 +49,7 @@ func (li Deposits) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root 
 			return &li[i]
 		}
 		return nil
-	}, length, spec.MAX_DEPOSITS)
+	}, length, uint64(spec.MAX_DEPOSITS))
 }
 
 // Verify that outstanding deposits are processed up to the maximum number of deposits, then process all in order.
@@ -65,8 +65,8 @@ func ProcessDeposits(ctx context.Context, spec *common.Spec, epc *common.EpochsC
 	}
 	// state deposit count and deposit index are trusted not to underflow
 	expectedInputCount := uint64(eth1Data.DepositCount - depIndex)
-	if expectedInputCount > spec.MAX_DEPOSITS {
-		expectedInputCount = spec.MAX_DEPOSITS
+	if expectedInputCount > uint64(spec.MAX_DEPOSITS) {
+		expectedInputCount = uint64(spec.MAX_DEPOSITS)
 	}
 	if inputCount != expectedInputCount {
 		return errors.New("block does not contain expected deposits amount")

@@ -189,7 +189,7 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 
 // To load a state:
 //
-//     state, err := beacon.AsBeaconStateView(beacon.BeaconStateType.Deserialize(codec.NewDecodingReader(reader, size)))
+//	state, err := beacon.AsBeaconStateView(beacon.BeaconStateType.Deserialize(codec.NewDecodingReader(reader, size)))
 func AsBeaconStateView(v View, err error) (*BeaconStateView, error) {
 	c, err := AsContainer(v, err)
 	return &BeaconStateView{c}, err
@@ -494,9 +494,9 @@ func (state *BeaconStateView) SetLatestExecutionPayloadHeader(h *common.Executio
 
 func (state *BeaconStateView) ForkSettings(spec *common.Spec) *common.ForkSettings {
 	return &common.ForkSettings{
-		MinSlashingPenaltyQuotient:     spec.MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX,
-		ProportionalSlashingMultiplier: spec.PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX,
-		InactivityPenaltyQuotient:      spec.INACTIVITY_PENALTY_QUOTIENT_BELLATRIX,
+		MinSlashingPenaltyQuotient:     uint64(spec.MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX),
+		ProportionalSlashingMultiplier: uint64(spec.PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX),
+		InactivityPenaltyQuotient:      uint64(spec.INACTIVITY_PENALTY_QUOTIENT_BELLATRIX),
 		CalcProposerShare: func(whistleblowerReward common.Gwei) common.Gwei {
 			return whistleblowerReward * altair.PROPOSER_WEIGHT / altair.WEIGHT_DENOMINATOR
 		},

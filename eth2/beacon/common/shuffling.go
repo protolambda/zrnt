@@ -42,9 +42,9 @@ func LoadBoundedIndices(validators ValidatorRegistry) ([]BoundedIndex, error) {
 
 func CommitteeCount(spec *Spec, activeValidators uint64) uint64 {
 	validatorsPerSlot := activeValidators / uint64(spec.SLOTS_PER_EPOCH)
-	committeesPerSlot := validatorsPerSlot / spec.TARGET_COMMITTEE_SIZE
-	if spec.MAX_COMMITTEES_PER_SLOT < committeesPerSlot {
-		committeesPerSlot = spec.MAX_COMMITTEES_PER_SLOT
+	committeesPerSlot := validatorsPerSlot / uint64(spec.TARGET_COMMITTEE_SIZE)
+	if uint64(spec.MAX_COMMITTEES_PER_SLOT) < committeesPerSlot {
+		committeesPerSlot = uint64(spec.MAX_COMMITTEES_PER_SLOT)
 	}
 	if committeesPerSlot == 0 {
 		committeesPerSlot = 1
@@ -98,7 +98,7 @@ func NewShufflingEpoch(spec *Spec, indicesBounded []BoundedIndex, seed Root, epo
 	}
 	// shuffles the active indices into the shuffling
 	// (name is misleading, unshuffle as a list results in original indices to be traced back to their functional committee position)
-	UnshuffleList(spec.SHUFFLE_ROUND_COUNT, shep.Shuffling, seed)
+	UnshuffleList(uint8(spec.SHUFFLE_ROUND_COUNT), shep.Shuffling, seed)
 
 	validatorCount := uint64(len(shep.Shuffling))
 	committeesPerSlot := CommitteeCount(spec, validatorCount)

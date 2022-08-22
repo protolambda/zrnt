@@ -13,7 +13,7 @@ func (p *CommitteeIndices) Deserialize(spec *Spec, dr *codec.DecodingReader) err
 		i := len(*p)
 		*p = append(*p, ValidatorIndex(0))
 		return &((*p)[i])
-	}, ValidatorIndexType.TypeByteLength(), spec.MAX_VALIDATORS_PER_COMMITTEE)
+	}, ValidatorIndexType.TypeByteLength(), uint64(spec.MAX_VALIDATORS_PER_COMMITTEE))
 }
 
 func (a CommitteeIndices) Serialize(_ *Spec, w *codec.EncodingWriter) error {
@@ -33,9 +33,9 @@ func (*CommitteeIndices) FixedLength(*Spec) uint64 {
 func (p CommitteeIndices) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
 	return hFn.Uint64ListHTR(func(i uint64) uint64 {
 		return uint64(p[i])
-	}, uint64(len(p)), spec.MAX_VALIDATORS_PER_COMMITTEE)
+	}, uint64(len(p)), uint64(spec.MAX_VALIDATORS_PER_COMMITTEE))
 }
 
 func (c *Phase0Preset) CommitteeIndices() ListTypeDef {
-	return ListType(ValidatorIndexType, c.MAX_VALIDATORS_PER_COMMITTEE)
+	return ListType(ValidatorIndexType, uint64(c.MAX_VALIDATORS_PER_COMMITTEE))
 }

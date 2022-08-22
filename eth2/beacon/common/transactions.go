@@ -12,7 +12,7 @@ import (
 )
 
 func PayloadTransactionsType(spec *Spec) ListTypeDef {
-	return ListType(TransactionType(spec), spec.MAX_TRANSACTIONS_PER_PAYLOAD)
+	return ListType(TransactionType(spec), uint64(spec.MAX_TRANSACTIONS_PER_PAYLOAD))
 }
 
 type PayloadTransactions []Transaction
@@ -22,7 +22,7 @@ func (txs *PayloadTransactions) Deserialize(spec *Spec, dr *codec.DecodingReader
 		i := len(*txs)
 		*txs = append(*txs, Transaction{})
 		return spec.Wrap(&((*txs)[i]))
-	}, 0, spec.MAX_TRANSACTIONS_PER_PAYLOAD)
+	}, 0, uint64(spec.MAX_TRANSACTIONS_PER_PAYLOAD))
 }
 
 func (txs PayloadTransactions) Serialize(spec *Spec, w *codec.EncodingWriter) error {
@@ -49,17 +49,17 @@ func (txs PayloadTransactions) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
 			return spec.Wrap(&txs[i])
 		}
 		return nil
-	}, length, spec.MAX_TRANSACTIONS_PER_PAYLOAD)
+	}, length, uint64(spec.MAX_TRANSACTIONS_PER_PAYLOAD))
 }
 
 func TransactionType(spec *Spec) *BasicListTypeDef {
-	return BasicListType(Uint8Type, spec.MAX_BYTES_PER_TRANSACTION)
+	return BasicListType(Uint8Type, uint64(spec.MAX_BYTES_PER_TRANSACTION))
 }
 
 type Transaction []byte
 
 func (otx *Transaction) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
-	return dr.ByteList((*[]byte)(otx), spec.MAX_BYTES_PER_TRANSACTION)
+	return dr.ByteList((*[]byte)(otx), uint64(spec.MAX_BYTES_PER_TRANSACTION))
 }
 
 func (otx Transaction) Serialize(spec *Spec, w *codec.EncodingWriter) error {
@@ -75,7 +75,7 @@ func (otx *Transaction) FixedLength(*Spec) uint64 {
 }
 
 func (otx Transaction) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
-	return hFn.ByteListHTR(otx, spec.MAX_BYTES_PER_TRANSACTION)
+	return hFn.ByteListHTR(otx, uint64(spec.MAX_BYTES_PER_TRANSACTION))
 }
 
 func (otx Transaction) MarshalText() ([]byte, error) {

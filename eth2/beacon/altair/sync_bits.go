@@ -22,7 +22,7 @@ func (li SyncCommitteeSubnetBits) View(spec *common.Spec) *SyncCommitteeSubnetBi
 }
 
 func (li *SyncCommitteeSubnetBits) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
-	return dr.BitVector((*[]byte)(li), spec.SYNC_COMMITTEE_SIZE/common.SYNC_COMMITTEE_SUBNET_COUNT)
+	return dr.BitVector((*[]byte)(li), uint64(spec.SYNC_COMMITTEE_SIZE)/common.SYNC_COMMITTEE_SUBNET_COUNT)
 }
 
 func (li SyncCommitteeSubnetBits) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
@@ -30,11 +30,11 @@ func (li SyncCommitteeSubnetBits) Serialize(spec *common.Spec, w *codec.Encoding
 }
 
 func (li SyncCommitteeSubnetBits) ByteLength(spec *common.Spec) uint64 {
-	return (spec.SYNC_COMMITTEE_SIZE + 7) / 8
+	return (uint64(spec.SYNC_COMMITTEE_SIZE) + 7) / 8
 }
 
 func (li *SyncCommitteeSubnetBits) FixedLength(spec *common.Spec) uint64 {
-	return (spec.SYNC_COMMITTEE_SIZE + 7) / 8
+	return (uint64(spec.SYNC_COMMITTEE_SIZE) + 7) / 8
 }
 
 func (li SyncCommitteeSubnetBits) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
@@ -89,7 +89,7 @@ func (v *SyncCommitteeSubnetBitsView) Raw(spec *common.Spec) (SyncCommitteeSubne
 }
 
 func SyncCommitteeSubnetBitsType(spec *common.Spec) *BitVectorTypeDef {
-	return BitVectorType(spec.SYNC_COMMITTEE_SIZE / common.SYNC_COMMITTEE_SUBNET_COUNT)
+	return BitVectorType(uint64(spec.SYNC_COMMITTEE_SIZE) / common.SYNC_COMMITTEE_SUBNET_COUNT)
 }
 
 // SyncCommitteeBits is formatted as a serialized SSZ bitvector,
@@ -102,7 +102,7 @@ func (li SyncCommitteeBits) View(spec *common.Spec) *SyncCommitteeBitsView {
 }
 
 func (li *SyncCommitteeBits) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
-	return dr.BitVector((*[]byte)(li), spec.SYNC_COMMITTEE_SIZE)
+	return dr.BitVector((*[]byte)(li), uint64(spec.SYNC_COMMITTEE_SIZE))
 }
 
 func (li SyncCommitteeBits) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
@@ -110,11 +110,11 @@ func (li SyncCommitteeBits) Serialize(spec *common.Spec, w *codec.EncodingWriter
 }
 
 func (li SyncCommitteeBits) ByteLength(spec *common.Spec) uint64 {
-	return (spec.SYNC_COMMITTEE_SIZE + 7) / 8
+	return (uint64(spec.SYNC_COMMITTEE_SIZE) + 7) / 8
 }
 
 func (li *SyncCommitteeBits) FixedLength(spec *common.Spec) uint64 {
-	return (spec.SYNC_COMMITTEE_SIZE + 7) / 8
+	return (uint64(spec.SYNC_COMMITTEE_SIZE) + 7) / 8
 }
 
 func (li SyncCommitteeBits) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
@@ -170,5 +170,5 @@ func (v *SyncCommitteeBitsView) Raw(spec *common.Spec) (SyncCommitteeBits, error
 }
 
 func SyncCommitteeBitsType(spec *common.Spec) *BitVectorTypeDef {
-	return BitVectorType(spec.SYNC_COMMITTEE_SIZE)
+	return BitVectorType(uint64(spec.SYNC_COMMITTEE_SIZE))
 }

@@ -27,7 +27,7 @@ func (testCase *ShufflingTestCase) Run(t *testing.T) {
 			for i := 0; i < len(data); i++ {
 				data[i] = common.ValidatorIndex(i)
 			}
-			common.UnshuffleList(testCase.Spec.SHUFFLE_ROUND_COUNT, data, testCase.Seed)
+			common.UnshuffleList(uint8(testCase.Spec.SHUFFLE_ROUND_COUNT), data, testCase.Seed)
 			for i := uint64(0); i < testCase.Count; i++ {
 				unshuffledIndex := data[i]
 				expectedIndex := testCase.Mapping[i]
@@ -42,7 +42,7 @@ func (testCase *ShufflingTestCase) Run(t *testing.T) {
 			for i := 0; i < len(data); i++ {
 				data[i] = common.ValidatorIndex(i)
 			}
-			common.ShuffleList(testCase.Spec.SHUFFLE_ROUND_COUNT, data, testCase.Seed)
+			common.ShuffleList(uint8(testCase.Spec.SHUFFLE_ROUND_COUNT), data, testCase.Seed)
 			for i := uint64(0); i < testCase.Count; i++ {
 				shuffleOut := testCase.Mapping[i]
 				shuffledIndex := data[shuffleOut]
@@ -56,7 +56,7 @@ func (testCase *ShufflingTestCase) Run(t *testing.T) {
 		t.Run("UnpermuteIndex", func(t *testing.T) {
 			for i := uint64(0); i < testCase.Count; i++ {
 				shuffledIndex := testCase.Mapping[i]
-				unshuffledIndex := common.UnpermuteIndex(testCase.Spec.SHUFFLE_ROUND_COUNT, shuffledIndex, testCase.Count, testCase.Seed)
+				unshuffledIndex := common.UnpermuteIndex(uint8(testCase.Spec.SHUFFLE_ROUND_COUNT), shuffledIndex, testCase.Count, testCase.Seed)
 				if unshuffledIndex != common.ValidatorIndex(i) {
 					t.Errorf("different un-permuted index: %d (at %d) unshuffled to %d", shuffledIndex, i, unshuffledIndex)
 					break
@@ -66,7 +66,7 @@ func (testCase *ShufflingTestCase) Run(t *testing.T) {
 		t.Run("PermuteIndex", func(t *testing.T) {
 			for i := uint64(0); i < testCase.Count; i++ {
 				expectedIndex := testCase.Mapping[i]
-				shuffledIndex := common.PermuteIndex(testCase.Spec.SHUFFLE_ROUND_COUNT, common.ValidatorIndex(i), testCase.Count, testCase.Seed)
+				shuffledIndex := common.PermuteIndex(uint8(testCase.Spec.SHUFFLE_ROUND_COUNT), common.ValidatorIndex(i), testCase.Count, testCase.Seed)
 				if shuffledIndex != expectedIndex {
 					t.Errorf("different shuffled index: %d, expected %d, at index %d", shuffledIndex, expectedIndex, i)
 					break

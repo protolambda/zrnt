@@ -14,7 +14,7 @@ func (a *Balances) Deserialize(spec *common.Spec, dr *codec.DecodingReader) erro
 		i := len(*a)
 		*a = append(*a, common.Gwei(0))
 		return &(*a)[i]
-	}, common.GweiType.TypeByteLength(), spec.VALIDATOR_REGISTRY_LIMIT)
+	}, common.GweiType.TypeByteLength(), uint64(spec.VALIDATOR_REGISTRY_LIMIT))
 }
 
 func (a Balances) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
@@ -35,7 +35,7 @@ func (li Balances) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root 
 	length := uint64(len(li))
 	return hFn.Uint64ListHTR(func(i uint64) uint64 {
 		return uint64(li[i])
-	}, length, spec.VALIDATOR_REGISTRY_LIMIT)
+	}, length, uint64(spec.VALIDATOR_REGISTRY_LIMIT))
 }
 
 func (li Balances) View(limit uint64) (*RegistryBalancesView, error) {
@@ -49,7 +49,7 @@ func (li Balances) View(limit uint64) (*RegistryBalancesView, error) {
 }
 
 func RegistryBalancesType(spec *common.Spec) *BasicListTypeDef {
-	return BasicListType(common.GweiType, spec.VALIDATOR_REGISTRY_LIMIT)
+	return BasicListType(common.GweiType, uint64(spec.VALIDATOR_REGISTRY_LIMIT))
 }
 
 type RegistryBalancesView struct {

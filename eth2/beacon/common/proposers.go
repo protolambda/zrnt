@@ -88,7 +88,7 @@ func ComputeProposers(spec *Spec, state BeaconState, epoch Epoch, active []Valid
 	activeShards := uint64(0)
 
 	validatorsPerSlot := uint64(len(active)) / uint64(spec.SLOTS_PER_EPOCH)
-	committeesPerSlot := validatorsPerSlot / spec.TARGET_COMMITTEE_SIZE
+	committeesPerSlot := validatorsPerSlot / uint64(spec.TARGET_COMMITTEE_SIZE)
 
 	var shardProposers [][]ValidatorIndex
 	// compute shard proposers (if sharding pre-state)
@@ -151,7 +151,7 @@ func ComputeProposerIndex(spec *Spec, registry ValidatorRegistry, active []Valid
 		for j := uint64(0); j < 32; j++ {
 			randomByte := h[j]
 			absI := ValidatorIndex(((i << 5) | j) % uint64(len(active)))
-			shuffledI := PermuteIndex(spec.SHUFFLE_ROUND_COUNT, absI, uint64(len(active)), seed)
+			shuffledI := PermuteIndex(uint8(spec.SHUFFLE_ROUND_COUNT), absI, uint64(len(active)), seed)
 			candidateIndex := active[int(shuffledI)]
 			validator, err := registry.Validator(candidateIndex)
 			if err != nil {

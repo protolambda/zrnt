@@ -226,5 +226,5 @@ func AsEpoch(v View, err error) (Epoch, error) {
 }
 
 func (spec *Spec) GetChurnLimit(activeValidatorCount uint64) uint64 {
-	return math.MaxU64(spec.MIN_PER_EPOCH_CHURN_LIMIT, activeValidatorCount/spec.CHURN_LIMIT_QUOTIENT)
+	return math.MaxU64(uint64(spec.MIN_PER_EPOCH_CHURN_LIMIT), activeValidatorCount/uint64(spec.CHURN_LIMIT_QUOTIENT))
 }

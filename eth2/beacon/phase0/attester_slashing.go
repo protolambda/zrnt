@@ -49,7 +49,7 @@ func (a *AttesterSlashing) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) comm
 }
 
 func BlockAttesterSlashingsType(spec *common.Spec) ListTypeDef {
-	return ListType(AttesterSlashingType(spec), spec.MAX_ATTESTER_SLASHINGS)
+	return ListType(AttesterSlashingType(spec), uint64(spec.MAX_ATTESTER_SLASHINGS))
 }
 
 func AttesterSlashingType(spec *common.Spec) *ContainerTypeDef {
@@ -66,7 +66,7 @@ func (a *AttesterSlashings) Deserialize(spec *common.Spec, dr *codec.DecodingRea
 		i := len(*a)
 		*a = append(*a, AttesterSlashing{})
 		return spec.Wrap(&((*a)[i]))
-	}, 0, spec.MAX_ATTESTER_SLASHINGS)
+	}, 0, uint64(spec.MAX_ATTESTER_SLASHINGS))
 }
 
 func (a AttesterSlashings) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
@@ -93,7 +93,7 @@ func (li AttesterSlashings) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) com
 			return spec.Wrap(&li[i])
 		}
 		return nil
-	}, length, spec.MAX_ATTESTER_SLASHINGS)
+	}, length, uint64(spec.MAX_ATTESTER_SLASHINGS))
 }
 
 func ProcessAttesterSlashing(spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, attesterSlashing *AttesterSlashing) error {

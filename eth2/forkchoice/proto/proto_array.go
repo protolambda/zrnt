@@ -729,11 +729,11 @@ func (pr *ProtoArray) nodeLeadsToViableHead(node *ProtoNode) (bool, error) {
 	}
 }
 
-//This is the equivalent to the `filter_block_tree` function in the eth2 spec:
+// This is the equivalent to the `filter_block_tree` function in the eth2 spec:
 //
-//https://github.com/ethereum/eth2.0-specs/blob/v0.11.1/specs/phase0/fork-choice.md#filter_block_tree
+// https://github.com/ethereum/eth2.0-specs/blob/v0.11.1/specs/phase0/fork-choice.md#filter_block_tree
 //
-//Any node that has a different finalized or justified epoch should not be viable for the head.
+// Any node that has a different finalized or justified epoch should not be viable for the head.
 func (pr *ProtoArray) isNodeViableForHead(node *ProtoNode) bool {
 	return (node.JustifiedEpoch == pr.justifiedEpoch || pr.justifiedEpoch == common.GENESIS_EPOCH) &&
 		(node.FinalizedEpoch == pr.finalizedEpoch || pr.finalizedEpoch == common.GENESIS_EPOCH)

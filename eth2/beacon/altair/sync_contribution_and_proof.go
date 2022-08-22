@@ -142,7 +142,7 @@ func AsSignedContributionAndProof(v View, err error) (*SignedContributionAndProo
 }
 
 func IsSyncCommitteeAggregator(spec *common.Spec, sig common.BLSSignature) bool {
-	modulo := spec.SYNC_COMMITTEE_SIZE / common.SYNC_COMMITTEE_SUBNET_COUNT / common.TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE
+	modulo := uint64(spec.SYNC_COMMITTEE_SIZE) / common.SYNC_COMMITTEE_SUBNET_COUNT / common.TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE
 	if modulo < 1 {
 		modulo = 1
 	}

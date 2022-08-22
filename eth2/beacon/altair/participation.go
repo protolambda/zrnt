@@ -105,7 +105,7 @@ func (r *ParticipationRegistry) Deserialize(spec *common.Spec, dr *codec.Decodin
 		i := len(*r)
 		*r = append(*r, ParticipationFlags(0))
 		return &(*r)[i]
-	}, ParticipationFlagsType.TypeByteLength(), spec.VALIDATOR_REGISTRY_LIMIT)
+	}, ParticipationFlagsType.TypeByteLength(), uint64(spec.VALIDATOR_REGISTRY_LIMIT))
 }
 
 func (r ParticipationRegistry) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
@@ -125,7 +125,7 @@ func (r *ParticipationRegistry) FixedLength(spec *common.Spec) uint64 {
 func (r ParticipationRegistry) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
 	return hFn.Uint8ListHTR(func(i uint64) uint8 {
 		return uint8(r[i])
-	}, uint64(len(r)), spec.VALIDATOR_REGISTRY_LIMIT)
+	}, uint64(len(r)), uint64(spec.VALIDATOR_REGISTRY_LIMIT))
 }
 
 func (r ParticipationRegistry) View(spec *common.Spec) (*ParticipationRegistryView, error) {
@@ -140,7 +140,7 @@ func (r ParticipationRegistry) View(spec *common.Spec) (*ParticipationRegistryVi
 }
 
 func ParticipationRegistryType(spec *common.Spec) *BasicListTypeDef {
-	return BasicListType(ParticipationFlagsType, spec.VALIDATOR_REGISTRY_LIMIT)
+	return BasicListType(ParticipationFlagsType, uint64(spec.VALIDATOR_REGISTRY_LIMIT))
 }
 
 type ParticipationRegistryView struct {

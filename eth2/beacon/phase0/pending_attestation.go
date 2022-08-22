@@ -188,7 +188,7 @@ func (a *PendingAttestations) Deserialize(spec *common.Spec, dr *codec.DecodingR
 		i := len(*a)
 		*a = append(*a, &PendingAttestation{})
 		return spec.Wrap((*a)[i])
-	}, 0, spec.MAX_ATTESTATIONS*uint64(spec.SLOTS_PER_EPOCH))
+	}, 0, uint64(spec.MAX_ATTESTATIONS)*uint64(spec.SLOTS_PER_EPOCH))
 }
 
 func (a PendingAttestations) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
@@ -215,11 +215,11 @@ func (li PendingAttestations) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) c
 			return spec.Wrap(li[i])
 		}
 		return nil
-	}, length, spec.MAX_ATTESTATIONS*uint64(spec.SLOTS_PER_EPOCH))
+	}, length, uint64(spec.MAX_ATTESTATIONS)*uint64(spec.SLOTS_PER_EPOCH))
 }
 
 func PendingAttestationsType(spec *common.Spec) ListTypeDef {
-	return ComplexListType(PendingAttestationType(spec), spec.MAX_ATTESTATIONS*uint64(spec.SLOTS_PER_EPOCH))
+	return ComplexListType(PendingAttestationType(spec), uint64(spec.MAX_ATTESTATIONS)*uint64(spec.SLOTS_PER_EPOCH))
 }
 
 type PendingAttestationsView struct{ *ComplexListView }

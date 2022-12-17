@@ -104,6 +104,10 @@ func (v *ValidatorView) Pubkey() (common.BLSPubkey, error) {
 func (v *ValidatorView) WithdrawalCredentials() (out common.Root, err error) {
 	return AsRoot(v.Get(_validatorWithdrawalCredentials))
 }
+func (v *ValidatorView) SetWithdrawalCredentials(b common.Root) (err error) {
+	wCred := RootView(b)
+	return v.Set(_validatorWithdrawalCredentials, &wCred)
+}
 func (v *ValidatorView) EffectiveBalance() (common.Gwei, error) {
 	return common.AsGwei(v.Get(_validatorEffectiveBalance))
 }

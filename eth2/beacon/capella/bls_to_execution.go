@@ -7,6 +7,7 @@ import (
 
 	blsu "github.com/protolambda/bls12-381-util"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/util/hashing"
 	"github.com/protolambda/ztyp/tree"
 )
 
@@ -42,15 +43,16 @@ func ProcessBLSToExecutionChange(spec *common.Spec, epc *common.EpochsContext, s
 		return err
 	}
 
-	validatorPubKey, err := validator.Pubkey()
+	validatorWithdrawalCredentials, err := validator.WithdrawalCredentials()
 	if err != nil {
 		return err
 	}
-	if !bytes.Equal(validatorPubKey[:1], []byte{common.BLS_WITHDRAWAL_PREFIX}) {
-		return fmt.Errorf("invalid bls to execution change, validator not bls")
+	if !bytes.Equal(validatorWithdrawalCredentials[:1], []byte{common.BLS_WITHDRAWAL_PREFIX}) {
+		return fmt.Errorf("invalid bls to execution change, validator not bls: %v", validatorWithdrawalCredentials)
 	}
-	if !bytes.Equal(validatorPubKey[1:], addressChange.FromBLSPubKey[1:]) {
-		return fmt.Errorf("invalid bls to execution change, incorrect public key")
+	sigHash := hashing.Hash(addressChange.FromBLSPubKey[:])
+	if !bytes.Equal(validatorWithdrawalCredentials[1:], sigHash[1:]) {
+		return fmt.Errorf("invalid bls to execution change, incorrect public key: got %v, want %v", addressChange.FromBLSPubKey, validatorWithdrawalCredentials)
 	}
 	currentSlot, err := state.Slot()
 	if err != nil {
@@ -79,6 +81,5 @@ func ProcessBLSToExecutionChange(spec *common.Spec, epc *common.EpochsContext, s
 	var newWithdrawalCredentials tree.Root
 	copy(newWithdrawalCredentials[0:1], []byte{common.ETH1_ADDRESS_WITHDRAWAL_PREFIX})
 	copy(newWithdrawalCredentials[12:], addressChange.ToExecutionAddress[:])
-	validator.SetWithdrawalCredentials(newWithdrawalCredentials)
-	return nil
+	return validator.SetWithdrawalCredentials(newWithdrawalCredentials)
 }

@@ -273,6 +273,9 @@ func (state *BeaconStateView) GetExpectedWithdrawals(spec *common.Spec) (common.
 			})
 			withdrawalIndex += 1
 		}
+		if len(withdrawals) == int(spec.MAX_WITHDRAWALS_PER_PAYLOAD) {
+			break
+		}
 		validatorIndex = common.ValidatorIndex(uint64(validatorIndex+1) % validatorCount)
 		i += 1
 	}
@@ -315,21 +318,18 @@ func ProcessWithdrawals(ctx context.Context, spec *common.Spec, state *BeaconSta
 		return err
 	}
 	if len(expectedWithdrawals) == int(spec.MAX_WITHDRAWALS_PER_PAYLOAD) {
-		nextIndex, err := state.NextWithdrawalValidatorIndex()
-		if err != nil {
-			return err
-		}
-		nextIndex = common.ValidatorIndex(uint64(nextIndex+1) % validatorCount)
-		if err = state.SetNextWithdrawalValidatorIndex(nextIndex); err != nil {
+		latestWithdrawal := expectedWithdrawals[len(expectedWithdrawals)-1]
+		nextValidatorIndex := common.ValidatorIndex(uint64(latestWithdrawal.ValidatorIndex+1) % validatorCount)
+		if err = state.SetNextWithdrawalValidatorIndex(nextValidatorIndex); err != nil {
 			return err
 		}
 	} else {
-		nextIndex, err := state.NextWithdrawalValidatorIndex()
+		nextValidatorIndex, err := state.NextWithdrawalValidatorIndex()
 		if err != nil {
 			return err
 		}
-		nextIndex = common.ValidatorIndex((uint64(nextIndex) + uint64(spec.MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP)) % validatorCount)
-		if err = state.SetNextWithdrawalValidatorIndex(nextIndex); err != nil {
+		nextValidatorIndex = common.ValidatorIndex((uint64(nextValidatorIndex) + uint64(spec.MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP)) % validatorCount)
+		if err = state.SetNextWithdrawalValidatorIndex(nextValidatorIndex); err != nil {
 			return err
 		}
 	}

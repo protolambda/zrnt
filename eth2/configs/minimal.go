@@ -59,9 +59,9 @@ var Minimal = &common.Spec{
 		MAX_EXTRA_DATA_BYTES:                       32,
 	},
 	CapellaPreset: common.CapellaPreset{
-		MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP: 16384,
+		MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP: 16,
 		MAX_BLS_TO_EXECUTION_CHANGES:         16,
-		MAX_WITHDRAWALS_PER_PAYLOAD:          16,
+		MAX_WITHDRAWALS_PER_PAYLOAD:          4,
 	},
 	ShardingPreset: common.ShardingPreset{
 		MAX_SHARDS:                          8,

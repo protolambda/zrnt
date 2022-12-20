@@ -68,6 +68,16 @@ func TestYamlDecodingMainnetBellatrix(t *testing.T) {
 	}
 }
 
+func TestYamlDecodingMainnetCapella(t *testing.T) {
+	var conf common.CapellaPreset
+	if err := yaml.Unmarshal(mustLoad("presets", "mainnet", "capella"), &conf); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(conf, Mainnet.CapellaPreset) {
+		t.Fatal("Failed to load mainnet capella preset")
+	}
+}
+
 func TestYamlDecodingMainnetSharding(t *testing.T) {
 	var conf common.ShardingPreset
 	if err := yaml.Unmarshal(mustLoad("presets", "mainnet", "sharding"), &conf); err != nil {
@@ -105,6 +115,16 @@ func TestYamlDecodingMinimalBellatrix(t *testing.T) {
 	}
 	if !reflect.DeepEqual(conf, Minimal.BellatrixPreset) {
 		t.Fatal("Failed to load minimal bellatrix preset")
+	}
+}
+
+func TestYamlDecodingMinimalCapella(t *testing.T) {
+	var conf common.CapellaPreset
+	if err := yaml.Unmarshal(mustLoad("presets", "minimal", "capella"), &conf); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(conf, Minimal.CapellaPreset) {
+		t.Fatal("Failed to load minimal capella preset")
 	}
 }
 

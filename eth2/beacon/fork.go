@@ -6,6 +6,7 @@ import (
 
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
 	"github.com/protolambda/zrnt/eth2/beacon/bellatrix"
+	"github.com/protolambda/zrnt/eth2/beacon/capella"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 )
@@ -45,8 +46,7 @@ func (d *ForkDecoder) BlockAllocator(digest common.ForkDigest) (func() OpaqueBlo
 	case d.Bellatrix:
 		return func() OpaqueBlock { return new(bellatrix.SignedBeaconBlock) }, nil
 	case d.Capella:
-		// TODO: Implement
-		return nil, fmt.Errorf("capella not implemented: %s", digest)
+		return func() OpaqueBlock { return new(capella.SignedBeaconBlock) }, nil
 	//case d.Sharding:
 	//	return new(sharding.SignedBeaconBlock), nil
 	default:
@@ -59,8 +59,10 @@ func (d *ForkDecoder) ForkDigest(epoch common.Epoch) common.ForkDigest {
 		return d.Genesis
 	} else if epoch < d.Spec.BELLATRIX_FORK_EPOCH {
 		return d.Altair
-	} else if epoch < d.Spec.SHARDING_FORK_EPOCH {
+	} else if epoch < d.Spec.CAPELLA_FORK_EPOCH {
 		return d.Bellatrix
+	} else if epoch < d.Spec.SHARDING_FORK_EPOCH {
+		return d.Capella
 	} else {
 		return d.Sharding
 	}
@@ -92,8 +94,12 @@ func (s *StandardUpgradeableBeaconState) UpgradeMaybe(ctx context.Context, spec 
 		}
 		s.BeaconState = post
 	}
-	if slot == common.Slot(spec.CAPELLA_FORK_EPOCH)*spec.SLOTS_PER_EPOCH {
-		// TODO: upgrade
+	if tpre, ok := s.BeaconState.(*bellatrix.BeaconStateView); ok && slot == common.Slot(spec.CAPELLA_FORK_EPOCH)*spec.SLOTS_PER_EPOCH {
+		post, err := capella.UpgradeToCapella(spec, epc, tpre)
+		if err != nil {
+			return fmt.Errorf("failed to upgrade bellatrix to capella state: %v", err)
+		}
+		s.BeaconState = post
 	}
 	//if slot == common.Slot(spec.SHARDING_FORK_EPOCH)*spec.SLOTS_PER_EPOCH {
 	// TODO: upgrade
@@ -130,6 +136,17 @@ func EnvelopeToSignedBeaconBlock(benv *common.BeaconBlockEnvelope) (common.SpecO
 	case *bellatrix.BeaconBlockBody:
 		return &bellatrix.SignedBeaconBlock{
 			Message: bellatrix.BeaconBlock{
+				Slot:          benv.Slot,
+				ProposerIndex: benv.ProposerIndex,
+				ParentRoot:    benv.ParentRoot,
+				StateRoot:     benv.StateRoot,
+				Body:          *x,
+			},
+			Signature: benv.Signature,
+		}, nil
+	case *capella.BeaconBlockBody:
+		return &capella.SignedBeaconBlock{
+			Message: capella.BeaconBlock{
 				Slot:          benv.Slot,
 				ProposerIndex: benv.ProposerIndex,
 				ParentRoot:    benv.ParentRoot,

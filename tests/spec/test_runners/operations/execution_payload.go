@@ -15,7 +15,7 @@ type MockExecEngine struct {
 	Valid bool `yaml:"execution_valid"`
 }
 
-func (m *MockExecEngine) ExecutePayload(ctx context.Context, executionPayload *common.ExecutionPayload) (valid bool, err error) {
+func (m *MockExecEngine) ExecutePayload(ctx context.Context, executionPayload interface{}) (valid bool, err error) {
 	return m.Valid, nil
 }
 

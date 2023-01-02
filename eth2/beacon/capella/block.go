@@ -233,7 +233,7 @@ func BeaconBlockBodyType(spec *common.Spec) *ContainerTypeDef {
 		{"sync_aggregate", altair.SyncAggregateType(spec)},
 		// Capella
 		{"execution_payload", ExecutionPayloadType(spec)},
-		{"bls_to_execution_changes", common.BLSToExecutionChangeType},
+		{"bls_to_execution_changes", common.BlockSignedBLSToExecutionChangesType(spec)},
 	})
 }
 
@@ -309,15 +309,16 @@ func (b *BeaconBlockBodyShallow) WithExecutionPayload(spec *common.Spec, payload
 		return nil, fmt.Errorf("payload does not match expected root: %s <> %s", b.ExecutionPayloadRoot, payloadRoot)
 	}
 	return &BeaconBlockBody{
-		RandaoReveal:      b.RandaoReveal,
-		Eth1Data:          b.Eth1Data,
-		Graffiti:          b.Graffiti,
-		ProposerSlashings: b.ProposerSlashings,
-		AttesterSlashings: b.AttesterSlashings,
-		Attestations:      b.Attestations,
-		Deposits:          b.Deposits,
-		VoluntaryExits:    b.VoluntaryExits,
-		SyncAggregate:     b.SyncAggregate,
-		ExecutionPayload:  payload,
+		RandaoReveal:          b.RandaoReveal,
+		Eth1Data:              b.Eth1Data,
+		Graffiti:              b.Graffiti,
+		ProposerSlashings:     b.ProposerSlashings,
+		AttesterSlashings:     b.AttesterSlashings,
+		Attestations:          b.Attestations,
+		Deposits:              b.Deposits,
+		VoluntaryExits:        b.VoluntaryExits,
+		SyncAggregate:         b.SyncAggregate,
+		ExecutionPayload:      payload,
+		BLSToExecutionChanges: b.BLSToExecutionChanges,
 	}, nil
 }

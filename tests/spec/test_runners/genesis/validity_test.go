@@ -2,6 +2,7 @@ package sanity
 
 import (
 	"bytes"
+	"github.com/protolambda/zrnt/eth2/beacon/capella"
 	"io/ioutil"
 	"testing"
 
@@ -33,6 +34,8 @@ func runCase(t *testing.T, forkName test_util.ForkName, readPart test_util.TestP
 		genesisState, err = altair.AsBeaconStateView(altair.BeaconStateType(spec).Deserialize(decodingReader))
 	case "bellatrix":
 		genesisState, err = bellatrix.AsBeaconStateView(bellatrix.BeaconStateType(spec).Deserialize(decodingReader))
+	case "capella":
+		genesisState, err = capella.AsBeaconStateView(capella.BeaconStateType(spec).Deserialize(decodingReader))
 	default:
 		t.Fatalf("unrecognized fork name: %s", forkName)
 	}

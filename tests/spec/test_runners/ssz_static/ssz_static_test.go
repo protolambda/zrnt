@@ -3,6 +3,7 @@ package ssz_static
 import (
 	"bytes"
 	"encoding/hex"
+	"github.com/protolambda/zrnt/eth2/beacon/capella"
 	"io/ioutil"
 	"testing"
 
@@ -98,6 +99,7 @@ var objs = map[test_util.ForkName]map[string]ObjAllocator{
 	"phase0":    {},
 	"altair":    {},
 	"bellatrix": {},
+	"capella":   {},
 }
 
 func init() {
@@ -129,6 +131,7 @@ func init() {
 		objs["phase0"][k] = v
 		objs["altair"][k] = v
 		objs["bellatrix"][k] = v
+		objs["capella"][k] = v
 	}
 	objs["phase0"]["BeaconBlockBody"] = func() interface{} { return new(phase0.BeaconBlockBody) }
 	objs["phase0"]["BeaconBlock"] = func() interface{} { return new(phase0.BeaconBlock) }
@@ -158,6 +161,15 @@ func init() {
 	objs["bellatrix"]["ExecutionPayloadHeader"] = func() interface{} { return new(common.ExecutionPayloadHeader) }
 	//objs["bellatrix"]["PowBlock"] = func() interface{} { return new(bellatrix.PowBlock) }
 
+	objs["capella"]["BeaconBlockBody"] = func() interface{} { return new(capella.BeaconBlockBody) }
+	objs["capella"]["BeaconBlock"] = func() interface{} { return new(capella.BeaconBlock) }
+	objs["capella"]["BeaconState"] = func() interface{} { return new(capella.BeaconState) }
+	objs["capella"]["SignedBeaconBlock"] = func() interface{} { return new(capella.SignedBeaconBlock) }
+	objs["capella"]["ExecutionPayload"] = func() interface{} { return new(capella.ExecutionPayload) }
+	objs["capella"]["ExecutionPayloadHeader"] = func() interface{} { return new(capella.ExecutionPayloadHeader) }
+	objs["capella"]["Withdrawal"] = func() interface{} { return new(common.Withdrawal) }
+	objs["capella"]["BLSToExecutionChange"] = func() interface{} { return new(common.BLSToExecutionChange) }
+	objs["capella"]["SignedBLSToExecutionChange"] = func() interface{} { return new(common.SignedBLSToExecutionChange) }
 }
 
 type RootsYAML struct {

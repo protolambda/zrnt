@@ -75,14 +75,12 @@ func (e WithdrawalIndex) String() string {
 	return Uint64View(e).String()
 }
 
-func WithdrawalType(spec *Spec) *ContainerTypeDef {
-	return ContainerType("Withdrawal", []FieldDef{
-		{"index", WithdrawalIndexType},
-		{"validator_index", ValidatorIndexType},
-		{"address", Eth1AddressType},
-		{"amount", GweiType},
-	})
-}
+var WithdrawalType = ContainerType("Withdrawal", []FieldDef{
+	{"index", WithdrawalIndexType},
+	{"validator_index", ValidatorIndexType},
+	{"address", Eth1AddressType},
+	{"amount", GweiType},
+})
 
 type WithdrawalView struct {
 	*ContainerView
@@ -139,37 +137,37 @@ type Withdrawal struct {
 	Amount         Gwei            `json:"amount" yaml:"amount"`
 }
 
-func (s *Withdrawal) View(spec *Spec) *WithdrawalView {
+func (s *Withdrawal) View() *WithdrawalView {
 	i, vi, ad, am := s.Index, s.ValidatorIndex, s.Address, s.Amount
-	v, err := AsWithdrawal(WithdrawalType(spec).FromFields(Uint64View(i), Uint64View(vi), ad.View(), Uint64View(am)))
+	v, err := AsWithdrawal(WithdrawalType.FromFields(Uint64View(i), Uint64View(vi), ad.View(), Uint64View(am)))
 	if err != nil {
 		panic(err)
 	}
 	return v
 }
 
-func (s *Withdrawal) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
+func (s *Withdrawal) Deserialize(dr *codec.DecodingReader) error {
 	return dr.FixedLenContainer(&s.Index, &s.ValidatorIndex, &s.Address, &s.Amount)
 }
 
-func (s *Withdrawal) Serialize(spec *Spec, w *codec.EncodingWriter) error {
+func (s *Withdrawal) Serialize(w *codec.EncodingWriter) error {
 	return w.FixedLenContainer(&s.Index, &s.ValidatorIndex, &s.Address, &s.Amount)
 }
 
-func (s *Withdrawal) ByteLength(spec *Spec) uint64 {
+func (s *Withdrawal) ByteLength() uint64 {
 	return Uint64Type.TypeByteLength()*3 + Eth1AddressType.TypeByteLength()
 }
 
-func (s *Withdrawal) FixedLength(spec *Spec) uint64 {
+func (s *Withdrawal) FixedLength() uint64 {
 	return Uint64Type.TypeByteLength()*3 + Eth1AddressType.TypeByteLength()
 }
 
-func (s *Withdrawal) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
+func (s *Withdrawal) HashTreeRoot(hFn tree.HashFn) Root {
 	return hFn.HashTreeRoot(&s.Index, &s.ValidatorIndex, &s.Address, &s.Amount)
 }
 
 func WithdrawalsType(spec *Spec) ListTypeDef {
-	return ListType(WithdrawalType(spec), uint64(spec.MAX_WITHDRAWALS_PER_PAYLOAD))
+	return ListType(WithdrawalType, uint64(spec.MAX_WITHDRAWALS_PER_PAYLOAD))
 }
 
 type Withdrawals []Withdrawal
@@ -178,19 +176,19 @@ func (ws *Withdrawals) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
 	return dr.List(func() codec.Deserializable {
 		i := len(*ws)
 		*ws = append(*ws, Withdrawal{})
-		return spec.Wrap(&((*ws)[i]))
-	}, Uint64Type.TypeByteLength()*3+Eth1AddressType.TypeByteLength(), uint64(spec.MAX_WITHDRAWALS_PER_PAYLOAD))
+		return &((*ws)[i])
+	}, WithdrawalType.TypeByteLength(), uint64(spec.MAX_WITHDRAWALS_PER_PAYLOAD))
 }
 
 func (ws Withdrawals) Serialize(spec *Spec, w *codec.EncodingWriter) error {
 	return w.List(func(i uint64) codec.Serializable {
-		return spec.Wrap(&ws[i])
+		return &ws[i]
 	}, Uint64Type.TypeByteLength()*3+Eth1AddressType.TypeByteLength(), uint64(len(ws)))
 }
 
 func (ws Withdrawals) ByteLength(spec *Spec) (out uint64) {
 	for _, v := range ws {
-		out += v.ByteLength(spec) + codec.OFFSET_SIZE
+		out += v.ByteLength() + codec.OFFSET_SIZE
 	}
 	return
 }
@@ -203,7 +201,7 @@ func (ws Withdrawals) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
 	length := uint64(len(ws))
 	return hFn.ComplexListHTR(func(i uint64) tree.HTR {
 		if i < length {
-			return spec.Wrap(&ws[i])
+			return &ws[i]
 		}
 		return nil
 	}, length, uint64(spec.MAX_WITHDRAWALS_PER_PAYLOAD))
@@ -281,11 +279,11 @@ func (s *BLSToExecutionChange) Serialize(w *codec.EncodingWriter) error {
 }
 
 func (s *BLSToExecutionChange) ByteLength() uint64 {
-	return 76
+	return 8 + 48 + 20
 }
 
 func (s *BLSToExecutionChange) FixedLength() uint64 {
-	return 76
+	return 8 + 48 + 20
 }
 
 func (s *BLSToExecutionChange) HashTreeRoot(hFn tree.HashFn) Root {
@@ -370,24 +368,28 @@ func (s *SignedBLSToExecutionChange) HashTreeRoot(hFn tree.HashFn) Root {
 	return hFn.HashTreeRoot(&s.BLSToExecutionChange, &s.Signature)
 }
 
+func BlockSignedBLSToExecutionChangesType(spec *Spec) ListTypeDef {
+	return ListType(SignedBLSToExecutionChangeType, uint64(spec.MAX_BLS_TO_EXECUTION_CHANGES))
+}
+
 type SignedBLSToExecutionChanges []SignedBLSToExecutionChange
 
-func (a *SignedBLSToExecutionChanges) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
+func (li *SignedBLSToExecutionChanges) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
 	return dr.List(func() codec.Deserializable {
-		i := len(*a)
-		*a = append(*a, SignedBLSToExecutionChange{})
-		return &((*a)[i])
+		i := len(*li)
+		*li = append(*li, SignedBLSToExecutionChange{})
+		return &((*li)[i])
 	}, SignedBLSToExecutionChangeType.TypeByteLength(), uint64(spec.MAX_BLS_TO_EXECUTION_CHANGES))
 }
 
-func (a SignedBLSToExecutionChanges) Serialize(_ *Spec, w *codec.EncodingWriter) error {
+func (li SignedBLSToExecutionChanges) Serialize(_ *Spec, w *codec.EncodingWriter) error {
 	return w.List(func(i uint64) codec.Serializable {
-		return &a[i]
-	}, SignedBLSToExecutionChangeType.TypeByteLength(), uint64(len(a)))
+		return &li[i]
+	}, SignedBLSToExecutionChangeType.TypeByteLength(), uint64(len(li)))
 }
 
-func (a SignedBLSToExecutionChanges) ByteLength(_ *Spec) (out uint64) {
-	return SignedBLSToExecutionChangeType.TypeByteLength() * uint64(len(a))
+func (li SignedBLSToExecutionChanges) ByteLength(_ *Spec) (out uint64) {
+	return SignedBLSToExecutionChangeType.TypeByteLength() * uint64(len(li))
 }
 
 func (*SignedBLSToExecutionChanges) FixedLength(*Spec) uint64 {
@@ -401,5 +403,5 @@ func (li SignedBLSToExecutionChanges) HashTreeRoot(spec *Spec, hFn tree.HashFn) 
 			return &li[i]
 		}
 		return nil
-	}, length, uint64(spec.MAX_PROPOSER_SLASHINGS))
+	}, length, uint64(spec.MAX_BLS_TO_EXECUTION_CHANGES))
 }

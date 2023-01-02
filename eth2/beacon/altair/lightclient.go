@@ -142,7 +142,7 @@ func LightClientUpdateType(spec *common.Spec) *ContainerTypeDef {
 		{"finalized_header", common.BeaconBlockHeaderType},
 		{"finality_branch", FinalizedRootProofBranchType},
 		{"sync_aggregate", SyncAggregateType(spec)},
-		{"fork_version", common.VersionType},
+		{"signature_slot", common.SlotType},
 	})
 }
 
@@ -157,8 +157,8 @@ type LightClientUpdate struct {
 	FinalityBranch  FinalizedRootProofBranch `yaml:"finality_branch" json:"finality_branch"`
 	// Sync committee aggregate signature
 	SyncAggregate SyncAggregate `yaml:"sync_aggregate" json:"sync_aggregate"`
-	// Fork version for the aggregate signature
-	ForkVersion common.Version `yaml:"fork_version" json:"fork_version"`
+	// Slot at which the aggregate signature was created (untrusted)
+	SignatureSlot common.Slot `yaml:"signature_slot" json:"signature_slot"`
 }
 
 func (lcu *LightClientUpdate) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
@@ -169,7 +169,7 @@ func (lcu *LightClientUpdate) Deserialize(spec *common.Spec, dr *codec.DecodingR
 		&lcu.FinalizedHeader,
 		&lcu.FinalityBranch,
 		spec.Wrap(&lcu.SyncAggregate),
-		&lcu.ForkVersion,
+		&lcu.SignatureSlot,
 	)
 }
 
@@ -181,7 +181,7 @@ func (lcu *LightClientUpdate) Serialize(spec *common.Spec, w *codec.EncodingWrit
 		&lcu.FinalizedHeader,
 		&lcu.FinalityBranch,
 		spec.Wrap(&lcu.SyncAggregate),
-		&lcu.ForkVersion,
+		&lcu.SignatureSlot,
 	)
 }
 
@@ -193,7 +193,7 @@ func (lcu *LightClientUpdate) ByteLength(spec *common.Spec) uint64 {
 		&lcu.FinalizedHeader,
 		&lcu.FinalityBranch,
 		spec.Wrap(&lcu.SyncAggregate),
-		&lcu.ForkVersion,
+		&lcu.SignatureSlot,
 	)
 }
 
@@ -205,7 +205,7 @@ func (lcu *LightClientUpdate) FixedLength(spec *common.Spec) uint64 {
 		&lcu.FinalizedHeader,
 		&lcu.FinalityBranch,
 		spec.Wrap(&lcu.SyncAggregate),
-		&lcu.ForkVersion,
+		&lcu.SignatureSlot,
 	)
 }
 
@@ -217,6 +217,6 @@ func (lcu *LightClientUpdate) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) c
 		&lcu.FinalizedHeader,
 		&lcu.FinalityBranch,
 		spec.Wrap(&lcu.SyncAggregate),
-		&lcu.ForkVersion,
+		&lcu.SignatureSlot,
 	)
 }

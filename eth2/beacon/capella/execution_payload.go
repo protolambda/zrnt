@@ -69,7 +69,6 @@ func ProcessExecutionPayload(ctx context.Context, spec *common.Spec, state Execu
 			slot, genesisTime, expectedTime, executionPayload.Timestamp)
 	}
 
-	/* TODO: Execution Payload as interface to support both types
 	if valid, err := engine.ExecutePayload(ctx, executionPayload); err != nil {
 		return fmt.Errorf("unexpected problem in execution engine when inserting block %s (height %d), err: %v",
 			executionPayload.BlockHash, executionPayload.BlockNumber, err)
@@ -77,7 +76,6 @@ func ProcessExecutionPayload(ctx context.Context, spec *common.Spec, state Execu
 		return fmt.Errorf("execution engine says payload is invalid: %s (height %d)",
 			executionPayload.BlockHash, executionPayload.BlockNumber)
 	}
-	*/
 
 	return state.SetLatestExecutionPayloadHeader(executionPayload.Header(spec))
 }

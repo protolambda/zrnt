@@ -526,12 +526,12 @@ func (state *BeaconStateView) SetNextWithdrawalIndex(nextIndex common.Withdrawal
 }
 
 func (state *BeaconStateView) NextWithdrawalValidatorIndex() (common.ValidatorIndex, error) {
-	v, err := state.Get(_nextWithdrawalIndex)
+	v, err := state.Get(_nextWithdrawalValidatorIndex)
 	return common.AsValidatorIndex(v, err)
 }
 
 func (state *BeaconStateView) SetNextWithdrawalValidatorIndex(nextValidator common.ValidatorIndex) error {
-	return state.Set(_nextWithdrawalIndex, Uint64View(nextValidator))
+	return state.Set(_nextWithdrawalValidatorIndex, Uint64View(nextValidator))
 }
 
 func (state *BeaconStateView) ForkSettings(spec *common.Spec) *common.ForkSettings {

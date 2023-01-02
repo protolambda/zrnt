@@ -183,14 +183,11 @@ func (ws *Withdrawals) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
 func (ws Withdrawals) Serialize(spec *Spec, w *codec.EncodingWriter) error {
 	return w.List(func(i uint64) codec.Serializable {
 		return &ws[i]
-	}, Uint64Type.TypeByteLength()*3+Eth1AddressType.TypeByteLength(), uint64(len(ws)))
+	}, WithdrawalType.TypeByteLength(), uint64(len(ws)))
 }
 
 func (ws Withdrawals) ByteLength(spec *Spec) (out uint64) {
-	for _, v := range ws {
-		out += v.ByteLength() + codec.OFFSET_SIZE
-	}
-	return
+	return WithdrawalType.TypeByteLength() * uint64(len(ws))
 }
 
 func (ws *Withdrawals) FixedLength(*Spec) uint64 {

@@ -303,11 +303,15 @@ func ProcessWithdrawals(ctx context.Context, spec *common.Spec, state *BeaconSta
 			withdrawal.Amount != expectedWithdrawal.Amount {
 			return fmt.Errorf("unexpected withdrawal in Capella ProcessWithdrawals: want=%s, got=%s", expectedWithdrawal, withdrawal)
 		}
-		common.DecreaseBalance(bals, expectedWithdrawal.ValidatorIndex, expectedWithdrawal.Amount)
+		if err := common.DecreaseBalance(bals, expectedWithdrawal.ValidatorIndex, expectedWithdrawal.Amount); err != nil {
+			return fmt.Errorf("failed to decrease balance: %w", err)
+		}
 	}
 	if len(expectedWithdrawals) > 0 {
 		latestWithdrawal := expectedWithdrawals[len(expectedWithdrawals)-1]
-		state.SetNextWithdrawalIndex(latestWithdrawal.Index + 1)
+		if err := state.SetNextWithdrawalIndex(latestWithdrawal.Index + 1); err != nil {
+			return fmt.Errorf("failed to set withdrawal index: %w", err)
+		}
 	}
 	validators, err := state.Validators()
 	if err != nil {

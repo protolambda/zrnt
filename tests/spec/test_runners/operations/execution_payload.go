@@ -29,7 +29,7 @@ type ExecutionPayloadTestCase struct {
 
 func (c *ExecutionPayloadTestCase) Load(t *testing.T, forkName test_util.ForkName, readPart test_util.TestPartReader) {
 	c.BaseTransitionTest.Load(t, forkName, readPart)
-	test_util.LoadSSZ(t, "sync_aggregate", c.Spec.Wrap(&c.ExecutionPayload), readPart)
+	test_util.LoadSSZ(t, "execution_payload", c.Spec.Wrap(&c.ExecutionPayload), readPart)
 	part := readPart.Part("execution.yml")
 	dec := yaml.NewDecoder(part)
 	dec.KnownFields(true)
@@ -37,7 +37,7 @@ func (c *ExecutionPayloadTestCase) Load(t *testing.T, forkName test_util.ForkNam
 }
 
 func (c *ExecutionPayloadTestCase) Run() error {
-	s, ok := c.Pre.(*bellatrix.BeaconStateView)
+	s, ok := c.Pre.(bellatrix.ExecutionTrackingBeaconState)
 	if !ok {
 		return fmt.Errorf("unrecognized state type: %T", c.Pre)
 	}
@@ -45,6 +45,6 @@ func (c *ExecutionPayloadTestCase) Run() error {
 }
 
 func TestExecutionPayload(t *testing.T) {
-	test_util.RunTransitionTest(t, []test_util.ForkName{"bellatrix"}, "operations", "execution_payload",
+	test_util.RunTransitionTest(t, []test_util.ForkName{"bellatrix", "capella"}, "operations", "execution_payload",
 		func() test_util.TransitionTest { return new(ExecutionPayloadTestCase) })
 }

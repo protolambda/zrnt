@@ -305,10 +305,8 @@ func (spec *Spec) ForkVersion(slot Slot) Version {
 		return spec.ALTAIR_FORK_VERSION
 	} else if epoch < spec.CAPELLA_FORK_EPOCH {
 		return spec.BELLATRIX_FORK_VERSION
-	} else if epoch < spec.SHARDING_FORK_EPOCH {
-		return spec.CAPELLA_FORK_VERSION
 	} else {
-		return spec.SHARDING_FORK_VERSION
+		return spec.CAPELLA_FORK_VERSION
 	}
 }
 

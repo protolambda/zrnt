@@ -61,10 +61,8 @@ func (d *ForkDecoder) ForkDigest(epoch common.Epoch) common.ForkDigest {
 		return d.Altair
 	} else if epoch < d.Spec.CAPELLA_FORK_EPOCH {
 		return d.Bellatrix
-	} else if epoch < d.Spec.SHARDING_FORK_EPOCH {
-		return d.Capella
 	} else {
-		return d.Sharding
+		return d.Capella
 	}
 }
 

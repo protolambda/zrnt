@@ -27,7 +27,7 @@ func UpgradeToCapella(spec *common.Spec, epc *common.EpochsContext, pre *bellatr
 	}
 	fork := common.Fork{
 		PreviousVersion: preFork.CurrentVersion,
-		CurrentVersion:  spec.BELLATRIX_FORK_VERSION,
+		CurrentVersion:  spec.CAPELLA_FORK_VERSION,
 		Epoch:           epoch,
 	}
 	latestBlockHeader, err := pre.LatestBlockHeader()
@@ -114,6 +114,27 @@ func UpgradeToCapella(spec *common.Spec, epc *common.EpochsContext, pre *bellatr
 	if err != nil {
 		return nil, err
 	}
+	oldExecutionHeader, err := latestExecutionPayloadHeader.Raw()
+	if err != nil {
+		return nil, err
+	}
+	updatedExecutionPayloadHeader := &ExecutionPayloadHeader{
+		ParentHash:       oldExecutionHeader.ParentHash,
+		FeeRecipient:     oldExecutionHeader.FeeRecipient,
+		StateRoot:        oldExecutionHeader.StateRoot,
+		ReceiptsRoot:     oldExecutionHeader.ReceiptsRoot,
+		LogsBloom:        oldExecutionHeader.LogsBloom,
+		PrevRandao:       oldExecutionHeader.PrevRandao,
+		BlockNumber:      oldExecutionHeader.BlockNumber,
+		GasLimit:         oldExecutionHeader.GasLimit,
+		GasUsed:          oldExecutionHeader.GasUsed,
+		Timestamp:        oldExecutionHeader.Timestamp,
+		ExtraData:        oldExecutionHeader.ExtraData,
+		BaseFeePerGas:    oldExecutionHeader.BaseFeePerGas,
+		BlockHash:        oldExecutionHeader.BlockHash,
+		TransactionsRoot: oldExecutionHeader.TransactionsRoot,
+		WithdrawalsRoot:  common.Root{}, // New in Capella
+	}
 	nextWithdrawalIndex := view.Uint64View(0)
 	nextWithdrawalValidatorIndex := view.Uint64View(0)
 
@@ -142,7 +163,7 @@ func UpgradeToCapella(spec *common.Spec, epc *common.EpochsContext, pre *bellatr
 		inactivityScores,
 		currentSyncCommitteeView,
 		nextSyncCommitteeView,
-		latestExecutionPayloadHeader,
+		updatedExecutionPayloadHeader.View(),
 		nextWithdrawalIndex,
 		nextWithdrawalValidatorIndex,
 	))

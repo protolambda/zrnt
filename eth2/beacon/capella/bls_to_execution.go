@@ -16,14 +16,14 @@ func ProcessBLSToExecutionChanges(ctx context.Context, spec *common.Spec, epc *c
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		if err := ProcessBLSToExecutionChange(spec, epc, state, &ops[i]); err != nil {
+		if err := ProcessBLSToExecutionChange(ctx, spec, epc, state, &ops[i]); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func ProcessBLSToExecutionChange(spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, op *common.SignedBLSToExecutionChange) error {
+func ProcessBLSToExecutionChange(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, op *common.SignedBLSToExecutionChange) error {
 	validators, err := state.Validators()
 	if err != nil {
 		return err

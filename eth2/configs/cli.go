@@ -16,6 +16,7 @@ type SpecOptions struct {
 	Phase0Preset    string `ask:"--preset-phase0" help:"Eth2 phase0 spec preset, name or path to YAML"`
 	AltairPreset    string `ask:"--preset-altair" help:"Eth2 altair spec preset, name or path to YAML"`
 	BellatrixPreset string `ask:"--preset-bellatrix" help:"Eth2 bellatrix spec preset, name or path to YAML"`
+	CapellaPreset   string `ask:"--preset-capella" help:"Eth2 capella spec preset, name or path to YAML"`
 	ShardingPreset  string `ask:"--preset-sharding" help:"Eth2 sharding spec preset, name or path to YAML"`
 
 	// TODO: execution engine config for Bellatrix
@@ -27,6 +28,7 @@ type LegacyConfig struct {
 	common.Phase0Preset    `yaml:",inline"`
 	common.AltairPreset    `yaml:",inline"`
 	common.BellatrixPreset `yaml:",inline"`
+	common.CapellaPreset   `yaml:",inline"`
 	common.ShardingPreset  `yaml:",inline"`
 	common.Config          `yaml:",inline"`
 }
@@ -54,6 +56,7 @@ func (c *SpecOptions) Spec() (*common.Spec, error) {
 			spec.Phase0Preset = legacy.Phase0Preset
 			spec.AltairPreset = legacy.AltairPreset
 			spec.BellatrixPreset = legacy.BellatrixPreset
+			spec.CapellaPreset = legacy.CapellaPreset
 			spec.ShardingPreset = legacy.ShardingPreset
 			spec.Config = legacy.Config
 		}
@@ -123,6 +126,22 @@ func (c *SpecOptions) Spec() (*common.Spec, error) {
 		}
 	}
 
+	switch c.CapellaPreset {
+	case "mainnet":
+		spec.CapellaPreset = Mainnet.CapellaPreset
+	case "minimal":
+		spec.CapellaPreset = Minimal.CapellaPreset
+	default:
+		f, err := os.Open(c.CapellaPreset)
+		if err != nil {
+			return nil, fmt.Errorf("failed to open capella preset file: %v", err)
+		}
+		dec := yaml.NewDecoder(f)
+		if err := dec.Decode(&spec.CapellaPreset); err != nil {
+			return nil, fmt.Errorf("failed to decode capella preset: %v", err)
+		}
+	}
+
 	switch c.ShardingPreset {
 	case "mainnet":
 		spec.ShardingPreset = Mainnet.ShardingPreset
@@ -147,5 +166,6 @@ func (c *SpecOptions) Default() {
 	c.Phase0Preset = "mainnet"
 	c.AltairPreset = "mainnet"
 	c.BellatrixPreset = "mainnet"
+	c.CapellaPreset = "mainnet"
 	c.ShardingPreset = "mainnet"
 }

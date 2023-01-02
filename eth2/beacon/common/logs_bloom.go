@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
-	"fmt"
-
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/conv"
 	"github.com/protolambda/ztyp/tree"
@@ -19,14 +17,12 @@ type LogsBloomView struct {
 }
 
 func (v *LogsBloomView) Raw() (*LogsBloom, error) {
-	var out LogsBloom
-	buf := codec.NewEncodingWriter(bytes.NewBuffer(out[:]))
-	if err := v.Serialize(buf); err != nil {
+	var buf bytes.Buffer
+	if err := v.Serialize(codec.NewEncodingWriter(&buf)); err != nil {
 		return nil, err
 	}
-	if x := buf.Written(); x != BYTES_PER_LOGS_BLOOM {
-		return nil, fmt.Errorf("unexpected logs bloom tree view, got %d bytes", x)
-	}
+	var out LogsBloom
+	copy(out[:], buf.Bytes())
 	return &out, nil
 }
 

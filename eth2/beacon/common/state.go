@@ -27,6 +27,7 @@ type Eth1DataVotes interface {
 type Validator interface {
 	Pubkey() (BLSPubkey, error)
 	WithdrawalCredentials() (out Root, err error)
+	SetWithdrawalCredentials(out Root) (err error)
 	EffectiveBalance() (Gwei, error)
 	SetEffectiveBalance(b Gwei) error
 	Slashed() (bool, error)

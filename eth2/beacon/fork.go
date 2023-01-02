@@ -6,6 +6,7 @@ import (
 
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
 	"github.com/protolambda/zrnt/eth2/beacon/bellatrix"
+	"github.com/protolambda/zrnt/eth2/beacon/capella"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 )
@@ -15,6 +16,7 @@ type ForkDecoder struct {
 	Genesis   common.ForkDigest
 	Altair    common.ForkDigest
 	Bellatrix common.ForkDigest
+	Capella   common.ForkDigest
 	Sharding  common.ForkDigest
 	// TODO more forks
 }
@@ -25,6 +27,7 @@ func NewForkDecoder(spec *common.Spec, genesisValRoot common.Root) *ForkDecoder 
 		Genesis:   common.ComputeForkDigest(spec.GENESIS_FORK_VERSION, genesisValRoot),
 		Altair:    common.ComputeForkDigest(spec.ALTAIR_FORK_VERSION, genesisValRoot),
 		Bellatrix: common.ComputeForkDigest(spec.BELLATRIX_FORK_VERSION, genesisValRoot),
+		Capella:   common.ComputeForkDigest(spec.CAPELLA_FORK_VERSION, genesisValRoot),
 		Sharding:  common.ComputeForkDigest(spec.SHARDING_FORK_VERSION, genesisValRoot),
 	}
 }
@@ -42,6 +45,8 @@ func (d *ForkDecoder) BlockAllocator(digest common.ForkDigest) (func() OpaqueBlo
 		return func() OpaqueBlock { return new(altair.SignedBeaconBlock) }, nil
 	case d.Bellatrix:
 		return func() OpaqueBlock { return new(bellatrix.SignedBeaconBlock) }, nil
+	case d.Capella:
+		return func() OpaqueBlock { return new(capella.SignedBeaconBlock) }, nil
 	//case d.Sharding:
 	//	return new(sharding.SignedBeaconBlock), nil
 	default:
@@ -54,10 +59,10 @@ func (d *ForkDecoder) ForkDigest(epoch common.Epoch) common.ForkDigest {
 		return d.Genesis
 	} else if epoch < d.Spec.BELLATRIX_FORK_EPOCH {
 		return d.Altair
-	} else if epoch < d.Spec.SHARDING_FORK_EPOCH {
+	} else if epoch < d.Spec.CAPELLA_FORK_EPOCH {
 		return d.Bellatrix
 	} else {
-		return d.Sharding
+		return d.Capella
 	}
 }
 
@@ -84,6 +89,13 @@ func (s *StandardUpgradeableBeaconState) UpgradeMaybe(ctx context.Context, spec 
 		post, err := bellatrix.UpgradeToBellatrix(spec, epc, tpre)
 		if err != nil {
 			return fmt.Errorf("failed to upgrade atalir to bellatrix state: %v", err)
+		}
+		s.BeaconState = post
+	}
+	if tpre, ok := s.BeaconState.(*bellatrix.BeaconStateView); ok && slot == common.Slot(spec.CAPELLA_FORK_EPOCH)*spec.SLOTS_PER_EPOCH {
+		post, err := capella.UpgradeToCapella(spec, epc, tpre)
+		if err != nil {
+			return fmt.Errorf("failed to upgrade bellatrix to capella state: %v", err)
 		}
 		s.BeaconState = post
 	}
@@ -122,6 +134,17 @@ func EnvelopeToSignedBeaconBlock(benv *common.BeaconBlockEnvelope) (common.SpecO
 	case *bellatrix.BeaconBlockBody:
 		return &bellatrix.SignedBeaconBlock{
 			Message: bellatrix.BeaconBlock{
+				Slot:          benv.Slot,
+				ProposerIndex: benv.ProposerIndex,
+				ParentRoot:    benv.ParentRoot,
+				StateRoot:     benv.StateRoot,
+				Body:          *x,
+			},
+			Signature: benv.Signature,
+		}, nil
+	case *capella.BeaconBlockBody:
+		return &capella.SignedBeaconBlock{
+			Message: capella.BeaconBlock{
 				Slot:          benv.Slot,
 				ProposerIndex: benv.ProposerIndex,
 				ParentRoot:    benv.ParentRoot,

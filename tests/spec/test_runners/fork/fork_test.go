@@ -2,6 +2,7 @@ package finality
 
 import (
 	"fmt"
+	"github.com/protolambda/zrnt/eth2/beacon/capella"
 	"testing"
 
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
@@ -39,6 +40,8 @@ func (c *ForkTestCase) Load(t *testing.T, forkName test_util.ForkName, readPart 
 		preFork = "phase0"
 	case "bellatrix":
 		preFork = "altair"
+	case "capella":
+		preFork = "bellatrix"
 	default:
 		t.Fatalf("unrecognized fork: %s", c.PostFork)
 		return
@@ -73,6 +76,12 @@ func (c *ForkTestCase) Run() error {
 			return err
 		}
 		c.Pre = out
+	case "capella":
+		out, err := capella.UpgradeToCapella(c.Spec, epc, c.Pre.(*bellatrix.BeaconStateView))
+		if err != nil {
+			return err
+		}
+		c.Pre = out
 	default:
 		return fmt.Errorf("unrecognized fork: %s", c.PostFork)
 	}
@@ -94,6 +103,6 @@ func (c *ForkTestCase) Check(t *testing.T) {
 }
 
 func TestFork(t *testing.T) {
-	test_util.RunTransitionTest(t, []test_util.ForkName{"altair", "bellatrix"}, "fork", "fork",
+	test_util.RunTransitionTest(t, []test_util.ForkName{"altair", "bellatrix", "capella"}, "fork", "fork",
 		func() test_util.TransitionTest { return new(ForkTestCase) })
 }

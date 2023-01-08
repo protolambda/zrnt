@@ -1,10 +1,11 @@
 package phase0
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
+
+	"github.com/protolambda/zrnt/eth2/beacon/common"
 )
 
 // HistoricalBatchRoots stores roots: a batch of state or block roots.

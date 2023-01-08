@@ -5,10 +5,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/protolambda/ztyp/tree"
+
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
-	"github.com/protolambda/ztyp/tree"
 )
 
 func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spec, epc *common.EpochsContext) error {
@@ -58,7 +59,7 @@ func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spe
 	if err := phase0.ProcessRandaoMixesReset(ctx, spec, epc, state); err != nil {
 		return err
 	}
-	if err := phase0.ProcessHistoricalRootsUpdate(ctx, spec, epc, state); err != nil {
+	if err := ProcessHistoricalSummariesUpdate(ctx, spec, epc, state); err != nil {
 		return err
 	}
 	if err := altair.ProcessParticipationFlagUpdates(ctx, spec, state); err != nil {
@@ -338,4 +339,42 @@ func ProcessWithdrawals(ctx context.Context, spec *common.Spec, state *BeaconSta
 		}
 	}
 	return nil
+}
+
+type HistoricalSummariesBeaconState interface {
+	common.BeaconState
+	HistoricalSummaries() (HistoricalSummariesList, error)
+}
+
+func ProcessHistoricalSummariesUpdate(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state HistoricalSummariesBeaconState) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	// Set historical summaries accumulator
+	if epc.NextEpoch.Epoch%spec.SlotToEpoch(spec.SLOTS_PER_HISTORICAL_ROOT) == 0 {
+		if err := UpdateHistoricalSummaries(state); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func UpdateHistoricalSummaries(state HistoricalSummariesBeaconState) error {
+	histSummaries, err := state.HistoricalSummaries()
+	if err != nil {
+		return err
+	}
+	blockRoots, err := state.BlockRoots()
+	if err != nil {
+		return err
+	}
+	stateRoots, err := state.StateRoots()
+	if err != nil {
+		return err
+	}
+	hFn := tree.GetHashFn()
+	return histSummaries.Append(HistoricalSummary{
+		BlockSummaryRoot: blockRoots.HashTreeRoot(hFn),
+		StateSummaryRoot: stateRoots.HashTreeRoot(hFn),
+	})
 }

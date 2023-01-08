@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
+	"github.com/protolambda/zrnt/eth2/beacon/capella"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
@@ -57,9 +58,16 @@ func TestEth1DataReset(t *testing.T) {
 }
 
 func TestHistoricalRootsUpdate(t *testing.T) {
-	test_util.RunTransitionTest(t, test_util.AllForks, "epoch_processing", "historical_roots_update",
+	test_util.RunTransitionTest(t, []test_util.ForkName{"phase0", "altair", "bellatrix"}, "epoch_processing", "historical_roots_update",
 		NewEpochTest(func(spec *common.Spec, state common.BeaconState, epc *common.EpochsContext, flats []common.FlatValidator) error {
 			return phase0.ProcessHistoricalRootsUpdate(context.Background(), spec, epc, state)
+		}))
+}
+
+func TestHistoricalSummariesUpdate(t *testing.T) {
+	test_util.RunTransitionTest(t, []test_util.ForkName{"capella"}, "epoch_processing", "historical_summaries_update",
+		NewEpochTest(func(spec *common.Spec, state common.BeaconState, epc *common.EpochsContext, flats []common.FlatValidator) error {
+			return capella.ProcessHistoricalSummariesUpdate(context.Background(), spec, epc, state.(capella.HistoricalSummariesBeaconState))
 		}))
 }
 

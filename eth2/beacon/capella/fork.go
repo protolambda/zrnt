@@ -1,9 +1,10 @@
 package capella
 
 import (
+	"github.com/protolambda/ztyp/view"
+
 	"github.com/protolambda/zrnt/eth2/beacon/bellatrix"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
-	"github.com/protolambda/ztyp/view"
 )
 
 func UpgradeToCapella(spec *common.Spec, epc *common.EpochsContext, pre *bellatrix.BeaconStateView) (*BeaconStateView, error) {
@@ -166,5 +167,6 @@ func UpgradeToCapella(spec *common.Spec, epc *common.EpochsContext, pre *bellatr
 		updatedExecutionPayloadHeader.View(),
 		nextWithdrawalIndex,
 		nextWithdrawalValidatorIndex,
+		HistoricalSummariesType(spec).Default(nil),
 	))
 }

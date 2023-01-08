@@ -3,12 +3,13 @@ package capella
 import (
 	"bytes"
 
-	"github.com/protolambda/zrnt/eth2/beacon/altair"
-	"github.com/protolambda/zrnt/eth2/beacon/common"
-	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
+
+	"github.com/protolambda/zrnt/eth2/beacon/altair"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 )
 
 type BeaconState struct {
@@ -21,7 +22,7 @@ type BeaconState struct {
 	LatestBlockHeader common.BeaconBlockHeader    `json:"latest_block_header" yaml:"latest_block_header"`
 	BlockRoots        phase0.HistoricalBatchRoots `json:"block_roots" yaml:"block_roots"`
 	StateRoots        phase0.HistoricalBatchRoots `json:"state_roots" yaml:"state_roots"`
-	HistoricalRoots   phase0.HistoricalRoots      `json:"historical_roots" yaml:"historical_roots"`
+	HistoricalRoots   phase0.HistoricalRoots      `json:"historical_roots" yaml:"historical_roots"` // Frozen in Capella, replaced by historical_summaries
 	// Eth1
 	Eth1Data         common.Eth1Data      `json:"eth1_data" yaml:"eth1_data"`
 	Eth1DataVotes    phase0.Eth1DataVotes `json:"eth1_data_votes" yaml:"eth1_data_votes"`
@@ -49,6 +50,8 @@ type BeaconState struct {
 	// Withdrawals
 	NextWithdrawalIndex          common.WithdrawalIndex `json:"next_withdrawal_index" yaml:"next_withdrawal_index"`
 	NextWithdrawalValidatorIndex common.ValidatorIndex  `json:"next_withdrawal_validator_index" yaml:"next_withdrawal_validator_index"`
+	// Deep history valid from Capella onwards
+	HistoricalSummaries HistoricalSummaries `json:"historical_summaries"`
 }
 
 func (v *BeaconState) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
@@ -66,6 +69,7 @@ func (v *BeaconState) Deserialize(spec *common.Spec, dr *codec.DecodingReader) e
 		spec.Wrap(&v.CurrentSyncCommittee), spec.Wrap(&v.NextSyncCommittee),
 		&v.LatestExecutionPayloadHeader,
 		&v.NextWithdrawalIndex, &v.NextWithdrawalValidatorIndex,
+		spec.Wrap(&v.HistoricalSummaries),
 	)
 }
 
@@ -84,6 +88,7 @@ func (v *BeaconState) Serialize(spec *common.Spec, w *codec.EncodingWriter) erro
 		spec.Wrap(&v.CurrentSyncCommittee), spec.Wrap(&v.NextSyncCommittee),
 		&v.LatestExecutionPayloadHeader,
 		&v.NextWithdrawalIndex, &v.NextWithdrawalValidatorIndex,
+		spec.Wrap(&v.HistoricalSummaries),
 	)
 }
 
@@ -102,6 +107,7 @@ func (v *BeaconState) ByteLength(spec *common.Spec) uint64 {
 		spec.Wrap(&v.CurrentSyncCommittee), spec.Wrap(&v.NextSyncCommittee),
 		&v.LatestExecutionPayloadHeader,
 		&v.NextWithdrawalIndex, &v.NextWithdrawalValidatorIndex,
+		spec.Wrap(&v.HistoricalSummaries),
 	)
 }
 
@@ -124,6 +130,7 @@ func (v *BeaconState) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Ro
 		spec.Wrap(&v.CurrentSyncCommittee), spec.Wrap(&v.NextSyncCommittee),
 		&v.LatestExecutionPayloadHeader,
 		&v.NextWithdrawalIndex, &v.NextWithdrawalValidatorIndex,
+		spec.Wrap(&v.HistoricalSummaries),
 	)
 }
 
@@ -157,6 +164,7 @@ const (
 	_latestExecutionPayloadHeader
 	_nextWithdrawalIndex
 	_nextWithdrawalValidatorIndex
+	_historicalSummaries
 )
 
 func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
@@ -200,6 +208,8 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 		// Withdrawals
 		{"next_withdrawal_index", common.WithdrawalIndexType},
 		{"next_withdrawal_validator_index", common.ValidatorIndexType},
+		// Deep history valid from Capella onwards
+		{"historical_summaries", HistoricalSummariesType(spec)},
 	})
 }
 
@@ -532,6 +542,15 @@ func (state *BeaconStateView) NextWithdrawalValidatorIndex() (common.ValidatorIn
 
 func (state *BeaconStateView) SetNextWithdrawalValidatorIndex(nextValidator common.ValidatorIndex) error {
 	return state.Set(_nextWithdrawalValidatorIndex, Uint64View(nextValidator))
+}
+
+type HistoricalSummariesList interface {
+	Append(summary HistoricalSummary) error
+}
+
+func (state *BeaconStateView) HistoricalSummaries() (HistoricalSummariesList, error) {
+	v, err := state.Get(_historicalSummaries)
+	return AsHistoricalSummaries(v, err)
 }
 
 func (state *BeaconStateView) ForkSettings(spec *common.Spec) *common.ForkSettings {

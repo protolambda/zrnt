@@ -3,8 +3,12 @@ package finality
 import (
 	"context"
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/beacon/capella"
 	"testing"
+
+	"github.com/protolambda/zrnt/eth2/beacon/capella"
+	"github.com/protolambda/zrnt/eth2/beacon/deneb"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
@@ -12,7 +16,6 @@ import (
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
-	"gopkg.in/yaml.v3"
 )
 
 type FinalityTestCase struct {
@@ -55,6 +58,11 @@ func (c *FinalityTestCase) Load(t *testing.T, forkName test_util.ForkName, readP
 			dst := new(capella.SignedBeaconBlock)
 			test_util.LoadSpecObj(t, fmt.Sprintf("blocks_%d", i), dst, readPart)
 			digest := common.ComputeForkDigest(c.Spec.CAPELLA_FORK_VERSION, valRoot)
+			return dst.Envelope(c.Spec, digest)
+		case "eip4844":
+			dst := new(deneb.SignedBeaconBlock)
+			test_util.LoadSpecObj(t, fmt.Sprintf("blocks_%d", i), dst, readPart)
+			digest := common.ComputeForkDigest(c.Spec.DENEB_FORK_VERSION, valRoot)
 			return dst.Envelope(c.Spec, digest)
 		default:
 			t.Fatal(fmt.Errorf("unrecognized fork name: %s", forkName))

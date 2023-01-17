@@ -6,9 +6,10 @@ import (
 	"fmt"
 
 	blsu "github.com/protolambda/bls12-381-util"
+	"github.com/protolambda/ztyp/tree"
+
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/util/hashing"
-	"github.com/protolambda/ztyp/tree"
 )
 
 func ProcessBLSToExecutionChanges(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, ops common.SignedBLSToExecutionChanges) error {
@@ -54,15 +55,11 @@ func ProcessBLSToExecutionChange(ctx context.Context, spec *common.Spec, epc *co
 	if !bytes.Equal(validatorWithdrawalCredentials[1:], sigHash[1:]) {
 		return fmt.Errorf("invalid bls to execution change, incorrect public key: got %v, want %v", addressChange.FromBLSPubKey, validatorWithdrawalCredentials)
 	}
-	currentSlot, err := state.Slot()
+	genesisValidatorsRoot, err := state.GenesisValidatorsRoot()
 	if err != nil {
 		return err
 	}
-	prevSlot := currentSlot.Previous()
-	domain, err := common.GetDomain(state, common.DOMAIN_BLS_TO_EXECUTION_CHANGE, spec.SlotToEpoch(prevSlot))
-	if err != nil {
-		return err
-	}
+	domain := common.ComputeDomain(common.DOMAIN_BLS_TO_EXECUTION_CHANGE, spec.GENESIS_FORK_VERSION, genesisValidatorsRoot)
 
 	sigRoot := common.ComputeSigningRoot(addressChange.HashTreeRoot(tree.GetHashFn()), domain)
 	pubKey, err := addressChange.FromBLSPubKey.Pubkey()

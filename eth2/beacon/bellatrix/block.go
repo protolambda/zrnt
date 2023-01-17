@@ -3,12 +3,13 @@ package bellatrix
 import (
 	"fmt"
 
-	"github.com/protolambda/zrnt/eth2/beacon/altair"
-	"github.com/protolambda/zrnt/eth2/beacon/common"
-	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
+
+	"github.com/protolambda/zrnt/eth2/beacon/altair"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 )
 
 type SignedBeaconBlock struct {
@@ -124,7 +125,7 @@ type BeaconBlockBody struct {
 
 	SyncAggregate altair.SyncAggregate `json:"sync_aggregate" yaml:"sync_aggregate"`
 
-	ExecutionPayload common.ExecutionPayload `json:"execution_payload" yaml:"execution_payload"`
+	ExecutionPayload ExecutionPayload `json:"execution_payload" yaml:"execution_payload"`
 }
 
 func (b *BeaconBlockBody) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
@@ -222,7 +223,7 @@ func BeaconBlockBodyType(spec *common.Spec) *ContainerTypeDef {
 		{"voluntary_exits", phase0.BlockVoluntaryExitsType(spec)},
 		{"sync_aggregate", altair.SyncAggregateType(spec)},
 		// Bellatrix
-		{"execution_payload", common.ExecutionPayloadType(spec)},
+		{"execution_payload", ExecutionPayloadType(spec)},
 	})
 }
 
@@ -286,7 +287,7 @@ func (b *BeaconBlockBodyShallow) HashTreeRoot(spec *common.Spec, hFn tree.HashFn
 	)
 }
 
-func (b *BeaconBlockBodyShallow) WithExecutionPayload(spec *common.Spec, payload common.ExecutionPayload) (*BeaconBlockBody, error) {
+func (b *BeaconBlockBodyShallow) WithExecutionPayload(spec *common.Spec, payload ExecutionPayload) (*BeaconBlockBody, error) {
 	payloadRoot := payload.HashTreeRoot(spec, tree.GetHashFn())
 	if b.ExecutionPayloadRoot != payloadRoot {
 		return nil, fmt.Errorf("payload does not match expected root: %s <> %s", b.ExecutionPayloadRoot, payloadRoot)

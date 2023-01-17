@@ -35,8 +35,9 @@ var DOMAIN_CONTRIBUTION_AND_PROOF = BLSDomainType{0x09, 0x00, 0x00, 0x00}
 // Capella
 var DOMAIN_BLS_TO_EXECUTION_CHANGE = BLSDomainType{0x0A, 0x00, 0x00, 0x00}
 
-// Sharding
-var DOMAIN_SHARD_BLOB = BLSDomainType{0x80, 0x00, 0x00, 0x00}
+// Deneb
+const BLOB_TX_TYPE = 0x05
+const VERSIONED_HASH_VERSION_KZG = 0x01
 
 type Phase0Preset struct {
 	// Misc.
@@ -119,23 +120,9 @@ type CapellaPreset struct {
 	MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP Uint64View `yaml:"MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP" json:"MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP"`
 }
 
-type ShardingPreset struct {
-	// Misc.
-	MAX_SHARDS                          Uint64View `yaml:"MAX_SHARDS" json:"MAX_SHARDS"`
-	INITIAL_ACTIVE_SHARDS               Uint64View `yaml:"INITIAL_ACTIVE_SHARDS" json:"INITIAL_ACTIVE_SHARDS"`
-	SAMPLE_PRICE_ADJUSTMENT_COEFFICIENT Uint64View `yaml:"SAMPLE_PRICE_ADJUSTMENT_COEFFICIENT" json:"SAMPLE_PRICE_ADJUSTMENT_COEFFICIENT"`
-	MAX_SHARD_PROPOSER_SLASHINGS        Uint64View `yaml:"MAX_SHARD_PROPOSER_SLASHINGS" json:"MAX_SHARD_PROPOSER_SLASHINGS"`
-	MAX_SHARD_HEADERS_PER_SHARD         Uint64View `yaml:"MAX_SHARD_HEADERS_PER_SHARD" json:"MAX_SHARD_HEADERS_PER_SHARD"`
-	SHARD_STATE_MEMORY_SLOTS            Slot       `yaml:"SHARD_STATE_MEMORY_SLOTS" json:"SHARD_STATE_MEMORY_SLOTS"`
-	BLOB_BUILDER_REGISTRY_LIMIT         Uint64View `yaml:"BLOB_BUILDER_REGISTRY_LIMIT" json:"BLOB_BUILDER_REGISTRY_LIMIT"`
-
-	// Shard blob samples
-	MAX_SAMPLES_PER_BLOCK    Uint64View `yaml:"MAX_SAMPLES_PER_BLOCK" json:"MAX_SAMPLES_PER_BLOCK"`
-	TARGET_SAMPLES_PER_BLOCK Uint64View `yaml:"TARGET_SAMPLES_PER_BLOCK" json:"TARGET_SAMPLES_PER_BLOCK"`
-
-	// Gwei values
-	MAX_SAMPLE_PRICE Gwei `yaml:"MAX_SAMPLE_PRICE" json:"MAX_SAMPLE_PRICE"`
-	MIN_SAMPLE_PRICE Gwei `yaml:"MIN_SAMPLE_PRICE" json:"MIN_SAMPLE_PRICE"`
+type DenebPreset struct {
+	FIELD_ELEMENTS_PER_BLOB Uint64View `yaml:"FIELD_ELEMENTS_PER_BLOB" json:"FIELD_ELEMENTS_PER_BLOB"`
+	MAX_BLOBS_PER_BLOCK     Uint64View `yaml:"MAX_BLOBS_PER_BLOCK" json:"MAX_BLOBS_PER_BLOCK"`
 }
 
 type Config struct {
@@ -159,9 +146,9 @@ type Config struct {
 	CAPELLA_FORK_VERSION Version `yaml:"CAPELLA_FORK_VERSION" json:"CAPELLA_FORK_VERSION"`
 	CAPELLA_FORK_EPOCH   Epoch   `yaml:"CAPELLA_FORK_EPOCH" json:"CAPELLA_FORK_EPOCH"`
 
-	// Sharding
-	SHARDING_FORK_VERSION Version `yaml:"SHARDING_FORK_VERSION" json:"SHARDING_FORK_VERSION"`
-	SHARDING_FORK_EPOCH   Epoch   `yaml:"SHARDING_FORK_EPOCH" json:"SHARDING_FORK_EPOCH"`
+	// Deneb (still named EIP-4844 in specs, but easier to name it Deneb now)
+	DENEB_FORK_VERSION Version `yaml:"EIP4844_FORK_VERSION" json:"EIP4844_FORK_VERSION"`
+	DENEB_FORK_EPOCH   Epoch   `yaml:"EIP4844_FORK_EPOCH" json:"EIP4844_FORK_EPOCH"`
 
 	// Merge transition
 	TERMINAL_TOTAL_DIFFICULTY            Uint256View `yaml:"TERMINAL_TOTAL_DIFFICULTY" json:"TERMINAL_TOTAL_DIFFICULTY"`
@@ -190,12 +177,6 @@ type Config struct {
 	DEPOSIT_NETWORK_ID       Uint64View  `yaml:"DEPOSIT_NETWORK_ID" json:"DEPOSIT_NETWORK_ID"`
 	DEPOSIT_CONTRACT_ADDRESS Eth1Address `yaml:"DEPOSIT_CONTRACT_ADDRESS" json:"DEPOSIT_CONTRACT_ADDRESS"`
 }
-
-// TODO
-//type TrustedSetup struct {
-//	G1_SETUP []BLSPubkey `yaml:"G1_SETUP" json:"G1_SETUP"`
-//	G2_SETUP []BLSSignature `yaml:"G2_SETUP" json:"G2_SETUP"`
-//}
 
 type SpecObj interface {
 	Deserialize(spec *Spec, dr *codec.DecodingReader) error
@@ -267,7 +248,7 @@ type Spec struct {
 	AltairPreset    `json:",inline" yaml:",inline"`
 	BellatrixPreset `json:",inline" yaml:",inline"`
 	CapellaPreset   `json:",inline" yaml:",inline"`
-	ShardingPreset  `json:",inline" yaml:",inline"`
+	DenebPreset     `json:",inline" yaml:",inline"`
 	Config          `json:",inline" yaml:",inline"`
 	Setup           `json:",inline" yaml:",inline"`
 
@@ -307,37 +288,5 @@ func (spec *Spec) ForkVersion(slot Slot) Version {
 		return spec.BELLATRIX_FORK_VERSION
 	} else {
 		return spec.CAPELLA_FORK_VERSION
-	}
-}
-
-func (spec *Spec) ActiveShardCount(epoch Epoch) uint64 {
-	// TODO: this may become more dynamic, based on state, fork, etc.
-	return uint64(spec.INITIAL_ACTIVE_SHARDS)
-}
-
-func (spec *Spec) ComputeUpdatedSamplePrice(prevSamplePrice Gwei, shardBlockLength uint64, adjustmentQuotient uint64) Gwei {
-	if shardBlockLength > uint64(spec.TARGET_SAMPLES_PER_BLOCK) {
-		delta := Gwei(uint64(prevSamplePrice) * (shardBlockLength - uint64(spec.TARGET_SAMPLES_PER_BLOCK)) /
-			uint64(spec.TARGET_SAMPLES_PER_BLOCK) / adjustmentQuotient)
-		if delta < 1 {
-			delta = 1
-		}
-		out := prevSamplePrice + delta
-		if out > spec.MAX_SAMPLE_PRICE {
-			out = spec.MAX_SAMPLE_PRICE
-		}
-		return out
-	} else {
-		delta := Gwei(uint64(prevSamplePrice) * (uint64(spec.TARGET_SAMPLES_PER_BLOCK) - shardBlockLength) /
-			uint64(spec.TARGET_SAMPLES_PER_BLOCK) / adjustmentQuotient)
-		if delta < 1 {
-			delta = 1
-		}
-		out := spec.MIN_SAMPLE_PRICE + delta
-		if out < prevSamplePrice {
-			out = prevSamplePrice
-		}
-		out -= delta
-		return out
 	}
 }

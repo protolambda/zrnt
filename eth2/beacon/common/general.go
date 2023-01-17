@@ -14,47 +14,6 @@ type Bytes32 = Root
 
 const Bytes32Type = RootType
 
-type Shard Uint64View
-
-func (a *Shard) Deserialize(dr *codec.DecodingReader) error {
-	return (*Uint64View)(a).Deserialize(dr)
-}
-
-func (i Shard) Serialize(w *codec.EncodingWriter) error {
-	return w.WriteUint64(uint64(i))
-}
-
-func (Shard) ByteLength() uint64 {
-	return 8
-}
-
-func (Shard) FixedLength() uint64 {
-	return 8
-}
-
-func (e Shard) HashTreeRoot(hFn tree.HashFn) Root {
-	return Uint64View(e).HashTreeRoot(hFn)
-}
-
-func (e Shard) MarshalJSON() ([]byte, error) {
-	return Uint64View(e).MarshalJSON()
-}
-
-func (e *Shard) UnmarshalJSON(b []byte) error {
-	return ((*Uint64View)(e)).UnmarshalJSON(b)
-}
-
-func (e Shard) String() string {
-	return Uint64View(e).String()
-}
-
-const ShardType = Uint64Type
-
-func AsShard(v View, err error) (Shard, error) {
-	i, err := AsUint64(v, err)
-	return Shard(i), err
-}
-
 type CommitteeIndex Uint64View
 
 func (i *CommitteeIndex) Deserialize(dr *codec.DecodingReader) error {

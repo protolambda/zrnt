@@ -260,7 +260,7 @@ type BLSToExecutionChange struct {
 
 func (s *BLSToExecutionChange) View() *BLSToExecutionChangeView {
 	vi, pk, ea := s.ValidatorIndex, s.FromBLSPubKey, s.ToExecutionAddress
-	v, err := AsBLSToExecutionChange(ExecutionPayloadHeaderType.FromFields(Uint64View(vi), ViewPubkey(&pk), ea.View()))
+	v, err := AsBLSToExecutionChange(BLSToExecutionChangeType.FromFields(Uint64View(vi), ViewPubkey(&pk), ea.View()))
 	if err != nil {
 		panic(err)
 	}

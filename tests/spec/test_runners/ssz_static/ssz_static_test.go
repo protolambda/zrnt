@@ -3,20 +3,22 @@ package ssz_static
 import (
 	"bytes"
 	"encoding/hex"
-	"github.com/protolambda/zrnt/eth2/beacon/capella"
 	"io/ioutil"
 	"testing"
 
+	"github.com/protolambda/zrnt/eth2/beacon/capella"
+
 	"github.com/golang/snappy"
+	"github.com/protolambda/ztyp/codec"
+	"github.com/protolambda/ztyp/tree"
+	"gopkg.in/yaml.v3"
+
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
 	"github.com/protolambda/zrnt/eth2/beacon/bellatrix"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/eth2/configs"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
-	"github.com/protolambda/ztyp/codec"
-	"github.com/protolambda/ztyp/tree"
-	"gopkg.in/yaml.v3"
 )
 
 type SSZStaticTestCase struct {
@@ -157,8 +159,8 @@ func init() {
 	objs["bellatrix"]["BeaconBlock"] = func() interface{} { return new(bellatrix.BeaconBlock) }
 	objs["bellatrix"]["BeaconState"] = func() interface{} { return new(bellatrix.BeaconState) }
 	objs["bellatrix"]["SignedBeaconBlock"] = func() interface{} { return new(bellatrix.SignedBeaconBlock) }
-	objs["bellatrix"]["ExecutionPayload"] = func() interface{} { return new(common.ExecutionPayload) }
-	objs["bellatrix"]["ExecutionPayloadHeader"] = func() interface{} { return new(common.ExecutionPayloadHeader) }
+	objs["bellatrix"]["ExecutionPayload"] = func() interface{} { return new(bellatrix.ExecutionPayload) }
+	objs["bellatrix"]["ExecutionPayloadHeader"] = func() interface{} { return new(bellatrix.ExecutionPayloadHeader) }
 	//objs["bellatrix"]["PowBlock"] = func() interface{} { return new(bellatrix.PowBlock) }
 
 	objs["capella"]["BeaconBlockBody"] = func() interface{} { return new(capella.BeaconBlockBody) }

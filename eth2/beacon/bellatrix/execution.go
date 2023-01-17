@@ -1,7 +1,6 @@
-package capella
+package bellatrix
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/protolambda/ztyp/codec"
@@ -26,7 +25,6 @@ const (
 	__baseFeePerGas
 	__blockHash
 	__transactionsRoot
-	__withdrawalsRoot
 	__end
 )
 
@@ -45,7 +43,6 @@ var ExecutionPayloadHeaderType = ContainerType("ExecutionPayloadHeader", []Field
 	{"base_fee_per_gas", Uint256Type},
 	{"block_hash", common.Hash32Type},
 	{"transactions_root", RootType},
-	{"withdrawals_root", RootType},
 })
 
 type ExecutionPayloadHeaderView struct {
@@ -74,7 +71,6 @@ func (v *ExecutionPayloadHeaderView) Raw() (*ExecutionPayloadHeader, error) {
 	baseFeePerGas, err := AsUint256(values[__baseFeePerGas], err)
 	blockHash, err := AsRoot(values[__blockHash], err)
 	transactionsRoot, err := AsRoot(values[__transactionsRoot], err)
-	withdrawalsRoot, err := AsRoot(values[__withdrawalsRoot], err)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +97,6 @@ func (v *ExecutionPayloadHeaderView) Raw() (*ExecutionPayloadHeader, error) {
 		BaseFeePerGas:    baseFeePerGas,
 		BlockHash:        blockHash,
 		TransactionsRoot: transactionsRoot,
-		WithdrawalsRoot:  withdrawalsRoot,
 	}, nil
 }
 
@@ -181,7 +176,6 @@ type ExecutionPayloadHeader struct {
 	BaseFeePerGas    Uint256View        `json:"base_fee_per_gas" yaml:"base_fee_per_gas"`
 	BlockHash        common.Hash32      `json:"block_hash" yaml:"block_hash"`
 	TransactionsRoot common.Root        `json:"transactions_root" yaml:"transactions_root"`
-	WithdrawalsRoot  common.Root        `json:"withdrawals_root" yaml:"withdrawals_root"`
 }
 
 func (s *ExecutionPayloadHeader) View() *ExecutionPayloadHeaderView {
@@ -192,9 +186,8 @@ func (s *ExecutionPayloadHeader) View() *ExecutionPayloadHeaderView {
 	pr, cb, sr, rr := (*RootView)(&s.ParentHash), s.FeeRecipient.View(), (*RootView)(&s.StateRoot), (*RootView)(&s.ReceiptsRoot)
 	lb, rng, nr, gl, gu := s.LogsBloom.View(), (*RootView)(&s.PrevRandao), s.BlockNumber, s.GasLimit, s.GasUsed
 	ts, bf, bh, tr := Uint64View(s.Timestamp), &s.BaseFeePerGas, (*RootView)(&s.BlockHash), (*RootView)(&s.TransactionsRoot)
-	wr := (*RootView)(&s.WithdrawalsRoot)
 
-	v, err := AsExecutionPayloadHeader(ExecutionPayloadHeaderType.FromFields(pr, cb, sr, rr, lb, rng, nr, gl, gu, ts, ed, bf, bh, tr, wr))
+	v, err := AsExecutionPayloadHeader(ExecutionPayloadHeaderType.FromFields(pr, cb, sr, rr, lb, rng, nr, gl, gu, ts, ed, bf, bh, tr))
 	if err != nil {
 		panic(err)
 	}
@@ -204,25 +197,19 @@ func (s *ExecutionPayloadHeader) View() *ExecutionPayloadHeaderView {
 func (s *ExecutionPayloadHeader) Deserialize(dr *codec.DecodingReader) error {
 	return dr.Container(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
-		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot,
-		&s.WithdrawalsRoot,
-	)
+		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot)
 }
 
 func (s *ExecutionPayloadHeader) Serialize(w *codec.EncodingWriter) error {
 	return w.Container(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
-		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot,
-		&s.WithdrawalsRoot,
-	)
+		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot)
 }
 
 func (s *ExecutionPayloadHeader) ByteLength() uint64 {
 	return codec.ContainerLength(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
-		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot,
-		&s.WithdrawalsRoot,
-	)
+		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot)
 }
 
 func (b *ExecutionPayloadHeader) FixedLength() uint64 {
@@ -232,9 +219,7 @@ func (b *ExecutionPayloadHeader) FixedLength() uint64 {
 func (s *ExecutionPayloadHeader) HashTreeRoot(hFn tree.HashFn) common.Root {
 	return hFn.HashTreeRoot(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
-		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot,
-		&s.WithdrawalsRoot,
-	)
+		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot)
 }
 
 func ExecutionPayloadType(spec *common.Spec) *ContainerTypeDef {
@@ -253,7 +238,6 @@ func ExecutionPayloadType(spec *common.Spec) *ContainerTypeDef {
 		{"base_fee_per_gas", Uint256Type},
 		{"block_hash", common.Hash32Type},
 		{"transactions", common.PayloadTransactionsType(spec)},
-		{"withdrawals", common.WithdrawalsType(spec)},
 	})
 }
 
@@ -281,31 +265,24 @@ type ExecutionPayload struct {
 	BaseFeePerGas Uint256View                `json:"base_fee_per_gas" yaml:"base_fee_per_gas"`
 	BlockHash     common.Hash32              `json:"block_hash" yaml:"block_hash"`
 	Transactions  common.PayloadTransactions `json:"transactions" yaml:"transactions"`
-	Withdrawals   common.Withdrawals         `json:"withdrawals" yaml:"withdrawals"`
 }
 
 func (s *ExecutionPayload) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
 	return dr.Container(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
-		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions),
-		spec.Wrap(&s.Withdrawals),
-	)
+		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions))
 }
 
 func (s *ExecutionPayload) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
 	return w.Container(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
-		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions),
-		spec.Wrap(&s.Withdrawals),
-	)
+		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions))
 }
 
 func (s *ExecutionPayload) ByteLength(spec *common.Spec) uint64 {
 	return codec.ContainerLength(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
-		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions),
-		spec.Wrap(&s.Withdrawals),
-	)
+		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions))
 }
 
 func (a *ExecutionPayload) FixedLength(*common.Spec) uint64 {
@@ -316,9 +293,7 @@ func (a *ExecutionPayload) FixedLength(*common.Spec) uint64 {
 func (s *ExecutionPayload) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
 	return hFn.HashTreeRoot(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
-		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions),
-		spec.Wrap(&s.Withdrawals),
-	)
+		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions))
 }
 
 func (ep *ExecutionPayload) Header(spec *common.Spec) *ExecutionPayloadHeader {
@@ -337,15 +312,5 @@ func (ep *ExecutionPayload) Header(spec *common.Spec) *ExecutionPayloadHeader {
 		BaseFeePerGas:    ep.BaseFeePerGas,
 		BlockHash:        ep.BlockHash,
 		TransactionsRoot: ep.Transactions.HashTreeRoot(spec, tree.GetHashFn()),
-		WithdrawalsRoot:  ep.Withdrawals.HashTreeRoot(spec, tree.GetHashFn()),
 	}
-}
-
-func (ep *ExecutionPayload) GetWitdrawals() []common.Withdrawal {
-	return ep.Withdrawals
-}
-
-type ExecutionEngine interface {
-	ExecutePayload(ctx context.Context, executionPayload *ExecutionPayload) (valid bool, err error)
-	// TODO: remaining interface parts
 }

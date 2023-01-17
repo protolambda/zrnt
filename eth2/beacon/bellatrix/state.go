@@ -3,12 +3,13 @@ package bellatrix
 import (
 	"bytes"
 
-	"github.com/protolambda/zrnt/eth2/beacon/altair"
-	"github.com/protolambda/zrnt/eth2/beacon/common"
-	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
+
+	"github.com/protolambda/zrnt/eth2/beacon/altair"
+	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 )
 
 type BeaconState struct {
@@ -45,7 +46,7 @@ type BeaconState struct {
 	CurrentSyncCommittee common.SyncCommittee `json:"current_sync_committee" yaml:"current_sync_committee"`
 	NextSyncCommittee    common.SyncCommittee `json:"next_sync_committee" yaml:"next_sync_committee"`
 	// Execution-layer
-	LatestExecutionPayloadHeader common.ExecutionPayloadHeader `json:"latest_execution_payload_header" yaml:"latest_execution_payload_header"`
+	LatestExecutionPayloadHeader ExecutionPayloadHeader `json:"latest_execution_payload_header" yaml:"latest_execution_payload_header"`
 }
 
 func (v *BeaconState) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
@@ -183,7 +184,7 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 		{"current_sync_committee", common.SyncCommitteeType(spec)},
 		{"next_sync_committee", common.SyncCommitteeType(spec)},
 		// Execution-layer
-		{"latest_execution_payload_header", common.ExecutionPayloadHeaderType},
+		{"latest_execution_payload_header", ExecutionPayloadHeaderType},
 	})
 }
 
@@ -484,11 +485,11 @@ func (state *BeaconStateView) RotateSyncCommittee(next *common.SyncCommitteeView
 	return state.Set(_nextSyncCommittee, next)
 }
 
-func (state *BeaconStateView) LatestExecutionPayloadHeader() (*common.ExecutionPayloadHeaderView, error) {
-	return common.AsExecutionPayloadHeader(state.Get(_latestExecutionPayloadHeader))
+func (state *BeaconStateView) LatestExecutionPayloadHeader() (*ExecutionPayloadHeaderView, error) {
+	return AsExecutionPayloadHeader(state.Get(_latestExecutionPayloadHeader))
 }
 
-func (state *BeaconStateView) SetLatestExecutionPayloadHeader(h *common.ExecutionPayloadHeader) error {
+func (state *BeaconStateView) SetLatestExecutionPayloadHeader(h *ExecutionPayloadHeader) error {
 	return state.Set(_latestExecutionPayloadHeader, h.View())
 }
 

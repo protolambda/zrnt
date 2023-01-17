@@ -136,51 +136,6 @@ func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spe
 	return nil
 }
 
-type ExecutionUpgradeBeaconState interface {
-	IsExecutionEnabled(spec *common.Spec, block *BeaconBlock) (bool, error)
-	IsTransitionCompleted() (bool, error)
-	IsTransitionBlock(spec *common.Spec, block *BeaconBlock) (bool, error)
-}
-
-type ExecutionTrackingBeaconState interface {
-	common.BeaconState
-
-	LatestExecutionPayloadHeader() (*ExecutionPayloadHeaderView, error)
-	SetLatestExecutionPayloadHeader(h *ExecutionPayloadHeader) error
-}
-
-func (state *BeaconStateView) IsExecutionEnabled(spec *common.Spec, block *BeaconBlock) (bool, error) {
-	isTransitionCompleted, err := state.IsTransitionCompleted()
-	if err != nil {
-		return false, err
-	}
-	if isTransitionCompleted {
-		return true, nil
-	}
-	return state.IsTransitionBlock(spec, block)
-}
-
-func (state *BeaconStateView) IsTransitionCompleted() (bool, error) {
-	execHeader, err := state.LatestExecutionPayloadHeader()
-	if err != nil {
-		return false, err
-	}
-	empty := ExecutionPayloadHeaderType.DefaultNode().MerkleRoot(tree.GetHashFn())
-	return execHeader.HashTreeRoot(tree.GetHashFn()) != empty, nil
-}
-
-func (state *BeaconStateView) IsTransitionBlock(spec *common.Spec, block *BeaconBlock) (bool, error) {
-	isTransitionCompleted, err := state.IsTransitionCompleted()
-	if err != nil {
-		return false, err
-	}
-	if isTransitionCompleted {
-		return false, nil
-	}
-	empty := ExecutionPayloadType(spec).DefaultNode().MerkleRoot(tree.GetHashFn())
-	return block.Body.ExecutionPayload.HashTreeRoot(spec, tree.GetHashFn()) != empty, nil
-}
-
 func HasEth1WithdrawalCredential(validator common.Validator) bool {
 	withdrawalCredentials, err := validator.WithdrawalCredentials()
 	if err != nil {
@@ -217,7 +172,15 @@ func IsPartiallyWithdrawableValidator(spec *common.Spec, validator common.Valida
 	return HasEth1WithdrawalCredential(validator) && hasMaxEffectiveBalance && hasExcessBalance
 }
 
-func (state *BeaconStateView) GetExpectedWithdrawals(spec *common.Spec) (common.Withdrawals, error) {
+type BeaconStateWithWithdrawals interface {
+	common.BeaconState
+	NextWithdrawalValidatorIndex() (common.ValidatorIndex, error)
+	SetNextWithdrawalIndex(nextIndex common.WithdrawalIndex) error
+	SetNextWithdrawalValidatorIndex(nextValidator common.ValidatorIndex) error
+	NextWithdrawalIndex() (common.WithdrawalIndex, error)
+}
+
+func GetExpectedWithdrawals(state BeaconStateWithWithdrawals, spec *common.Spec) ([]common.Withdrawal, error) {
 	slot, err := state.Slot()
 	if err != nil {
 		return nil, err
@@ -283,20 +246,25 @@ func (state *BeaconStateView) GetExpectedWithdrawals(spec *common.Spec) (common.
 	return withdrawals, nil
 }
 
-func ProcessWithdrawals(ctx context.Context, spec *common.Spec, state *BeaconStateView, executionPayload *ExecutionPayload) error {
-	expectedWithdrawals, err := state.GetExpectedWithdrawals(spec)
+type ExecutionPayloadWithWithdrawals interface {
+	GetWitdrawals() []common.Withdrawal
+}
+
+func ProcessWithdrawals(ctx context.Context, spec *common.Spec, state BeaconStateWithWithdrawals, executionPayload ExecutionPayloadWithWithdrawals) error {
+	expectedWithdrawals, err := GetExpectedWithdrawals(state, spec)
 	if err != nil {
 		return err
 	}
-	if len(expectedWithdrawals) != len(executionPayload.Withdrawals) {
-		return fmt.Errorf("unexpected number of withdrawals in Capella ProcessWithdrawals: want=%d, got=%d", len(expectedWithdrawals), len(executionPayload.Withdrawals))
+	withdrawals := executionPayload.GetWitdrawals()
+	if len(expectedWithdrawals) != len(withdrawals) {
+		return fmt.Errorf("unexpected number of withdrawals in Capella ProcessWithdrawals: want=%d, got=%d", len(expectedWithdrawals), len(withdrawals))
 	}
 	bals, err := state.Balances()
 	if err != nil {
 		return err
 	}
 	for w := 0; w < len(expectedWithdrawals); w++ {
-		withdrawal := executionPayload.Withdrawals[w]
+		withdrawal := withdrawals[w]
 		expectedWithdrawal := expectedWithdrawals[w]
 		if withdrawal.Index != expectedWithdrawal.Index ||
 			withdrawal.ValidatorIndex != expectedWithdrawal.ValidatorIndex ||

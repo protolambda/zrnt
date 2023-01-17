@@ -1,13 +1,13 @@
-package bellatrix
+package deneb
 
 import (
 	"github.com/protolambda/ztyp/view"
 
-	"github.com/protolambda/zrnt/eth2/beacon/altair"
+	"github.com/protolambda/zrnt/eth2/beacon/capella"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 )
 
-func UpgradeToBellatrix(spec *common.Spec, epc *common.EpochsContext, pre *altair.BeaconStateView) (*BeaconStateView, error) {
+func UpgradeToDeneb(spec *common.Spec, epc *common.EpochsContext, pre *capella.BeaconStateView) (*BeaconStateView, error) {
 	// yes, super ugly code, but it does transfer compatible subtrees without duplicating data or breaking caches
 	slot, err := pre.Slot()
 	if err != nil {
@@ -28,7 +28,7 @@ func UpgradeToBellatrix(spec *common.Spec, epc *common.EpochsContext, pre *altai
 	}
 	fork := common.Fork{
 		PreviousVersion: preFork.CurrentVersion,
-		CurrentVersion:  spec.BELLATRIX_FORK_VERSION,
+		CurrentVersion:  spec.DENEB_FORK_VERSION,
 		Epoch:           epoch,
 	}
 	latestBlockHeader, err := pre.LatestBlockHeader()
@@ -111,7 +111,44 @@ func UpgradeToBellatrix(spec *common.Spec, epc *common.EpochsContext, pre *altai
 	if err != nil {
 		return nil, err
 	}
-	latestExecutionPayloadHeader := ExecutionPayloadHeaderType.Default(nil)
+	latestExecutionPayloadHeader, err := pre.LatestExecutionPayloadHeader()
+	if err != nil {
+		return nil, err
+	}
+	oldExecutionHeader, err := latestExecutionPayloadHeader.Raw()
+	if err != nil {
+		return nil, err
+	}
+	updatedExecutionPayloadHeader := &ExecutionPayloadHeader{
+		ParentHash:       oldExecutionHeader.ParentHash,
+		FeeRecipient:     oldExecutionHeader.FeeRecipient,
+		StateRoot:        oldExecutionHeader.StateRoot,
+		ReceiptsRoot:     oldExecutionHeader.ReceiptsRoot,
+		LogsBloom:        oldExecutionHeader.LogsBloom,
+		PrevRandao:       oldExecutionHeader.PrevRandao,
+		BlockNumber:      oldExecutionHeader.BlockNumber,
+		GasLimit:         oldExecutionHeader.GasLimit,
+		GasUsed:          oldExecutionHeader.GasUsed,
+		Timestamp:        oldExecutionHeader.Timestamp,
+		ExtraData:        oldExecutionHeader.ExtraData,
+		BaseFeePerGas:    oldExecutionHeader.BaseFeePerGas,
+		ExcessDataGas:    view.Uint256View{},
+		BlockHash:        oldExecutionHeader.BlockHash,
+		TransactionsRoot: oldExecutionHeader.TransactionsRoot,
+		WithdrawalsRoot:  oldExecutionHeader.WithdrawalsRoot,
+	}
+	nextWithdrawalIndex, err := pre.NextWithdrawalIndex()
+	if err != nil {
+		return nil, err
+	}
+	nextWithdrawalValidatorIndex, err := pre.NextWithdrawalValidatorIndex()
+	if err != nil {
+		return nil, err
+	}
+	nextHistoricalSummaries, err := pre.HistoricalSummaries()
+	if err != nil {
+		return nil, err
+	}
 
 	return AsBeaconStateView(BeaconStateType(spec).FromFields(
 		(*view.Uint64View)(&genesisTime),
@@ -138,6 +175,9 @@ func UpgradeToBellatrix(spec *common.Spec, epc *common.EpochsContext, pre *altai
 		inactivityScores,
 		currentSyncCommitteeView,
 		nextSyncCommitteeView,
-		latestExecutionPayloadHeader,
+		updatedExecutionPayloadHeader.View(),
+		(*view.Uint64View)(&nextWithdrawalIndex),
+		(*view.Uint64View)(&nextWithdrawalValidatorIndex),
+		nextHistoricalSummaries.(*capella.HistoricalSummariesView),
 	))
 }

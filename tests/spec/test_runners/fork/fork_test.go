@@ -2,15 +2,18 @@ package finality
 
 import (
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/beacon/capella"
 	"testing"
+
+	"github.com/protolambda/zrnt/eth2/beacon/capella"
+	"github.com/protolambda/zrnt/eth2/beacon/deneb"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
 	"github.com/protolambda/zrnt/eth2/beacon/bellatrix"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
-	"gopkg.in/yaml.v3"
 )
 
 type ForkTestCase struct {
@@ -42,6 +45,8 @@ func (c *ForkTestCase) Load(t *testing.T, forkName test_util.ForkName, readPart 
 		preFork = "altair"
 	case "capella":
 		preFork = "bellatrix"
+	case "eip4844", "deneb":
+		preFork = "capella"
 	default:
 		t.Fatalf("unrecognized fork: %s", c.PostFork)
 		return
@@ -82,6 +87,12 @@ func (c *ForkTestCase) Run() error {
 			return err
 		}
 		c.Pre = out
+	case "eip4844":
+		out, err := deneb.UpgradeToDeneb(c.Spec, epc, c.Pre.(*capella.BeaconStateView))
+		if err != nil {
+			return err
+		}
+		c.Pre = out
 	default:
 		return fmt.Errorf("unrecognized fork: %s", c.PostFork)
 	}
@@ -103,6 +114,6 @@ func (c *ForkTestCase) Check(t *testing.T) {
 }
 
 func TestFork(t *testing.T) {
-	test_util.RunTransitionTest(t, []test_util.ForkName{"altair", "bellatrix", "capella"}, "fork", "fork",
+	test_util.RunTransitionTest(t, []test_util.ForkName{"altair", "bellatrix", "capella", "eip4844"}, "fork", "fork",
 		func() test_util.TransitionTest { return new(ForkTestCase) })
 }

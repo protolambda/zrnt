@@ -3,8 +3,12 @@ package transition
 import (
 	"context"
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/beacon/capella"
 	"testing"
+
+	"github.com/protolambda/zrnt/eth2/beacon/capella"
+	"github.com/protolambda/zrnt/eth2/beacon/deneb"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
@@ -12,7 +16,6 @@ import (
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
-	"gopkg.in/yaml.v3"
 )
 
 type TransitionTestCase struct {
@@ -51,6 +54,9 @@ func (c *TransitionTestCase) Load(t *testing.T, testFork test_util.ForkName, rea
 	case "capella":
 		preForkName = "bellatrix"
 		c.Spec.CAPELLA_FORK_EPOCH = common.Epoch(m.ForkEpoch)
+	case "eip4844":
+		preForkName = "capella"
+		c.Spec.DENEB_FORK_EPOCH = common.Epoch(m.ForkEpoch)
 	default:
 		t.Fatalf("unsupported fork %s", testFork)
 	}
@@ -99,6 +105,11 @@ func (c *TransitionTestCase) Load(t *testing.T, testFork test_util.ForkName, rea
 			test_util.LoadSpecObj(t, fmt.Sprintf("blocks_%d", i), dst, readPart)
 			digest := common.ComputeForkDigest(c.Spec.CAPELLA_FORK_VERSION, valRoot)
 			return dst.Envelope(c.Spec, digest)
+		case "eip4844":
+			dst := new(deneb.SignedBeaconBlock)
+			test_util.LoadSpecObj(t, fmt.Sprintf("blocks_%d", i), dst, readPart)
+			digest := common.ComputeForkDigest(c.Spec.DENEB_FORK_VERSION, valRoot)
+			return dst.Envelope(c.Spec, digest)
 		default:
 			t.Fatalf("unrecognized fork name: %s", forkName)
 			return nil
@@ -127,6 +138,6 @@ func (c *TransitionTestCase) Run() error {
 }
 
 func TestTransition(t *testing.T) {
-	test_util.RunTransitionTest(t, []test_util.ForkName{"altair", "bellatrix", "capella"}, "transition", "core",
+	test_util.RunTransitionTest(t, []test_util.ForkName{"altair", "bellatrix", "capella", "eip4844"}, "transition", "core",
 		func() test_util.TransitionTest { return new(TransitionTestCase) })
 }

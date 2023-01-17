@@ -2,19 +2,22 @@ package sanity
 
 import (
 	"bytes"
-	"github.com/protolambda/zrnt/eth2/beacon/capella"
 	"io/ioutil"
 	"testing"
 
+	"github.com/protolambda/zrnt/eth2/beacon/capella"
+	"github.com/protolambda/zrnt/eth2/beacon/deneb"
+
 	"github.com/golang/snappy"
+	"github.com/protolambda/ztyp/codec"
+	"gopkg.in/yaml.v3"
+
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
 	"github.com/protolambda/zrnt/eth2/beacon/bellatrix"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/eth2/configs"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
-	"github.com/protolambda/ztyp/codec"
-	"gopkg.in/yaml.v3"
 )
 
 func runCase(t *testing.T, forkName test_util.ForkName, readPart test_util.TestPartReader) {
@@ -36,6 +39,8 @@ func runCase(t *testing.T, forkName test_util.ForkName, readPart test_util.TestP
 		genesisState, err = bellatrix.AsBeaconStateView(bellatrix.BeaconStateType(spec).Deserialize(decodingReader))
 	case "capella":
 		genesisState, err = capella.AsBeaconStateView(capella.BeaconStateType(spec).Deserialize(decodingReader))
+	case "eip4844":
+		genesisState, err = deneb.AsBeaconStateView(deneb.BeaconStateType(spec).Deserialize(decodingReader))
 	default:
 		t.Fatalf("unrecognized fork name: %s", forkName)
 	}

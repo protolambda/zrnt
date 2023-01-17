@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"gopkg.in/yaml.v3"
+
+	"github.com/protolambda/zrnt/eth2/beacon/common"
 )
 
 type SpecOptions struct {
@@ -17,7 +18,7 @@ type SpecOptions struct {
 	AltairPreset    string `ask:"--preset-altair" help:"Eth2 altair spec preset, name or path to YAML"`
 	BellatrixPreset string `ask:"--preset-bellatrix" help:"Eth2 bellatrix spec preset, name or path to YAML"`
 	CapellaPreset   string `ask:"--preset-capella" help:"Eth2 capella spec preset, name or path to YAML"`
-	ShardingPreset  string `ask:"--preset-sharding" help:"Eth2 sharding spec preset, name or path to YAML"`
+	DenebPreset     string `ask:"--preset-deneb" help:"Eth2 deneb spec preset, name or path to YAML"`
 
 	// TODO: execution engine config for Bellatrix
 	// TODO: trusted setup config for Sharding
@@ -29,7 +30,7 @@ type LegacyConfig struct {
 	common.AltairPreset    `yaml:",inline"`
 	common.BellatrixPreset `yaml:",inline"`
 	common.CapellaPreset   `yaml:",inline"`
-	common.ShardingPreset  `yaml:",inline"`
+	common.DenebPreset     `yaml:",inline"`
 	common.Config          `yaml:",inline"`
 }
 
@@ -57,7 +58,7 @@ func (c *SpecOptions) Spec() (*common.Spec, error) {
 			spec.AltairPreset = legacy.AltairPreset
 			spec.BellatrixPreset = legacy.BellatrixPreset
 			spec.CapellaPreset = legacy.CapellaPreset
-			spec.ShardingPreset = legacy.ShardingPreset
+			spec.DenebPreset = legacy.DenebPreset
 			spec.Config = legacy.Config
 		}
 	}
@@ -142,19 +143,19 @@ func (c *SpecOptions) Spec() (*common.Spec, error) {
 		}
 	}
 
-	switch c.ShardingPreset {
+	switch c.DenebPreset {
 	case "mainnet":
-		spec.ShardingPreset = Mainnet.ShardingPreset
+		spec.DenebPreset = Mainnet.DenebPreset
 	case "minimal":
-		spec.ShardingPreset = Minimal.ShardingPreset
+		spec.DenebPreset = Minimal.DenebPreset
 	default:
-		f, err := os.Open(c.ShardingPreset)
+		f, err := os.Open(c.DenebPreset)
 		if err != nil {
-			return nil, fmt.Errorf("failed to open sharding preset file: %v", err)
+			return nil, fmt.Errorf("failed to open deneb preset file: %v", err)
 		}
 		dec := yaml.NewDecoder(f)
-		if err := dec.Decode(&spec.ShardingPreset); err != nil {
-			return nil, fmt.Errorf("failed to decode sharding preset: %v", err)
+		if err := dec.Decode(&spec.DenebPreset); err != nil {
+			return nil, fmt.Errorf("failed to decode deneb preset: %v", err)
 		}
 	}
 	return &spec, nil
@@ -167,5 +168,5 @@ func (c *SpecOptions) Default() {
 	c.AltairPreset = "mainnet"
 	c.BellatrixPreset = "mainnet"
 	c.CapellaPreset = "mainnet"
-	c.ShardingPreset = "mainnet"
+	c.DenebPreset = "mainnet"
 }

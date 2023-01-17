@@ -49,8 +49,6 @@ type EpochsContext struct {
 	ValidatorPubkeyCache *PubkeyCache
 	Proposers            *ProposersEpoch
 
-	BuilderPubkeyCache *BuilderPubkeyCache
-
 	PreviousEpoch *ShufflingEpoch
 	CurrentEpoch  *ShufflingEpoch
 	NextEpoch     *ShufflingEpoch
@@ -80,23 +78,9 @@ func NewEpochsContext(spec *Spec, state BeaconState) (*EpochsContext, error) {
 		return nil, err
 	}
 
-	// nil if no builder data in the state (pre-sharding)
-	var bpc *BuilderPubkeyCache
-	if builderState, ok := state.(BuilderBeaconState); ok {
-		builders, err := builderState.BlobBuilders()
-		if err != nil {
-			return nil, err
-		}
-		bpc, err = NewBuilderPubkeyCache(builders)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	epc := &EpochsContext{
 		Spec:                 spec,
 		ValidatorPubkeyCache: pc,
-		BuilderPubkeyCache:   bpc,
 	}
 	if err := epc.LoadShuffling(state); err != nil {
 		return nil, err
@@ -348,36 +332,4 @@ func (epc *EpochsContext) GetCommitteeCountPerSlot(epoch Epoch) (uint64, error) 
 
 func (epc *EpochsContext) GetBeaconProposer(slot Slot) (ValidatorIndex, error) {
 	return epc.Proposers.GetBeaconProposer(slot)
-}
-
-func (epc *EpochsContext) GetShardProposer(slot Slot, shard Shard) (ValidatorIndex, error) {
-	return epc.Proposers.GetShardProposer(slot, shard)
-}
-
-func (epc *EpochsContext) StartShard(slot Slot) (Shard, error) {
-	epoch := epc.Spec.SlotToEpoch(slot)
-	activeShards := epc.Proposers.ActiveShards
-	if activeShards == 0 {
-		return 0, nil
-	}
-	committeesPerSlot, err := epc.GetCommitteeCountPerSlot(epoch)
-	if err != nil {
-		return 0, err
-	}
-	return Shard((committeesPerSlot * uint64(slot)) % activeShards), nil
-}
-
-func (epc *EpochsContext) ComputeShardFromCommitteeIndex(slot Slot, index CommitteeIndex) (Shard, error) {
-	activeShards := epc.Proposers.ActiveShards
-	if activeShards == 0 {
-		return 0, nil
-	}
-	if uint64(index) >= activeShards {
-		return 0, fmt.Errorf("committee index %d cannot be higher than active shards count %d", index, activeShards)
-	}
-	start, err := epc.StartShard(slot)
-	if err != nil {
-		return 0, err
-	}
-	return Shard((uint64(index) + uint64(start)) % activeShards), nil
 }

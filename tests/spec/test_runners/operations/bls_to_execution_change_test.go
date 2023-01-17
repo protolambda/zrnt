@@ -2,8 +2,9 @@ package operations
 
 import (
 	"context"
-	"github.com/protolambda/zrnt/eth2/beacon/capella"
 	"testing"
+
+	"github.com/protolambda/zrnt/eth2/beacon/capella"
 
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
@@ -28,6 +29,6 @@ func (c *BlsToExecutionChangeTestCase) Run() error {
 }
 
 func TestBlsToExecutionChange(t *testing.T) {
-	test_util.RunTransitionTest(t, []test_util.ForkName{"capella"}, "operations", "bls_to_execution_change",
+	test_util.RunTransitionTest(t, []test_util.ForkName{"capella", "deneb"}, "operations", "bls_to_execution_change",
 		func() test_util.TransitionTest { return new(BlsToExecutionChangeTestCase) })
 }

@@ -3,8 +3,9 @@ package operations
 import (
 	"context"
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/beacon/capella"
 	"testing"
+
+	"github.com/protolambda/zrnt/eth2/beacon/capella"
 
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 )
@@ -28,6 +29,6 @@ func (c *WithdrawalsTestCase) Run() error {
 }
 
 func TestWithdrawals(t *testing.T) {
-	test_util.RunTransitionTest(t, []test_util.ForkName{"capella"}, "operations", "withdrawals",
+	test_util.RunTransitionTest(t, []test_util.ForkName{"capella", "deneb"}, "operations", "withdrawals",
 		func() test_util.TransitionTest { return new(WithdrawalsTestCase) })
 }

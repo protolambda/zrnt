@@ -1,4 +1,4 @@
-package bellatrix
+package deneb
 
 import (
 	"context"

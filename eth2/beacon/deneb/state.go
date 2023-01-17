@@ -1,4 +1,4 @@
-package capella
+package deneb
 
 import (
 	"bytes"
@@ -8,6 +8,7 @@ import (
 	. "github.com/protolambda/ztyp/view"
 
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
+	"github.com/protolambda/zrnt/eth2/beacon/capella"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 )
@@ -45,13 +46,13 @@ type BeaconState struct {
 	// Light client sync committees
 	CurrentSyncCommittee common.SyncCommittee `json:"current_sync_committee" yaml:"current_sync_committee"`
 	NextSyncCommittee    common.SyncCommittee `json:"next_sync_committee" yaml:"next_sync_committee"`
-	// Execution-layer
+	// Execution-layer  (modified in EIP-4844)
 	LatestExecutionPayloadHeader ExecutionPayloadHeader `json:"latest_execution_payload_header" yaml:"latest_execution_payload_header"`
 	// Withdrawals
 	NextWithdrawalIndex          common.WithdrawalIndex `json:"next_withdrawal_index" yaml:"next_withdrawal_index"`
 	NextWithdrawalValidatorIndex common.ValidatorIndex  `json:"next_withdrawal_validator_index" yaml:"next_withdrawal_validator_index"`
 	// Deep history valid from Capella onwards
-	HistoricalSummaries HistoricalSummaries `json:"historical_summaries"`
+	HistoricalSummaries capella.HistoricalSummaries `json:"historical_summaries"`
 }
 
 func (v *BeaconState) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
@@ -209,7 +210,7 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 		{"next_withdrawal_index", common.WithdrawalIndexType},
 		{"next_withdrawal_validator_index", common.ValidatorIndexType},
 		// Deep history valid from Capella onwards
-		{"historical_summaries", HistoricalSummariesType(spec)},
+		{"historical_summaries", capella.HistoricalSummariesType(spec)},
 	})
 }
 
@@ -544,13 +545,9 @@ func (state *BeaconStateView) SetNextWithdrawalValidatorIndex(nextValidator comm
 	return state.Set(_nextWithdrawalValidatorIndex, Uint64View(nextValidator))
 }
 
-type HistoricalSummariesList interface {
-	Append(summary HistoricalSummary) error
-}
-
-func (state *BeaconStateView) HistoricalSummaries() (HistoricalSummariesList, error) {
+func (state *BeaconStateView) HistoricalSummaries() (capella.HistoricalSummariesList, error) {
 	v, err := state.Get(_historicalSummaries)
-	return AsHistoricalSummaries(v, err)
+	return capella.AsHistoricalSummaries(v, err)
 }
 
 func (state *BeaconStateView) ForkSettings(spec *common.Spec) *common.ForkSettings {

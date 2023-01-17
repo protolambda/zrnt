@@ -1,8 +1,9 @@
 package configs
 
 import (
-	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/view"
+
+	"github.com/protolambda/zrnt/eth2/beacon/common"
 )
 
 var Minimal = &common.Spec{
@@ -63,18 +64,8 @@ var Minimal = &common.Spec{
 		MAX_BLS_TO_EXECUTION_CHANGES:         16,
 		MAX_WITHDRAWALS_PER_PAYLOAD:          4,
 	},
-	ShardingPreset: common.ShardingPreset{
-		MAX_SHARDS:                          8,
-		INITIAL_ACTIVE_SHARDS:               2,
-		SAMPLE_PRICE_ADJUSTMENT_COEFFICIENT: 8,
-		MAX_SHARD_PROPOSER_SLASHINGS:        4,
-		MAX_SHARD_HEADERS_PER_SHARD:         4,
-		SHARD_STATE_MEMORY_SLOTS:            256,
-		BLOB_BUILDER_REGISTRY_LIMIT:         1 << 40,
-		MAX_SAMPLES_PER_BLOCK:               2048,
-		TARGET_SAMPLES_PER_BLOCK:            1024,
-		MAX_SAMPLE_PRICE:                    1 << 33,
-		MIN_SAMPLE_PRICE:                    8,
+	DenebPreset: common.DenebPreset{
+		MAX_BLOBS_PER_BLOCK: 4,
 	},
 	Config: common.Config{
 		PRESET_BASE:                          "minimal",
@@ -88,8 +79,8 @@ var Minimal = &common.Spec{
 		BELLATRIX_FORK_EPOCH:                 ^common.Epoch(0),
 		CAPELLA_FORK_VERSION:                 common.Version{0x03, 0x00, 0x00, 0x01},
 		CAPELLA_FORK_EPOCH:                   ^common.Epoch(0),
-		SHARDING_FORK_VERSION:                common.Version{0x04, 0x00, 0x00, 0x01},
-		SHARDING_FORK_EPOCH:                  ^common.Epoch(0),
+		DENEB_FORK_VERSION:                   common.Version{0x04, 0x00, 0x00, 0x01},
+		DENEB_FORK_EPOCH:                     ^common.Epoch(0),
 		TERMINAL_TOTAL_DIFFICULTY:            view.MustUint256("115792089237316195423570985008687907853269984665640564039457584007913129638912"),
 		TERMINAL_BLOCK_HASH:                  common.Bytes32{},
 		TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH: ^common.Timestamp(0),

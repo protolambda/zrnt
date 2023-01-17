@@ -1,4 +1,4 @@
-package capella
+package deneb
 
 import (
 	"fmt"
@@ -125,9 +125,11 @@ type BeaconBlockBody struct {
 
 	SyncAggregate altair.SyncAggregate `json:"sync_aggregate" yaml:"sync_aggregate"`
 
-	ExecutionPayload ExecutionPayload `json:"execution_payload" yaml:"execution_payload"`
+	ExecutionPayload ExecutionPayload `json:"execution_payload" yaml:"execution_payload"` // modified in EIP-4844
 
 	BLSToExecutionChanges common.SignedBLSToExecutionChanges `json:"bls_to_execution_changes" yaml:"bls_to_execution_changes"`
+
+	BlobKZGCommitments KZGCommitments `json:"blob_kzg_commitments" yaml:"blob_kzg_commitments"` // new in EIP-4844
 }
 
 func (b *BeaconBlockBody) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
@@ -138,6 +140,7 @@ func (b *BeaconBlockBody) Deserialize(spec *common.Spec, dr *codec.DecodingReade
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
 		spec.Wrap(&b.SyncAggregate), spec.Wrap(&b.ExecutionPayload),
 		spec.Wrap(&b.BLSToExecutionChanges),
+		spec.Wrap(&b.BlobKZGCommitments),
 	)
 }
 
@@ -149,6 +152,7 @@ func (b *BeaconBlockBody) Serialize(spec *common.Spec, w *codec.EncodingWriter) 
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
 		spec.Wrap(&b.SyncAggregate), spec.Wrap(&b.ExecutionPayload),
 		spec.Wrap(&b.BLSToExecutionChanges),
+		spec.Wrap(&b.BlobKZGCommitments),
 	)
 }
 
@@ -160,6 +164,7 @@ func (b *BeaconBlockBody) ByteLength(spec *common.Spec) uint64 {
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
 		spec.Wrap(&b.SyncAggregate), spec.Wrap(&b.ExecutionPayload),
 		spec.Wrap(&b.BLSToExecutionChanges),
+		spec.Wrap(&b.BlobKZGCommitments),
 	)
 }
 
@@ -175,6 +180,7 @@ func (b *BeaconBlockBody) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) commo
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
 		spec.Wrap(&b.SyncAggregate), spec.Wrap(&b.ExecutionPayload),
 		spec.Wrap(&b.BLSToExecutionChanges),
+		spec.Wrap(&b.BlobKZGCommitments),
 	)
 }
 
@@ -201,6 +207,9 @@ func (b *BeaconBlockBody) CheckLimits(spec *common.Spec) error {
 	if x := uint64(len(b.BLSToExecutionChanges)); x > uint64(spec.MAX_BLS_TO_EXECUTION_CHANGES) {
 		return fmt.Errorf("too many bls-to-execution changes: %d", x)
 	}
+	if x := uint64(len(b.BlobKZGCommitments)); x > uint64(spec.MAX_BLOBS_PER_BLOCK) {
+		return fmt.Errorf("too many blob kzg commitments: %d", x)
+	}
 	return nil
 }
 
@@ -217,7 +226,16 @@ func (b *BeaconBlockBody) Shallow(spec *common.Spec) *BeaconBlockBodyShallow {
 		SyncAggregate:         b.SyncAggregate,
 		ExecutionPayloadRoot:  b.ExecutionPayload.HashTreeRoot(spec, tree.GetHashFn()),
 		BLSToExecutionChanges: b.BLSToExecutionChanges,
+		BlobKZGCommitments:    b.BlobKZGCommitments,
 	}
+}
+
+func (b *BeaconBlockBody) GetTransactions() []common.Transaction {
+	return b.ExecutionPayload.Transactions
+}
+
+func (b *BeaconBlockBody) GetBlobKZGCommitments() []common.KZGCommitment {
+	return b.BlobKZGCommitments
 }
 
 func BeaconBlockBodyType(spec *common.Spec) *ContainerTypeDef {
@@ -235,6 +253,8 @@ func BeaconBlockBodyType(spec *common.Spec) *ContainerTypeDef {
 		// Capella
 		{"execution_payload", ExecutionPayloadType(spec)},
 		{"bls_to_execution_changes", common.BlockSignedBLSToExecutionChangesType(spec)},
+		// Deneb
+		{"blob_kzg_commitments", KZGCommitmentsType(spec)},
 	})
 }
 
@@ -254,6 +274,8 @@ type BeaconBlockBodyShallow struct {
 	ExecutionPayloadRoot common.Root `json:"execution_payload_root" yaml:"execution_payload_root"`
 
 	BLSToExecutionChanges common.SignedBLSToExecutionChanges `json:"bls_to_execution_changes" yaml:"bls_to_execution_changes"`
+
+	BlobKZGCommitments KZGCommitments `json:"blob_kzg_commitments" yaml:"blob_kzg_commitments"` // new in EIP-4844
 }
 
 func (b *BeaconBlockBodyShallow) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
@@ -264,6 +286,7 @@ func (b *BeaconBlockBodyShallow) Deserialize(spec *common.Spec, dr *codec.Decodi
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
 		spec.Wrap(&b.SyncAggregate), &b.ExecutionPayloadRoot,
 		spec.Wrap(&b.BLSToExecutionChanges),
+		spec.Wrap(&b.BlobKZGCommitments),
 	)
 }
 
@@ -275,6 +298,7 @@ func (b *BeaconBlockBodyShallow) Serialize(spec *common.Spec, w *codec.EncodingW
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
 		spec.Wrap(&b.SyncAggregate), &b.ExecutionPayloadRoot,
 		spec.Wrap(&b.BLSToExecutionChanges),
+		spec.Wrap(&b.BlobKZGCommitments),
 	)
 }
 
@@ -286,6 +310,7 @@ func (b *BeaconBlockBodyShallow) ByteLength(spec *common.Spec) uint64 {
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
 		spec.Wrap(&b.SyncAggregate), &b.ExecutionPayloadRoot,
 		spec.Wrap(&b.BLSToExecutionChanges),
+		spec.Wrap(&b.BlobKZGCommitments),
 	)
 }
 
@@ -301,6 +326,7 @@ func (b *BeaconBlockBodyShallow) HashTreeRoot(spec *common.Spec, hFn tree.HashFn
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
 		spec.Wrap(&b.SyncAggregate), &b.ExecutionPayloadRoot,
 		spec.Wrap(&b.BLSToExecutionChanges),
+		spec.Wrap(&b.BlobKZGCommitments),
 	)
 }
 
@@ -321,5 +347,6 @@ func (b *BeaconBlockBodyShallow) WithExecutionPayload(spec *common.Spec, payload
 		SyncAggregate:         b.SyncAggregate,
 		ExecutionPayload:      payload,
 		BLSToExecutionChanges: b.BLSToExecutionChanges,
+		BlobKZGCommitments:    b.BlobKZGCommitments,
 	}, nil
 }

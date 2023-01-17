@@ -1,12 +1,11 @@
-package bellatrix
+package deneb
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/protolambda/ztyp/tree"
-
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
+	"github.com/protolambda/zrnt/eth2/beacon/capella"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 )
@@ -58,7 +57,7 @@ func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spe
 	if err := phase0.ProcessRandaoMixesReset(ctx, spec, epc, state); err != nil {
 		return err
 	}
-	if err := phase0.ProcessHistoricalRootsUpdate(ctx, spec, epc, state); err != nil {
+	if err := capella.ProcessHistoricalSummariesUpdate(ctx, spec, epc, state); err != nil {
 		return err
 	}
 	if err := altair.ProcessParticipationFlagUpdates(ctx, spec, state); err != nil {
@@ -92,6 +91,9 @@ func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spe
 	if enabled, err := state.IsExecutionEnabled(spec, block); err != nil {
 		return err
 	} else if enabled {
+		if err := capella.ProcessWithdrawals(ctx, spec, state, &body.ExecutionPayload); err != nil {
+			return err
+		}
 		if err := ProcessExecutionPayload(ctx, spec, state, &body.ExecutionPayload, spec.ExecutionEngine); err != nil {
 			return err
 		}
@@ -123,53 +125,14 @@ func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spe
 	if err := phase0.ProcessVoluntaryExits(ctx, spec, epc, state, body.VoluntaryExits); err != nil {
 		return err
 	}
+	if err := capella.ProcessBLSToExecutionChanges(ctx, spec, epc, state, body.BLSToExecutionChanges); err != nil {
+		return err
+	}
 	if err := altair.ProcessSyncAggregate(ctx, spec, epc, state, &body.SyncAggregate); err != nil {
 		return err
 	}
+	if err := ProcessBlobKZGCommitments(ctx, spec, state, body); err != nil {
+		return fmt.Errorf("failed to process blob KZG commitments: %w", err)
+	}
 	return nil
-}
-
-type ExecutionUpgradeBeaconState interface {
-	IsExecutionEnabled(spec *common.Spec, block *BeaconBlock) (bool, error)
-	IsTransitionCompleted() (bool, error)
-	IsTransitionBlock(spec *common.Spec, block *BeaconBlock) (bool, error)
-}
-
-type ExecutionTrackingBeaconState interface {
-	common.BeaconState
-
-	LatestExecutionPayloadHeader() (*ExecutionPayloadHeaderView, error)
-	SetLatestExecutionPayloadHeader(h *ExecutionPayloadHeader) error
-}
-
-func (state *BeaconStateView) IsExecutionEnabled(spec *common.Spec, block *BeaconBlock) (bool, error) {
-	isTransitionCompleted, err := state.IsTransitionCompleted()
-	if err != nil {
-		return false, err
-	}
-	if isTransitionCompleted {
-		return true, nil
-	}
-	return state.IsTransitionBlock(spec, block)
-}
-
-func (state *BeaconStateView) IsTransitionCompleted() (bool, error) {
-	execHeader, err := state.LatestExecutionPayloadHeader()
-	if err != nil {
-		return false, err
-	}
-	empty := ExecutionPayloadHeaderType.DefaultNode().MerkleRoot(tree.GetHashFn())
-	return execHeader.HashTreeRoot(tree.GetHashFn()) != empty, nil
-}
-
-func (state *BeaconStateView) IsTransitionBlock(spec *common.Spec, block *BeaconBlock) (bool, error) {
-	isTransitionCompleted, err := state.IsTransitionCompleted()
-	if err != nil {
-		return false, err
-	}
-	if isTransitionCompleted {
-		return false, nil
-	}
-	empty := ExecutionPayloadType(spec).DefaultNode().MerkleRoot(tree.GetHashFn())
-	return block.Body.ExecutionPayload.HashTreeRoot(spec, tree.GetHashFn()) != empty, nil
 }

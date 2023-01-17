@@ -6,8 +6,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"gopkg.in/yaml.v3"
+
+	"github.com/protolambda/zrnt/eth2/beacon/common"
 )
 
 func mustLoad(path ...string) []byte {
@@ -78,13 +79,13 @@ func TestYamlDecodingMainnetCapella(t *testing.T) {
 	}
 }
 
-func TestYamlDecodingMainnetSharding(t *testing.T) {
-	var conf common.ShardingPreset
-	if err := yaml.Unmarshal(mustLoad("presets", "mainnet", "sharding"), &conf); err != nil {
+func TestYamlDecodingMainnetDeneb(t *testing.T) {
+	var conf common.DenebPreset
+	if err := yaml.Unmarshal(mustLoad("presets", "mainnet", "deneb"), &conf); err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(conf, Mainnet.ShardingPreset) {
-		t.Fatal("Failed to load mainnet sharding preset")
+	if !reflect.DeepEqual(conf, Mainnet.DenebPreset) {
+		t.Fatal("Failed to load mainnet deneb preset")
 	}
 }
 
@@ -128,12 +129,12 @@ func TestYamlDecodingMinimalCapella(t *testing.T) {
 	}
 }
 
-func TestYamlDecodingMinimalSharding(t *testing.T) {
-	var conf common.ShardingPreset
-	if err := yaml.Unmarshal(mustLoad("presets", "minimal", "sharding"), &conf); err != nil {
+func TestYamlDecodingMinimalDeneb(t *testing.T) {
+	var conf common.DenebPreset
+	if err := yaml.Unmarshal(mustLoad("presets", "minimal", "deneb"), &conf); err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(conf, Minimal.ShardingPreset) {
-		t.Fatal("Failed to load minimal sharding preset")
+	if !reflect.DeepEqual(conf, Minimal.DenebPreset) {
+		t.Fatal("Failed to load minimal deneb preset")
 	}
 }

@@ -65,7 +65,8 @@ var Mainnet = &common.Spec{
 		MAX_WITHDRAWALS_PER_PAYLOAD:          16,
 	},
 	DenebPreset: common.DenebPreset{
-		MAX_BLOBS_PER_BLOCK: 4,
+		FIELD_ELEMENTS_PER_BLOB: 4096,
+		MAX_BLOBS_PER_BLOCK:     4,
 	},
 	Config: common.Config{
 		PRESET_BASE:                          "mainnet",

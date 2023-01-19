@@ -200,19 +200,19 @@ func (s *ExecutionPayloadHeader) View() *ExecutionPayloadHeaderView {
 func (s *ExecutionPayloadHeader) Deserialize(dr *codec.DecodingReader) error {
 	return dr.Container(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
-		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot)
+		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot, &s.VerkleProof, &s.VerkleKeyVals)
 }
 
 func (s *ExecutionPayloadHeader) Serialize(w *codec.EncodingWriter) error {
 	return w.Container(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
-		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot)
+		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot, &s.VerkleProof, &s.VerkleKeyVals)
 }
 
 func (s *ExecutionPayloadHeader) ByteLength() uint64 {
 	return codec.ContainerLength(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
-		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot)
+		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot, &s.VerkleProof, &s.VerkleKeyVals)
 }
 
 func (b *ExecutionPayloadHeader) FixedLength() uint64 {
@@ -222,7 +222,7 @@ func (b *ExecutionPayloadHeader) FixedLength() uint64 {
 func (s *ExecutionPayloadHeader) HashTreeRoot(hFn tree.HashFn) Root {
 	return hFn.HashTreeRoot(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
-		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot)
+		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot, &s.VerkleProof, &s.VerkleKeyVals)
 }
 
 func ExecutionPayloadType(spec *Spec) *ContainerTypeDef {
@@ -340,19 +340,19 @@ type ExecutionPayload struct {
 func (s *ExecutionPayload) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
 	return dr.Container(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
-		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions))
+		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions), &s.VerkleProof, &s.VerkleKeyVals)
 }
 
 func (s *ExecutionPayload) Serialize(spec *Spec, w *codec.EncodingWriter) error {
 	return w.Container(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
-		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions))
+		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions), &s.VerkleProof, &s.VerkleKeyVals)
 }
 
 func (s *ExecutionPayload) ByteLength(spec *Spec) uint64 {
 	return codec.ContainerLength(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
-		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions))
+		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions), &s.VerkleProof, &s.VerkleKeyVals)
 }
 
 func (a *ExecutionPayload) FixedLength(*Spec) uint64 {
@@ -363,7 +363,7 @@ func (a *ExecutionPayload) FixedLength(*Spec) uint64 {
 func (s *ExecutionPayload) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
 	return hFn.HashTreeRoot(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
-		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions))
+		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions), &s.VerkleProof, &s.VerkleKeyVals)
 }
 
 func (ep *ExecutionPayload) Header(spec *Spec) *ExecutionPayloadHeader {

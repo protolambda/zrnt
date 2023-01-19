@@ -32,6 +32,8 @@ var ExecutionPayloadHeaderType = ContainerType("ExecutionPayloadHeader", []Field
 	{"base_fee_per_gas", Uint256Type},
 	{"block_hash", Hash32Type},
 	{"transactions_root", RootType},
+	{"verkle_proof", Bytes32Type},
+	{"verkle_key_vals", Bytes32Type},
 })
 
 type ExecutionPayloadHeaderView struct {
@@ -71,6 +73,14 @@ func (v *ExecutionPayloadHeaderView) Raw() (*ExecutionPayloadHeader, error) {
 	if err != nil {
 		return nil, err
 	}
+	verkleProof, err := AsRoot(values[14], err)
+	if err != nil {
+		return nil, err
+	}
+	verkleKeyVals, err := AsRoot(values[15], err)
+	if err != nil {
+		return nil, err
+	}
 	return &ExecutionPayloadHeader{
 		ParentHash:       parentHash,
 		FeeRecipient:     feeRecipient,
@@ -86,6 +96,8 @@ func (v *ExecutionPayloadHeaderView) Raw() (*ExecutionPayloadHeader, error) {
 		BaseFeePerGas:    baseFeePerGas,
 		BlockHash:        blockHash,
 		TransactionsRoot: transactionsRoot,
+		VerkleProof:      verkleProof,
+		VerkleKeyVals:    verkleKeyVals,
 	}, nil
 }
 
@@ -165,6 +177,8 @@ type ExecutionPayloadHeader struct {
 	BaseFeePerGas    Uint256View `json:"base_fee_per_gas" yaml:"base_fee_per_gas"`
 	BlockHash        Hash32      `json:"block_hash" yaml:"block_hash"`
 	TransactionsRoot Root        `json:"transactions_root" yaml:"transactions_root"`
+	VerkleProof      Bytes32     `json:"verkle_proof" yaml:"verkle_proof"`
+	VerkleKeyVals    Bytes32     `json:"verkle_key_vals" yaml:"verkle_key_vals"`
 }
 
 func (s *ExecutionPayloadHeader) View() *ExecutionPayloadHeaderView {
@@ -227,6 +241,8 @@ func ExecutionPayloadType(spec *Spec) *ContainerTypeDef {
 		{"base_fee_per_gas", Uint256Type},
 		{"block_hash", Hash32Type},
 		{"transactions", PayloadTransactionsType(spec)},
+		{"verkle_proof", Bytes32Type},
+		{"verkle_key_vals", Bytes32Type},
 	})
 }
 
@@ -317,6 +333,8 @@ type ExecutionPayload struct {
 	BaseFeePerGas Uint256View         `json:"base_fee_per_gas" yaml:"base_fee_per_gas"`
 	BlockHash     Hash32              `json:"block_hash" yaml:"block_hash"`
 	Transactions  PayloadTransactions `json:"transactions" yaml:"transactions"`
+	VerkleProof   Bytes32             `json:"verkle_proof" yaml:"verkle_proof"`
+	VerkleKeyVals Bytes32             `json:"verkle_key_vals" yaml:"verkle_key_vals"`
 }
 
 func (s *ExecutionPayload) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
@@ -364,6 +382,8 @@ func (ep *ExecutionPayload) Header(spec *Spec) *ExecutionPayloadHeader {
 		BaseFeePerGas:    ep.BaseFeePerGas,
 		BlockHash:        ep.BlockHash,
 		TransactionsRoot: ep.Transactions.HashTreeRoot(spec, tree.GetHashFn()),
+		VerkleProof:      ep.VerkleProof,
+		VerkleKeyVals:    ep.VerkleKeyVals,
 	}
 }
 

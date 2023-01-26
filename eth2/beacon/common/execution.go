@@ -17,6 +17,50 @@ type Hash32 = Root
 
 const Hash32Type = RootType
 
+const (
+	MAX_STEMS                = 1 << 16
+	MAX_COMMITMENTS_PER_STEM = 33 //  = 31 for inner nodes + 2 (C1/C2)
+	VERKLE_WIDTH             = 256
+	IPA_PROOF_DEPTH          = 8 // = log2(VERKLE_WIDTH)
+)
+
+var StemType RootMeta = 31
+
+var SuffixStateDiffType = ContainerType("SuffixStateDiff", []FieldDef{
+	{"suffix", ByteType},
+	{"current_value", UnionType([]TypeDef{nil, Bytes32Type})},
+	// Uncomment this for all testnets after Kaustinen
+	// {"new_value", UnionType([]TypeDef{nil, Bytes32Type})},
+})
+
+var StemStateDiffType = ContainerType("StemStateDiff", []FieldDef{
+	{"stem", StemType},
+	{"suffix_diffs", ListType(SuffixStateDiffType, VERKLE_WIDTH)},
+})
+
+var IpaProofType = ContainerType("IpaProof", []FieldDef{
+	{"C_L", VectorType(Bytes32Type, IPA_PROOF_DEPTH)},
+	{"C_R", VectorType(Bytes32Type, IPA_PROOF_DEPTH)},
+	{"final_evaluation", Bytes32Type},
+})
+
+var VerkleProofFields = []FieldDef{
+	{"other_stems", ListType(StemType, MAX_STEMS)},
+	{"depth_extension_present", ListType(Uint8Type, MAX_STEMS)},
+	{"commitments_by_path", ListType(Bytes32Type, MAX_STEMS*MAX_COMMITMENTS_PER_STEM)},
+	{"D", Bytes32Type},
+	{"ipa_poof", IpaProofType},
+}
+
+var VerkleProofType = ContainerType("VerkleProof", VerkleProofFields)
+
+var ExecutionWitnessFields = []FieldDef{
+	{"state_diff", ListType(StemStateDiffType, MAX_STEMS)},
+	{"verkle_proof", VerkleProofType},
+}
+
+var ExecutionWitnessType = ContainerType("ExecutionWitness", ExecutionWitnessFields)
+
 var ExecutionPayloadHeaderType = ContainerType("ExecutionPayloadHeader", []FieldDef{
 	{"parent_hash", Hash32Type},
 	{"fee_recipient", Eth1AddressType},
@@ -32,8 +76,7 @@ var ExecutionPayloadHeaderType = ContainerType("ExecutionPayloadHeader", []Field
 	{"base_fee_per_gas", Uint256Type},
 	{"block_hash", Hash32Type},
 	{"transactions_root", RootType},
-	{"verkle_proof", Bytes32Type},
-	{"verkle_key_vals", Bytes32Type},
+	{"execution_witness", RootType},
 })
 
 type ExecutionPayloadHeaderView struct {
@@ -62,6 +105,7 @@ func (v *ExecutionPayloadHeaderView) Raw() (*ExecutionPayloadHeader, error) {
 	baseFeePerGas, err := AsUint256(values[11], err)
 	blockHash, err := AsRoot(values[12], err)
 	transactionsRoot, err := AsRoot(values[13], err)
+	executionWitnessRoot, err := AsRoot(values[14], err)
 	if err != nil {
 		return nil, err
 	}
@@ -73,31 +117,22 @@ func (v *ExecutionPayloadHeaderView) Raw() (*ExecutionPayloadHeader, error) {
 	if err != nil {
 		return nil, err
 	}
-	verkleProof, err := AsRoot(values[14], err)
-	if err != nil {
-		return nil, err
-	}
-	verkleKeyVals, err := AsRoot(values[15], err)
-	if err != nil {
-		return nil, err
-	}
 	return &ExecutionPayloadHeader{
-		ParentHash:       parentHash,
-		FeeRecipient:     feeRecipient,
-		StateRoot:        stateRoot,
-		ReceiptsRoot:     receiptsRoot,
-		LogsBloom:        *logsBloom,
-		PrevRandao:       prevRandao,
-		BlockNumber:      blockNumber,
-		GasLimit:         gasLimit,
-		GasUsed:          gasUsed,
-		Timestamp:        timestamp,
-		ExtraData:        extraData,
-		BaseFeePerGas:    baseFeePerGas,
-		BlockHash:        blockHash,
-		TransactionsRoot: transactionsRoot,
-		VerkleProof:      verkleProof,
-		VerkleKeyVals:    verkleKeyVals,
+		ParentHash:           parentHash,
+		FeeRecipient:         feeRecipient,
+		StateRoot:            stateRoot,
+		ReceiptsRoot:         receiptsRoot,
+		LogsBloom:            *logsBloom,
+		PrevRandao:           prevRandao,
+		BlockNumber:          blockNumber,
+		GasLimit:             gasLimit,
+		GasUsed:              gasUsed,
+		Timestamp:            timestamp,
+		ExtraData:            extraData,
+		BaseFeePerGas:        baseFeePerGas,
+		BlockHash:            blockHash,
+		TransactionsRoot:     transactionsRoot,
+		ExecutionWitnessRoot: executionWitnessRoot,
 	}, nil
 }
 
@@ -163,22 +198,21 @@ func AsExecutionPayloadHeader(v View, err error) (*ExecutionPayloadHeaderView, e
 }
 
 type ExecutionPayloadHeader struct {
-	ParentHash       Hash32      `json:"parent_hash" yaml:"parent_hash"`
-	FeeRecipient     Eth1Address `json:"fee_recipient" yaml:"fee_recipient"`
-	StateRoot        Bytes32     `json:"state_root" yaml:"state_root"`
-	ReceiptsRoot     Bytes32     `json:"receipts_root" yaml:"receipts_root"`
-	LogsBloom        LogsBloom   `json:"logs_bloom" yaml:"logs_bloom"`
-	PrevRandao       Bytes32     `json:"prev_randao" yaml:"prev_randao"`
-	BlockNumber      Uint64View  `json:"block_number" yaml:"block_number"`
-	GasLimit         Uint64View  `json:"gas_limit" yaml:"gas_limit"`
-	GasUsed          Uint64View  `json:"gas_used" yaml:"gas_used"`
-	Timestamp        Timestamp   `json:"timestamp" yaml:"timestamp"`
-	ExtraData        ExtraData   `json:"extra_data" yaml:"extra_data"`
-	BaseFeePerGas    Uint256View `json:"base_fee_per_gas" yaml:"base_fee_per_gas"`
-	BlockHash        Hash32      `json:"block_hash" yaml:"block_hash"`
-	TransactionsRoot Root        `json:"transactions_root" yaml:"transactions_root"`
-	VerkleProof      Bytes32     `json:"verkle_proof" yaml:"verkle_proof"`
-	VerkleKeyVals    Bytes32     `json:"verkle_key_vals" yaml:"verkle_key_vals"`
+	ParentHash           Hash32      `json:"parent_hash" yaml:"parent_hash"`
+	FeeRecipient         Eth1Address `json:"fee_recipient" yaml:"fee_recipient"`
+	StateRoot            Bytes32     `json:"state_root" yaml:"state_root"`
+	ReceiptsRoot         Bytes32     `json:"receipts_root" yaml:"receipts_root"`
+	LogsBloom            LogsBloom   `json:"logs_bloom" yaml:"logs_bloom"`
+	PrevRandao           Bytes32     `json:"prev_randao" yaml:"prev_randao"`
+	BlockNumber          Uint64View  `json:"block_number" yaml:"block_number"`
+	GasLimit             Uint64View  `json:"gas_limit" yaml:"gas_limit"`
+	GasUsed              Uint64View  `json:"gas_used" yaml:"gas_used"`
+	Timestamp            Timestamp   `json:"timestamp" yaml:"timestamp"`
+	ExtraData            ExtraData   `json:"extra_data" yaml:"extra_data"`
+	BaseFeePerGas        Uint256View `json:"base_fee_per_gas" yaml:"base_fee_per_gas"`
+	BlockHash            Hash32      `json:"block_hash" yaml:"block_hash"`
+	TransactionsRoot     Root        `json:"transactions_root" yaml:"transactions_root"`
+	ExecutionWitnessRoot Root        `json:"execution_witness_root" yaml:"execution_witness_root"`
 }
 
 func (s *ExecutionPayloadHeader) View() *ExecutionPayloadHeaderView {
@@ -189,8 +223,8 @@ func (s *ExecutionPayloadHeader) View() *ExecutionPayloadHeaderView {
 	pr, cb, sr, rr := (*RootView)(&s.ParentHash), s.FeeRecipient.View(), (*RootView)(&s.StateRoot), (*RootView)(&s.ReceiptsRoot)
 	lb, rng, nr, gl, gu := s.LogsBloom.View(), (*RootView)(&s.PrevRandao), s.BlockNumber, s.GasLimit, s.GasUsed
 	ts, bf, bh, tr := Uint64View(s.Timestamp), &s.BaseFeePerGas, (*RootView)(&s.BlockHash), (*RootView)(&s.TransactionsRoot)
-	vp, vkv := (*RootView)(&s.VerkleProof), (*RootView)(&s.VerkleKeyVals)
-	v, err := AsExecutionPayloadHeader(ExecutionPayloadHeaderType.FromFields(pr, cb, sr, rr, lb, rng, nr, gl, gu, ts, ed, bf, bh, tr, vp, vkv))
+	ew := (*RootView)(&s.ExecutionWitnessRoot)
+	v, err := AsExecutionPayloadHeader(ExecutionPayloadHeaderType.FromFields(pr, cb, sr, rr, lb, rng, nr, gl, gu, ts, ed, bf, bh, tr, ew))
 	if err != nil {
 		panic(err)
 	}
@@ -200,19 +234,19 @@ func (s *ExecutionPayloadHeader) View() *ExecutionPayloadHeaderView {
 func (s *ExecutionPayloadHeader) Deserialize(dr *codec.DecodingReader) error {
 	return dr.Container(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
-		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot, &s.VerkleProof, &s.VerkleKeyVals)
+		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot, &s.ExecutionWitnessRoot)
 }
 
 func (s *ExecutionPayloadHeader) Serialize(w *codec.EncodingWriter) error {
 	return w.Container(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
-		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot, &s.VerkleProof, &s.VerkleKeyVals)
+		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot, &s.ExecutionWitnessRoot)
 }
 
 func (s *ExecutionPayloadHeader) ByteLength() uint64 {
 	return codec.ContainerLength(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
-		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot, &s.VerkleProof, &s.VerkleKeyVals)
+		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot, &s.ExecutionWitnessRoot)
 }
 
 func (b *ExecutionPayloadHeader) FixedLength() uint64 {
@@ -222,7 +256,7 @@ func (b *ExecutionPayloadHeader) FixedLength() uint64 {
 func (s *ExecutionPayloadHeader) HashTreeRoot(hFn tree.HashFn) Root {
 	return hFn.HashTreeRoot(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
-		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot, &s.VerkleProof, &s.VerkleKeyVals)
+		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, &s.TransactionsRoot, &s.ExecutionWitnessRoot)
 }
 
 func ExecutionPayloadType(spec *Spec) *ContainerTypeDef {
@@ -241,8 +275,7 @@ func ExecutionPayloadType(spec *Spec) *ContainerTypeDef {
 		{"base_fee_per_gas", Uint256Type},
 		{"block_hash", Hash32Type},
 		{"transactions", PayloadTransactionsType(spec)},
-		{"verkle_proof", Bytes32Type},
-		{"verkle_key_vals", Bytes32Type},
+		{"execution_witness", ExecutionWitnessType},
 	})
 }
 
@@ -319,40 +352,39 @@ func (v *ExtraDataView) Raw() (ExtraData, error) {
 }
 
 type ExecutionPayload struct {
-	ParentHash    Hash32              `json:"parent_hash" yaml:"parent_hash"`
-	FeeRecipient  Eth1Address         `json:"fee_recipient" yaml:"fee_recipient"`
-	StateRoot     Bytes32             `json:"state_root" yaml:"state_root"`
-	ReceiptsRoot  Bytes32             `json:"receipts_root" yaml:"receipts_root"`
-	LogsBloom     LogsBloom           `json:"logs_bloom" yaml:"logs_bloom"`
-	PrevRandao    Bytes32             `json:"prev_randao" yaml:"prev_randao"`
-	BlockNumber   Uint64View          `json:"block_number" yaml:"block_number"`
-	GasLimit      Uint64View          `json:"gas_limit" yaml:"gas_limit"`
-	GasUsed       Uint64View          `json:"gas_used" yaml:"gas_used"`
-	Timestamp     Timestamp           `json:"timestamp" yaml:"timestamp"`
-	ExtraData     ExtraData           `json:"extra_data" yaml:"extra_data"`
-	BaseFeePerGas Uint256View         `json:"base_fee_per_gas" yaml:"base_fee_per_gas"`
-	BlockHash     Hash32              `json:"block_hash" yaml:"block_hash"`
-	Transactions  PayloadTransactions `json:"transactions" yaml:"transactions"`
-	VerkleProof   Bytes32             `json:"verkle_proof" yaml:"verkle_proof"`
-	VerkleKeyVals Bytes32             `json:"verkle_key_vals" yaml:"verkle_key_vals"`
+	ParentHash       Hash32              `json:"parent_hash" yaml:"parent_hash"`
+	FeeRecipient     Eth1Address         `json:"fee_recipient" yaml:"fee_recipient"`
+	StateRoot        Bytes32             `json:"state_root" yaml:"state_root"`
+	ReceiptsRoot     Bytes32             `json:"receipts_root" yaml:"receipts_root"`
+	LogsBloom        LogsBloom           `json:"logs_bloom" yaml:"logs_bloom"`
+	PrevRandao       Bytes32             `json:"prev_randao" yaml:"prev_randao"`
+	BlockNumber      Uint64View          `json:"block_number" yaml:"block_number"`
+	GasLimit         Uint64View          `json:"gas_limit" yaml:"gas_limit"`
+	GasUsed          Uint64View          `json:"gas_used" yaml:"gas_used"`
+	Timestamp        Timestamp           `json:"timestamp" yaml:"timestamp"`
+	ExtraData        ExtraData           `json:"extra_data" yaml:"extra_data"`
+	BaseFeePerGas    Uint256View         `json:"base_fee_per_gas" yaml:"base_fee_per_gas"`
+	BlockHash        Hash32              `json:"block_hash" yaml:"block_hash"`
+	Transactions     PayloadTransactions `json:"transactions" yaml:"transactions"`
+	ExecutionWitness ExecutionWitness    `json:"execution_witness", yaml:"execution_witness"`
 }
 
 func (s *ExecutionPayload) Deserialize(spec *Spec, dr *codec.DecodingReader) error {
 	return dr.Container(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
-		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions), &s.VerkleProof, &s.VerkleKeyVals)
+		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions), &s.ExecutionWitness)
 }
 
 func (s *ExecutionPayload) Serialize(spec *Spec, w *codec.EncodingWriter) error {
 	return w.Container(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
-		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions), &s.VerkleProof, &s.VerkleKeyVals)
+		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions), &s.ExecutionWitness)
 }
 
 func (s *ExecutionPayload) ByteLength(spec *Spec) uint64 {
 	return codec.ContainerLength(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
-		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions), &s.VerkleProof, &s.VerkleKeyVals)
+		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions), &s.ExecutionWitness)
 }
 
 func (a *ExecutionPayload) FixedLength(*Spec) uint64 {
@@ -363,27 +395,26 @@ func (a *ExecutionPayload) FixedLength(*Spec) uint64 {
 func (s *ExecutionPayload) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
 	return hFn.HashTreeRoot(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
-		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions), &s.VerkleProof, &s.VerkleKeyVals)
+		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas, &s.BlockHash, spec.Wrap(&s.Transactions), &s.ExecutionWitness)
 }
 
 func (ep *ExecutionPayload) Header(spec *Spec) *ExecutionPayloadHeader {
 	return &ExecutionPayloadHeader{
-		ParentHash:       ep.ParentHash,
-		FeeRecipient:     ep.FeeRecipient,
-		StateRoot:        ep.StateRoot,
-		ReceiptsRoot:     ep.ReceiptsRoot,
-		LogsBloom:        ep.LogsBloom,
-		PrevRandao:       ep.PrevRandao,
-		BlockNumber:      ep.BlockNumber,
-		GasLimit:         ep.GasLimit,
-		GasUsed:          ep.GasUsed,
-		Timestamp:        ep.Timestamp,
-		ExtraData:        ep.ExtraData,
-		BaseFeePerGas:    ep.BaseFeePerGas,
-		BlockHash:        ep.BlockHash,
-		TransactionsRoot: ep.Transactions.HashTreeRoot(spec, tree.GetHashFn()),
-		VerkleProof:      ep.VerkleProof,
-		VerkleKeyVals:    ep.VerkleKeyVals,
+		ParentHash:           ep.ParentHash,
+		FeeRecipient:         ep.FeeRecipient,
+		StateRoot:            ep.StateRoot,
+		ReceiptsRoot:         ep.ReceiptsRoot,
+		LogsBloom:            ep.LogsBloom,
+		PrevRandao:           ep.PrevRandao,
+		BlockNumber:          ep.BlockNumber,
+		GasLimit:             ep.GasLimit,
+		GasUsed:              ep.GasUsed,
+		Timestamp:            ep.Timestamp,
+		ExtraData:            ep.ExtraData,
+		BaseFeePerGas:        ep.BaseFeePerGas,
+		BlockHash:            ep.BlockHash,
+		TransactionsRoot:     ep.Transactions.HashTreeRoot(spec, tree.GetHashFn()),
+		ExecutionWitnessRoot: ep.ExecutionWitness.HashTreeRoot(tree.GetHashFn()),
 	}
 }
 

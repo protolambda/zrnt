@@ -38,7 +38,7 @@ func (c *BlockHeaderTestCase) Load(t *testing.T, forkName test_util.ForkName, re
 		var block capella.BeaconBlock
 		test_util.LoadSpecObj(t, "block", &block, readPart)
 		c.Header = block.Header(c.Spec)
-	case "eip4844":
+	case "deneb":
 		var block deneb.BeaconBlock
 		test_util.LoadSpecObj(t, "block", &block, readPart)
 		c.Header = block.Header(c.Spec)

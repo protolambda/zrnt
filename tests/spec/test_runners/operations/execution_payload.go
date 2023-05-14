@@ -37,7 +37,7 @@ func (c *ExecutionPayloadTestCase) Load(t *testing.T, forkName test_util.ForkNam
 		c.ExecutionPayload = new(bellatrix.ExecutionPayload)
 	case "capella":
 		c.ExecutionPayload = new(capella.ExecutionPayload)
-	case "eip4844":
+	case "deneb":
 		c.ExecutionPayload = new(deneb.ExecutionPayload)
 	}
 	test_util.LoadSSZ(t, "execution_payload", c.Spec.Wrap(c.ExecutionPayload), readPart)
@@ -61,6 +61,6 @@ func (c *ExecutionPayloadTestCase) Run() error {
 }
 
 func TestExecutionPayload(t *testing.T) {
-	test_util.RunTransitionTest(t, []test_util.ForkName{"bellatrix", "capella", "eip4844"}, "operations", "execution_payload",
+	test_util.RunTransitionTest(t, []test_util.ForkName{"bellatrix", "capella", "deneb"}, "operations", "execution_payload",
 		func() test_util.TransitionTest { return new(ExecutionPayloadTestCase) })
 }

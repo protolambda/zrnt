@@ -3,7 +3,7 @@ version: 2.1
 jobs:
   build:
     docker:
-      - image: protolambda/zrnt-ci-primary:1.6.0
+      - image: protolambda/zrnt-ci-primary:1.7.0
     working_directory: /zrnt-repo
 
     parallelism: 2

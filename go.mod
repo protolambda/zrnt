@@ -8,6 +8,6 @@ require (
 	github.com/minio/sha256-simd v0.1.0
 	github.com/protolambda/bls12-381-util v0.0.0-20210720105258-a772f2aac13e
 	github.com/protolambda/messagediff v1.4.0
-	github.com/protolambda/ztyp v0.2.2
+	github.com/protolambda/ztyp v0.2.3-0.20230210160528-a0236251c773
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 )

@@ -88,6 +88,7 @@ var ExecutionPayloadHeaderType = ContainerType("ExecutionPayloadHeader", []Field
 	{"block_hash", common.Hash32Type},
 	{"transactions_root", RootType},
 	{"withdrawals_root", RootType},
+	{"execution_witness_root", RootType},
 })
 
 type ExecutionPayloadHeaderView struct {

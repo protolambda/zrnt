@@ -2,6 +2,7 @@ package phase0
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -62,6 +63,18 @@ func (a ProposerSlashings) Serialize(_ *common.Spec, w *codec.EncodingWriter) er
 	return w.List(func(i uint64) codec.Serializable {
 		return &a[i]
 	}, ProposerSlashingType.TypeByteLength(), uint64(len(a)))
+}
+
+func (a ProposerSlashings) MarshalJSON() ([]byte, error) {
+	var slashings []ProposerSlashing
+	if len(a) == 0 {
+		return json.Marshal([]ProposerSlashing{})
+	} else {
+		for _, v := range a {
+			slashings = append(slashings, v)
+		}
+	}
+	return json.Marshal(slashings)
 }
 
 func (a ProposerSlashings) ByteLength(_ *common.Spec) (out uint64) {

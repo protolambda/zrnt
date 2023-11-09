@@ -2,6 +2,7 @@ package phase0
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -30,6 +31,18 @@ func (a VoluntaryExits) Serialize(spec *common.Spec, w *codec.EncodingWriter) er
 	return w.List(func(i uint64) codec.Serializable {
 		return &a[i]
 	}, SignedVoluntaryExitType.TypeByteLength(), uint64(len(a)))
+}
+
+func (a VoluntaryExits) MarshalJSON() ([]byte, error) {
+	var exits []SignedVoluntaryExit
+	if len(a) == 0 {
+		return json.Marshal([]VoluntaryExit{})
+	} else {
+		for _, v := range a {
+			exits = append(exits, v)
+		}
+	}
+	return json.Marshal(exits)
 }
 
 func (a VoluntaryExits) ByteLength(spec *common.Spec) (out uint64) {

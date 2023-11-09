@@ -2,6 +2,7 @@ package phase0
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -34,6 +35,17 @@ func (a Deposits) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
 	}, common.DepositType.TypeByteLength(), uint64(len(a)))
 }
 
+func (a Deposits) MarshalJSON() ([]byte, error) {
+	var deposits []common.Deposit
+	if len(a) == 0 {
+		return json.Marshal([]common.Deposit{})
+	} else {
+		for _, v := range a {
+			deposits = append(deposits, v)
+		}
+	}
+	return json.Marshal(deposits)
+}
 func (a Deposits) ByteLength(*common.Spec) (out uint64) {
 	return common.DepositType.TypeByteLength() * uint64(len(a))
 }

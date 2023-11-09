@@ -3,6 +3,7 @@ package common
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 
 	"github.com/protolambda/ztyp/codec"
@@ -29,6 +30,18 @@ func (txs PayloadTransactions) Serialize(spec *Spec, w *codec.EncodingWriter) er
 	return w.List(func(i uint64) codec.Serializable {
 		return spec.Wrap(&txs[i])
 	}, 0, uint64(len(txs)))
+}
+
+func (txs PayloadTransactions) MarshalJSON() ([]byte, error) {
+	var transactions []Transaction
+	if len(txs) == 0 {
+		return json.Marshal([]Transaction{})
+	} else {
+		for _, v := range txs {
+			transactions = append(transactions, v)
+		}
+	}
+	return json.Marshal(transactions)
 }
 
 func (txs PayloadTransactions) ByteLength(spec *Spec) (out uint64) {

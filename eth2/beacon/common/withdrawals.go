@@ -2,6 +2,7 @@ package common
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -184,6 +185,18 @@ func (ws Withdrawals) Serialize(spec *Spec, w *codec.EncodingWriter) error {
 	return w.List(func(i uint64) codec.Serializable {
 		return &ws[i]
 	}, WithdrawalType.TypeByteLength(), uint64(len(ws)))
+}
+
+func (ws Withdrawals) MarshalJSON() ([]byte, error) {
+	var withdrawals []Withdrawal
+	if len(ws) == 0 {
+		return json.Marshal([]Withdrawal{})
+	} else {
+		for _, v := range ws {
+			withdrawals = append(withdrawals, v)
+		}
+	}
+	return json.Marshal(withdrawals)
 }
 
 func (ws Withdrawals) ByteLength(spec *Spec) (out uint64) {
@@ -383,6 +396,18 @@ func (li SignedBLSToExecutionChanges) Serialize(_ *Spec, w *codec.EncodingWriter
 	return w.List(func(i uint64) codec.Serializable {
 		return &li[i]
 	}, SignedBLSToExecutionChangeType.TypeByteLength(), uint64(len(li)))
+}
+
+func (li SignedBLSToExecutionChanges) MarshalJSON() ([]byte, error) {
+	changes := []SignedBLSToExecutionChange{}
+	if len(li) == 0 {
+		return json.Marshal([]SignedBLSToExecutionChange{})
+	} else {
+		for _, v := range li {
+			changes = append(changes, v)
+		}
+	}
+	return json.Marshal(changes)
 }
 
 func (li SignedBLSToExecutionChanges) ByteLength(_ *Spec) (out uint64) {

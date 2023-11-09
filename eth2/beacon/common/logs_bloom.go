@@ -3,6 +3,7 @@ package common
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 
 	"github.com/protolambda/ztyp/codec"
@@ -93,4 +94,8 @@ func (p *LogsBloom) UnmarshalText(text []byte) error {
 		return errors.New("cannot decode into nil logs bloom")
 	}
 	return conv.FixedBytesUnmarshalText(p[:], text[:])
+}
+
+func (p LogsBloom) MarshalJSON() ([]byte, error) {
+	return json.Marshal(p.String())
 }

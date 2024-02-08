@@ -131,11 +131,14 @@ const (
 	_stateBlockRoots
 	_stateStateRoots
 	_stateHistoricalRoots
+	_stateRewardAdjustmentFactor
 	_stateEth1Data
 	_stateEth1DataVotes
 	_stateEth1DepositIndex
 	_stateValidators
 	_stateBalances
+	_statePreviousEpochReserve
+	_stateCurrentEpochReserve
 	_stateRandaoMixes
 	_stateSlashings
 	_statePreviousEpochParticipation
@@ -161,6 +164,7 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 		{"block_roots", phase0.BatchRootsType(spec)},
 		{"state_roots", phase0.BatchRootsType(spec)},
 		{"historical_roots", phase0.HistoricalRootsType(spec)},
+		{"reward_adjustment_factor", Uint64Type},
 		// Eth1
 		{"eth1_data", common.Eth1DataType},
 		{"eth1_data_votes", phase0.Eth1DataVotesType(spec)},
@@ -168,6 +172,8 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 		// Registry
 		{"validators", phase0.ValidatorsRegistryType(spec)},
 		{"balances", phase0.RegistryBalancesType(spec)},
+		{"previous_epoch_reserve", Uint64Type},
+		{"current_epoch_reserve", Uint64Type},
 		// Randomness
 		{"randao_mixes", phase0.RandaoMixesType(spec)},
 		// Slashings

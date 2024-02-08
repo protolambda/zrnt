@@ -104,7 +104,7 @@ type BeaconState interface {
 	StateRoots() (BatchRoots, error)
 	HistoricalRoots() (HistoricalRoots, error)
 	RewardAdjustmentFactor() (Timestamp, error)
-	SetRewardAdjustmentFactor(v uint64) error
+	SetRewardAdjustmentFactor(v Timestamp) error
 	Eth1Data() (Eth1Data, error)
 	SetEth1Data(v Eth1Data) error
 	Eth1DataVotes() (Eth1DataVotes, error)
@@ -116,9 +116,9 @@ type BeaconState interface {
 	Balances() (BalancesRegistry, error)
 	SetBalances(balances []Gwei) error
 	PreviousEpochReserve() (Timestamp, error)
-	SetPreviousEpochReserve(v uint64) error
+	SetPreviousEpochReserve(v Timestamp) error
 	CurrentEpochReserve() (Timestamp, error)
-	SetCurrentEpochReserve(v uint64) error
+	SetCurrentEpochReserve(v Timestamp) error
 
 	AddValidator(spec *Spec, pub BLSPubkey, withdrawalCreds Root, balance Gwei) error
 

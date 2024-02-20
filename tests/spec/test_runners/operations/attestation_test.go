@@ -2,6 +2,7 @@ package operations
 
 import (
 	"fmt"
+	"github.com/protolambda/zrnt/eth2/beacon/deneb"
 	"testing"
 
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
@@ -28,7 +29,14 @@ func (c *AttestationTestCase) Run() error {
 	if s, ok := c.Pre.(phase0.Phase0PendingAttestationsBeaconState); ok {
 		return phase0.ProcessAttestation(c.Spec, epc, s, &c.Attestation)
 	} else if s, ok := c.Pre.(altair.AltairLikeBeaconState); ok {
-		return altair.ProcessAttestation(c.Spec, epc, s, &c.Attestation)
+		switch c.Fork {
+		case "altair", "bellatrix", "capella":
+			return altair.ProcessAttestation(c.Spec, epc, s, &c.Attestation)
+		case "deneb":
+			return deneb.ProcessAttestation(c.Spec, epc, s, &c.Attestation)
+		default:
+			return fmt.Errorf("unrecognized fork: %s", c.Fork)
+		}
 	} else {
 		return fmt.Errorf("unrecognized state type: %T", s)
 	}

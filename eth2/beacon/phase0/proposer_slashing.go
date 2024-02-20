@@ -2,6 +2,7 @@ package phase0
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -80,6 +81,13 @@ func (li ProposerSlashings) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) com
 		}
 		return nil
 	}, length, uint64(spec.MAX_PROPOSER_SLASHINGS))
+}
+
+func (li ProposerSlashings) MarshalJSON() ([]byte, error) {
+	if li == nil {
+		return json.Marshal([]ProposerSlashing{}) // encode as empty list, not null
+	}
+	return json.Marshal([]ProposerSlashing(li))
 }
 
 func ProcessProposerSlashings(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, ops []ProposerSlashing) error {

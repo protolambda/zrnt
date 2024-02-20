@@ -1,6 +1,8 @@
 package deneb
 
 import (
+	"encoding/json"
+
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	"github.com/protolambda/ztyp/view"
@@ -40,6 +42,13 @@ func (li KZGCommitments) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common
 		}
 		return nil
 	}, length, uint64(spec.MAX_BLOB_COMMITMENTS_PER_BLOCK))
+}
+
+func (li KZGCommitments) MarshalJSON() ([]byte, error) {
+	if li == nil {
+		return json.Marshal([]common.KZGCommitment{}) // encode as empty list, not null
+	}
+	return json.Marshal([]common.KZGCommitment(li))
 }
 
 func KZGCommitmentsType(spec *common.Spec) *view.ComplexListTypeDef {

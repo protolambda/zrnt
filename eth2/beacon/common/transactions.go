@@ -3,6 +3,7 @@ package common
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 
 	"github.com/protolambda/ztyp/codec"
@@ -50,6 +51,13 @@ func (txs PayloadTransactions) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
 		}
 		return nil
 	}, length, uint64(spec.MAX_TRANSACTIONS_PER_PAYLOAD))
+}
+
+func (txs PayloadTransactions) MarshalJSON() ([]byte, error) {
+	if txs == nil {
+		return json.Marshal([]Transaction{}) // encode as empty list, not null
+	}
+	return json.Marshal([]Transaction(txs))
 }
 
 func TransactionType(spec *Spec) *BasicListTypeDef {

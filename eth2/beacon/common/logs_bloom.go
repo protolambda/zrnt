@@ -80,7 +80,7 @@ func (s *LogsBloom) HashTreeRoot(hFn tree.HashFn) tree.Root {
 	return hFn(hFn(a, b), hFn(c, d))
 }
 
-func (p *LogsBloom) MarshalText() ([]byte, error) {
+func (p LogsBloom) MarshalText() ([]byte, error) {
 	return conv.BytesMarshalText(p[:])
 }
 

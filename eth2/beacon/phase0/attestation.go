@@ -2,6 +2,7 @@ package phase0
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -86,6 +87,13 @@ func (li Attestations) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.R
 		}
 		return nil
 	}, length, uint64(spec.MAX_ATTESTATIONS))
+}
+
+func (li Attestations) MarshalJSON() ([]byte, error) {
+	if li == nil {
+		return json.Marshal([]Attestation{}) // encode as empty list, not null
+	}
+	return json.Marshal([]Attestation(li))
 }
 
 func ProcessAttestations(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state Phase0PendingAttestationsBeaconState, ops []Attestation) error {

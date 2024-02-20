@@ -3,7 +3,6 @@ package common
 import (
 	"encoding/json"
 
-	kbls "github.com/kilic/bls12-381"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	. "github.com/protolambda/ztyp/view"
@@ -301,23 +300,6 @@ type Spec struct {
 	Config          `json:",inline" yaml:",inline"`
 
 	ExecutionEngine `json:"-" yaml:"-"`
-}
-
-type G1Setup struct {
-	Serialized [][48]byte
-	Points     []kbls.PointG1
-}
-
-// TODO: serialize/deserialize json and yaml
-
-type G2Setup struct {
-	Serialized [][96]byte
-	Points     []kbls.PointG2
-}
-
-type Setup struct {
-	G1_SETUP G1Setup `json:"G1_SETUP" yaml:"G1_SETUP"`
-	G2_SETUP G2Setup `json:"G2_SETUP" yaml:"G2_SETUP"`
 }
 
 // Wraps the object to parametrize with given spec. JSON and YAML functionality is proxied to the inner value.

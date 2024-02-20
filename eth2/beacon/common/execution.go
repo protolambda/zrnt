@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
+	"fmt"
 
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/conv"
@@ -57,6 +58,9 @@ func (otx *ExtraData) UnmarshalText(text []byte) error {
 }
 
 func (otx ExtraData) View() (*ExtraDataView, error) {
+	if len(otx) > MAX_EXTRA_DATA_BYTES {
+		return nil, fmt.Errorf("extra-data is too large to be transformed into SSZ tree form: %d", len(otx))
+	}
 	dec := codec.NewDecodingReader(bytes.NewReader(otx), uint64(len(otx)))
 	return AsExtraData(ExtraDataType.Deserialize(dec))
 }

@@ -18,6 +18,38 @@ type MockExecEngine struct {
 	Valid bool `yaml:"execution_valid"`
 }
 
+func (m *MockExecEngine) DenebNotifyNewPayload(ctx context.Context, executionPayload *deneb.ExecutionPayload, parentBeaconBlockRoot common.Root) (valid bool, err error) {
+	return m.Valid, nil
+}
+
+func (m *MockExecEngine) DenebIsValidVersionedHashes(ctx context.Context, payload *deneb.ExecutionPayload, versionedHashes []common.Hash32) (bool, error) {
+	return m.Valid, nil
+}
+
+func (m *MockExecEngine) DenebIsValidBlockHash(ctx context.Context, payload *deneb.ExecutionPayload, parentBeaconBlockRoot common.Root) (bool, error) {
+	return m.Valid, nil
+}
+
+func (m *MockExecEngine) CapellaNotifyNewPayload(ctx context.Context, executionPayload *capella.ExecutionPayload) (valid bool, err error) {
+	return m.Valid, nil
+}
+
+func (m *MockExecEngine) CapellaIsValidBlockHash(ctx context.Context, payload *capella.ExecutionPayload) (bool, error) {
+	return m.Valid, nil
+}
+
+func (m *MockExecEngine) BellatrixNotifyNewPayload(ctx context.Context, executionPayload *bellatrix.ExecutionPayload) (valid bool, err error) {
+	return m.Valid, nil
+}
+
+func (m *MockExecEngine) BellatrixIsValidBlockHash(ctx context.Context, payload *bellatrix.ExecutionPayload) (bool, error) {
+	return m.Valid, nil
+}
+
+var _ bellatrix.ExecutionEngine = (*MockExecEngine)(nil)
+var _ capella.ExecutionEngine = (*MockExecEngine)(nil)
+var _ deneb.ExecutionEngine = (*MockExecEngine)(nil)
+
 func (m *MockExecEngine) ExecutePayload(ctx context.Context, executionPayload interface{}) (valid bool, err error) {
 	return m.Valid, nil
 }
@@ -26,21 +58,21 @@ var _ common.ExecutionEngine = (*MockExecEngine)(nil)
 
 type ExecutionPayloadTestCase struct {
 	test_util.BaseTransitionTest
-	ExecutionPayload common.SpecObj
-	Execution        MockExecEngine
+	BlockBody common.SpecObj
+	Execution MockExecEngine
 }
 
 func (c *ExecutionPayloadTestCase) Load(t *testing.T, forkName test_util.ForkName, readPart test_util.TestPartReader) {
 	c.BaseTransitionTest.Load(t, forkName, readPart)
 	switch forkName {
 	case "bellatrix":
-		c.ExecutionPayload = new(bellatrix.ExecutionPayload)
+		c.BlockBody = new(bellatrix.BeaconBlockBody)
 	case "capella":
-		c.ExecutionPayload = new(capella.ExecutionPayload)
+		c.BlockBody = new(capella.BeaconBlockBody)
 	case "deneb":
-		c.ExecutionPayload = new(deneb.ExecutionPayload)
+		c.BlockBody = new(deneb.BeaconBlockBody)
 	}
-	test_util.LoadSSZ(t, "execution_payload", c.Spec.Wrap(c.ExecutionPayload), readPart)
+	test_util.LoadSSZ(t, "body", c.Spec.Wrap(c.BlockBody), readPart)
 	part := readPart.Part("execution.yml")
 	dec := yaml.NewDecoder(part)
 	dec.KnownFields(true)
@@ -50,11 +82,14 @@ func (c *ExecutionPayloadTestCase) Load(t *testing.T, forkName test_util.ForkNam
 func (c *ExecutionPayloadTestCase) Run() error {
 	switch s := c.Pre.(type) {
 	case bellatrix.ExecutionTrackingBeaconState:
-		return bellatrix.ProcessExecutionPayload(context.Background(), c.Spec, s, c.ExecutionPayload.(*bellatrix.ExecutionPayload), &c.Execution)
+		return bellatrix.ProcessExecutionPayload(context.Background(), c.Spec,
+			s, &c.BlockBody.(*bellatrix.BeaconBlockBody).ExecutionPayload, &c.Execution)
 	case capella.ExecutionTrackingBeaconState:
-		return capella.ProcessExecutionPayload(context.Background(), c.Spec, s, c.ExecutionPayload.(*capella.ExecutionPayload), &c.Execution)
+		return capella.ProcessExecutionPayload(context.Background(), c.Spec,
+			s, &c.BlockBody.(*capella.BeaconBlockBody).ExecutionPayload, &c.Execution)
 	case deneb.ExecutionTrackingBeaconState:
-		return deneb.ProcessExecutionPayload(context.Background(), c.Spec, s, c.ExecutionPayload.(*deneb.ExecutionPayload), &c.Execution)
+		return deneb.ProcessExecutionPayload(context.Background(), c.Spec,
+			s, c.BlockBody.(*deneb.BeaconBlockBody), &c.Execution)
 	default:
 		return fmt.Errorf("unrecognized state type: %T", c.Pre)
 	}

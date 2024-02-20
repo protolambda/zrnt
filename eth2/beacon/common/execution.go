@@ -2,7 +2,6 @@ package common
 
 import (
 	"bytes"
-	"context"
 	"encoding/hex"
 	"errors"
 
@@ -79,7 +78,8 @@ func (v *ExtraDataView) Raw() (ExtraData, error) {
 	return ExtraData(buf.Bytes()), nil
 }
 
+// ExecutionEngine represents an extensible execution-engine interface to verify execution payloads with.
+// This engine may implement various interfaces, such as
+// bellatrix.ExecutionEngine, capella.ExecutionEngine, deneb.ExecutionEngine
 type ExecutionEngine interface {
-	ExecutePayload(ctx context.Context, executionPayload interface{}) (valid bool, err error)
-	// TODO: remaining interface parts
 }

@@ -27,7 +27,8 @@ const (
 	__blockHash
 	__transactionsRoot
 	__withdrawalsRoot
-	__excessDataGas
+	__blobGasUsed
+	__excessBlobGas
 	__end
 )
 
@@ -47,7 +48,8 @@ var ExecutionPayloadHeaderType = ContainerType("ExecutionPayloadHeader", []Field
 	{"block_hash", common.Hash32Type},
 	{"transactions_root", RootType},
 	{"withdrawals_root", RootType},
-	{"excess_data_gas", Uint256Type}, // new in EIP-4844
+	{"blob_gas_used", Uint64Type},   // new in Deneb
+	{"excess_blob_gas", Uint64Type}, // new in Deneb
 })
 
 type ExecutionPayloadHeaderView struct {
@@ -77,7 +79,11 @@ func (v *ExecutionPayloadHeaderView) Raw() (*ExecutionPayloadHeader, error) {
 	blockHash, err := AsRoot(values[__blockHash], err)
 	transactionsRoot, err := AsRoot(values[__transactionsRoot], err)
 	withdrawalsRoot, err := AsRoot(values[__withdrawalsRoot], err)
-	excessDataGas, err := AsUint256(values[__excessDataGas], err)
+	blobGasUsed, err := AsUint64(values[__blobGasUsed], err)
+	if err != nil {
+		return nil, err
+	}
+	excessBlobGas, err := AsUint64(values[__excessBlobGas], err)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +111,8 @@ func (v *ExecutionPayloadHeaderView) Raw() (*ExecutionPayloadHeader, error) {
 		BlockHash:        blockHash,
 		TransactionsRoot: transactionsRoot,
 		WithdrawalsRoot:  withdrawalsRoot,
-		ExcessDataGas:    excessDataGas,
+		BlobGasUsed:      blobGasUsed,
+		ExcessBlobGas:    excessBlobGas,
 	}, nil
 }
 
@@ -165,8 +172,12 @@ func (v *ExecutionPayloadHeaderView) TransactionsRoot() (common.Root, error) {
 	return AsRoot(v.Get(__transactionsRoot))
 }
 
-func (v *ExecutionPayloadHeaderView) ExcessDataGas() (Uint256View, error) {
-	return AsUint256(v.Get(__excessDataGas))
+func (v *ExecutionPayloadHeaderView) BlobGasUsed() (Uint64View, error) {
+	return AsUint64(v.Get(__blobGasUsed))
+}
+
+func (v *ExecutionPayloadHeaderView) ExcessBlobGas() (Uint64View, error) {
+	return AsUint64(v.Get(__excessBlobGas))
 }
 
 func AsExecutionPayloadHeader(v View, err error) (*ExecutionPayloadHeaderView, error) {
@@ -190,7 +201,8 @@ type ExecutionPayloadHeader struct {
 	BlockHash        common.Hash32      `json:"block_hash" yaml:"block_hash"`
 	TransactionsRoot common.Root        `json:"transactions_root" yaml:"transactions_root"`
 	WithdrawalsRoot  common.Root        `json:"withdrawals_root" yaml:"withdrawals_root"`
-	ExcessDataGas    Uint256View        `json:"excess_data_gas" yaml:"excess_data_gas"`
+	BlobGasUsed      Uint64View         `json:"blob_gas_used" yaml:"blob_gas_used"`
+	ExcessBlobGas    Uint64View         `json:"excess_blob_gas" yaml:"excess_blob_gas"`
 }
 
 func (s *ExecutionPayloadHeader) View() *ExecutionPayloadHeaderView {
@@ -203,9 +215,9 @@ func (s *ExecutionPayloadHeader) View() *ExecutionPayloadHeaderView {
 	ts, bf := Uint64View(s.Timestamp), &s.BaseFeePerGas
 	bh, tr := (*RootView)(&s.BlockHash), (*RootView)(&s.TransactionsRoot)
 	wr := (*RootView)(&s.WithdrawalsRoot)
-	edg := &s.ExcessDataGas
+	bgu, ebg := &s.BlobGasUsed, &s.ExcessBlobGas
 
-	v, err := AsExecutionPayloadHeader(ExecutionPayloadHeaderType.FromFields(pr, cb, sr, rr, lb, rng, nr, gl, gu, ts, ed, bf, bh, tr, wr, edg))
+	v, err := AsExecutionPayloadHeader(ExecutionPayloadHeaderType.FromFields(pr, cb, sr, rr, lb, rng, nr, gl, gu, ts, ed, bf, bh, tr, wr, bgu, ebg))
 	if err != nil {
 		panic(err)
 	}
@@ -216,7 +228,8 @@ func (s *ExecutionPayloadHeader) Deserialize(dr *codec.DecodingReader) error {
 	return dr.Container(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
 		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas,
-		&s.BlockHash, &s.TransactionsRoot, &s.WithdrawalsRoot, &s.ExcessDataGas,
+		&s.BlockHash, &s.TransactionsRoot, &s.WithdrawalsRoot,
+		&s.BlobGasUsed, &s.ExcessBlobGas,
 	)
 }
 
@@ -224,7 +237,8 @@ func (s *ExecutionPayloadHeader) Serialize(w *codec.EncodingWriter) error {
 	return w.Container(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
 		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas,
-		&s.BlockHash, &s.TransactionsRoot, &s.WithdrawalsRoot, &s.ExcessDataGas,
+		&s.BlockHash, &s.TransactionsRoot, &s.WithdrawalsRoot,
+		&s.BlobGasUsed, &s.ExcessBlobGas,
 	)
 }
 
@@ -232,7 +246,8 @@ func (s *ExecutionPayloadHeader) ByteLength() uint64 {
 	return codec.ContainerLength(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
 		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas,
-		&s.BlockHash, &s.TransactionsRoot, &s.WithdrawalsRoot, &s.ExcessDataGas,
+		&s.BlockHash, &s.TransactionsRoot, &s.WithdrawalsRoot,
+		&s.BlobGasUsed, &s.ExcessBlobGas,
 	)
 }
 
@@ -244,7 +259,8 @@ func (s *ExecutionPayloadHeader) HashTreeRoot(hFn tree.HashFn) common.Root {
 	return hFn.HashTreeRoot(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
 		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas,
-		&s.BlockHash, &s.TransactionsRoot, &s.WithdrawalsRoot, &s.ExcessDataGas,
+		&s.BlockHash, &s.TransactionsRoot, &s.WithdrawalsRoot,
+		&s.BlobGasUsed, &s.ExcessBlobGas,
 	)
 }
 
@@ -265,7 +281,8 @@ func ExecutionPayloadType(spec *common.Spec) *ContainerTypeDef {
 		{"block_hash", common.Hash32Type},
 		{"transactions", common.PayloadTransactionsType(spec)},
 		{"withdrawals", common.WithdrawalsType(spec)},
-		{"excess_data_gas", Uint256Type}, // new in EIP-4844
+		{"blob_gas_used", Uint64Type},   // new in Deneb
+		{"excess_blob_gas", Uint64Type}, // new in Deneb
 	})
 }
 
@@ -294,14 +311,16 @@ type ExecutionPayload struct {
 	BlockHash     common.Hash32              `json:"block_hash" yaml:"block_hash"`
 	Transactions  common.PayloadTransactions `json:"transactions" yaml:"transactions"`
 	Withdrawals   common.Withdrawals         `json:"withdrawals" yaml:"withdrawals"`
-	ExcessDataGas Uint256View                `json:"excess_data_gas" yaml:"excess_data_gas"`
+	BlobGasUsed   Uint64View                 `json:"blob_gas_used" yaml:"blob_gas_used"`
+	ExcessBlobGas Uint64View                 `json:"excess_blob_gas" yaml:"excess_blob_gas"`
 }
 
 func (s *ExecutionPayload) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
 	return dr.Container(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
 		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas,
-		&s.BlockHash, spec.Wrap(&s.Transactions), spec.Wrap(&s.Withdrawals), &s.ExcessDataGas,
+		&s.BlockHash, spec.Wrap(&s.Transactions), spec.Wrap(&s.Withdrawals),
+		&s.BlobGasUsed, &s.ExcessBlobGas,
 	)
 }
 
@@ -309,7 +328,8 @@ func (s *ExecutionPayload) Serialize(spec *common.Spec, w *codec.EncodingWriter)
 	return w.Container(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
 		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas,
-		&s.BlockHash, spec.Wrap(&s.Transactions), spec.Wrap(&s.Withdrawals), &s.ExcessDataGas,
+		&s.BlockHash, spec.Wrap(&s.Transactions), spec.Wrap(&s.Withdrawals),
+		&s.BlobGasUsed, &s.ExcessBlobGas,
 	)
 }
 
@@ -317,7 +337,8 @@ func (s *ExecutionPayload) ByteLength(spec *common.Spec) uint64 {
 	return codec.ContainerLength(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
 		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas,
-		&s.BlockHash, spec.Wrap(&s.Transactions), spec.Wrap(&s.Withdrawals), &s.ExcessDataGas,
+		&s.BlockHash, spec.Wrap(&s.Transactions), spec.Wrap(&s.Withdrawals),
+		&s.BlobGasUsed, &s.ExcessBlobGas,
 	)
 }
 
@@ -330,7 +351,8 @@ func (s *ExecutionPayload) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) comm
 	return hFn.HashTreeRoot(&s.ParentHash, &s.FeeRecipient, &s.StateRoot,
 		&s.ReceiptsRoot, &s.LogsBloom, &s.PrevRandao, &s.BlockNumber, &s.GasLimit,
 		&s.GasUsed, &s.Timestamp, &s.ExtraData, &s.BaseFeePerGas,
-		&s.BlockHash, spec.Wrap(&s.Transactions), spec.Wrap(&s.Withdrawals), &s.ExcessDataGas,
+		&s.BlockHash, spec.Wrap(&s.Transactions), spec.Wrap(&s.Withdrawals),
+		&s.BlobGasUsed, &s.ExcessBlobGas,
 	)
 }
 
@@ -351,7 +373,8 @@ func (ep *ExecutionPayload) Header(spec *common.Spec) *ExecutionPayloadHeader {
 		BlockHash:        ep.BlockHash,
 		TransactionsRoot: ep.Transactions.HashTreeRoot(spec, tree.GetHashFn()),
 		WithdrawalsRoot:  ep.Withdrawals.HashTreeRoot(spec, tree.GetHashFn()),
-		ExcessDataGas:    ep.ExcessDataGas,
+		BlobGasUsed:      ep.BlobGasUsed,
+		ExcessBlobGas:    ep.ExcessBlobGas,
 	}
 }
 
@@ -359,7 +382,35 @@ func (ep *ExecutionPayload) GetWitdrawals() []common.Withdrawal {
 	return ep.Withdrawals
 }
 
+type NewPayloadRequest struct {
+	ExecutionPayload      *ExecutionPayload
+	VersionedHashes       []common.Hash32
+	ParentBeaconBlockRoot common.Root
+}
+
 type ExecutionEngine interface {
-	ExecutePayload(ctx context.Context, executionPayload *ExecutionPayload) (valid bool, err error)
-	// TODO: remaining interface parts
+	DenebNotifyNewPayload(ctx context.Context, executionPayload *ExecutionPayload, parentBeaconBlockRoot common.Root) (valid bool, err error)
+	DenebIsValidVersionedHashes(ctx context.Context, payload *ExecutionPayload, versionedHashes []common.Hash32) (bool, error)
+	DenebIsValidBlockHash(ctx context.Context, payload *ExecutionPayload, parentBeaconBlockRoot common.Root) (bool, error)
+}
+
+func VerifyAndNotifyNewPayload(ctx context.Context, eng ExecutionEngine, newPayloadRequest *NewPayloadRequest) (bool, error) {
+	executionPayload := newPayloadRequest.ExecutionPayload
+	parentBeaconBlockRoot := newPayloadRequest.ParentBeaconBlockRoot
+
+	// Modified in Deneb
+	if ok, err := eng.DenebIsValidBlockHash(ctx, executionPayload, parentBeaconBlockRoot); err != nil {
+		return false, fmt.Errorf("failed to check block hash: %w", err)
+	} else if !ok {
+		return false, nil
+	}
+
+	// New in Deneb
+	if ok, err := eng.DenebIsValidVersionedHashes(ctx, executionPayload, newPayloadRequest.VersionedHashes); err != nil {
+		return false, fmt.Errorf("failed to check blob versioned hashes: %w", err)
+	} else if !ok {
+		return false, nil
+	}
+
+	return eng.DenebNotifyNewPayload(ctx, executionPayload, parentBeaconBlockRoot)
 }

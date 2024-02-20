@@ -83,22 +83,17 @@ func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spe
 	if err := common.ProcessHeader(ctx, spec, state, &benv.BeaconBlockHeader, expectedProposer); err != nil {
 		return err
 	}
-	block := &BeaconBlock{
-		Slot:          benv.Slot,
-		ProposerIndex: benv.ProposerIndex,
-		ParentRoot:    benv.ParentRoot,
-		StateRoot:     benv.StateRoot,
-		Body:          *body,
-	}
-	if enabled, err := state.IsExecutionEnabled(spec, block); err != nil {
+	// [Modified in Capella] Removed `is_execution_enabled` check in Capella
+	if err := ProcessWithdrawals(ctx, spec, state, &body.ExecutionPayload); err != nil {
 		return err
-	} else if enabled {
-		if err := ProcessWithdrawals(ctx, spec, state, &body.ExecutionPayload); err != nil {
-			return err
-		}
-		if err := ProcessExecutionPayload(ctx, spec, state, &body.ExecutionPayload, spec.ExecutionEngine); err != nil {
-			return err
-		}
+	}
+	// Modified in Capella
+	eng, ok := spec.ExecutionEngine.(ExecutionEngine)
+	if !ok {
+		return fmt.Errorf("provided execution-engine interface does not support Capella: %T", spec.ExecutionEngine)
+	}
+	if err := ProcessExecutionPayload(ctx, spec, state, &body.ExecutionPayload, eng); err != nil {
+		return err
 	}
 	if err := phase0.ProcessRandaoReveal(ctx, spec, epc, state, body.RandaoReveal); err != nil {
 		return err

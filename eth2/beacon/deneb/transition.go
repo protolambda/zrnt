@@ -38,7 +38,8 @@ func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spe
 	if err := altair.ProcessEpochRewardsAndPenalties(ctx, spec, epc, attesterData, state); err != nil {
 		return err
 	}
-	if err := phase0.ProcessEpochRegistryUpdates(ctx, spec, epc, flats, state); err != nil {
+	// Modified in Deneb
+	if err := ProcessEpochRegistryUpdates(ctx, spec, epc, flats, state); err != nil {
 		return err
 	}
 	// phase0 implementation, but with fork-logic, will account for changed slashing multiplier
@@ -81,22 +82,16 @@ func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spe
 	if err := common.ProcessHeader(ctx, spec, state, &benv.BeaconBlockHeader, expectedProposer); err != nil {
 		return err
 	}
-	block := &BeaconBlock{
-		Slot:          benv.Slot,
-		ProposerIndex: benv.ProposerIndex,
-		ParentRoot:    benv.ParentRoot,
-		StateRoot:     benv.StateRoot,
-		Body:          *body,
-	}
-	if enabled, err := state.IsExecutionEnabled(spec, block); err != nil {
+	if err := capella.ProcessWithdrawals(ctx, spec, state, &body.ExecutionPayload); err != nil {
 		return err
-	} else if enabled {
-		if err := capella.ProcessWithdrawals(ctx, spec, state, &body.ExecutionPayload); err != nil {
-			return err
-		}
-		if err := ProcessExecutionPayload(ctx, spec, state, &body.ExecutionPayload, spec.ExecutionEngine); err != nil {
-			return err
-		}
+	}
+	// Modified in Deneb
+	eng, ok := spec.ExecutionEngine.(ExecutionEngine)
+	if !ok {
+		return fmt.Errorf("provided execution-engine interface does not support Deneb: %T", spec.ExecutionEngine)
+	}
+	if err := ProcessExecutionPayload(ctx, spec, state, body, eng); err != nil {
+		return err
 	}
 	if err := phase0.ProcessRandaoReveal(ctx, spec, epc, state, body.RandaoReveal); err != nil {
 		return err
@@ -115,14 +110,16 @@ func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spe
 	if err := phase0.ProcessAttesterSlashings(ctx, spec, epc, state, body.AttesterSlashings); err != nil {
 		return err
 	}
-	if err := altair.ProcessAttestations(ctx, spec, epc, state, body.Attestations); err != nil {
+	// Modified in Deneb
+	if err := ProcessAttestations(ctx, spec, epc, state, body.Attestations); err != nil {
 		return err
 	}
 	// Note: state.AddValidator changed in Altair, but the deposit processing itself stayed the same.
 	if err := phase0.ProcessDeposits(ctx, spec, epc, state, body.Deposits); err != nil {
 		return err
 	}
-	if err := phase0.ProcessVoluntaryExits(ctx, spec, epc, state, body.VoluntaryExits); err != nil {
+	// Modified in Deneb
+	if err := ProcessVoluntaryExits(ctx, spec, epc, state, body.VoluntaryExits); err != nil {
 		return err
 	}
 	if err := capella.ProcessBLSToExecutionChanges(ctx, spec, epc, state, body.BLSToExecutionChanges); err != nil {
@@ -130,9 +127,6 @@ func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spe
 	}
 	if err := altair.ProcessSyncAggregate(ctx, spec, epc, state, &body.SyncAggregate); err != nil {
 		return err
-	}
-	if err := ProcessBlobKZGCommitments(ctx, spec, state, body); err != nil {
-		return fmt.Errorf("failed to process blob KZG commitments: %w", err)
 	}
 	return nil
 }

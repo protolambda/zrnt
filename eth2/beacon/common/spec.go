@@ -300,7 +300,6 @@ type Spec struct {
 	DenebPreset     `json:",inline" yaml:",inline"`
 	Config          `json:",inline" yaml:",inline"`
 
-	// Experimental, for bellatrix
 	ExecutionEngine `json:"-" yaml:"-"`
 }
 

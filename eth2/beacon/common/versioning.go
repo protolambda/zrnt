@@ -82,7 +82,7 @@ type ForkDigest [4]byte
 
 func (p *ForkDigest) Deserialize(dr *codec.DecodingReader) error {
 	if p == nil {
-		return errors.New("nil version")
+		return errors.New("nil fork-digest")
 	}
 	_, err := dr.Read(p[:])
 	return err
@@ -115,7 +115,7 @@ func (p ForkDigest) String() string {
 
 func (p *ForkDigest) UnmarshalText(text []byte) error {
 	if p == nil {
-		return errors.New("cannot decode into nil Version")
+		return errors.New("cannot decode into nil ForkDigest")
 	}
 	if len(text) >= 2 && text[0] == '0' && (text[1] == 'x' || text[1] == 'X') {
 		text = text[2:]
@@ -271,4 +271,54 @@ func GetDomain(state BeaconState, dom BLSDomainType, messageEpoch Epoch) (BLSDom
 		return BLSDomain{}, err
 	}
 	return fork.GetDomain(dom, genesisValRoot, messageEpoch)
+}
+
+// A network message domain
+type NetworkMessageDomain [4]byte
+
+func (p *NetworkMessageDomain) Deserialize(dr *codec.DecodingReader) error {
+	if p == nil {
+		return errors.New("nil network-message-domain")
+	}
+	_, err := dr.Read(p[:])
+	return err
+}
+
+func (p NetworkMessageDomain) Serialize(w *codec.EncodingWriter) error {
+	return w.Write(p[:])
+}
+
+func (p NetworkMessageDomain) ByteLength() uint64 {
+	return 4
+}
+
+func (NetworkMessageDomain) FixedLength() uint64 {
+	return 4
+}
+
+func (p NetworkMessageDomain) HashTreeRoot(_ tree.HashFn) (out Root) {
+	copy(out[:], p[:])
+	return
+}
+
+func (p NetworkMessageDomain) MarshalText() ([]byte, error) {
+	return []byte("0x" + hex.EncodeToString(p[:])), nil
+}
+
+func (p NetworkMessageDomain) String() string {
+	return "0x" + hex.EncodeToString(p[:])
+}
+
+func (p *NetworkMessageDomain) UnmarshalText(text []byte) error {
+	if p == nil {
+		return errors.New("cannot decode into nil NetworkMessageDomain")
+	}
+	if len(text) >= 2 && text[0] == '0' && (text[1] == 'x' || text[1] == 'X') {
+		text = text[2:]
+	}
+	if len(text) != 8 {
+		return fmt.Errorf("unexpected length string '%s'", string(text))
+	}
+	_, err := hex.Decode(p[:], text)
+	return err
 }

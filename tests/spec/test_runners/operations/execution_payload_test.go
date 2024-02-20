@@ -73,7 +73,7 @@ func (c *ExecutionPayloadTestCase) Load(t *testing.T, forkName test_util.ForkNam
 		c.BlockBody = new(deneb.BeaconBlockBody)
 	}
 	test_util.LoadSSZ(t, "body", c.Spec.Wrap(c.BlockBody), readPart)
-	part := readPart.Part("execution.yml")
+	part := readPart.Part("execution.yaml")
 	dec := yaml.NewDecoder(part)
 	dec.KnownFields(true)
 	test_util.Check(t, dec.Decode(&c.Execution))

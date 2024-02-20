@@ -62,6 +62,9 @@ func ProcessExecutionPayload(ctx context.Context, spec *common.Spec, state Execu
 	}
 
 	// [New in Deneb:EIP4844] Verify commitments are under limit
+	if uint64(len(body.BlobKZGCommitments)) > uint64(spec.MAX_BLOBS_PER_BLOCK) {
+		return fmt.Errorf("too many blob KZG commitments: %d", len(body.BLSToExecutionChanges))
+	}
 
 	// Verify the execution payload is valid
 	// [Modified in Deneb:EIP4844] Pass `versioned_hashes` to Execution Engine

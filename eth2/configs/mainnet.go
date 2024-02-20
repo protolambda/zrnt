@@ -135,5 +135,5 @@ var Mainnet = &common.Spec{
 		EIP7594_FORK_VERSION:                  common.Version{6, 0, 0, 1},
 		EIP7594_FORK_EPOCH:                    ^common.Epoch(0),
 	},
-	ExecutionEngine: new(NoOpExecutionEngine),
+	ExecutionEngine: nil,
 }

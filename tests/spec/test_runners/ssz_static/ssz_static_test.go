@@ -148,6 +148,7 @@ func init() {
 
 	objs["altair"]["LightClientSnapshot"] = func() interface{} { return new(altair.LightClientSnapshot) }
 	objs["altair"]["LightClientUpdate"] = func() interface{} { return new(altair.LightClientUpdate) }
+	objs["altair"]["LightClientHeader"] = func() interface{} { return new(altair.LightClientHeader) }
 	objs["altair"]["SyncAggregatorSelectionData"] = func() interface{} { return new(altair.SyncAggregatorSelectionData) }
 	objs["altair"]["SyncCommitteeContribution"] = func() interface{} { return new(altair.SyncCommitteeContribution) }
 	objs["altair"]["ContributionAndProof"] = func() interface{} { return new(altair.ContributionAndProof) }
@@ -172,6 +173,7 @@ func init() {
 	objs["capella"]["Withdrawal"] = func() interface{} { return new(common.Withdrawal) }
 	objs["capella"]["BLSToExecutionChange"] = func() interface{} { return new(common.BLSToExecutionChange) }
 	objs["capella"]["SignedBLSToExecutionChange"] = func() interface{} { return new(common.SignedBLSToExecutionChange) }
+	objs["capella"]["LightClientHeader"] = func() interface{} { return new(capella.LightClientHeader) }
 }
 
 type RootsYAML struct {

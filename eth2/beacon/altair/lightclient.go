@@ -220,3 +220,41 @@ func (lcu *LightClientUpdate) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) c
 		&lcu.SignatureSlot,
 	)
 }
+
+var LightClientHeaderType = ContainerType("LightClientHeaderType", []FieldDef{
+	{"beacon", common.BeaconBlockHeaderType},
+})
+
+type LightClientHeader struct {
+	Beacon common.BeaconBlockHeader `yaml:"beacon" json:"beacon"`
+}
+
+func (lch *LightClientHeader) Deserialize(dr *codec.DecodingReader) error {
+	return dr.FixedLenContainer(
+		&lch.Beacon,
+	)
+}
+
+func (lch *LightClientHeader) Serialize(w *codec.EncodingWriter) error {
+	return w.FixedLenContainer(
+		&lch.Beacon,
+	)
+}
+
+func (lch *LightClientHeader) ByteLength() uint64 {
+	return codec.ContainerLength(
+		&lch.Beacon,
+	)
+}
+
+func (lch *LightClientHeader) FixedLength() uint64 {
+	return codec.ContainerLength(
+		&lch.Beacon,
+	)
+}
+
+func (lch *LightClientHeader) HashTreeRoot(hFn tree.HashFn) common.Root {
+	return hFn.HashTreeRoot(
+		&lch.Beacon,
+	)
+}

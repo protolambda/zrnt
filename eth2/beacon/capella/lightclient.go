@@ -1,6 +1,7 @@
 package capella
 
 import (
+	"github.com/protolambda/zrnt/eth2/beacon/altair"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
@@ -70,4 +71,42 @@ func (l *LightClientHeader) ByteLength() (out uint64) {
 
 func (l *LightClientHeader) HashTreeRoot(h tree.HashFn) common.Root {
 	return h.HashTreeRoot(&l.Beacon, &l.Execution, &l.ExecutionBranch)
+}
+
+type LightClientBootstrap struct {
+	Header                     LightClientHeader
+	CurrentSyncCommittee       common.SyncCommittee
+	CurrentSyncCommitteeBranch altair.SyncCommitteeProofBranch
+}
+
+func NewLightClientBootstrapType(spec *common.Spec) *view.ContainerTypeDef {
+	return view.ContainerType("LightClientHeader", []view.FieldDef{
+		{Name: "header", Type: LightClientHeaderType},
+		{Name: "next_sync_committee", Type: common.SyncCommitteeType(spec)},
+		{Name: "next_sync_committee_branch", Type: altair.SyncCommitteeProofBranchType},
+	})
+}
+
+func (lcb *LightClientBootstrap) FixedLength(spec *common.Spec) uint64 {
+	return codec.ContainerLength(&lcb.Header, spec.Wrap(&lcb.CurrentSyncCommittee), &lcb.CurrentSyncCommitteeBranch)
+}
+
+func (lcb *LightClientBootstrap) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
+	return dr.Container(&lcb.Header, spec.Wrap(&lcb.CurrentSyncCommittee), &lcb.CurrentSyncCommitteeBranch)
+}
+
+func (lcb *LightClientBootstrap) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
+	return w.Container(&lcb.Header, spec.Wrap(&lcb.CurrentSyncCommittee), &lcb.CurrentSyncCommitteeBranch)
+}
+
+func (lcb *LightClientBootstrap) ByteLength(spec *common.Spec) uint64 {
+	return codec.ContainerLength(&lcb.Header, spec.Wrap(&lcb.CurrentSyncCommittee), &lcb.CurrentSyncCommitteeBranch)
+}
+
+func (lcb *LightClientBootstrap) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
+	return hFn.HashTreeRoot(
+		&lcb.Header,
+		spec.Wrap(&lcb.CurrentSyncCommittee),
+		&lcb.CurrentSyncCommitteeBranch,
+	)
 }

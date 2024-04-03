@@ -150,6 +150,8 @@ func init() {
 	objs["altair"]["LightClientUpdate"] = func() interface{} { return new(altair.LightClientUpdate) }
 	objs["altair"]["LightClientHeader"] = func() interface{} { return new(altair.LightClientHeader) }
 	objs["altair"]["LightClientBootstrap"] = func() interface{} { return new(altair.LightClientBootstrap) }
+	objs["altair"]["LightClientFinalityUpdate"] = func() interface{} { return new(altair.LightClientFinalityUpdate) }
+	objs["altair"]["LightClientOptimisticUpdate"] = func() interface{} { return new(altair.LightClientOptimisticUpdate) }
 	objs["altair"]["SyncAggregatorSelectionData"] = func() interface{} { return new(altair.SyncAggregatorSelectionData) }
 	objs["altair"]["SyncCommitteeContribution"] = func() interface{} { return new(altair.SyncCommitteeContribution) }
 	objs["altair"]["ContributionAndProof"] = func() interface{} { return new(altair.ContributionAndProof) }
@@ -176,6 +178,9 @@ func init() {
 	objs["capella"]["SignedBLSToExecutionChange"] = func() interface{} { return new(common.SignedBLSToExecutionChange) }
 	objs["capella"]["LightClientHeader"] = func() interface{} { return new(capella.LightClientHeader) }
 	objs["capella"]["LightClientBootstrap"] = func() interface{} { return new(capella.LightClientBootstrap) }
+	objs["capella"]["LightClientUpdate"] = func() interface{} { return new(capella.LightClientUpdate) }
+	objs["capella"]["LightClientFinalityUpdate"] = func() interface{} { return new(capella.LightClientFinalityUpdate) }
+	objs["capella"]["LightClientOptimisticUpdate"] = func() interface{} { return new(capella.LightClientOptimisticUpdate) }
 }
 
 type RootsYAML struct {
@@ -227,6 +232,36 @@ func runSSZStaticTest(fork test_util.ForkName, name string, alloc ObjAllocator, 
 
 func TestSSZStatic(t *testing.T) {
 	t.Parallel()
+	t.Run("minimal", func(t *testing.T) {
+		for fork, objByName := range objs {
+			t.Run(string(fork), func(t *testing.T) {
+				for k, v := range objByName {
+					t.Run(k, runSSZStaticTest(fork, k, v, configs.Minimal))
+				}
+			})
+		}
+	})
+	t.Run("mainnet", func(t *testing.T) {
+		for fork, objByName := range objs {
+			t.Run(string(fork), func(t *testing.T) {
+				for k, v := range objByName {
+					t.Run(k, runSSZStaticTest(fork, k, v, configs.Mainnet))
+				}
+			})
+		}
+	})
+}
+
+func TestSSZStatic2(t *testing.T) {
+	var objs = map[test_util.ForkName]map[string]ObjAllocator{
+		"phase0":    {},
+		"altair":    {},
+		"bellatrix": {},
+		"capella":   {},
+	}
+	//objs["capella"]["LightClientUpdate"] = func() interface{} { return new(capella.LightClientUpdate) }
+	objs["capella"]["LightClientFinalityUpdate"] = func() interface{} { return new(capella.LightClientFinalityUpdate) }
+	//objs["capella"]["LightClientOptimisticUpdate"] = func() interface{} { return new(capella.LightClientOptimisticUpdate) }
 	t.Run("minimal", func(t *testing.T) {
 		for fork, objByName := range objs {
 			t.Run(string(fork), func(t *testing.T) {

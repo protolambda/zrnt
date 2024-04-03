@@ -136,10 +136,10 @@ func (fb FinalizedRootProofBranch) HashTreeRoot(hFn tree.HashFn) common.Root {
 
 func LightClientUpdateType(spec *common.Spec) *ContainerTypeDef {
 	return ContainerType("SyncCommittee", []FieldDef{
-		{"attested_header", common.BeaconBlockHeaderType},
+		{"attested_header", LightClientHeaderType},
 		{"next_sync_committee", common.SyncCommitteeType(spec)},
 		{"next_sync_committee_branch", SyncCommitteeProofBranchType},
-		{"finalized_header", common.BeaconBlockHeaderType},
+		{"finalized_header", LightClientHeaderType},
 		{"finality_branch", FinalizedRootProofBranchType},
 		{"sync_aggregate", SyncAggregateType(spec)},
 		{"signature_slot", common.SlotType},
@@ -148,12 +148,12 @@ func LightClientUpdateType(spec *common.Spec) *ContainerTypeDef {
 
 type LightClientUpdate struct {
 	// Update beacon block header
-	AttestedHeader common.BeaconBlockHeader `yaml:"attested_header" json:"attested_header"`
+	AttestedHeader LightClientHeader `yaml:"attested_header" json:"attested_header"`
 	// Next sync committee corresponding to the header
 	NextSyncCommittee       common.SyncCommittee     `yaml:"next_sync_committee" json:"next_sync_committee"`
 	NextSyncCommitteeBranch SyncCommitteeProofBranch `yaml:"next_sync_committee_branch" json:"next_sync_committee_branch"`
 	// Finality proof for the update header
-	FinalizedHeader common.BeaconBlockHeader `yaml:"finalized_header" json:"finalized_header"`
+	FinalizedHeader LightClientHeader `yaml:"finalized_header" json:"finalized_header"`
 	FinalityBranch  FinalizedRootProofBranch `yaml:"finality_branch" json:"finality_branch"`
 	// Sync committee aggregate signature
 	SyncAggregate SyncAggregate `yaml:"sync_aggregate" json:"sync_aggregate"`
@@ -222,7 +222,7 @@ func (lcu *LightClientUpdate) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) c
 }
 
 var LightClientHeaderType = ContainerType("LightClientHeaderType", []FieldDef{
-	{"beacon", common.BeaconBlockHeaderType},
+	{Name: "beacon", Type: common.BeaconBlockHeaderType},
 })
 
 type LightClientHeader struct {
@@ -260,16 +260,16 @@ func (lch *LightClientHeader) HashTreeRoot(hFn tree.HashFn) common.Root {
 }
 
 type LightClientBootstrap struct {
-	Header                     LightClientHeader
-	CurrentSyncCommittee       common.SyncCommittee
-	CurrentSyncCommitteeBranch SyncCommitteeProofBranch
+	Header                     LightClientHeader        `yaml:"header" json:"header"`
+	CurrentSyncCommittee       common.SyncCommittee     `yaml:"current_sync_committee" json:"current_sync_committee"`
+	CurrentSyncCommitteeBranch SyncCommitteeProofBranch `yaml:"current_sync_committee_branch" json:"current_sync_committee_branch"`
 }
 
 func NewLightClientBootstrapType(spec *common.Spec) *ContainerTypeDef {
 	return ContainerType("LightClientHeader", []FieldDef{
 		{Name: "header", Type: LightClientHeaderType},
-		{Name: "next_sync_committee", Type: common.SyncCommitteeType(spec)},
-		{Name: "next_sync_committee_branch", Type: SyncCommitteeProofBranchType},
+		{Name: "current_sync_committee", Type: common.SyncCommitteeType(spec)},
+		{Name: "current_sync_committee_branch", Type: SyncCommitteeProofBranchType},
 	})
 }
 
@@ -294,5 +294,89 @@ func (lcb *LightClientBootstrap) HashTreeRoot(spec *common.Spec, hFn tree.HashFn
 		&lcb.Header,
 		spec.Wrap(&lcb.CurrentSyncCommittee),
 		&lcb.CurrentSyncCommitteeBranch,
+	)
+}
+
+type LightClientFinalityUpdate struct {
+	AttestedHeader  LightClientHeader        `yaml:"attested_header" json:"attested_header"`
+	FinalizedHeader common.BeaconBlockHeader `yaml:"finalized_header" json:"finalized_header"`
+	FinalityBranch  FinalizedRootProofBranch `yaml:"finality_branch" json:"finality_branch"`
+	SyncAggregate   SyncAggregate            `yaml:"sync_aggregate" json:"sync_aggregate"`
+	SignatureSlot   common.Slot              `yaml:"signature_slot" json:"signature_slot"`
+}
+
+func LightClientFinalityUpdateType(spec *common.Spec) *ContainerTypeDef {
+	return ContainerType("SyncCommittee", []FieldDef{
+		{Name: "attested_header", Type: common.BeaconBlockHeaderType},
+		{Name: "finalized_header", Type: common.BeaconBlockHeaderType},
+		{Name: "finality_branch", Type: FinalizedRootProofBranchType},
+		{Name: "sync_aggregate", Type: SyncAggregateType(spec)},
+		{Name: "signature_slot", Type: common.SlotType},
+	})
+}
+
+func (lcfu *LightClientFinalityUpdate) FixedLength(spec *common.Spec) uint64 {
+	return codec.ContainerLength(&lcfu.AttestedHeader, &lcfu.FinalizedHeader, &lcfu.FinalityBranch, spec.Wrap(&lcfu.SyncAggregate), &lcfu.SignatureSlot)
+}
+
+func (lcfu *LightClientFinalityUpdate) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
+	return dr.Container(&lcfu.AttestedHeader, &lcfu.FinalizedHeader, &lcfu.FinalityBranch, spec.Wrap(&lcfu.SyncAggregate), &lcfu.SignatureSlot)
+}
+
+func (lcfu *LightClientFinalityUpdate) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
+	return w.Container(&lcfu.AttestedHeader, &lcfu.FinalizedHeader, &lcfu.FinalityBranch, spec.Wrap(&lcfu.SyncAggregate), &lcfu.SignatureSlot)
+}
+
+func (lcfu *LightClientFinalityUpdate) ByteLength(spec *common.Spec) uint64 {
+	return codec.ContainerLength(&lcfu.AttestedHeader, &lcfu.FinalizedHeader, &lcfu.FinalityBranch, spec.Wrap(&lcfu.SyncAggregate), &lcfu.SignatureSlot)
+}
+
+func (lcfu *LightClientFinalityUpdate) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
+	return hFn.HashTreeRoot(
+		&lcfu.AttestedHeader,
+		&lcfu.FinalizedHeader,
+		&lcfu.FinalityBranch,
+		spec.Wrap(&lcfu.SyncAggregate),
+		&lcfu.SignatureSlot,
+	)
+}
+
+type LightClientOptimisticUpdate struct {
+	AttestedHeader LightClientHeader `yaml:"attested_header" json:"attested_header"`
+	SyncAggregate  SyncAggregate     `yaml:"sync_aggregate" json:"sync_aggregate"`
+	SignatureSlot  common.Slot       `yaml:"signature_slot" json:"signature_slot"`
+}
+
+func LightClientOptimisticUpdateType(spec *common.Spec) *ContainerTypeDef {
+	return ContainerType("SyncCommittee", []FieldDef{
+		{Name: "attested_header", Type: common.BeaconBlockHeaderType},
+		{Name: "finalized_header", Type: common.BeaconBlockHeaderType},
+		{Name: "finality_branch", Type: FinalizedRootProofBranchType},
+		{Name: "sync_aggregate", Type: SyncAggregateType(spec)},
+		{Name: "signature_slot", Type: common.SlotType},
+	})
+}
+
+func (lcou *LightClientOptimisticUpdate) FixedLength(spec *common.Spec) uint64 {
+	return codec.ContainerLength(&lcou.AttestedHeader, spec.Wrap(&lcou.SyncAggregate), &lcou.SignatureSlot)
+}
+
+func (lcou *LightClientOptimisticUpdate) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
+	return dr.Container(&lcou.AttestedHeader, spec.Wrap(&lcou.SyncAggregate), &lcou.SignatureSlot)
+}
+
+func (lcou *LightClientOptimisticUpdate) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
+	return w.Container(&lcou.AttestedHeader, spec.Wrap(&lcou.SyncAggregate), &lcou.SignatureSlot)
+}
+
+func (lcou *LightClientOptimisticUpdate) ByteLength(spec *common.Spec) uint64 {
+	return codec.ContainerLength(&lcou.AttestedHeader, spec.Wrap(&lcou.SyncAggregate), &lcou.SignatureSlot)
+}
+
+func (lcou *LightClientOptimisticUpdate) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
+	return hFn.HashTreeRoot(
+		&lcou.AttestedHeader,
+		spec.Wrap(&lcou.SyncAggregate),
+		&lcou.SignatureSlot,
 	)
 }

@@ -88,7 +88,7 @@ func NewLightClientBootstrapType(spec *common.Spec) *view.ContainerTypeDef {
 }
 
 func (lcb *LightClientBootstrap) FixedLength(spec *common.Spec) uint64 {
-	return codec.ContainerLength(&lcb.Header, spec.Wrap(&lcb.CurrentSyncCommittee), &lcb.CurrentSyncCommitteeBranch)
+	return 0
 }
 
 func (lcb *LightClientBootstrap) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
@@ -175,15 +175,7 @@ func (lcu *LightClientUpdate) ByteLength(spec *common.Spec) uint64 {
 }
 
 func (lcu *LightClientUpdate) FixedLength(spec *common.Spec) uint64 {
-	return codec.ContainerLength(
-		&lcu.AttestedHeader,
-		spec.Wrap(&lcu.NextSyncCommittee),
-		&lcu.NextSyncCommitteeBranch,
-		&lcu.FinalizedHeader,
-		&lcu.FinalityBranch,
-		spec.Wrap(&lcu.SyncAggregate),
-		&lcu.SignatureSlot,
-	)
+	return 0
 }
 
 func (lcu *LightClientUpdate) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
@@ -217,7 +209,7 @@ func LightClientFinalityUpdateType(spec *common.Spec) *view.ContainerTypeDef {
 }
 
 func (lcfu *LightClientFinalityUpdate) FixedLength(spec *common.Spec) uint64 {
-	return codec.ContainerLength(&lcfu.AttestedHeader, &lcfu.FinalizedHeader, &lcfu.FinalityBranch, spec.Wrap(&lcfu.SyncAggregate), &lcfu.SignatureSlot)
+	return 0
 }
 
 func (lcfu *LightClientFinalityUpdate) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
@@ -259,7 +251,7 @@ func LightClientOptimisticUpdateType(spec *common.Spec) *view.ContainerTypeDef {
 }
 
 func (lcou *LightClientOptimisticUpdate) FixedLength(spec *common.Spec) uint64 {
-	return codec.ContainerLength(&lcou.AttestedHeader, spec.Wrap(&lcou.SyncAggregate), &lcou.SignatureSlot)
+	return 0
 }
 
 func (lcou *LightClientOptimisticUpdate) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {

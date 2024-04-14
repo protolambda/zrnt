@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/protolambda/zrnt/eth2/beacon/capella"
+	"github.com/protolambda/zrnt/eth2/beacon/deneb"
 
 	"github.com/golang/snappy"
 	"github.com/protolambda/ztyp/codec"
@@ -102,6 +103,7 @@ var objs = map[test_util.ForkName]map[string]ObjAllocator{
 	"altair":    {},
 	"bellatrix": {},
 	"capella":   {},
+	"deneb":     {},
 }
 
 func init() {
@@ -181,6 +183,15 @@ func init() {
 	objs["capella"]["LightClientUpdate"] = func() interface{} { return new(capella.LightClientUpdate) }
 	objs["capella"]["LightClientFinalityUpdate"] = func() interface{} { return new(capella.LightClientFinalityUpdate) }
 	objs["capella"]["LightClientOptimisticUpdate"] = func() interface{} { return new(capella.LightClientOptimisticUpdate) }
+
+	objs["deneb"]["SignedBeaconBlock"] = func() interface{} { return new(deneb.SignedBeaconBlock) }
+	objs["deneb"]["ExecutionPayload"] = func() interface{} { return new(deneb.ExecutionPayload) }
+	objs["deneb"]["ExecutionPayloadHeader"] = func() interface{} { return new(deneb.ExecutionPayloadHeader) }
+	objs["deneb"]["LightClientHeader"] = func() interface{} { return new(deneb.LightClientHeader) }
+	objs["deneb"]["LightClientBootstrap"] = func() interface{} { return new(deneb.LightClientBootstrap) }
+	objs["deneb"]["LightClientUpdate"] = func() interface{} { return new(deneb.LightClientUpdate) }
+	objs["deneb"]["LightClientFinalityUpdate"] = func() interface{} { return new(deneb.LightClientFinalityUpdate) }
+	objs["deneb"]["LightClientOptimisticUpdate"] = func() interface{} { return new(deneb.LightClientOptimisticUpdate) }
 }
 
 type RootsYAML struct {

@@ -1,4 +1,4 @@
-module github.com/superblock-dev/zrnt
+module github.com/protolambda/zrnt
 
 go 1.16
 
@@ -8,8 +8,8 @@ require (
 	github.com/minio/sha256-simd v0.1.0
 	github.com/protolambda/bls12-381-util v0.0.0-20210720105258-a772f2aac13e
 	github.com/protolambda/messagediff v1.4.0
-	github.com/protolambda/zrnt v0.30.0
 	github.com/protolambda/ztyp v0.2.2
+	github.com/superblock-dev/zrnt v0.0.0-20240606153346-1bb63217e7c4 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 )
 

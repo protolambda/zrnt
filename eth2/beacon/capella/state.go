@@ -46,7 +46,7 @@ type BeaconState struct {
 	CurrentSyncCommittee common.SyncCommittee `json:"current_sync_committee" yaml:"current_sync_committee"`
 	NextSyncCommittee    common.SyncCommittee `json:"next_sync_committee" yaml:"next_sync_committee"`
 	// Bailout
-	BailoutScores BailoutScores `json:"bail_out_scores" yaml:"bail_out_scores"`
+	BailoutScores altair.BailoutScores `json:"bail_out_scores" yaml:"bail_out_scores"`
 	// Execution-layer
 	LatestExecutionPayloadHeader ExecutionPayloadHeader `json:"latest_execution_payload_header" yaml:"latest_execution_payload_header"`
 	// Withdrawals
@@ -218,7 +218,7 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 		{"current_sync_committee", common.SyncCommitteeType(spec)},
 		{"next_sync_committee", common.SyncCommitteeType(spec)},
 		// Bailout
-		{"bail_out_scores", BailoutScoresType(spec)},
+		{"bail_out_scores", altair.BailoutScoresType(spec)},
 		// Execution-layer
 		{"latest_execution_payload_header", ExecutionPayloadHeaderType},
 		// Withdrawals
@@ -546,8 +546,8 @@ func (state *BeaconStateView) SetNextSyncCommittee(v *common.SyncCommitteeView) 
 	return state.Set(_nextSyncCommittee, v)
 }
 
-func (state *BeaconStateView) BailoutScores() (*BailoutScoresView, error) {
-	return AsBailoutScores(state.Get(_bailoutScores))
+func (state *BeaconStateView) BailoutScores() (*altair.BailoutScoresView, error) {
+	return altair.AsBailoutScores(state.Get(_bailoutScores))
 }
 
 func (state *BeaconStateView) RotateSyncCommittee(next *common.SyncCommitteeView) error {

@@ -47,7 +47,7 @@ type BeaconState struct {
 	CurrentSyncCommittee common.SyncCommittee `json:"current_sync_committee" yaml:"current_sync_committee"`
 	NextSyncCommittee    common.SyncCommittee `json:"next_sync_committee" yaml:"next_sync_committee"`
 	// Bailout
-	BailoutScores BailoutScores `json:"bail_out_scores" yaml:"bail_out_scores"`
+	BailoutScores altair.BailoutScores `json:"bail_out_scores" yaml:"bail_out_scores"`
 	// Execution-layer  (modified in EIP-4844)
 	LatestExecutionPayloadHeader ExecutionPayloadHeader `json:"latest_execution_payload_header" yaml:"latest_execution_payload_header"`
 	// Withdrawals
@@ -152,11 +152,14 @@ const (
 	_stateBlockRoots
 	_stateStateRoots
 	_stateHistoricalRoots
+	_stateRewardAdjustmentFactor
 	_stateEth1Data
 	_stateEth1DataVotes
 	_stateEth1DepositIndex
 	_stateValidators
 	_stateBalances
+	_statePreviousEpochReserve
+	_stateCurrentEpochReserve
 	_stateRandaoMixes
 	_stateSlashings
 	_statePreviousEpochParticipation
@@ -187,6 +190,8 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 		{"block_roots", phase0.BatchRootsType(spec)},
 		{"state_roots", phase0.BatchRootsType(spec)},
 		{"historical_roots", phase0.HistoricalRootsType(spec)},
+		// Tokenomics
+		{"reward_adjustment_factor", Uint64Type},
 		// Eth1
 		{"eth1_data", common.Eth1DataType},
 		{"eth1_data_votes", phase0.Eth1DataVotesType(spec)},
@@ -194,6 +199,8 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 		// Registry
 		{"validators", phase0.ValidatorsRegistryType(spec)},
 		{"balances", phase0.RegistryBalancesType(spec)},
+		{"previous_epoch_reserve", Uint64Type},
+		{"current_epoch_reserve", Uint64Type},
 		// Randomness
 		{"randao_mixes", phase0.RandaoMixesType(spec)},
 		// Slashings
@@ -212,7 +219,7 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 		{"current_sync_committee", common.SyncCommitteeType(spec)},
 		{"next_sync_committee", common.SyncCommitteeType(spec)},
 		// Bailout
-		{"bail_out_scores", BailoutScoresType(spec)},
+		{"bail_out_scores", altair.BailoutScoresType(spec)},
 		// Execution-layer
 		{"latest_execution_payload_header", ExecutionPayloadHeaderType},
 		// Withdrawals
@@ -302,6 +309,14 @@ func (state *BeaconStateView) HistoricalRoots() (common.HistoricalRoots, error) 
 	return phase0.AsHistoricalRoots(state.Get(_stateHistoricalRoots))
 }
 
+func (state *BeaconStateView) RewardAdjustmentFactor() (common.Timestamp, error) {
+	return common.AsTimestamp(state.Get(_stateRewardAdjustmentFactor))
+}
+
+func (state *BeaconStateView) SetRewardAdjustmentFactor(v common.Timestamp) error {
+	return state.Set(_stateRewardAdjustmentFactor, Uint64View(v))
+}
+
 func (state *BeaconStateView) Eth1Data() (common.Eth1Data, error) {
 	dat, err := common.AsEth1Data(state.Get(_stateEth1Data))
 	if err != nil {
@@ -345,6 +360,22 @@ func (state *BeaconStateView) SetBalances(balances []common.Gwei) error {
 		return err
 	}
 	return state.Set(_stateBalances, balancesView)
+}
+
+func (state *BeaconStateView) PreviousEpochReserve() (common.Timestamp, error) {
+	return common.AsTimestamp(state.Get(_statePreviousEpochReserve))
+}
+
+func (state *BeaconStateView) SetPreviousEpochReserve(v common.Timestamp) error {
+	return state.Set(_statePreviousEpochReserve, Uint64View(v))
+}
+
+func (state *BeaconStateView) CurrentEpochReserve() (common.Timestamp, error) {
+	return common.AsTimestamp(state.Get(_stateCurrentEpochReserve))
+}
+
+func (state *BeaconStateView) SetCurrentEpochReserve(v common.Timestamp) error {
+	return state.Set(_stateCurrentEpochReserve, Uint64View(v))
 }
 
 func (state *BeaconStateView) AddValidator(spec *common.Spec, pub common.BLSPubkey, withdrawalCreds common.Root, balance common.Gwei) error {
@@ -516,8 +547,8 @@ func (state *BeaconStateView) SetNextSyncCommittee(v *common.SyncCommitteeView) 
 	return state.Set(_nextSyncCommittee, v)
 }
 
-func (state *BeaconStateView) BailoutScores() (*BailoutScoresView, error) {
-	return AsBailoutScores(state.Get(_bailoutScores))
+func (state *BeaconStateView) BailoutScores() (*altair.BailoutScoresView, error) {
+	return altair.AsBailoutScores(state.Get(_bailoutScores))
 }
 
 func (state *BeaconStateView) RotateSyncCommittee(next *common.SyncCommitteeView) error {
@@ -596,7 +627,7 @@ func (state *BeaconStateView) Raw(spec *common.Spec) (*BeaconState, error) {
 }
 
 func (state *BeaconStateView) CopyState() (common.BeaconState, error) {
-	return AsBeaconStateView(state.ContainerView.Copy())
+	return altair.AsBeaconStateView(state.ContainerView.Copy())
 }
 
 type ExecutionUpgradeBeaconState interface {

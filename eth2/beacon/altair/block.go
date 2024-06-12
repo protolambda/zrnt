@@ -122,6 +122,7 @@ type BeaconBlockBody struct {
 	VoluntaryExits    phase0.VoluntaryExits    `json:"voluntary_exits" yaml:"voluntary_exits"`
 
 	SyncAggregate SyncAggregate `json:"sync_aggregate" yaml:"sync_aggregate"`
+	BailOuts      BailOuts      `json:"bail_outs" yaml:"bail_outs"`
 }
 
 func (b *BeaconBlockBody) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
@@ -130,7 +131,7 @@ func (b *BeaconBlockBody) Deserialize(spec *common.Spec, dr *codec.DecodingReade
 		&b.Graffiti, spec.Wrap(&b.ProposerSlashings),
 		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
-		spec.Wrap(&b.SyncAggregate),
+		spec.Wrap(&b.SyncAggregate), spec.Wrap(&b.BailOuts),
 	)
 }
 
@@ -140,7 +141,7 @@ func (b *BeaconBlockBody) Serialize(spec *common.Spec, w *codec.EncodingWriter) 
 		&b.Graffiti, spec.Wrap(&b.ProposerSlashings),
 		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
-		spec.Wrap(&b.SyncAggregate),
+		spec.Wrap(&b.SyncAggregate), spec.Wrap(&b.BailOuts),
 	)
 }
 
@@ -150,7 +151,7 @@ func (b *BeaconBlockBody) ByteLength(spec *common.Spec) uint64 {
 		&b.Graffiti, spec.Wrap(&b.ProposerSlashings),
 		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
-		spec.Wrap(&b.SyncAggregate),
+		spec.Wrap(&b.SyncAggregate), spec.Wrap(&b.BailOuts),
 	)
 }
 
@@ -164,7 +165,7 @@ func (b *BeaconBlockBody) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) commo
 		b.Graffiti, spec.Wrap(&b.ProposerSlashings),
 		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
-		spec.Wrap(&b.SyncAggregate),
+		spec.Wrap(&b.SyncAggregate), spec.Wrap(&b.BailOuts),
 	)
 }
 
@@ -184,6 +185,9 @@ func (b *BeaconBlockBody) CheckLimits(spec *common.Spec) error {
 	if x := uint64(len(b.VoluntaryExits)); x > uint64(spec.MAX_VOLUNTARY_EXITS) {
 		return fmt.Errorf("too many voluntary exits: %d", x)
 	}
+	if x := uint64(len(b.BailOuts)); x > uint64(spec.MAX_VOLUNTARY_EXITS) {
+		return fmt.Errorf("too many bali outs: %d", x)
+	}
 	return nil
 }
 
@@ -199,5 +203,6 @@ func BeaconBlockBodyType(spec *common.Spec) *ContainerTypeDef {
 		{"deposits", phase0.BlockDepositsType(spec)},
 		{"voluntary_exits", phase0.BlockVoluntaryExitsType(spec)},
 		{"sync_aggregate", SyncAggregateType(spec)},
+		{"bail_outs", BlockBailOutsType(spec)},
 	})
 }

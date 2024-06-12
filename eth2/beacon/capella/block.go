@@ -124,6 +124,7 @@ type BeaconBlockBody struct {
 	VoluntaryExits    phase0.VoluntaryExits    `json:"voluntary_exits" yaml:"voluntary_exits"`
 
 	SyncAggregate altair.SyncAggregate `json:"sync_aggregate" yaml:"sync_aggregate"`
+	BailOuts      altair.BailOuts      `json:"bail_outs" yaml:"bail_outs"`
 
 	ExecutionPayload ExecutionPayload `json:"execution_payload" yaml:"execution_payload"`
 
@@ -136,7 +137,7 @@ func (b *BeaconBlockBody) Deserialize(spec *common.Spec, dr *codec.DecodingReade
 		&b.Graffiti, spec.Wrap(&b.ProposerSlashings),
 		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
-		spec.Wrap(&b.SyncAggregate), spec.Wrap(&b.ExecutionPayload),
+		spec.Wrap(&b.SyncAggregate), spec.Wrap(&b.BailOuts), spec.Wrap(&b.ExecutionPayload),
 		spec.Wrap(&b.BLSToExecutionChanges),
 	)
 }
@@ -147,7 +148,7 @@ func (b *BeaconBlockBody) Serialize(spec *common.Spec, w *codec.EncodingWriter) 
 		&b.Graffiti, spec.Wrap(&b.ProposerSlashings),
 		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
-		spec.Wrap(&b.SyncAggregate), spec.Wrap(&b.ExecutionPayload),
+		spec.Wrap(&b.SyncAggregate), spec.Wrap(&b.BailOuts), spec.Wrap(&b.ExecutionPayload),
 		spec.Wrap(&b.BLSToExecutionChanges),
 	)
 }
@@ -158,7 +159,7 @@ func (b *BeaconBlockBody) ByteLength(spec *common.Spec) uint64 {
 		&b.Graffiti, spec.Wrap(&b.ProposerSlashings),
 		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
-		spec.Wrap(&b.SyncAggregate), spec.Wrap(&b.ExecutionPayload),
+		spec.Wrap(&b.SyncAggregate), spec.Wrap(&b.BailOuts), spec.Wrap(&b.ExecutionPayload),
 		spec.Wrap(&b.BLSToExecutionChanges),
 	)
 }
@@ -173,7 +174,7 @@ func (b *BeaconBlockBody) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) commo
 		b.Graffiti, spec.Wrap(&b.ProposerSlashings),
 		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
-		spec.Wrap(&b.SyncAggregate), spec.Wrap(&b.ExecutionPayload),
+		spec.Wrap(&b.SyncAggregate), spec.Wrap(&b.BailOuts), spec.Wrap(&b.ExecutionPayload),
 		spec.Wrap(&b.BLSToExecutionChanges),
 	)
 }
@@ -193,6 +194,9 @@ func (b *BeaconBlockBody) CheckLimits(spec *common.Spec) error {
 	}
 	if x := uint64(len(b.VoluntaryExits)); x > uint64(spec.MAX_VOLUNTARY_EXITS) {
 		return fmt.Errorf("too many voluntary exits: %d", x)
+	}
+	if x := uint64(len(b.BailOuts)); x > uint64(spec.MAX_VOLUNTARY_EXITS) {
+		return fmt.Errorf("too many bali outs: %d", x)
 	}
 	// TODO: also check sum of byte size, sanity check block size.
 	if x := uint64(len(b.ExecutionPayload.Transactions)); x > uint64(spec.MAX_TRANSACTIONS_PER_PAYLOAD) {
@@ -215,6 +219,7 @@ func (b *BeaconBlockBody) Shallow(spec *common.Spec) *BeaconBlockBodyShallow {
 		Deposits:              b.Deposits,
 		VoluntaryExits:        b.VoluntaryExits,
 		SyncAggregate:         b.SyncAggregate,
+		BailOuts:              b.BailOuts,
 		ExecutionPayloadRoot:  b.ExecutionPayload.HashTreeRoot(spec, tree.GetHashFn()),
 		BLSToExecutionChanges: b.BLSToExecutionChanges,
 	}
@@ -232,6 +237,7 @@ func BeaconBlockBodyType(spec *common.Spec) *ContainerTypeDef {
 		{"deposits", phase0.BlockDepositsType(spec)},
 		{"voluntary_exits", phase0.BlockVoluntaryExitsType(spec)},
 		{"sync_aggregate", altair.SyncAggregateType(spec)},
+		{"bail_outs", altair.BlockBailOutsType(spec)},
 		// Capella
 		{"execution_payload", ExecutionPayloadType(spec)},
 		{"bls_to_execution_changes", common.BlockSignedBLSToExecutionChangesType(spec)},
@@ -250,6 +256,7 @@ type BeaconBlockBodyShallow struct {
 	VoluntaryExits    phase0.VoluntaryExits    `json:"voluntary_exits" yaml:"voluntary_exits"`
 
 	SyncAggregate altair.SyncAggregate `json:"sync_aggregate" yaml:"sync_aggregate"`
+	BailOuts      altair.BailOuts      `json:"bail_outs" yaml:"bail_outs"`
 
 	ExecutionPayloadRoot common.Root `json:"execution_payload_root" yaml:"execution_payload_root"`
 
@@ -262,7 +269,7 @@ func (b *BeaconBlockBodyShallow) Deserialize(spec *common.Spec, dr *codec.Decodi
 		&b.Graffiti, spec.Wrap(&b.ProposerSlashings),
 		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
-		spec.Wrap(&b.SyncAggregate), &b.ExecutionPayloadRoot,
+		spec.Wrap(&b.SyncAggregate), spec.Wrap(&b.BailOuts), &b.ExecutionPayloadRoot,
 		spec.Wrap(&b.BLSToExecutionChanges),
 	)
 }
@@ -273,7 +280,7 @@ func (b *BeaconBlockBodyShallow) Serialize(spec *common.Spec, w *codec.EncodingW
 		&b.Graffiti, spec.Wrap(&b.ProposerSlashings),
 		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
-		spec.Wrap(&b.SyncAggregate), &b.ExecutionPayloadRoot,
+		spec.Wrap(&b.SyncAggregate), spec.Wrap(&b.BailOuts), &b.ExecutionPayloadRoot,
 		spec.Wrap(&b.BLSToExecutionChanges),
 	)
 }
@@ -284,7 +291,7 @@ func (b *BeaconBlockBodyShallow) ByteLength(spec *common.Spec) uint64 {
 		&b.Graffiti, spec.Wrap(&b.ProposerSlashings),
 		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
-		spec.Wrap(&b.SyncAggregate), &b.ExecutionPayloadRoot,
+		spec.Wrap(&b.SyncAggregate), spec.Wrap(&b.BailOuts), &b.ExecutionPayloadRoot,
 		spec.Wrap(&b.BLSToExecutionChanges),
 	)
 }
@@ -299,7 +306,7 @@ func (b *BeaconBlockBodyShallow) HashTreeRoot(spec *common.Spec, hFn tree.HashFn
 		b.Graffiti, spec.Wrap(&b.ProposerSlashings),
 		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
-		spec.Wrap(&b.SyncAggregate), &b.ExecutionPayloadRoot,
+		spec.Wrap(&b.SyncAggregate), spec.Wrap(&b.BailOuts), &b.ExecutionPayloadRoot,
 		spec.Wrap(&b.BLSToExecutionChanges),
 	)
 }
@@ -319,6 +326,7 @@ func (b *BeaconBlockBodyShallow) WithExecutionPayload(spec *common.Spec, payload
 		Deposits:              b.Deposits,
 		VoluntaryExits:        b.VoluntaryExits,
 		SyncAggregate:         b.SyncAggregate,
+		BailOuts:              b.BailOuts,
 		ExecutionPayload:      payload,
 		BLSToExecutionChanges: b.BLSToExecutionChanges,
 	}, nil

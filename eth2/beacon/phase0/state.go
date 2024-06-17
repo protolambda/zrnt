@@ -20,7 +20,7 @@ type BeaconState struct {
 	BlockRoots             HistoricalBatchRoots     `json:"block_roots" yaml:"block_roots"`
 	StateRoots             HistoricalBatchRoots     `json:"state_roots" yaml:"state_roots"`
 	HistoricalRoots        HistoricalRoots          `json:"historical_roots" yaml:"historical_roots"`
-	RewardAdjustmentFactor common.Timestamp         `json:"reward_adjustment_factor" yaml:"reward_adjustment_factor"`
+	RewardAdjustmentFactor common.Number            `json:"reward_adjustment_factor" yaml:"reward_adjustment_factor"`
 	// Eth1
 	Eth1Data         common.Eth1Data     `json:"eth1_data" yaml:"eth1_data"`
 	Eth1DataVotes    Eth1DataVotes       `json:"eth1_data_votes" yaml:"eth1_data_votes"`
@@ -28,10 +28,10 @@ type BeaconState struct {
 	// Registry
 	Validators           ValidatorRegistry `json:"validators" yaml:"validators"`
 	Balances             Balances          `json:"balances" yaml:"balances"`
+	PreviousEpochReserve common.Number     `json:"previous_epoch_reserve" yaml:"previous_epoch_reserve"`
+	CurrentEpochReserve  common.Number     `json:"current_epoch_reserve" yaml:"current_epoch_reserve"`
 	RandaoMixes          RandaoMixes       `json:"randao_mixes" yaml:"randao_mixes"`
 	Slashings            SlashingsHistory  `json:"slashings" yaml:"slashings"`
-	PreviousEpochReserve common.Timestamp  `json:"previous_epoch_reserve" yaml:"previous_epoch_reserve"`
-	CurrentEpochReserve  common.Timestamp  `json:"current_epoch_reserve" yaml:"current_epoch_reserve"`
 	// Attestations
 	PreviousEpochAttestations PendingAttestations `json:"previous_epoch_attestations" yaml:"previous_epoch_attestations"`
 	CurrentEpochAttestations  PendingAttestations `json:"current_epoch_attestations" yaml:"current_epoch_attestations"`
@@ -244,11 +244,11 @@ func (state *BeaconStateView) HistoricalRoots() (common.HistoricalRoots, error) 
 	return AsHistoricalRoots(state.Get(_stateHistoricalRoots))
 }
 
-func (state *BeaconStateView) RewardAdjustmentFactor() (common.Timestamp, error) {
-	return common.AsTimestamp(state.Get(_stateRewardAdjustmentFactor))
+func (state *BeaconStateView) RewardAdjustmentFactor() (common.Number, error) {
+	return common.AsNumber(state.Get(_stateRewardAdjustmentFactor))
 }
 
-func (state *BeaconStateView) SetRewardAdjustmentFactor(v common.Timestamp) error {
+func (state *BeaconStateView) SetRewardAdjustmentFactor(v common.Number) error {
 	return state.Set(_stateRewardAdjustmentFactor, Uint64View(v))
 }
 
@@ -297,19 +297,19 @@ func (state *BeaconStateView) SetBalances(balances []common.Gwei) error {
 	return state.Set(_stateBalances, balancesView)
 }
 
-func (state *BeaconStateView) PreviousEpochReserve() (common.Timestamp, error) {
-	return common.AsTimestamp(state.Get(_statePreviousEpochReserve))
+func (state *BeaconStateView) PreviousEpochReserve() (common.Number, error) {
+	return common.AsNumber(state.Get(_statePreviousEpochReserve))
 }
 
-func (state *BeaconStateView) SetPreviousEpochReserve(v common.Timestamp) error {
+func (state *BeaconStateView) SetPreviousEpochReserve(v common.Number) error {
 	return state.Set(_statePreviousEpochReserve, Uint64View(v))
 }
 
-func (state *BeaconStateView) CurrentEpochReserve() (common.Timestamp, error) {
-	return common.AsTimestamp(state.Get(_stateCurrentEpochReserve))
+func (state *BeaconStateView) CurrentEpochReserve() (common.Number, error) {
+	return common.AsNumber(state.Get(_stateCurrentEpochReserve))
 }
 
-func (state *BeaconStateView) SetCurrentEpochReserve(v common.Timestamp) error {
+func (state *BeaconStateView) SetCurrentEpochReserve(v common.Number) error {
 	return state.Set(_stateCurrentEpochReserve, Uint64View(v))
 }
 

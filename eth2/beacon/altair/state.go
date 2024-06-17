@@ -25,19 +25,22 @@ type BeaconState struct {
 	Slot                  common.Slot      `json:"slot" yaml:"slot"`
 	Fork                  common.Fork      `json:"fork" yaml:"fork"`
 	// History
-	LatestBlockHeader common.BeaconBlockHeader    `json:"latest_block_header" yaml:"latest_block_header"`
-	BlockRoots        phase0.HistoricalBatchRoots `json:"block_roots" yaml:"block_roots"`
-	StateRoots        phase0.HistoricalBatchRoots `json:"state_roots" yaml:"state_roots"`
-	HistoricalRoots   phase0.HistoricalRoots      `json:"historical_roots" yaml:"historical_roots"`
+	LatestBlockHeader      common.BeaconBlockHeader    `json:"latest_block_header" yaml:"latest_block_header"`
+	BlockRoots             phase0.HistoricalBatchRoots `json:"block_roots" yaml:"block_roots"`
+	StateRoots             phase0.HistoricalBatchRoots `json:"state_roots" yaml:"state_roots"`
+	HistoricalRoots        phase0.HistoricalRoots      `json:"historical_roots" yaml:"historical_roots"`
+	RewardAdjustmentFactor common.Number               `json:"reward_adjustment_factor" yaml:"reward_adjustment_factor"`
 	// Eth1
 	Eth1Data         common.Eth1Data      `json:"eth1_data" yaml:"eth1_data"`
 	Eth1DataVotes    phase0.Eth1DataVotes `json:"eth1_data_votes" yaml:"eth1_data_votes"`
 	Eth1DepositIndex common.DepositIndex  `json:"eth1_deposit_index" yaml:"eth1_deposit_index"`
 	// Registry
-	Validators  phase0.ValidatorRegistry `json:"validators" yaml:"validators"`
-	Balances    phase0.Balances          `json:"balances" yaml:"balances"`
-	RandaoMixes phase0.RandaoMixes       `json:"randao_mixes" yaml:"randao_mixes"`
-	Slashings   phase0.SlashingsHistory  `json:"slashings" yaml:"slashings"`
+	Validators           phase0.ValidatorRegistry `json:"validators" yaml:"validators"`
+	Balances             phase0.Balances          `json:"balances" yaml:"balances"`
+	PreviousEpochReserve common.Number            `json:"previous_epoch_reserve" yaml:"previous_epoch_reserve"`
+	CurrentEpochReserve  common.Number            `json:"current_epoch_reserve" yaml:"current_epoch_reserve"`
+	RandaoMixes          phase0.RandaoMixes       `json:"randao_mixes" yaml:"randao_mixes"`
+	Slashings            phase0.SlashingsHistory  `json:"slashings" yaml:"slashings"`
 	// Participation
 	PreviousEpochParticipation ParticipationRegistry `json:"previous_epoch_participation" yaml:"previous_epoch_participation"`
 	CurrentEpochParticipation  ParticipationRegistry `json:"current_epoch_participation" yaml:"current_epoch_participation"`
@@ -58,9 +61,9 @@ type BeaconState struct {
 func (v *BeaconState) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
 	return dr.Container(&v.GenesisTime, &v.GenesisValidatorsRoot,
 		&v.Slot, &v.Fork, &v.LatestBlockHeader,
-		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), spec.Wrap(&v.HistoricalRoots),
+		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), spec.Wrap(&v.HistoricalRoots), &v.RewardAdjustmentFactor,
 		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.Eth1DepositIndex,
-		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances),
+		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances), &v.PreviousEpochReserve, &v.CurrentEpochReserve,
 		spec.Wrap(&v.RandaoMixes), spec.Wrap(&v.Slashings),
 		spec.Wrap(&v.PreviousEpochParticipation), spec.Wrap(&v.CurrentEpochParticipation),
 		&v.JustificationBits,
@@ -75,9 +78,9 @@ func (v *BeaconState) Deserialize(spec *common.Spec, dr *codec.DecodingReader) e
 func (v *BeaconState) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
 	return w.Container(&v.GenesisTime, &v.GenesisValidatorsRoot,
 		&v.Slot, &v.Fork, &v.LatestBlockHeader,
-		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), spec.Wrap(&v.HistoricalRoots),
+		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), spec.Wrap(&v.HistoricalRoots), &v.RewardAdjustmentFactor,
 		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.Eth1DepositIndex,
-		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances),
+		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances), &v.PreviousEpochReserve, &v.CurrentEpochReserve,
 		spec.Wrap(&v.RandaoMixes), spec.Wrap(&v.Slashings),
 		spec.Wrap(&v.PreviousEpochParticipation), spec.Wrap(&v.CurrentEpochParticipation),
 		&v.JustificationBits,
@@ -92,9 +95,9 @@ func (v *BeaconState) Serialize(spec *common.Spec, w *codec.EncodingWriter) erro
 func (v *BeaconState) ByteLength(spec *common.Spec) uint64 {
 	return codec.ContainerLength(&v.GenesisTime, &v.GenesisValidatorsRoot,
 		&v.Slot, &v.Fork, &v.LatestBlockHeader,
-		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), spec.Wrap(&v.HistoricalRoots),
+		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), spec.Wrap(&v.HistoricalRoots), &v.RewardAdjustmentFactor,
 		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.Eth1DepositIndex,
-		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances),
+		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances), &v.PreviousEpochReserve, &v.CurrentEpochReserve,
 		spec.Wrap(&v.RandaoMixes), spec.Wrap(&v.Slashings),
 		spec.Wrap(&v.PreviousEpochParticipation), spec.Wrap(&v.CurrentEpochParticipation),
 		&v.JustificationBits,
@@ -113,9 +116,9 @@ func (*BeaconState) FixedLength(*common.Spec) uint64 {
 func (v *BeaconState) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
 	return hFn.HashTreeRoot(&v.GenesisTime, &v.GenesisValidatorsRoot,
 		&v.Slot, &v.Fork, &v.LatestBlockHeader,
-		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), spec.Wrap(&v.HistoricalRoots),
+		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), spec.Wrap(&v.HistoricalRoots), &v.RewardAdjustmentFactor,
 		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.Eth1DepositIndex,
-		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances),
+		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances), &v.PreviousEpochReserve, &v.CurrentEpochReserve,
 		spec.Wrap(&v.RandaoMixes), spec.Wrap(&v.Slashings),
 		spec.Wrap(&v.PreviousEpochParticipation), spec.Wrap(&v.CurrentEpochParticipation),
 		&v.JustificationBits,
@@ -172,7 +175,6 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 		{"block_roots", phase0.BatchRootsType(spec)},
 		{"state_roots", phase0.BatchRootsType(spec)},
 		{"historical_roots", phase0.HistoricalRootsType(spec)},
-		{"reward_adjustment_factor", Uint64Type},
 		// Tokenomics
 		{"reward_adjustment_factor", Uint64Type},
 		// Eth1
@@ -182,8 +184,6 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 		// Registry
 		{"validators", phase0.ValidatorsRegistryType(spec)},
 		{"balances", phase0.RegistryBalancesType(spec)},
-		{"previous_epoch_reserve", Uint64Type},
-		{"current_epoch_reserve", Uint64Type},
 		{"previous_epoch_reserve", Uint64Type},
 		{"current_epoch_reserve", Uint64Type},
 		// Randomness
@@ -287,11 +287,11 @@ func (state *BeaconStateView) HistoricalRoots() (common.HistoricalRoots, error) 
 	return phase0.AsHistoricalRoots(state.Get(_stateHistoricalRoots))
 }
 
-func (state *BeaconStateView) RewardAdjustmentFactor() (common.Timestamp, error) {
-	return common.AsTimestamp(state.Get(_stateRewardAdjustmentFactor))
+func (state *BeaconStateView) RewardAdjustmentFactor() (common.Number, error) {
+	return common.AsNumber(state.Get(_stateRewardAdjustmentFactor))
 }
 
-func (state *BeaconStateView) SetRewardAdjustmentFactor(v common.Timestamp) error {
+func (state *BeaconStateView) SetRewardAdjustmentFactor(v common.Number) error {
 	return state.Set(_stateRewardAdjustmentFactor, Uint64View(v))
 }
 
@@ -340,19 +340,19 @@ func (state *BeaconStateView) SetBalances(balances []common.Gwei) error {
 	return state.Set(_stateBalances, balancesView)
 }
 
-func (state *BeaconStateView) PreviousEpochReserve() (common.Timestamp, error) {
-	return common.AsTimestamp(state.Get(_statePreviousEpochReserve))
+func (state *BeaconStateView) PreviousEpochReserve() (common.Number, error) {
+	return common.AsNumber(state.Get(_statePreviousEpochReserve))
 }
 
-func (state *BeaconStateView) SetPreviousEpochReserve(v common.Timestamp) error {
+func (state *BeaconStateView) SetPreviousEpochReserve(v common.Number) error {
 	return state.Set(_statePreviousEpochReserve, Uint64View(v))
 }
 
-func (state *BeaconStateView) CurrentEpochReserve() (common.Timestamp, error) {
-	return common.AsTimestamp(state.Get(_stateCurrentEpochReserve))
+func (state *BeaconStateView) CurrentEpochReserve() (common.Number, error) {
+	return common.AsNumber(state.Get(_stateCurrentEpochReserve))
 }
 
-func (state *BeaconStateView) SetCurrentEpochReserve(v common.Timestamp) error {
+func (state *BeaconStateView) SetCurrentEpochReserve(v common.Number) error {
 	return state.Set(_stateCurrentEpochReserve, Uint64View(v))
 }
 

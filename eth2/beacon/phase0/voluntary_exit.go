@@ -2,6 +2,7 @@ package phase0
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -48,6 +49,13 @@ func (li VoluntaryExits) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common
 		}
 		return nil
 	}, length, uint64(spec.MAX_VOLUNTARY_EXITS))
+}
+
+func (li VoluntaryExits) MarshalJSON() ([]byte, error) {
+	if li == nil {
+		return json.Marshal([]SignedVoluntaryExit{}) // encode as empty list, not null
+	}
+	return json.Marshal([]SignedVoluntaryExit(li))
 }
 
 func ProcessVoluntaryExits(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, ops []SignedVoluntaryExit) error {

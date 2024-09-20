@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/protolambda/zrnt/eth2/execution"
 	"io/ioutil"
 	"testing"
 
@@ -235,7 +236,7 @@ func RunTransitionTest(t *testing.T, forks []ForkName, runnerName string, handle
 	})
 	t.Run("minimal", func(t *testing.T) {
 		spec := *configs.Minimal
-		spec.ExecutionEngine = &NoOpExecutionEngine{}
+		spec.ExecutionEngine = &execution.NoOpExecutionEngine{}
 		for _, fork := range forks {
 			t.Run(string(fork), func(t *testing.T) {
 				RunHandler(t, runnerName+"/"+handlerName, caseRunner, &spec, fork)
@@ -244,7 +245,7 @@ func RunTransitionTest(t *testing.T, forks []ForkName, runnerName string, handle
 	})
 	t.Run("mainnet", func(t *testing.T) {
 		spec := *configs.Mainnet
-		spec.ExecutionEngine = &NoOpExecutionEngine{}
+		spec.ExecutionEngine = &execution.NoOpExecutionEngine{}
 		for _, fork := range forks {
 			t.Run(string(fork), func(t *testing.T) {
 				RunHandler(t, runnerName+"/"+handlerName, caseRunner, &spec, fork)
@@ -252,11 +253,3 @@ func RunTransitionTest(t *testing.T, forks []ForkName, runnerName string, handle
 		}
 	})
 }
-
-type NoOpExecutionEngine struct{}
-
-func (m *NoOpExecutionEngine) ExecutePayload(ctx context.Context, executionPayload interface{}) (valid bool, err error) {
-	return true, nil
-}
-
-var _ common.ExecutionEngine = (*NoOpExecutionEngine)(nil)

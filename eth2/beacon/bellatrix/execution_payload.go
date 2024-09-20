@@ -8,7 +8,7 @@ import (
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 )
 
-func ProcessExecutionPayload(ctx context.Context, spec *common.Spec, state ExecutionTrackingBeaconState, executionPayload *ExecutionPayload, engine common.ExecutionEngine) error {
+func ProcessExecutionPayload(ctx context.Context, spec *common.Spec, state ExecutionTrackingBeaconState, executionPayload *ExecutionPayload, engine ExecutionEngine) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -69,7 +69,7 @@ func ProcessExecutionPayload(ctx context.Context, spec *common.Spec, state Execu
 			slot, genesisTime, expectedTime, executionPayload.Timestamp)
 	}
 
-	if valid, err := engine.ExecutePayload(ctx, executionPayload); err != nil {
+	if valid, err := VerifyAndNotifyNewPayload(ctx, engine, &NewPayloadRequest{ExecutionPayload: executionPayload}); err != nil {
 		return fmt.Errorf("unexpected problem in execution engine when inserting block %s (height %d), err: %v",
 			executionPayload.BlockHash, executionPayload.BlockNumber, err)
 	} else if !valid {

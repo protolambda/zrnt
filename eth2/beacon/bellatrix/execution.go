@@ -1,6 +1,7 @@
 package bellatrix
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/protolambda/ztyp/codec"
@@ -313,4 +314,25 @@ func (ep *ExecutionPayload) Header(spec *common.Spec) *ExecutionPayloadHeader {
 		BlockHash:        ep.BlockHash,
 		TransactionsRoot: ep.Transactions.HashTreeRoot(spec, tree.GetHashFn()),
 	}
+}
+
+type NewPayloadRequest struct {
+	ExecutionPayload *ExecutionPayload
+}
+
+type ExecutionEngine interface {
+	BellatrixNotifyNewPayload(ctx context.Context, executionPayload *ExecutionPayload) (valid bool, err error)
+	BellatrixIsValidBlockHash(ctx context.Context, payload *ExecutionPayload) (bool, error)
+}
+
+func VerifyAndNotifyNewPayload(ctx context.Context, eng ExecutionEngine, newPayloadRequest *NewPayloadRequest) (bool, error) {
+	executionPayload := newPayloadRequest.ExecutionPayload
+
+	if ok, err := eng.BellatrixIsValidBlockHash(ctx, executionPayload); err != nil {
+		return false, fmt.Errorf("failed to check block hash: %w", err)
+	} else if !ok {
+		return false, nil
+	}
+
+	return eng.BellatrixNotifyNewPayload(ctx, executionPayload)
 }

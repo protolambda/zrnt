@@ -158,6 +158,7 @@ func (c *SpecOptions) Spec() (*common.Spec, error) {
 			return nil, fmt.Errorf("failed to decode deneb preset: %v", err)
 		}
 	}
+	spec.ExecutionEngine = nil
 	return &spec, nil
 }
 

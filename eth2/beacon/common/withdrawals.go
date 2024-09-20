@@ -2,6 +2,7 @@ package common
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -204,6 +205,13 @@ func (ws Withdrawals) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
 	}, length, uint64(spec.MAX_WITHDRAWALS_PER_PAYLOAD))
 }
 
+func (ws Withdrawals) MarshalJSON() ([]byte, error) {
+	if ws == nil {
+		return json.Marshal([]Withdrawal{}) // encode as empty list, not null
+	}
+	return json.Marshal([]Withdrawal(ws))
+}
+
 var BLSToExecutionChangeType = ContainerType("BLSToExecutionChange", []FieldDef{
 	{"validator_index", ValidatorIndexType},
 	{"from_bls_pubkey", BLSPubkeyType},
@@ -401,4 +409,11 @@ func (li SignedBLSToExecutionChanges) HashTreeRoot(spec *Spec, hFn tree.HashFn) 
 		}
 		return nil
 	}, length, uint64(spec.MAX_BLS_TO_EXECUTION_CHANGES))
+}
+
+func (li SignedBLSToExecutionChanges) MarshalJSON() ([]byte, error) {
+	if li == nil {
+		return json.Marshal([]SignedBLSToExecutionChange{}) // encode as empty list, not null
+	}
+	return json.Marshal([]SignedBLSToExecutionChange(li))
 }

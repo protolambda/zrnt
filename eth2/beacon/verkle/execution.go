@@ -68,6 +68,7 @@ var VerkleProofType = ContainerType("VerkleProof", VerkleProofFields)
 var ExecutionWitnessFields = []FieldDef{
 	{"state_diff", ListType(StemStateDiffType, MAX_STEMS)},
 	{"verkle_proof", VerkleProofType},
+	{"parent_state_root", common.Bytes32Type},
 }
 
 var ExecutionWitnessType = ContainerType("ExecutionWitness", ExecutionWitnessFields)

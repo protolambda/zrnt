@@ -465,10 +465,11 @@ func (vp *VerkleProof) HashTreeRoot(h tree.HashFn) tree.Root {
 type ExecutionWitness struct {
 	StateDiff   StateDiff
 	VerkleProof VerkleProof
+	ParentStateRoot common.Bytes32
 }
 
 func (ew *ExecutionWitness) Deserialize(dr *codec.DecodingReader) error {
-	return dr.Container(&ew.StateDiff, &ew.VerkleProof)
+	return dr.Container(&ew.StateDiff, &ew.VerkleProof, &ew.ParentStateRoot)
 }
 
 func (ew *ExecutionWitness) FixedLength() uint64 {
@@ -476,13 +477,13 @@ func (ew *ExecutionWitness) FixedLength() uint64 {
 }
 
 func (ew *ExecutionWitness) Serialize(w *codec.EncodingWriter) error {
-	return w.Container(&ew.StateDiff, &ew.VerkleProof)
+	return w.Container(&ew.StateDiff, &ew.VerkleProof, &ew.ParentStateRoot)
 }
 
 func (ew *ExecutionWitness) ByteLength() uint64 {
-	return ew.StateDiff.ByteLength() + ew.VerkleProof.ByteLength()
+	return ew.StateDiff.ByteLength() + ew.VerkleProof.ByteLength() + ew.ParentStateRoot.ByteLength()
 }
 
 func (ew *ExecutionWitness) HashTreeRoot(fn tree.HashFn) common.Root {
-	return fn.HashTreeRoot(&ew.StateDiff, &ew.VerkleProof)
+	return fn.HashTreeRoot(&ew.StateDiff, &ew.VerkleProof, &ew.ParentStateRoot)
 }

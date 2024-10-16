@@ -15,7 +15,6 @@ type AltairLikeBeaconState interface {
 	InactivityScores() (*InactivityScoresView, error)
 	CurrentEpochParticipation() (*ParticipationRegistryView, error)
 	PreviousEpochParticipation() (*ParticipationRegistryView, error)
-	BailoutScores() (*BailoutScoresView, error)
 }
 
 type BeaconState struct {
@@ -54,8 +53,6 @@ type BeaconState struct {
 	// Light client sync committees
 	CurrentSyncCommittee common.SyncCommittee `json:"current_sync_committee" yaml:"current_sync_committee"`
 	NextSyncCommittee    common.SyncCommittee `json:"next_sync_committee" yaml:"next_sync_committee"`
-	// Bailout
-	BailoutScores BailoutScores `json:"bail_out_scores" yaml:"bail_out_scores"`
 }
 
 func (v *BeaconState) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
@@ -71,7 +68,6 @@ func (v *BeaconState) Deserialize(spec *common.Spec, dr *codec.DecodingReader) e
 		&v.FinalizedCheckpoint,
 		spec.Wrap(&v.InactivityScores),
 		spec.Wrap(&v.CurrentSyncCommittee), spec.Wrap(&v.NextSyncCommittee),
-		spec.Wrap(&v.BailoutScores),
 	)
 }
 
@@ -88,7 +84,6 @@ func (v *BeaconState) Serialize(spec *common.Spec, w *codec.EncodingWriter) erro
 		&v.FinalizedCheckpoint,
 		spec.Wrap(&v.InactivityScores),
 		spec.Wrap(&v.CurrentSyncCommittee), spec.Wrap(&v.NextSyncCommittee),
-		spec.Wrap(&v.BailoutScores),
 	)
 }
 
@@ -105,7 +100,6 @@ func (v *BeaconState) ByteLength(spec *common.Spec) uint64 {
 		&v.FinalizedCheckpoint,
 		spec.Wrap(&v.InactivityScores),
 		spec.Wrap(&v.CurrentSyncCommittee), spec.Wrap(&v.NextSyncCommittee),
-		spec.Wrap(&v.BailoutScores),
 	)
 }
 
@@ -126,7 +120,6 @@ func (v *BeaconState) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Ro
 		&v.FinalizedCheckpoint,
 		spec.Wrap(&v.InactivityScores),
 		spec.Wrap(&v.CurrentSyncCommittee), spec.Wrap(&v.NextSyncCommittee),
-		spec.Wrap(&v.BailoutScores),
 	)
 }
 
@@ -160,7 +153,6 @@ const (
 	_inactivityScores
 	_currentSyncCommittee
 	_nextSyncCommittee
-	_bailoutScores
 )
 
 func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
@@ -203,8 +195,6 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 		// Sync
 		{"current_sync_committee", common.SyncCommitteeType(spec)},
 		{"next_sync_committee", common.SyncCommitteeType(spec)},
-		// Bailout
-		{"bail_out_scores", BailoutScoresType(spec)},
 	})
 }
 
@@ -406,13 +396,6 @@ func (state *BeaconStateView) AddValidator(spec *common.Spec, pub common.BLSPubk
 	if err := inActivityScores.Append(Uint8View(0)); err != nil {
 		return err
 	}
-	BailoutScores, err := state.BailoutScores()
-	if err != nil {
-		return err
-	}
-	if err := BailoutScores.Append(Uint8View(0)); err != nil {
-		return err
-	}
 	// New in Altair: init inactivity score
 	return nil
 }
@@ -523,10 +506,6 @@ func (state *BeaconStateView) NextSyncCommittee() (*common.SyncCommitteeView, er
 
 func (state *BeaconStateView) SetNextSyncCommittee(v *common.SyncCommitteeView) error {
 	return state.Set(_nextSyncCommittee, v)
-}
-
-func (state *BeaconStateView) BailoutScores() (*BailoutScoresView, error) {
-	return AsBailoutScores(state.Get(_bailoutScores))
 }
 
 func (state *BeaconStateView) RotateSyncCommittee(next *common.SyncCommitteeView) error {

@@ -115,10 +115,8 @@ type BeaconState interface {
 
 	Balances() (BalancesRegistry, error)
 	SetBalances(balances []Gwei) error
-	PreviousEpochReserve() (Number, error)
-	SetPreviousEpochReserve(v Number) error
-	CurrentEpochReserve() (Number, error)
-	SetCurrentEpochReserve(v Number) error
+	Reserves() (Number, error)
+	SetReserves(v Number) error
 
 	AddValidator(spec *Spec, pub BLSPubkey, withdrawalCreds Root, balance Gwei) error
 

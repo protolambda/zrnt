@@ -26,12 +26,11 @@ type BeaconState struct {
 	Eth1DataVotes    Eth1DataVotes       `json:"eth1_data_votes" yaml:"eth1_data_votes"`
 	Eth1DepositIndex common.DepositIndex `json:"eth1_deposit_index" yaml:"eth1_deposit_index"`
 	// Registry
-	Validators           ValidatorRegistry `json:"validators" yaml:"validators"`
-	Balances             Balances          `json:"balances" yaml:"balances"`
-	PreviousEpochReserve common.Number     `json:"previous_epoch_reserve" yaml:"previous_epoch_reserve"`
-	CurrentEpochReserve  common.Number     `json:"current_epoch_reserve" yaml:"current_epoch_reserve"`
-	RandaoMixes          RandaoMixes       `json:"randao_mixes" yaml:"randao_mixes"`
-	Slashings            SlashingsHistory  `json:"slashings" yaml:"slashings"`
+	Validators  ValidatorRegistry `json:"validators" yaml:"validators"`
+	Balances    Balances          `json:"balances" yaml:"balances"`
+	Reserves    common.Number     `json:"reserves" yaml:"reserves"`
+	RandaoMixes RandaoMixes       `json:"randao_mixes" yaml:"randao_mixes"`
+	Slashings   SlashingsHistory  `json:"slashings" yaml:"slashings"`
 	// Attestations
 	PreviousEpochAttestations PendingAttestations `json:"previous_epoch_attestations" yaml:"previous_epoch_attestations"`
 	CurrentEpochAttestations  PendingAttestations `json:"current_epoch_attestations" yaml:"current_epoch_attestations"`
@@ -47,7 +46,7 @@ func (v *BeaconState) Deserialize(spec *common.Spec, dr *codec.DecodingReader) e
 		&v.Slot, &v.Fork, &v.LatestBlockHeader,
 		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), spec.Wrap(&v.HistoricalRoots), &v.RewardAdjustmentFactor,
 		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.Eth1DepositIndex,
-		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances), &v.PreviousEpochReserve, &v.CurrentEpochReserve,
+		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances), &v.Reserves,
 		spec.Wrap(&v.RandaoMixes), spec.Wrap(&v.Slashings),
 		spec.Wrap(&v.PreviousEpochAttestations), spec.Wrap(&v.CurrentEpochAttestations),
 		&v.JustificationBits,
@@ -60,7 +59,7 @@ func (v *BeaconState) Serialize(spec *common.Spec, w *codec.EncodingWriter) erro
 		&v.Slot, &v.Fork, &v.LatestBlockHeader,
 		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), spec.Wrap(&v.HistoricalRoots), &v.RewardAdjustmentFactor,
 		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.Eth1DepositIndex,
-		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances), &v.PreviousEpochReserve, &v.CurrentEpochReserve,
+		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances), &v.Reserves,
 		spec.Wrap(&v.RandaoMixes), spec.Wrap(&v.Slashings),
 		spec.Wrap(&v.PreviousEpochAttestations), spec.Wrap(&v.CurrentEpochAttestations),
 		&v.JustificationBits,
@@ -73,7 +72,7 @@ func (v *BeaconState) ByteLength(spec *common.Spec) uint64 {
 		&v.Slot, &v.Fork, &v.LatestBlockHeader,
 		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), spec.Wrap(&v.HistoricalRoots), &v.RewardAdjustmentFactor,
 		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.Eth1DepositIndex,
-		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances), &v.PreviousEpochReserve, &v.CurrentEpochReserve,
+		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances), &v.Reserves,
 		spec.Wrap(&v.RandaoMixes), spec.Wrap(&v.Slashings),
 		spec.Wrap(&v.PreviousEpochAttestations), spec.Wrap(&v.CurrentEpochAttestations),
 		&v.JustificationBits,
@@ -90,7 +89,7 @@ func (v *BeaconState) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Ro
 		&v.Slot, &v.Fork, &v.LatestBlockHeader,
 		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), spec.Wrap(&v.HistoricalRoots), &v.RewardAdjustmentFactor,
 		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.Eth1DepositIndex,
-		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances), &v.PreviousEpochReserve, &v.CurrentEpochReserve,
+		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances), &v.Reserves,
 		spec.Wrap(&v.RandaoMixes), spec.Wrap(&v.Slashings),
 		spec.Wrap(&v.PreviousEpochAttestations), spec.Wrap(&v.CurrentEpochAttestations),
 		&v.JustificationBits,
@@ -115,8 +114,7 @@ const (
 	_stateEth1DepositIndex
 	_stateValidators
 	_stateBalances
-	_statePreviousEpochReserve
-	_stateCurrentEpochReserve
+	_stateReserves
 	_stateRandaoMixes
 	_stateSlashings
 	_statePreviousEpochAttestations
@@ -148,8 +146,7 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 		// Registry
 		{"validators", ValidatorsRegistryType(spec)},
 		{"balances", RegistryBalancesType(spec)},
-		{"previous_epoch_reserve", Uint64Type},
-		{"current_epoch_reserve", Uint64Type},
+		{"reserves", Uint64Type},
 		// Randomness
 		{"randao_mixes", RandaoMixesType(spec)},
 		// Slashings
@@ -297,20 +294,12 @@ func (state *BeaconStateView) SetBalances(balances []common.Gwei) error {
 	return state.Set(_stateBalances, balancesView)
 }
 
-func (state *BeaconStateView) PreviousEpochReserve() (common.Number, error) {
-	return common.AsNumber(state.Get(_statePreviousEpochReserve))
+func (state *BeaconStateView) Reserves() (common.Number, error) {
+	return common.AsNumber(state.Get(_stateReserves))
 }
 
-func (state *BeaconStateView) SetPreviousEpochReserve(v common.Number) error {
-	return state.Set(_statePreviousEpochReserve, Uint64View(v))
-}
-
-func (state *BeaconStateView) CurrentEpochReserve() (common.Number, error) {
-	return common.AsNumber(state.Get(_stateCurrentEpochReserve))
-}
-
-func (state *BeaconStateView) SetCurrentEpochReserve(v common.Number) error {
-	return state.Set(_stateCurrentEpochReserve, Uint64View(v))
+func (state *BeaconStateView) SetReserves(v common.Number) error {
+	return state.Set(_stateReserves, Uint64View(v))
 }
 
 func (state *BeaconStateView) AddValidator(spec *common.Spec, pub common.BLSPubkey, withdrawalCreds common.Root, balance common.Gwei) error {

@@ -68,19 +68,11 @@ type RandaoMixes interface {
 	SetRandomMix(epoch Epoch, mix Root) error
 }
 
-type Slashings interface {
-	GetSlashingsValue(epoch Epoch) (Gwei, error)
-	ResetSlashings(epoch Epoch) error
-	AddSlashing(epoch Epoch, add Gwei) error
-	Total() (sum Gwei, err error)
-}
-
 // ForkSettings are values that changed throughout forks, without change in surrounding logic.
 // To select the right settings based on configuration, ForkSettings(spec) is called on
 // the fork-specific implementation of the BeaconState interface.
 type ForkSettings struct {
 	MinSlashingPenaltyQuotient     uint64
-	ProportionalSlashingMultiplier uint64
 	InactivityPenaltyQuotient      uint64
 	CalcProposerShare              func(whistleblowerReward Gwei) Gwei
 }
@@ -122,8 +114,6 @@ type BeaconState interface {
 
 	RandaoMixes() (RandaoMixes, error)
 	SeedRandao(spec *Spec, seed Root) error
-
-	Slashings() (Slashings, error)
 
 	JustificationBits() (JustificationBits, error)
 	SetJustificationBits(bits JustificationBits) error

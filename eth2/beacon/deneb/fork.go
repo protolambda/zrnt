@@ -71,10 +71,6 @@ func UpgradeToDeneb(spec *common.Spec, epc *common.EpochsContext, pre *capella.B
 	if err != nil {
 		return nil, err
 	}
-	slashings, err := pre.Slashings()
-	if err != nil {
-		return nil, err
-	}
 	previousEpochParticipation, err := pre.PreviousEpochParticipation()
 	if err != nil {
 		return nil, err
@@ -166,7 +162,6 @@ func UpgradeToDeneb(spec *common.Spec, epc *common.EpochsContext, pre *capella.B
 		validators.(view.View),
 		balances.(view.View),
 		randaoMixes.(view.View),
-		slashings.(view.View),
 		previousEpochParticipation,
 		currentEpochParticipation,
 		justBits.View(),

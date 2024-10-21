@@ -66,17 +66,6 @@ func ProcessEth1DataReset(ctx context.Context, spec *common.Spec, epc *common.Ep
 	return nil
 }
 
-func ProcessSlashingsReset(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state common.BeaconState) error {
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-	slashings, err := state.Slashings()
-	if err != nil {
-		return err
-	}
-	return slashings.ResetSlashings(epc.NextEpoch.Epoch)
-}
-
 func ProcessRandaoMixesReset(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state common.BeaconState) error {
 	if err := ctx.Err(); err != nil {
 		return err

@@ -3,8 +3,9 @@ package epoch_processing
 import (
 	"context"
 	"fmt"
-	"github.com/protolambda/zrnt/eth2/beacon/deneb"
 	"testing"
+
+	"github.com/protolambda/zrnt/eth2/beacon/deneb"
 
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
 	"github.com/protolambda/zrnt/eth2/beacon/capella"
@@ -166,20 +167,6 @@ func TestRewardsPenalties(t *testing.T) {
 			} else {
 				return fmt.Errorf("unrecognized state type: %T", state)
 			}
-		}))
-}
-
-func TestSlashings(t *testing.T) {
-	test_util.RunTransitionTest(t, test_util.AllForks, "epoch_processing", "slashings",
-		NewEpochTest(func(spec *common.Spec, fork test_util.ForkName, state common.BeaconState, epc *common.EpochsContext, flats []common.FlatValidator) error {
-			return phase0.ProcessEpochSlashings(context.Background(), spec, epc, flats, state)
-		}))
-}
-
-func TestSlashingsReset(t *testing.T) {
-	test_util.RunTransitionTest(t, test_util.AllForks, "epoch_processing", "slashings_reset",
-		NewEpochTest(func(spec *common.Spec, fork test_util.ForkName, state common.BeaconState, epc *common.EpochsContext, flats []common.FlatValidator) error {
-			return phase0.ProcessSlashingsReset(context.Background(), spec, epc, state)
 		}))
 }
 

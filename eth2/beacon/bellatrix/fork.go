@@ -71,10 +71,6 @@ func UpgradeToBellatrix(spec *common.Spec, epc *common.EpochsContext, pre *altai
 	if err != nil {
 		return nil, err
 	}
-	slashings, err := pre.Slashings()
-	if err != nil {
-		return nil, err
-	}
 	previousEpochParticipation, err := pre.PreviousEpochParticipation()
 	if err != nil {
 		return nil, err
@@ -128,7 +124,6 @@ func UpgradeToBellatrix(spec *common.Spec, epc *common.EpochsContext, pre *altai
 		validators.(view.View),
 		balances.(view.View),
 		randaoMixes.(view.View),
-		slashings.(view.View),
 		previousEpochParticipation,
 		currentEpochParticipation,
 		justBits.View(),

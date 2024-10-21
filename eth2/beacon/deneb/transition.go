@@ -42,17 +42,10 @@ func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spe
 	if err := ProcessEpochRegistryUpdates(ctx, spec, epc, flats, state); err != nil {
 		return err
 	}
-	// phase0 implementation, but with fork-logic, will account for changed slashing multiplier
-	if err := phase0.ProcessEpochSlashings(ctx, spec, epc, flats, state); err != nil {
-		return err
-	}
 	if err := phase0.ProcessEth1DataReset(ctx, spec, epc, state); err != nil {
 		return err
 	}
 	if err := phase0.ProcessEffectiveBalanceUpdates(ctx, spec, epc, flats, state); err != nil {
-		return err
-	}
-	if err := phase0.ProcessSlashingsReset(ctx, spec, epc, state); err != nil {
 		return err
 	}
 	if err := phase0.ProcessRandaoMixesReset(ctx, spec, epc, state); err != nil {

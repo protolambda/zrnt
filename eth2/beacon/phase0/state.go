@@ -30,7 +30,6 @@ type BeaconState struct {
 	Balances    Balances          `json:"balances" yaml:"balances"`
 	Reserves    common.Number     `json:"reserves" yaml:"reserves"`
 	RandaoMixes RandaoMixes       `json:"randao_mixes" yaml:"randao_mixes"`
-	Slashings   SlashingsHistory  `json:"slashings" yaml:"slashings"`
 	// Attestations
 	PreviousEpochAttestations PendingAttestations `json:"previous_epoch_attestations" yaml:"previous_epoch_attestations"`
 	CurrentEpochAttestations  PendingAttestations `json:"current_epoch_attestations" yaml:"current_epoch_attestations"`
@@ -47,7 +46,7 @@ func (v *BeaconState) Deserialize(spec *common.Spec, dr *codec.DecodingReader) e
 		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), spec.Wrap(&v.HistoricalRoots), &v.RewardAdjustmentFactor,
 		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.Eth1DepositIndex,
 		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances), &v.Reserves,
-		spec.Wrap(&v.RandaoMixes), spec.Wrap(&v.Slashings),
+		spec.Wrap(&v.RandaoMixes),
 		spec.Wrap(&v.PreviousEpochAttestations), spec.Wrap(&v.CurrentEpochAttestations),
 		&v.JustificationBits,
 		&v.PreviousJustifiedCheckpoint, &v.CurrentJustifiedCheckpoint,
@@ -60,7 +59,7 @@ func (v *BeaconState) Serialize(spec *common.Spec, w *codec.EncodingWriter) erro
 		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), spec.Wrap(&v.HistoricalRoots), &v.RewardAdjustmentFactor,
 		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.Eth1DepositIndex,
 		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances), &v.Reserves,
-		spec.Wrap(&v.RandaoMixes), spec.Wrap(&v.Slashings),
+		spec.Wrap(&v.RandaoMixes),
 		spec.Wrap(&v.PreviousEpochAttestations), spec.Wrap(&v.CurrentEpochAttestations),
 		&v.JustificationBits,
 		&v.PreviousJustifiedCheckpoint, &v.CurrentJustifiedCheckpoint,
@@ -73,7 +72,7 @@ func (v *BeaconState) ByteLength(spec *common.Spec) uint64 {
 		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), spec.Wrap(&v.HistoricalRoots), &v.RewardAdjustmentFactor,
 		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.Eth1DepositIndex,
 		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances), &v.Reserves,
-		spec.Wrap(&v.RandaoMixes), spec.Wrap(&v.Slashings),
+		spec.Wrap(&v.RandaoMixes),
 		spec.Wrap(&v.PreviousEpochAttestations), spec.Wrap(&v.CurrentEpochAttestations),
 		&v.JustificationBits,
 		&v.PreviousJustifiedCheckpoint, &v.CurrentJustifiedCheckpoint,
@@ -90,7 +89,7 @@ func (v *BeaconState) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Ro
 		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), spec.Wrap(&v.HistoricalRoots), &v.RewardAdjustmentFactor,
 		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.Eth1DepositIndex,
 		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances), &v.Reserves,
-		spec.Wrap(&v.RandaoMixes), spec.Wrap(&v.Slashings),
+		spec.Wrap(&v.RandaoMixes),
 		spec.Wrap(&v.PreviousEpochAttestations), spec.Wrap(&v.CurrentEpochAttestations),
 		&v.JustificationBits,
 		&v.PreviousJustifiedCheckpoint, &v.CurrentJustifiedCheckpoint,
@@ -116,7 +115,6 @@ const (
 	_stateBalances
 	_stateReserves
 	_stateRandaoMixes
-	_stateSlashings
 	_statePreviousEpochAttestations
 	_stateCurrentEpochAttestations
 	_stateJustificationBits
@@ -149,8 +147,6 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 		{"reserves", Uint64Type},
 		// Randomness
 		{"randao_mixes", RandaoMixesType(spec)},
-		// Slashings
-		{"slashings", SlashingsType(spec)}, // Per-epoch sums of slashed effective balances
 		// Attestations
 		{"previous_epoch_attestations", PendingAttestationsType(spec)},
 		{"current_epoch_attestations", PendingAttestationsType(spec)},
@@ -345,10 +341,6 @@ func (state *BeaconStateView) SeedRandao(spec *common.Spec, seed common.Root) er
 	return state.Set(_stateRandaoMixes, v)
 }
 
-func (state *BeaconStateView) Slashings() (common.Slashings, error) {
-	return AsSlashings(state.Get(_stateSlashings))
-}
-
 func (state *BeaconStateView) PreviousEpochAttestations() (*PendingAttestationsView, error) {
 	return AsPendingAttestations(state.Get(_statePreviousEpochAttestations))
 }
@@ -423,9 +415,8 @@ func (state *BeaconStateView) SetFinalizedCheckpoint(c common.Checkpoint) error 
 
 func (state *BeaconStateView) ForkSettings(spec *common.Spec) *common.ForkSettings {
 	return &common.ForkSettings{
-		MinSlashingPenaltyQuotient:     uint64(spec.MIN_SLASHING_PENALTY_QUOTIENT),
-		ProportionalSlashingMultiplier: uint64(spec.PROPORTIONAL_SLASHING_MULTIPLIER),
-		InactivityPenaltyQuotient:      uint64(spec.INACTIVITY_PENALTY_QUOTIENT),
+		MinSlashingPenaltyQuotient: uint64(spec.MIN_SLASHING_PENALTY_QUOTIENT),
+		InactivityPenaltyQuotient:  uint64(spec.INACTIVITY_PENALTY_QUOTIENT),
 		CalcProposerShare: func(whistleblowerReward common.Gwei) common.Gwei {
 			return whistleblowerReward / common.Gwei(spec.PROPOSER_REWARD_QUOTIENT)
 		},

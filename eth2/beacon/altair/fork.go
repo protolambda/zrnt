@@ -108,10 +108,6 @@ func UpgradeToAltair(spec *common.Spec, epc *common.EpochsContext, pre *phase0.B
 	if err != nil {
 		return nil, err
 	}
-	slashings, err := pre.Slashings()
-	if err != nil {
-		return nil, err
-	}
 	valCount, err := validators.ValidatorCount()
 	if err != nil {
 		return nil, err
@@ -190,7 +186,6 @@ func UpgradeToAltair(spec *common.Spec, epc *common.EpochsContext, pre *phase0.B
 		validators.(view.View),
 		balances.(view.View),
 		randaoMixes.(view.View),
-		slashings.(view.View),
 		previousEpochParticipation,
 		currentEpochParticipation,
 		justBits.View(),

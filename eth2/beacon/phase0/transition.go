@@ -35,16 +35,10 @@ func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spe
 	if err := ProcessEpochRegistryUpdates(ctx, spec, epc, flats, state); err != nil {
 		return err
 	}
-	if err := ProcessEpochSlashings(ctx, spec, epc, flats, state); err != nil {
-		return err
-	}
 	if err := ProcessEth1DataReset(ctx, spec, epc, state); err != nil {
 		return err
 	}
 	if err := ProcessEffectiveBalanceUpdates(ctx, spec, epc, flats, state); err != nil {
-		return err
-	}
-	if err := ProcessSlashingsReset(ctx, spec, epc, state); err != nil {
 		return err
 	}
 	if err := ProcessRandaoMixesReset(ctx, spec, epc, state); err != nil {

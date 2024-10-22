@@ -40,6 +40,8 @@ type Validator interface {
 	SetExitEpoch(ep Epoch) error
 	WithdrawableEpoch() (Epoch, error)
 	SetWithdrawableEpoch(epoch Epoch) error
+	PrincipalBalance() (Gwei, error)
+	SetPrincipalBalance(pb Gwei) error
 	// Flatten the validator data into destination struct
 	// For intensive validator registry work, it is more efficient to iterate the registry once,
 	// unpack validators into a flat structure, and work with the flattened data.
@@ -72,9 +74,9 @@ type RandaoMixes interface {
 // To select the right settings based on configuration, ForkSettings(spec) is called on
 // the fork-specific implementation of the BeaconState interface.
 type ForkSettings struct {
-	MinSlashingPenaltyQuotient     uint64
-	InactivityPenaltyQuotient      uint64
-	CalcProposerShare              func(whistleblowerReward Gwei) Gwei
+	MinSlashingPenaltyQuotient uint64
+	InactivityPenaltyQuotient  uint64
+	CalcProposerShare          func(whistleblowerReward Gwei) Gwei
 }
 
 type BeaconState interface {

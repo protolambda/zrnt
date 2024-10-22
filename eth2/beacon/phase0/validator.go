@@ -19,16 +19,17 @@ type Validator struct {
 	ActivationEpoch            common.Epoch `json:"activation_epoch" yaml:"activation_epoch"`
 	ExitEpoch                  common.Epoch `json:"exit_epoch" yaml:"exit_epoch"`
 	WithdrawableEpoch          common.Epoch `json:"withdrawable_epoch" yaml:"withdrawable_epoch"`
+	PrincipalBalance           common.Gwei  `json:"principal_balance" yaml:"principal_balance"`
 }
 
 func (v *Validator) Deserialize(dr *codec.DecodingReader) error {
 	return dr.FixedLenContainer(&v.Pubkey, &v.WithdrawalCredentials, &v.EffectiveBalance, (*BoolView)(&v.Slashed),
-		&v.ActivationEligibilityEpoch, &v.ActivationEpoch, &v.ExitEpoch, &v.WithdrawableEpoch)
+		&v.ActivationEligibilityEpoch, &v.ActivationEpoch, &v.ExitEpoch, &v.WithdrawableEpoch, &v.PrincipalBalance)
 }
 
 func (v *Validator) Serialize(w *codec.EncodingWriter) error {
 	return w.FixedLenContainer(&v.Pubkey, &v.WithdrawalCredentials, &v.EffectiveBalance, (*BoolView)(&v.Slashed),
-		&v.ActivationEligibilityEpoch, &v.ActivationEpoch, &v.ExitEpoch, &v.WithdrawableEpoch)
+		&v.ActivationEligibilityEpoch, &v.ActivationEpoch, &v.ExitEpoch, &v.WithdrawableEpoch, &v.PrincipalBalance)
 }
 
 func (a *Validator) ByteLength() uint64 {
@@ -41,7 +42,7 @@ func (*Validator) FixedLength() uint64 {
 
 func (v *Validator) HashTreeRoot(hFn tree.HashFn) common.Root {
 	return hFn.HashTreeRoot(v.Pubkey, v.WithdrawalCredentials, v.EffectiveBalance, (BoolView)(v.Slashed),
-		v.ActivationEligibilityEpoch, v.ActivationEpoch, v.ExitEpoch, v.WithdrawableEpoch)
+		v.ActivationEligibilityEpoch, v.ActivationEpoch, v.ExitEpoch, v.WithdrawableEpoch, v.PrincipalBalance)
 }
 
 func (v *Validator) View() *ValidatorView {
@@ -55,6 +56,7 @@ func (v *Validator) View() *ValidatorView {
 		Uint64View(v.ActivationEpoch),
 		Uint64View(v.ExitEpoch),
 		Uint64View(v.WithdrawableEpoch),
+		Uint64View(v.PrincipalBalance),
 	)
 	return &ValidatorView{c}
 }
@@ -69,6 +71,7 @@ var ValidatorType = ContainerType("Validator", []FieldDef{
 	{"activation_epoch", common.EpochType},
 	{"exit_epoch", common.EpochType},
 	{"withdrawable_epoch", common.EpochType}, // When validator can withdraw funds
+	{"principal_balance", common.GweiType},   // Principal Balance
 })
 
 const (
@@ -81,6 +84,7 @@ const (
 	_validatorActivationEpoch
 	_validatorExitEpoch
 	_validatorWithdrawableEpoch
+	_validatorPrincipalBalance
 )
 
 type ValidatorView struct {
@@ -147,6 +151,13 @@ func (v *ValidatorView) WithdrawableEpoch() (common.Epoch, error) {
 func (v *ValidatorView) SetWithdrawableEpoch(epoch common.Epoch) error {
 	return v.Set(_validatorWithdrawableEpoch, Uint64View(epoch))
 }
+func (v *ValidatorView) PrincipalBalance() (common.Gwei, error) {
+	return common.AsGwei(v.Get(_validatorPrincipalBalance))
+}
+
+func (v *ValidatorView) SetPrincipalBalance(pb common.Gwei) error {
+	return v.Set(_validatorPrincipalBalance, Uint64View(pb))
+}
 
 func (v *ValidatorView) Flatten(dst *common.FlatValidator) error {
 	if dst == nil {
@@ -160,6 +171,7 @@ func (v *ValidatorView) Flatten(dst *common.FlatValidator) error {
 	dst.ActivationEpoch, err = common.AsEpoch(fields[5], err)
 	dst.ExitEpoch, err = common.AsEpoch(fields[6], err)
 	dst.WithdrawableEpoch, err = common.AsEpoch(fields[7], err)
+	dst.PrincipalBalance, err = common.AsGwei(fields[8], err)
 	if err != nil {
 		return errors.New("failed to flatten validator")
 	}

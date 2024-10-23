@@ -99,14 +99,6 @@ func UpgradeToBellatrix(spec *common.Spec, epc *common.EpochsContext, pre *altai
 	if err != nil {
 		return nil, err
 	}
-	currentSyncCommitteeView, err := pre.CurrentSyncCommittee()
-	if err != nil {
-		return nil, err
-	}
-	nextSyncCommitteeView, err := pre.NextSyncCommittee()
-	if err != nil {
-		return nil, err
-	}
 	latestExecutionPayloadHeader := ExecutionPayloadHeaderType.Default(nil)
 
 	return AsBeaconStateView(BeaconStateType(spec).FromFields(
@@ -131,8 +123,6 @@ func UpgradeToBellatrix(spec *common.Spec, epc *common.EpochsContext, pre *altai
 		currJustCh.View(),
 		finCh.View(),
 		inactivityScores,
-		currentSyncCommitteeView,
-		nextSyncCommitteeView,
 		latestExecutionPayloadHeader,
 	))
 }

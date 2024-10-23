@@ -99,14 +99,6 @@ func UpgradeToCapella(spec *common.Spec, epc *common.EpochsContext, pre *bellatr
 	if err != nil {
 		return nil, err
 	}
-	currentSyncCommitteeView, err := pre.CurrentSyncCommittee()
-	if err != nil {
-		return nil, err
-	}
-	nextSyncCommitteeView, err := pre.NextSyncCommittee()
-	if err != nil {
-		return nil, err
-	}
 	latestExecutionPayloadHeader, err := pre.LatestExecutionPayloadHeader()
 	if err != nil {
 		return nil, err
@@ -157,8 +149,6 @@ func UpgradeToCapella(spec *common.Spec, epc *common.EpochsContext, pre *bellatr
 		currJustCh.View(),
 		finCh.View(),
 		inactivityScores,
-		currentSyncCommitteeView,
-		nextSyncCommitteeView,
 		updatedExecutionPayloadHeader.View(),
 		nextWithdrawalIndex,
 		nextWithdrawalValidatorIndex,

@@ -169,14 +169,3 @@ func TestRewardsPenalties(t *testing.T) {
 			}
 		}))
 }
-
-func TestSyncCommitteeUpdates(t *testing.T) {
-	test_util.RunTransitionTest(t, []test_util.ForkName{"altair", "bellatrix", "capella", "deneb"}, "epoch_processing", "sync_committee_updates",
-		NewEpochTest(func(spec *common.Spec, fork test_util.ForkName, state common.BeaconState, epc *common.EpochsContext, flats []common.FlatValidator) error {
-			if s, ok := state.(common.SyncCommitteeBeaconState); ok {
-				return altair.ProcessSyncCommitteeUpdates(context.Background(), spec, epc, s)
-			} else {
-				return fmt.Errorf("unrecognized state type: %T", state)
-			}
-		}))
-}

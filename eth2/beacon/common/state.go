@@ -72,9 +72,9 @@ type RandaoMixes interface {
 // To select the right settings based on configuration, ForkSettings(spec) is called on
 // the fork-specific implementation of the BeaconState interface.
 type ForkSettings struct {
-	MinSlashingPenaltyQuotient     uint64
-	InactivityPenaltyQuotient      uint64
-	CalcProposerShare              func(whistleblowerReward Gwei) Gwei
+	MinSlashingPenaltyQuotient uint64
+	InactivityPenaltyQuotient  uint64
+	CalcProposerShare          func(whistleblowerReward Gwei) Gwei
 }
 
 type BeaconState interface {
@@ -142,13 +142,4 @@ type UpgradeableBeaconState interface {
 
 	// Called whenever the state may need to upgrade to a next fork, changes the BeaconState interface contents if so.
 	UpgradeMaybe(ctx context.Context, spec *Spec, epc *EpochsContext) error
-}
-
-type SyncCommitteeBeaconState interface {
-	BeaconState
-	CurrentSyncCommittee() (*SyncCommitteeView, error)
-	NextSyncCommittee() (*SyncCommitteeView, error)
-	SetCurrentSyncCommittee(v *SyncCommitteeView) error
-	SetNextSyncCommittee(v *SyncCommitteeView) error
-	RotateSyncCommittee(next *SyncCommitteeView) error
 }

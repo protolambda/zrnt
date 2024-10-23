@@ -99,14 +99,6 @@ func UpgradeToDeneb(spec *common.Spec, epc *common.EpochsContext, pre *capella.B
 	if err != nil {
 		return nil, err
 	}
-	currentSyncCommitteeView, err := pre.CurrentSyncCommittee()
-	if err != nil {
-		return nil, err
-	}
-	nextSyncCommitteeView, err := pre.NextSyncCommittee()
-	if err != nil {
-		return nil, err
-	}
 	latestExecutionPayloadHeader, err := pre.LatestExecutionPayloadHeader()
 	if err != nil {
 		return nil, err
@@ -169,8 +161,6 @@ func UpgradeToDeneb(spec *common.Spec, epc *common.EpochsContext, pre *capella.B
 		currJustCh.View(),
 		finCh.View(),
 		inactivityScores,
-		currentSyncCommitteeView,
-		nextSyncCommitteeView,
 		updatedExecutionPayloadHeader.View(),
 		(*view.Uint64View)(&nextWithdrawalIndex),
 		(*view.Uint64View)(&nextWithdrawalValidatorIndex),

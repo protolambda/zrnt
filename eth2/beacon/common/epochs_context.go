@@ -6,42 +6,6 @@ import (
 	"github.com/protolambda/zrnt/eth2/util/math"
 )
 
-type IndexedSyncCommittee struct {
-	CachedPubkeys []*CachedPubkey
-	Indices       []ValidatorIndex
-}
-
-func (isc *IndexedSyncCommittee) Subcommittee(spec *Spec, subnet uint64) (pubs []*CachedPubkey, indices []ValidatorIndex, err error) {
-	if subnet >= SYNC_COMMITTEE_SUBNET_COUNT {
-		return nil, nil, fmt.Errorf("invalid sync committee subnet: %d", subnet)
-	}
-	subComSize := uint64(spec.SYNC_COMMITTEE_SIZE) / SYNC_COMMITTEE_SUBNET_COUNT
-	i := subComSize * subnet
-	return isc.CachedPubkeys[i : i+subComSize], isc.Indices[i : i+subComSize], nil
-}
-
-func (isc *IndexedSyncCommittee) Subnets(spec *Spec, valIndex ValidatorIndex) (out []uint64) {
-	for i, commValIndex := range isc.Indices {
-		if commValIndex == valIndex {
-			subnet := uint64(i) / (uint64(spec.SYNC_COMMITTEE_SIZE) / SYNC_COMMITTEE_SUBNET_COUNT)
-			out = append(out, subnet)
-		}
-	}
-	return out
-}
-
-func (isc *IndexedSyncCommittee) InSubnet(spec *Spec, valIndex ValidatorIndex, subnet uint64) bool {
-	for i, commValIndex := range isc.Indices {
-		if commValIndex == valIndex {
-			valSubnet := uint64(i) / (uint64(spec.SYNC_COMMITTEE_SIZE) / SYNC_COMMITTEE_SUBNET_COUNT)
-			if valSubnet == subnet {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 type EpochsContext struct {
 	Spec *Spec
 
@@ -52,10 +16,6 @@ type EpochsContext struct {
 	PreviousEpoch *ShufflingEpoch
 	CurrentEpoch  *ShufflingEpoch
 	NextEpoch     *ShufflingEpoch
-
-	// nil for pre-altair chain
-	CurrentSyncCommittee *IndexedSyncCommittee
-	NextSyncCommittee    *IndexedSyncCommittee
 
 	// TODO: track active effective balances
 	// TODO: track total active stake
@@ -87,11 +47,6 @@ func NewEpochsContext(spec *Spec, state BeaconState) (*EpochsContext, error) {
 	}
 	if err := epc.LoadProposers(state); err != nil {
 		return nil, err
-	}
-	if syncState, ok := state.(SyncCommitteeBeaconState); ok {
-		if err := epc.LoadSyncCommittees(syncState); err != nil {
-			return nil, err
-		}
 	}
 	return epc, nil
 }
@@ -179,26 +134,6 @@ func (epc *EpochsContext) LoadProposers(state BeaconState) error {
 	return nil
 }
 
-func (epc *EpochsContext) LoadSyncCommittees(state SyncCommitteeBeaconState) error {
-	current, err := state.CurrentSyncCommittee()
-	if err != nil {
-		return fmt.Errorf("failed to get current sync committee to hydrate EPC")
-	}
-	epc.CurrentSyncCommittee, err = epc.hydrateSyncCommittee(current)
-	if err != nil {
-		return fmt.Errorf("failed to hydrate current sync committee in EPC")
-	}
-	next, err := state.NextSyncCommittee()
-	if err != nil {
-		return fmt.Errorf("failed to get next sync committee to hydrate EPC")
-	}
-	epc.NextSyncCommittee, err = epc.hydrateSyncCommittee(next)
-	if err != nil {
-		return fmt.Errorf("failed to hydrate next sync committee in EPC")
-	}
-	return nil
-}
-
 func (epc *EpochsContext) Clone() *EpochsContext {
 	// All fields can be reused, just need a fresh shallow copy of the outer container
 	epcClone := *epc
@@ -228,62 +163,7 @@ func (epc *EpochsContext) RotateEpochs(state BeaconState) error {
 	if err := epc.loadCurrentStake(state, indicesBounded); err != nil {
 		return err
 	}
-	if syncState, ok := state.(SyncCommitteeBeaconState); ok {
-		// if the state has a list of sync committee pubkeys, we want to cache the indices of that sync committee
-		if epc.CurrentEpoch.Epoch%epc.Spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD == 0 {
-			// just got into the epoch, we just need to re-hydrate the EPC
-			if epc.NextSyncCommittee != nil {
-				epc.CurrentSyncCommittee = epc.NextSyncCommittee
-			} else {
-				current, err := syncState.CurrentSyncCommittee()
-				if err != nil {
-					return fmt.Errorf("failed to get current sync committee to hydrate EPC")
-				}
-				epc.CurrentSyncCommittee, err = epc.hydrateSyncCommittee(current)
-				if err != nil {
-					return fmt.Errorf("failed to hydrate current sync committee in EPC")
-				}
-			}
-			next, err := syncState.NextSyncCommittee()
-			if err != nil {
-				return fmt.Errorf("failed to get next sync committee to hydrate EPC")
-			}
-			epc.NextSyncCommittee, err = epc.hydrateSyncCommittee(next)
-			if err != nil {
-				return fmt.Errorf("failed to hydrate next sync committee in EPC")
-			}
-		}
-	}
 	return nil
-}
-
-func (epc *EpochsContext) hydrateSyncCommittee(view *SyncCommitteeView) (*IndexedSyncCommittee, error) {
-	pubsView, err := view.Pubkeys()
-	if err != nil {
-		return nil, err
-	}
-	pubs, err := pubsView.Flatten()
-	if err != nil {
-		return nil, err
-	}
-	indices := make([]ValidatorIndex, len(pubs), len(pubs))
-	cachedPubs := make([]*CachedPubkey, len(pubs), len(pubs))
-	for i := 0; i < len(indices); i++ {
-		idx, ok := epc.ValidatorPubkeyCache.ValidatorIndex(pubs[i])
-		if !ok {
-			return nil, fmt.Errorf("missing validator index for pubkey %d (%s) of sync committee", i, pubs[i])
-		}
-		indices[i] = idx
-		cachedPubkey, ok := epc.ValidatorPubkeyCache.Pubkey(idx)
-		if !ok {
-			return nil, fmt.Errorf("pubkey cache is inconsistent, sync committee member with validator index %d has no cached pubkey", idx)
-		}
-		cachedPubs[i] = cachedPubkey
-	}
-	return &IndexedSyncCommittee{
-		CachedPubkeys: cachedPubs,
-		Indices:       indices,
-	}, nil
 }
 
 func (epc *EpochsContext) getSlotComms(slot Slot) ([][]ValidatorIndex, error) {

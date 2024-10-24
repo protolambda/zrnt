@@ -7,6 +7,7 @@ type FlatValidator struct {
 	ActivationEpoch            Epoch
 	ExitEpoch                  Epoch
 	WithdrawableEpoch          Epoch
+	PrincipalBalance           Gwei
 }
 
 func (v *FlatValidator) IsActive(epoch Epoch) bool {

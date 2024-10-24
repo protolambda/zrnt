@@ -156,21 +156,6 @@ func UpgradeToAltair(spec *common.Spec, epc *common.EpochsContext, pre *phase0.B
 		return nil, err
 	}
 
-	// Fill in sync committees
-	// Note: A duplicate committee is assigned for the current and next committee at the fork boundary
-	nextSyncCommittee, err := common.ComputeNextSyncCommittee(spec, epc, pre)
-	if err != nil {
-		return nil, err
-	}
-	currentSyncCommitteeView, err := nextSyncCommittee.View(spec)
-	if err != nil {
-		return nil, err
-	}
-	nextSyncCommitteeView, err := currentSyncCommitteeView.Copy()
-	if err != nil {
-		return nil, err
-	}
-
 	return AsBeaconStateView(BeaconStateType(spec).FromFields(
 		(*view.Uint64View)(&genesisTime),
 		(*view.RootView)(&genesisValidatorsRoot),
@@ -193,7 +178,5 @@ func UpgradeToAltair(spec *common.Spec, epc *common.EpochsContext, pre *phase0.B
 		currJustCh.View(),
 		finCh.View(),
 		inactivityScores,
-		currentSyncCommitteeView,
-		nextSyncCommitteeView,
 	))
 }

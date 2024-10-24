@@ -57,9 +57,6 @@ func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spe
 	if err := altair.ProcessParticipationFlagUpdates(ctx, spec, state); err != nil {
 		return err
 	}
-	if err := altair.ProcessSyncCommitteeUpdates(ctx, spec, epc, state); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -116,9 +113,6 @@ func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spe
 		return err
 	}
 	if err := capella.ProcessBLSToExecutionChanges(ctx, spec, epc, state, body.BLSToExecutionChanges); err != nil {
-		return err
-	}
-	if err := altair.ProcessSyncAggregate(ctx, spec, epc, state, &body.SyncAggregate); err != nil {
 		return err
 	}
 	return nil

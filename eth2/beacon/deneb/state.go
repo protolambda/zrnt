@@ -44,9 +44,6 @@ type BeaconState struct {
 	FinalizedCheckpoint         common.Checkpoint        `json:"finalized_checkpoint" yaml:"finalized_checkpoint"`
 	// Inactivity
 	InactivityScores altair.InactivityScores `json:"inactivity_scores" yaml:"inactivity_scores"`
-	// Light client sync committees
-	CurrentSyncCommittee common.SyncCommittee `json:"current_sync_committee" yaml:"current_sync_committee"`
-	NextSyncCommittee    common.SyncCommittee `json:"next_sync_committee" yaml:"next_sync_committee"`
 	// Execution-layer  (modified in EIP-4844)
 	LatestExecutionPayloadHeader ExecutionPayloadHeader `json:"latest_execution_payload_header" yaml:"latest_execution_payload_header"`
 	// Withdrawals
@@ -68,7 +65,6 @@ func (v *BeaconState) Deserialize(spec *common.Spec, dr *codec.DecodingReader) e
 		&v.PreviousJustifiedCheckpoint, &v.CurrentJustifiedCheckpoint,
 		&v.FinalizedCheckpoint,
 		spec.Wrap(&v.InactivityScores),
-		spec.Wrap(&v.CurrentSyncCommittee), spec.Wrap(&v.NextSyncCommittee),
 		&v.LatestExecutionPayloadHeader,
 		&v.NextWithdrawalIndex, &v.NextWithdrawalValidatorIndex,
 		spec.Wrap(&v.HistoricalSummaries),
@@ -87,7 +83,6 @@ func (v *BeaconState) Serialize(spec *common.Spec, w *codec.EncodingWriter) erro
 		&v.PreviousJustifiedCheckpoint, &v.CurrentJustifiedCheckpoint,
 		&v.FinalizedCheckpoint,
 		spec.Wrap(&v.InactivityScores),
-		spec.Wrap(&v.CurrentSyncCommittee), spec.Wrap(&v.NextSyncCommittee),
 		&v.LatestExecutionPayloadHeader,
 		&v.NextWithdrawalIndex, &v.NextWithdrawalValidatorIndex,
 		spec.Wrap(&v.HistoricalSummaries),
@@ -106,7 +101,6 @@ func (v *BeaconState) ByteLength(spec *common.Spec) uint64 {
 		&v.PreviousJustifiedCheckpoint, &v.CurrentJustifiedCheckpoint,
 		&v.FinalizedCheckpoint,
 		spec.Wrap(&v.InactivityScores),
-		spec.Wrap(&v.CurrentSyncCommittee), spec.Wrap(&v.NextSyncCommittee),
 		&v.LatestExecutionPayloadHeader,
 		&v.NextWithdrawalIndex, &v.NextWithdrawalValidatorIndex,
 		spec.Wrap(&v.HistoricalSummaries),
@@ -129,7 +123,6 @@ func (v *BeaconState) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Ro
 		&v.PreviousJustifiedCheckpoint, &v.CurrentJustifiedCheckpoint,
 		&v.FinalizedCheckpoint,
 		spec.Wrap(&v.InactivityScores),
-		spec.Wrap(&v.CurrentSyncCommittee), spec.Wrap(&v.NextSyncCommittee),
 		&v.LatestExecutionPayloadHeader,
 		&v.NextWithdrawalIndex, &v.NextWithdrawalValidatorIndex,
 		spec.Wrap(&v.HistoricalSummaries),
@@ -162,8 +155,6 @@ const (
 	_stateCurrentJustifiedCheckpoint
 	_stateFinalizedCheckpoint
 	_inactivityScores
-	_currentSyncCommittee
-	_nextSyncCommittee
 	_latestExecutionPayloadHeader
 	_nextWithdrawalIndex
 	_nextWithdrawalValidatorIndex
@@ -204,9 +195,6 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 		{"finalized_checkpoint", common.CheckpointType},
 		// Inactivity
 		{"inactivity_scores", altair.InactivityScoresType(spec)},
-		// Sync
-		{"current_sync_committee", common.SyncCommitteeType(spec)},
-		{"next_sync_committee", common.SyncCommitteeType(spec)},
 		// Execution-layer
 		{"latest_execution_payload_header", ExecutionPayloadHeaderType},
 		// Withdrawals
@@ -498,33 +486,6 @@ func (state *BeaconStateView) SetFinalizedCheckpoint(c common.Checkpoint) error 
 
 func (state *BeaconStateView) InactivityScores() (*altair.InactivityScoresView, error) {
 	return altair.AsInactivityScores(state.Get(_inactivityScores))
-}
-
-func (state *BeaconStateView) CurrentSyncCommittee() (*common.SyncCommitteeView, error) {
-	return common.AsSyncCommittee(state.Get(_currentSyncCommittee))
-}
-
-func (state *BeaconStateView) SetCurrentSyncCommittee(v *common.SyncCommitteeView) error {
-	return state.Set(_currentSyncCommittee, v)
-}
-
-func (state *BeaconStateView) NextSyncCommittee() (*common.SyncCommitteeView, error) {
-	return common.AsSyncCommittee(state.Get(_nextSyncCommittee))
-}
-
-func (state *BeaconStateView) SetNextSyncCommittee(v *common.SyncCommitteeView) error {
-	return state.Set(_nextSyncCommittee, v)
-}
-
-func (state *BeaconStateView) RotateSyncCommittee(next *common.SyncCommitteeView) error {
-	v, err := state.Get(_nextSyncCommittee)
-	if err != nil {
-		return err
-	}
-	if err := state.Set(_currentSyncCommittee, v); err != nil {
-		return err
-	}
-	return state.Set(_nextSyncCommittee, next)
 }
 
 func (state *BeaconStateView) LatestExecutionPayloadHeader() (*ExecutionPayloadHeaderView, error) {

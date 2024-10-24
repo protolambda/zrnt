@@ -120,8 +120,6 @@ type BeaconBlockBody struct {
 	Attestations      phase0.Attestations      `json:"attestations" yaml:"attestations"`
 	Deposits          phase0.Deposits          `json:"deposits" yaml:"deposits"`
 	VoluntaryExits    phase0.VoluntaryExits    `json:"voluntary_exits" yaml:"voluntary_exits"`
-
-	SyncAggregate SyncAggregate `json:"sync_aggregate" yaml:"sync_aggregate"`
 }
 
 func (b *BeaconBlockBody) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
@@ -130,7 +128,6 @@ func (b *BeaconBlockBody) Deserialize(spec *common.Spec, dr *codec.DecodingReade
 		&b.Graffiti, spec.Wrap(&b.ProposerSlashings),
 		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
-		spec.Wrap(&b.SyncAggregate),
 	)
 }
 
@@ -140,7 +137,6 @@ func (b *BeaconBlockBody) Serialize(spec *common.Spec, w *codec.EncodingWriter) 
 		&b.Graffiti, spec.Wrap(&b.ProposerSlashings),
 		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
-		spec.Wrap(&b.SyncAggregate),
 	)
 }
 
@@ -150,7 +146,6 @@ func (b *BeaconBlockBody) ByteLength(spec *common.Spec) uint64 {
 		&b.Graffiti, spec.Wrap(&b.ProposerSlashings),
 		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
-		spec.Wrap(&b.SyncAggregate),
 	)
 }
 
@@ -164,7 +159,6 @@ func (b *BeaconBlockBody) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) commo
 		b.Graffiti, spec.Wrap(&b.ProposerSlashings),
 		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
 		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
-		spec.Wrap(&b.SyncAggregate),
 	)
 }
 
@@ -198,6 +192,5 @@ func BeaconBlockBodyType(spec *common.Spec) *ContainerTypeDef {
 		{"attestations", phase0.BlockAttestationsType(spec)},
 		{"deposits", phase0.BlockDepositsType(spec)},
 		{"voluntary_exits", phase0.BlockVoluntaryExitsType(spec)},
-		{"sync_aggregate", SyncAggregateType(spec)},
 	})
 }

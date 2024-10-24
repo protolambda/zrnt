@@ -85,9 +85,6 @@ func (s *StandardUpgradeableBeaconState) UpgradeMaybe(ctx context.Context, spec 
 		if err != nil {
 			return fmt.Errorf("failed to upgrade phase0 to altair state: %v", err)
 		}
-		if err := epc.LoadSyncCommittees(post); err != nil {
-			return fmt.Errorf("failed to pre-compute sync committees: %v", err)
-		}
 		s.BeaconState = post
 	}
 	if tpre, ok := s.BeaconState.(*altair.BeaconStateView); ok && slot == common.Slot(spec.BELLATRIX_FORK_EPOCH)*spec.SLOTS_PER_EPOCH {

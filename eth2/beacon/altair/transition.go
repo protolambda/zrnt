@@ -54,9 +54,6 @@ func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spe
 	if err := ProcessParticipationFlagUpdates(ctx, spec, state); err != nil {
 		return err
 	}
-	if err := ProcessSyncCommitteeUpdates(ctx, spec, epc, state); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -97,9 +94,6 @@ func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spe
 		return err
 	}
 	if err := phase0.ProcessVoluntaryExits(ctx, spec, epc, state, body.VoluntaryExits); err != nil {
-		return err
-	}
-	if err := ProcessSyncAggregate(ctx, spec, epc, state, &body.SyncAggregate); err != nil {
 		return err
 	}
 	return nil

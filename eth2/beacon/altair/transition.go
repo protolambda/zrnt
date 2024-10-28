@@ -48,9 +48,6 @@ func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spe
 	if err := phase0.ProcessRandaoMixesReset(ctx, spec, epc, state); err != nil {
 		return err
 	}
-	if err := phase0.ProcessHistoricalRootsUpdate(ctx, spec, epc, state); err != nil {
-		return err
-	}
 	if err := ProcessParticipationFlagUpdates(ctx, spec, state); err != nil {
 		return err
 	}

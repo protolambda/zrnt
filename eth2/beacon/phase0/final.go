@@ -77,19 +77,6 @@ func ProcessRandaoMixesReset(ctx context.Context, spec *common.Spec, epc *common
 	return common.PrepareRandao(mixes, epc.NextEpoch.Epoch)
 }
 
-func ProcessHistoricalRootsUpdate(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state common.BeaconState) error {
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-	// Set historical root accumulator
-	if epc.NextEpoch.Epoch%spec.SlotToEpoch(spec.SLOTS_PER_HISTORICAL_ROOT) == 0 {
-		if err := common.UpdateHistoricalRoots(state); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func ProcessParticipationRecordUpdates(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state Phase0PendingAttestationsBeaconState) error {
 	if err := ctx.Err(); err != nil {
 		return err

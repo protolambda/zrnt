@@ -43,10 +43,6 @@ func UpgradeToBellatrix(spec *common.Spec, epc *common.EpochsContext, pre *altai
 	if err != nil {
 		return nil, err
 	}
-	historicalRoots, err := pre.HistoricalRoots()
-	if err != nil {
-		return nil, err
-	}
 	eth1Data, err := pre.Eth1Data()
 	if err != nil {
 		return nil, err
@@ -117,7 +113,6 @@ func UpgradeToBellatrix(spec *common.Spec, epc *common.EpochsContext, pre *altai
 		latestBlockHeader.View(),
 		blockRoots.(view.View),
 		stateRoots.(view.View),
-		historicalRoots.(view.View),
 		eth1Data.View(),
 		eth1DataVotes.(view.View),
 		(*view.Uint64View)(&eth1DepositIndex),

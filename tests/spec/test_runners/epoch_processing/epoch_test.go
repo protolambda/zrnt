@@ -59,13 +59,6 @@ func TestEth1DataReset(t *testing.T) {
 		}))
 }
 
-func TestHistoricalRootsUpdate(t *testing.T) {
-	test_util.RunTransitionTest(t, []test_util.ForkName{"phase0", "altair", "bellatrix"}, "epoch_processing", "historical_roots_update",
-		NewEpochTest(func(spec *common.Spec, fork test_util.ForkName, state common.BeaconState, epc *common.EpochsContext, flats []common.FlatValidator) error {
-			return phase0.ProcessHistoricalRootsUpdate(context.Background(), spec, epc, state)
-		}))
-}
-
 func TestHistoricalSummariesUpdate(t *testing.T) {
 	test_util.RunTransitionTest(t, []test_util.ForkName{"capella"}, "epoch_processing", "historical_summaries_update",
 		NewEpochTest(func(spec *common.Spec, fork test_util.ForkName, state common.BeaconState, epc *common.EpochsContext, flats []common.FlatValidator) error {

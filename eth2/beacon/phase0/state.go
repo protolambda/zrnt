@@ -19,7 +19,6 @@ type BeaconState struct {
 	LatestBlockHeader      common.BeaconBlockHeader `json:"latest_block_header" yaml:"latest_block_header"`
 	BlockRoots             HistoricalBatchRoots     `json:"block_roots" yaml:"block_roots"`
 	StateRoots             HistoricalBatchRoots     `json:"state_roots" yaml:"state_roots"`
-	HistoricalRoots        HistoricalRoots          `json:"historical_roots" yaml:"historical_roots"`
 	RewardAdjustmentFactor common.Number            `json:"reward_adjustment_factor" yaml:"reward_adjustment_factor"`
 	// Eth1
 	Eth1Data         common.Eth1Data     `json:"eth1_data" yaml:"eth1_data"`
@@ -43,7 +42,7 @@ type BeaconState struct {
 func (v *BeaconState) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
 	return dr.Container(&v.GenesisTime, &v.GenesisValidatorsRoot,
 		&v.Slot, &v.Fork, &v.LatestBlockHeader,
-		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), spec.Wrap(&v.HistoricalRoots), &v.RewardAdjustmentFactor,
+		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), &v.RewardAdjustmentFactor,
 		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.Eth1DepositIndex,
 		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances), &v.Reserves,
 		spec.Wrap(&v.RandaoMixes),
@@ -56,7 +55,7 @@ func (v *BeaconState) Deserialize(spec *common.Spec, dr *codec.DecodingReader) e
 func (v *BeaconState) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
 	return w.Container(&v.GenesisTime, &v.GenesisValidatorsRoot,
 		&v.Slot, &v.Fork, &v.LatestBlockHeader,
-		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), spec.Wrap(&v.HistoricalRoots), &v.RewardAdjustmentFactor,
+		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), &v.RewardAdjustmentFactor,
 		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.Eth1DepositIndex,
 		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances), &v.Reserves,
 		spec.Wrap(&v.RandaoMixes),
@@ -69,7 +68,7 @@ func (v *BeaconState) Serialize(spec *common.Spec, w *codec.EncodingWriter) erro
 func (v *BeaconState) ByteLength(spec *common.Spec) uint64 {
 	return codec.ContainerLength(&v.GenesisTime, &v.GenesisValidatorsRoot,
 		&v.Slot, &v.Fork, &v.LatestBlockHeader,
-		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), spec.Wrap(&v.HistoricalRoots), &v.RewardAdjustmentFactor,
+		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), &v.RewardAdjustmentFactor,
 		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.Eth1DepositIndex,
 		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances), &v.Reserves,
 		spec.Wrap(&v.RandaoMixes),
@@ -86,7 +85,7 @@ func (*BeaconState) FixedLength(*common.Spec) uint64 {
 func (v *BeaconState) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
 	return hFn.HashTreeRoot(&v.GenesisTime, &v.GenesisValidatorsRoot,
 		&v.Slot, &v.Fork, &v.LatestBlockHeader,
-		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), spec.Wrap(&v.HistoricalRoots), &v.RewardAdjustmentFactor,
+		spec.Wrap(&v.BlockRoots), spec.Wrap(&v.StateRoots), &v.RewardAdjustmentFactor,
 		&v.Eth1Data, spec.Wrap(&v.Eth1DataVotes), &v.Eth1DepositIndex,
 		spec.Wrap(&v.Validators), spec.Wrap(&v.Balances), &v.Reserves,
 		spec.Wrap(&v.RandaoMixes),
@@ -106,7 +105,6 @@ const (
 	_stateLatestBlockHeader
 	_stateBlockRoots
 	_stateStateRoots
-	_stateHistoricalRoots
 	_stateRewardAdjustmentFactor
 	_stateEth1Data
 	_stateEth1DataVotes
@@ -134,7 +132,6 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 		{"latest_block_header", common.BeaconBlockHeaderType},
 		{"block_roots", BatchRootsType(spec)},
 		{"state_roots", BatchRootsType(spec)},
-		{"historical_roots", HistoricalRootsType(spec)},
 		// Tokenomics
 		{"reward_adjustment_factor", Uint64Type},
 		// Eth1
@@ -231,10 +228,6 @@ func (state *BeaconStateView) BlockRoots() (common.BatchRoots, error) {
 
 func (state *BeaconStateView) StateRoots() (common.BatchRoots, error) {
 	return AsBatchRoots(state.Get(_stateStateRoots))
-}
-
-func (state *BeaconStateView) HistoricalRoots() (common.HistoricalRoots, error) {
-	return AsHistoricalRoots(state.Get(_stateHistoricalRoots))
 }
 
 func (state *BeaconStateView) RewardAdjustmentFactor() (common.Number, error) {

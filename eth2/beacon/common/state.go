@@ -13,10 +13,6 @@ type BatchRoots interface {
 	HashTreeRoot(fn tree.HashFn) Root
 }
 
-type HistoricalRoots interface {
-	Append(root Root) error
-}
-
 type Eth1DataVotes interface {
 	Reset() error
 	Length() (uint64, error)
@@ -96,7 +92,6 @@ type BeaconState interface {
 	SetLatestBlockHeader(v *BeaconBlockHeader) error
 	BlockRoots() (BatchRoots, error)
 	StateRoots() (BatchRoots, error)
-	HistoricalRoots() (HistoricalRoots, error)
 	RewardAdjustmentFactor() (Number, error)
 	SetRewardAdjustmentFactor(v Number) error
 	Eth1Data() (Eth1Data, error)

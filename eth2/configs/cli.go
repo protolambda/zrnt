@@ -19,6 +19,7 @@ type SpecOptions struct {
 	BellatrixPreset string `ask:"--preset-bellatrix" help:"Eth2 bellatrix spec preset, name or path to YAML"`
 	CapellaPreset   string `ask:"--preset-capella" help:"Eth2 capella spec preset, name or path to YAML"`
 	DenebPreset     string `ask:"--preset-deneb" help:"Eth2 deneb spec preset, name or path to YAML"`
+	ElectraPreset   string `ask:"--preset-electra" help:"Eth2 electra spec preset, name or path to YAML"`
 
 	// TODO: execution engine config for Bellatrix
 	// TODO: trusted setup config for Sharding
@@ -31,6 +32,7 @@ type LegacyConfig struct {
 	common.BellatrixPreset `yaml:",inline"`
 	common.CapellaPreset   `yaml:",inline"`
 	common.DenebPreset     `yaml:",inline"`
+	common.ElectraPreset   `yaml:",inline"`
 	common.Config          `yaml:",inline"`
 }
 
@@ -59,6 +61,7 @@ func (c *SpecOptions) Spec() (*common.Spec, error) {
 			spec.BellatrixPreset = legacy.BellatrixPreset
 			spec.CapellaPreset = legacy.CapellaPreset
 			spec.DenebPreset = legacy.DenebPreset
+			spec.ElectraPreset = legacy.ElectraPreset
 			spec.Config = legacy.Config
 		}
 	}
@@ -158,6 +161,22 @@ func (c *SpecOptions) Spec() (*common.Spec, error) {
 			return nil, fmt.Errorf("failed to decode deneb preset: %v", err)
 		}
 	}
+
+	switch c.ElectraPreset {
+	case "mainnet":
+		spec.ElectraPreset = Mainnet.ElectraPreset
+	case "minimal":
+		spec.ElectraPreset = Minimal.ElectraPreset
+	default:
+		f, err := os.Open(c.ElectraPreset)
+		if err != nil {
+			return nil, fmt.Errorf("failed to open electra preset file: %v", err)
+		}
+		dec := yaml.NewDecoder(f)
+		if err := dec.Decode(&spec.ElectraPreset); err != nil {
+			return nil, fmt.Errorf("failed to decode electra preset: %v", err)
+		}
+	}
 	spec.ExecutionEngine = nil
 	return &spec, nil
 }
@@ -170,4 +189,5 @@ func (c *SpecOptions) Default() {
 	c.BellatrixPreset = "mainnet"
 	c.CapellaPreset = "mainnet"
 	c.DenebPreset = "mainnet"
+	c.ElectraPreset = "mainnet"
 }

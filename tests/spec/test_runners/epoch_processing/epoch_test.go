@@ -52,13 +52,6 @@ func TestEffectiveBalanceUpdates(t *testing.T) {
 		}))
 }
 
-func TestEth1DataReset(t *testing.T) {
-	test_util.RunTransitionTest(t, test_util.AllForks, "epoch_processing", "eth1_data_reset",
-		NewEpochTest(func(spec *common.Spec, fork test_util.ForkName, state common.BeaconState, epc *common.EpochsContext, flats []common.FlatValidator) error {
-			return phase0.ProcessEth1DataReset(context.Background(), spec, epc, state)
-		}))
-}
-
 func TestHistoricalSummariesUpdate(t *testing.T) {
 	test_util.RunTransitionTest(t, []test_util.ForkName{"capella"}, "epoch_processing", "historical_summaries_update",
 		NewEpochTest(func(spec *common.Spec, fork test_util.ForkName, state common.BeaconState, epc *common.EpochsContext, flats []common.FlatValidator) error {

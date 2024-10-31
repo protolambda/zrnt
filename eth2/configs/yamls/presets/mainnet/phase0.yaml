@@ -38,8 +38,6 @@ SLOTS_PER_EPOCH: 32
 MIN_SEED_LOOKAHEAD: 1
 # 2**2 (= 4) epochs 25.6 minutes
 MAX_SEED_LOOKAHEAD: 4
-# 2**6 (= 64) epochs ~6.8 hours
-EPOCHS_PER_ETH1_VOTING_PERIOD: 64
 # 2**13 (= 8,192) slots ~27 hours
 SLOTS_PER_HISTORICAL_ROOT: 8192
 # 2**2 (= 4) epochs 25.6 minutes

@@ -244,34 +244,6 @@ func (state *BeaconStateView) SetRewardAdjustmentFactor(v common.Number) error {
 	return state.Set(_stateRewardAdjustmentFactor, Uint64View(v))
 }
 
-func (state *BeaconStateView) Eth1Data() (common.Eth1Data, error) {
-	dat, err := common.AsEth1Data(state.Get(_stateEth1Data))
-	if err != nil {
-		return common.Eth1Data{}, err
-	}
-	return dat.Raw()
-}
-
-func (state *BeaconStateView) SetEth1Data(v common.Eth1Data) error {
-	return state.Set(_stateEth1Data, v.View())
-}
-
-func (state *BeaconStateView) Eth1DataVotes() (common.Eth1DataVotes, error) {
-	return phase0.AsEth1DataVotes(state.Get(_stateEth1DataVotes))
-}
-
-func (state *BeaconStateView) Eth1DepositIndex() (common.DepositIndex, error) {
-	return common.AsDepositIndex(state.Get(_stateEth1DepositIndex))
-}
-
-func (state *BeaconStateView) IncrementDepositIndex() error {
-	depIndex, err := state.Eth1DepositIndex()
-	if err != nil {
-		return err
-	}
-	return state.Set(_stateEth1DepositIndex, Uint64View(depIndex+1))
-}
-
 func (state *BeaconStateView) Validators() (common.ValidatorRegistry, error) {
 	return phase0.AsValidatorsRegistry(state.Get(_stateValidators))
 }

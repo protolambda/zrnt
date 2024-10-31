@@ -39,9 +39,6 @@ func (state *BeaconStateView) ProcessEpoch(ctx context.Context, spec *common.Spe
 	if err := phase0.ProcessEpochRegistryUpdates(ctx, spec, epc, flats, state); err != nil {
 		return err
 	}
-	if err := phase0.ProcessEth1DataReset(ctx, spec, epc, state); err != nil {
-		return err
-	}
 	if err := phase0.ProcessEffectiveBalanceUpdates(ctx, spec, epc, flats, state); err != nil {
 		return err
 	}
@@ -69,9 +66,6 @@ func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spe
 	if err := phase0.ProcessRandaoReveal(ctx, spec, epc, state, body.RandaoReveal); err != nil {
 		return err
 	}
-	if err := phase0.ProcessEth1Vote(ctx, spec, epc, state, body.Eth1Data); err != nil {
-		return err
-	}
 	// Safety checks, in case the user of the function provided too many operations
 	if err := body.CheckLimits(spec); err != nil {
 		return err
@@ -84,10 +78,6 @@ func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spe
 		return err
 	}
 	if err := ProcessAttestations(ctx, spec, epc, state, body.Attestations); err != nil {
-		return err
-	}
-	// Note: state.AddValidator changed in Altair, but the deposit processing itself stayed the same.
-	if err := phase0.ProcessDeposits(ctx, spec, epc, state, body.Deposits); err != nil {
 		return err
 	}
 	if err := phase0.ProcessVoluntaryExits(ctx, spec, epc, state, body.VoluntaryExits); err != nil {

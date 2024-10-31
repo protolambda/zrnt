@@ -69,46 +69,6 @@ func AsTimestamp(v View, err error) (Timestamp, error) {
 	return Timestamp(i), err
 }
 
-// Eth1 deposit ordering
-type DepositIndex Uint64View
-
-func AsDepositIndex(v View, err error) (DepositIndex, error) {
-	i, err := AsUint64(v, err)
-	return DepositIndex(i), err
-}
-
-func (i *DepositIndex) Deserialize(dr *codec.DecodingReader) error {
-	return (*Uint64View)(i).Deserialize(dr)
-}
-
-func (i DepositIndex) Serialize(w *codec.EncodingWriter) error {
-	return w.WriteUint64(uint64(i))
-}
-
-func (DepositIndex) ByteLength() uint64 {
-	return 8
-}
-
-func (DepositIndex) FixedLength() uint64 {
-	return 8
-}
-
-func (i DepositIndex) HashTreeRoot(hFn tree.HashFn) Root {
-	return Uint64View(i).HashTreeRoot(hFn)
-}
-
-func (e DepositIndex) MarshalJSON() ([]byte, error) {
-	return Uint64View(e).MarshalJSON()
-}
-
-func (e *DepositIndex) UnmarshalJSON(b []byte) error {
-	return ((*Uint64View)(e)).UnmarshalJSON(b)
-}
-
-func (e DepositIndex) String() string {
-	return Uint64View(e).String()
-}
-
 const SlotType = Uint64Type
 
 type Slot Uint64View

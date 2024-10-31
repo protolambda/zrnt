@@ -49,23 +49,6 @@ func ProcessEffectiveBalanceUpdates(ctx context.Context, spec *common.Spec, epc 
 	return nil
 }
 
-func ProcessEth1DataReset(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state common.BeaconState) error {
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-	// Reset eth1 data votes if it is the end of the voting period.
-	if epc.NextEpoch.Epoch%spec.EPOCHS_PER_ETH1_VOTING_PERIOD == 0 {
-		votes, err := state.Eth1DataVotes()
-		if err != nil {
-			return err
-		}
-		if err := votes.Reset(); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func ProcessRandaoMixesReset(ctx context.Context, spec *common.Spec, epc *common.EpochsContext, state common.BeaconState) error {
 	if err := ctx.Err(); err != nil {
 		return err

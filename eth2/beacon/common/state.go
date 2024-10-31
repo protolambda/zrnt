@@ -12,14 +12,6 @@ type BatchRoots interface {
 	SetRoot(slot Slot, r Root) error
 	HashTreeRoot(fn tree.HashFn) Root
 }
-
-type Eth1DataVotes interface {
-	Reset() error
-	Length() (uint64, error)
-	Count(dat Eth1Data) (uint64, error)
-	Append(dat Eth1Data) error
-}
-
 type Validator interface {
 	Pubkey() (BLSPubkey, error)
 	WithdrawalCredentials() (out Root, err error)
@@ -92,11 +84,6 @@ type BeaconState interface {
 	StateRoots() (BatchRoots, error)
 	RewardAdjustmentFactor() (Number, error)
 	SetRewardAdjustmentFactor(v Number) error
-	Eth1Data() (Eth1Data, error)
-	SetEth1Data(v Eth1Data) error
-	Eth1DataVotes() (Eth1DataVotes, error)
-	Eth1DepositIndex() (DepositIndex, error)
-	IncrementDepositIndex() error
 
 	Validators() (ValidatorRegistry, error)
 

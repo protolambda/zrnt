@@ -8,7 +8,6 @@ import (
 	blsu "github.com/protolambda/bls12-381-util"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
-	"github.com/protolambda/zrnt/eth2/configs"
 )
 
 func CreateTestValidators(count uint64, balance common.Gwei) []phase0.KickstartValidatorData {
@@ -30,9 +29,10 @@ func CreateTestValidators(count uint64, balance common.Gwei) []phase0.KickstartV
 }
 
 func CreateTestState(validatorCount uint64, balance common.Gwei) (*phase0.BeaconStateView, *common.EpochsContext) {
-	out, epc, err := phase0.KickStartState(configs.Mainnet, common.Root{123}, 1564000000, CreateTestValidators(validatorCount, balance))
-	if err != nil {
-		panic(err)
-	}
-	return out, epc
+	// out, epc, err := phase0.KickStartState(configs.Mainnet, common.Root{123}, 1564000000, CreateTestValidators(validatorCount, balance))
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// return out, epc
+	return nil, nil
 }

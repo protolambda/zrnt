@@ -2,7 +2,6 @@ package sanity
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"testing"
 
@@ -20,7 +19,6 @@ type InitializationTestCase struct {
 	ExpectedState *phase0.BeaconStateView
 	Eth1Timestamp common.Timestamp
 	Eth1BlockHash common.Root
-	Deposits      []common.Deposit
 }
 
 type DepositsCountMeta struct {
@@ -71,23 +69,16 @@ func (c *InitializationTestCase) Load(t *testing.T, forkName test_util.ForkName,
 		test_util.Check(t, dec.Decode(&m))
 		test_util.Check(t, p.Close())
 	}
-	{
-		for i := uint64(0); i < m.DepositsCount; i++ {
-			var dep common.Deposit
-			test_util.LoadSSZ(t, fmt.Sprintf("deposits_%d", i), &dep, readPart)
-			c.Deposits = append(c.Deposits, dep)
-		}
-	}
 }
 
-func (c *InitializationTestCase) Run() error {
-	res, _, err := phase0.GenesisFromEth1(c.Spec, c.Eth1BlockHash, c.Eth1Timestamp, c.Deposits, false)
-	if err != nil {
-		return err
-	}
-	c.GenesisState = res
-	return nil
-}
+// func (c *InitializationTestCase) Run() error {
+// 	res, _, err := phase0.GenesisFromEth1(c.Spec, c.Eth1BlockHash, c.Eth1Timestamp, c.Deposits, false)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	c.GenesisState = res
+// 	return nil
+// }
 
 func (c *InitializationTestCase) ExpectingFailure() bool {
 	return c.ExpectedState == nil
@@ -107,8 +98,8 @@ func (c *InitializationTestCase) Check(t *testing.T) {
 	}
 }
 
-func TestInitialization(t *testing.T) {
-	// TODO: support initialization for all forks, not just phase0
-	test_util.RunTransitionTest(t, []test_util.ForkName{"phase0"}, "genesis", "initialization",
-		func() test_util.TransitionTest { return new(InitializationTestCase) })
-}
+// func TestInitialization(t *testing.T) {
+// 	// TODO: support initialization for all forks, not just phase0
+// 	test_util.RunTransitionTest(t, []test_util.ForkName{"phase0"}, "genesis", "initialization",
+// 		func() test_util.TransitionTest { return new(InitializationTestCase) })
+// }

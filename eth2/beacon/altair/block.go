@@ -112,40 +112,38 @@ func (block *BeaconBlock) Header(spec *common.Spec) *common.BeaconBlockHeader {
 
 type BeaconBlockBody struct {
 	RandaoReveal common.BLSSignature `json:"randao_reveal" yaml:"randao_reveal"`
-	Eth1Data     common.Eth1Data     `json:"eth1_data" yaml:"eth1_data"`
 	Graffiti     common.Root         `json:"graffiti" yaml:"graffiti"`
 
 	ProposerSlashings phase0.ProposerSlashings `json:"proposer_slashings" yaml:"proposer_slashings"`
 	AttesterSlashings phase0.AttesterSlashings `json:"attester_slashings" yaml:"attester_slashings"`
 	Attestations      phase0.Attestations      `json:"attestations" yaml:"attestations"`
-	Deposits          phase0.Deposits          `json:"deposits" yaml:"deposits"`
 	VoluntaryExits    phase0.VoluntaryExits    `json:"voluntary_exits" yaml:"voluntary_exits"`
 }
 
 func (b *BeaconBlockBody) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
 	return dr.Container(
-		&b.RandaoReveal, &b.Eth1Data,
+		&b.RandaoReveal,
 		&b.Graffiti, spec.Wrap(&b.ProposerSlashings),
 		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
-		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
+		spec.Wrap(&b.VoluntaryExits),
 	)
 }
 
 func (b *BeaconBlockBody) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
 	return w.Container(
-		&b.RandaoReveal, &b.Eth1Data,
+		&b.RandaoReveal,
 		&b.Graffiti, spec.Wrap(&b.ProposerSlashings),
 		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
-		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
+		spec.Wrap(&b.VoluntaryExits),
 	)
 }
 
 func (b *BeaconBlockBody) ByteLength(spec *common.Spec) uint64 {
 	return codec.ContainerLength(
-		&b.RandaoReveal, &b.Eth1Data,
+		&b.RandaoReveal,
 		&b.Graffiti, spec.Wrap(&b.ProposerSlashings),
 		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
-		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
+		spec.Wrap(&b.VoluntaryExits),
 	)
 }
 
@@ -155,10 +153,10 @@ func (a *BeaconBlockBody) FixedLength(*common.Spec) uint64 {
 
 func (b *BeaconBlockBody) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
 	return hFn.HashTreeRoot(
-		b.RandaoReveal, &b.Eth1Data,
+		b.RandaoReveal,
 		b.Graffiti, spec.Wrap(&b.ProposerSlashings),
 		spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations),
-		spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
+		spec.Wrap(&b.VoluntaryExits),
 	)
 }
 
@@ -172,9 +170,6 @@ func (b *BeaconBlockBody) CheckLimits(spec *common.Spec) error {
 	if x := uint64(len(b.Attestations)); x > uint64(spec.MAX_ATTESTATIONS) {
 		return fmt.Errorf("too many attestations: %d", x)
 	}
-	if x := uint64(len(b.Deposits)); x > uint64(spec.MAX_DEPOSITS) {
-		return fmt.Errorf("too many deposits: %d", x)
-	}
 	if x := uint64(len(b.VoluntaryExits)); x > uint64(spec.MAX_VOLUNTARY_EXITS) {
 		return fmt.Errorf("too many voluntary exits: %d", x)
 	}
@@ -184,13 +179,11 @@ func (b *BeaconBlockBody) CheckLimits(spec *common.Spec) error {
 func BeaconBlockBodyType(spec *common.Spec) *ContainerTypeDef {
 	return ContainerType("BeaconBlockBody", []FieldDef{
 		{"randao_reveal", common.BLSSignatureType},
-		{"eth1_data", common.Eth1DataType}, // Eth1 data vote
-		{"graffiti", common.Bytes32Type},   // Arbitrary data
+		{"graffiti", common.Bytes32Type}, // Arbitrary data
 		// Operations
 		{"proposer_slashings", phase0.BlockProposerSlashingsType(spec)},
 		{"attester_slashings", phase0.BlockAttesterSlashingsType(spec)},
 		{"attestations", phase0.BlockAttestationsType(spec)},
-		{"deposits", phase0.BlockDepositsType(spec)},
 		{"voluntary_exits", phase0.BlockVoluntaryExitsType(spec)},
 	})
 }

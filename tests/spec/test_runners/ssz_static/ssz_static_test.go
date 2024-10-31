@@ -112,10 +112,10 @@ func init() {
 		"AttesterSlashing":  func() interface{} { return new(phase0.AttesterSlashing) },
 		"BeaconBlockHeader": func() interface{} { return new(common.BeaconBlockHeader) },
 		"Checkpoint":        func() interface{} { return new(common.Checkpoint) },
-		"Deposit":           func() interface{} { return new(common.Deposit) },
-		"DepositData":       func() interface{} { return new(common.DepositData) },
+		// "Deposit":           func() interface{} { return new(common.Deposit) },
+		"DepositData": func() interface{} { return new(common.DepositData) },
 		//"Eth1Block": func() interface{} { return new(common.Eth1Block) }, // phase0 validator spec remnant
-		"Eth1Data":                func() interface{} { return new(common.Eth1Data) },
+		// "Eth1Data":                func() interface{} { return new(common.Eth1Data) },
 		"Fork":                    func() interface{} { return new(common.Fork) },
 		"ForkData":                func() interface{} { return new(common.ForkData) },
 		"HistoricalBatch":         func() interface{} { return new(phase0.HistoricalBatch) },
@@ -160,8 +160,8 @@ func init() {
 	objs["capella"]["ExecutionPayload"] = func() interface{} { return new(capella.ExecutionPayload) }
 	objs["capella"]["ExecutionPayloadHeader"] = func() interface{} { return new(capella.ExecutionPayloadHeader) }
 	objs["capella"]["Withdrawal"] = func() interface{} { return new(common.Withdrawal) }
-	objs["capella"]["BLSToExecutionChange"] = func() interface{} { return new(common.BLSToExecutionChange) }
-	objs["capella"]["SignedBLSToExecutionChange"] = func() interface{} { return new(common.SignedBLSToExecutionChange) }
+	// objs["capella"]["BLSToExecutionChange"] = func() interface{} { return new(common.BLSToExecutionChange) }
+	// objs["capella"]["SignedBLSToExecutionChange"] = func() interface{} { return new(common.SignedBLSToExecutionChange) }
 }
 
 type RootsYAML struct {

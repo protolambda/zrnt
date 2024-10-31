@@ -118,33 +118,3 @@ func (b *DepositProof) HashTreeRoot(hFn tree.HashFn) Root {
 		return b[i]
 	}, uint64(len(b)), uint64(len(b)))
 }
-
-type Deposit struct {
-	Proof DepositProof `json:"proof" yaml:"proof"`
-	Data  DepositData  `json:"data" yaml:"data"`
-}
-
-func (d *Deposit) Deserialize(dr *codec.DecodingReader) error {
-	return dr.Container(&d.Proof, &d.Data)
-}
-
-func (d *Deposit) Serialize(w *codec.EncodingWriter) error {
-	return w.FixedLenContainer(&d.Proof, &d.Data)
-}
-
-func (a *Deposit) ByteLength() uint64 {
-	return Eth1DataType.TypeByteLength()
-}
-
-func (a *Deposit) FixedLength() uint64 {
-	return DepositType.TypeByteLength()
-}
-
-func (b *Deposit) HashTreeRoot(hFn tree.HashFn) Root {
-	return hFn.HashTreeRoot(&b.Proof, &b.Data)
-}
-
-var DepositType = ContainerType("Deposit", []FieldDef{
-	{"proof", DepositProofType}, // Merkle path to deposit data list root
-	{"data", DepositDataType},
-})

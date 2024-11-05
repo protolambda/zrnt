@@ -48,7 +48,6 @@ type BeaconState struct {
 	// Deep history valid from Capella onwards
 	HistoricalSummaries capella.HistoricalSummaries `json:"historical_summaries"`
 	// Deposit & withdrawals
-	DepositRequestsStartIndex common.Number             `json:"deposit_requests_start_index" yaml:"deposit_requests_start_index"`
 	DepositBalanceToConsume   common.Gwei               `json:"deposit_balance_to_consume" yaml:"deposit_balance_to_consume"`
 	ExitBalanceToConsume      common.Gwei               `json:"exit_balance_to_consume" yaml:"exit_balance_to_consume"`
 	EarliestExitEpoch         common.Epoch              `json:"earliest_exit_epoch" yaml:"earliest_exit_epoch"`
@@ -70,7 +69,7 @@ func (v *BeaconState) Deserialize(spec *common.Spec, dr *codec.DecodingReader) e
 		&v.LatestExecutionPayloadHeader,
 		&v.NextWithdrawalIndex, &v.NextWithdrawalValidatorIndex,
 		spec.Wrap(&v.HistoricalSummaries),
-		&v.DepositRequestsStartIndex, &v.DepositBalanceToConsume, &v.ExitBalanceToConsume,
+		&v.DepositBalanceToConsume, &v.ExitBalanceToConsume,
 		&v.EarliestExitEpoch,
 		spec.Wrap(&v.PendingDeposits), spec.Wrap(&v.PendingPartialWithdrawals),
 	)
@@ -90,7 +89,7 @@ func (v *BeaconState) Serialize(spec *common.Spec, w *codec.EncodingWriter) erro
 		&v.LatestExecutionPayloadHeader,
 		&v.NextWithdrawalIndex, &v.NextWithdrawalValidatorIndex,
 		spec.Wrap(&v.HistoricalSummaries),
-		&v.DepositRequestsStartIndex, &v.DepositBalanceToConsume, &v.ExitBalanceToConsume,
+		&v.DepositBalanceToConsume, &v.ExitBalanceToConsume,
 		&v.EarliestExitEpoch,
 		spec.Wrap(&v.PendingDeposits), spec.Wrap(&v.PendingPartialWithdrawals),
 	)
@@ -110,7 +109,7 @@ func (v *BeaconState) ByteLength(spec *common.Spec) uint64 {
 		&v.LatestExecutionPayloadHeader,
 		&v.NextWithdrawalIndex, &v.NextWithdrawalValidatorIndex,
 		spec.Wrap(&v.HistoricalSummaries),
-		&v.DepositRequestsStartIndex, &v.DepositBalanceToConsume, &v.ExitBalanceToConsume,
+		&v.DepositBalanceToConsume, &v.ExitBalanceToConsume,
 		&v.EarliestExitEpoch,
 		spec.Wrap(&v.PendingDeposits), spec.Wrap(&v.PendingPartialWithdrawals),
 	)
@@ -134,7 +133,7 @@ func (v *BeaconState) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Ro
 		&v.LatestExecutionPayloadHeader,
 		&v.NextWithdrawalIndex, &v.NextWithdrawalValidatorIndex,
 		spec.Wrap(&v.HistoricalSummaries),
-		&v.DepositRequestsStartIndex, &v.DepositBalanceToConsume, &v.ExitBalanceToConsume,
+		&v.DepositBalanceToConsume, &v.ExitBalanceToConsume,
 		&v.EarliestExitEpoch,
 		spec.Wrap(&v.PendingDeposits), spec.Wrap(&v.PendingPartialWithdrawals),
 	)
@@ -166,7 +165,6 @@ const (
 	_nextWithdrawalIndex
 	_nextWithdrawalValidatorIndex
 	_historicalSummaries
-	_depositRequestsStartIndex
 	_depositBalanceToConsume
 	_exitBalanceToConsume
 	_earliestExitEpoch
@@ -211,7 +209,6 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 		// Deep history valid from Capella onwards
 		{"historical_summaries", capella.HistoricalSummariesType(spec)},
 		// Deposit & withdrawals
-		{"deposit_requests_start_index", Uint64Type},
 		{"deposit_balance_to_consume", common.GweiType},
 		{"exit_balance_to_consume", common.GweiType},
 		{"earliest_exit_epoch", common.EpochType},
@@ -510,15 +507,6 @@ func (state *BeaconStateView) HistoricalSummaries() (capella.HistoricalSummaries
 	return capella.AsHistoricalSummaries(v, err)
 }
 
-func (state *BeaconStateView) DepositRequestsStartIndex() (common.Number, error) {
-	v, err := state.Get(_depositRequestsStartIndex)
-	return common.AsNumber(v, err)
-}
-
-func (state *BeaconStateView) SetDepositRequestsStartIndex(v common.Number) error {
-	return state.Set(_depositRequestsStartIndex, Uint64View(v))
-}
-
 func (state *BeaconStateView) DepositBalanceToConsume() (common.Gwei, error) {
 	v, err := state.Get(_depositBalanceToConsume)
 	return common.AsGwei(v, err)
@@ -594,7 +582,6 @@ func (state *BeaconStateView) CopyState() (common.BeaconState, error) {
 
 type ExecutionTrackingBeaconState interface {
 	common.BeaconState
-
 	LatestExecutionPayloadHeader() (*deneb.ExecutionPayloadHeaderView, error)
 	SetLatestExecutionPayloadHeader(h *deneb.ExecutionPayloadHeader) error
 }

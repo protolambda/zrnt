@@ -1,4 +1,4 @@
-package deneb
+package electra
 
 import (
 	"context"

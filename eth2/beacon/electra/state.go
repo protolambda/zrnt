@@ -1,4 +1,4 @@
-package deneb
+package electra
 
 import (
 	"bytes"
@@ -47,6 +47,13 @@ type BeaconState struct {
 	NextWithdrawalValidatorIndex common.ValidatorIndex  `json:"next_withdrawal_validator_index" yaml:"next_withdrawal_validator_index"`
 	// Deep history valid from Capella onwards
 	HistoricalSummaries capella.HistoricalSummaries `json:"historical_summaries"`
+	// Deposit & withdrawals
+	DepositRequestsStartIndex common.Number             `json:"deposit_requests_start_index" yaml:"deposit_requests_start_index"`
+	DepositBalanceToConsume   common.Gwei               `json:"deposit_balance_to_consume" yaml:"deposit_balance_to_consume"`
+	ExitBalanceToConsume      common.Gwei               `json:"exit_balance_to_consume" yaml:"exit_balance_to_consume"`
+	EarliestExitEpoch         common.Epoch              `json:"earliest_exit_epoch" yaml:"earliest_exit_epoch"`
+	PendingDeposits           PendingDeposits           `json:"pending_deposits" yaml:"pending_deposits"`
+	PendingPartialWithdrawals PendingPartialWithdrawals `json:"pending_partial_withdrawals" yaml:"pending_partial_withdrawals"`
 }
 
 func (v *BeaconState) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
@@ -63,6 +70,9 @@ func (v *BeaconState) Deserialize(spec *common.Spec, dr *codec.DecodingReader) e
 		&v.LatestExecutionPayloadHeader,
 		&v.NextWithdrawalIndex, &v.NextWithdrawalValidatorIndex,
 		spec.Wrap(&v.HistoricalSummaries),
+		&v.DepositRequestsStartIndex, &v.DepositBalanceToConsume, &v.ExitBalanceToConsume,
+		&v.EarliestExitEpoch,
+		spec.Wrap(&v.PendingDeposits), spec.Wrap(&v.PendingPartialWithdrawals),
 	)
 }
 
@@ -80,6 +90,9 @@ func (v *BeaconState) Serialize(spec *common.Spec, w *codec.EncodingWriter) erro
 		&v.LatestExecutionPayloadHeader,
 		&v.NextWithdrawalIndex, &v.NextWithdrawalValidatorIndex,
 		spec.Wrap(&v.HistoricalSummaries),
+		&v.DepositRequestsStartIndex, &v.DepositBalanceToConsume, &v.ExitBalanceToConsume,
+		&v.EarliestExitEpoch,
+		spec.Wrap(&v.PendingDeposits), spec.Wrap(&v.PendingPartialWithdrawals),
 	)
 }
 
@@ -97,6 +110,9 @@ func (v *BeaconState) ByteLength(spec *common.Spec) uint64 {
 		&v.LatestExecutionPayloadHeader,
 		&v.NextWithdrawalIndex, &v.NextWithdrawalValidatorIndex,
 		spec.Wrap(&v.HistoricalSummaries),
+		&v.DepositRequestsStartIndex, &v.DepositBalanceToConsume, &v.ExitBalanceToConsume,
+		&v.EarliestExitEpoch,
+		spec.Wrap(&v.PendingDeposits), spec.Wrap(&v.PendingPartialWithdrawals),
 	)
 }
 
@@ -118,6 +134,9 @@ func (v *BeaconState) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Ro
 		&v.LatestExecutionPayloadHeader,
 		&v.NextWithdrawalIndex, &v.NextWithdrawalValidatorIndex,
 		spec.Wrap(&v.HistoricalSummaries),
+		&v.DepositRequestsStartIndex, &v.DepositBalanceToConsume, &v.ExitBalanceToConsume,
+		&v.EarliestExitEpoch,
+		spec.Wrap(&v.PendingDeposits), spec.Wrap(&v.PendingPartialWithdrawals),
 	)
 }
 
@@ -147,6 +166,12 @@ const (
 	_nextWithdrawalIndex
 	_nextWithdrawalValidatorIndex
 	_historicalSummaries
+	_depositRequestsStartIndex
+	_depositBalanceToConsume
+	_exitBalanceToConsume
+	_earliestExitEpoch
+	_pendingDeposits
+	_pendingPartialWithdrawals
 )
 
 func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
@@ -185,6 +210,13 @@ func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 		{"next_withdrawal_validator_index", common.ValidatorIndexType},
 		// Deep history valid from Capella onwards
 		{"historical_summaries", capella.HistoricalSummariesType(spec)},
+		// Deposit & withdrawals
+		{"deposit_requests_start_index", Uint64Type},
+		{"deposit_balance_to_consume", common.GweiType},
+		{"exit_balance_to_consume", common.GweiType},
+		{"earliest_exit_epoch", common.EpochType},
+		{"pending_deposits", PendingDepositsType(spec)},
+		{"pending_partial_withdrawals", PendingPartialWithdrawalsType(spec)},
 	})
 }
 
@@ -476,6 +508,60 @@ func (state *BeaconStateView) SetNextWithdrawalValidatorIndex(nextValidator comm
 func (state *BeaconStateView) HistoricalSummaries() (capella.HistoricalSummariesList, error) {
 	v, err := state.Get(_historicalSummaries)
 	return capella.AsHistoricalSummaries(v, err)
+}
+
+func (state *BeaconStateView) DepositRequestsStartIndex() (common.Number, error) {
+	v, err := state.Get(_depositRequestsStartIndex)
+	return common.AsNumber(v, err)
+}
+
+func (state *BeaconStateView) SetDepositRequestsStartIndex(v common.Number) error {
+	return state.Set(_depositRequestsStartIndex, Uint64View(v))
+}
+
+func (state *BeaconStateView) DepositBalanceToConsume() (common.Gwei, error) {
+	v, err := state.Get(_depositBalanceToConsume)
+	return common.AsGwei(v, err)
+}
+
+func (state *BeaconStateView) SetDepositBalanceToConsume(v common.Gwei) error {
+	return state.Set(_depositBalanceToConsume, Uint64View(v))
+}
+
+func (state *BeaconStateView) ExitBalanceToConsume() (common.Gwei, error) {
+	v, err := state.Get(_exitBalanceToConsume)
+	return common.AsGwei(v, err)
+}
+
+func (state *BeaconStateView) SetExitBalanceToConsume(v common.Gwei) error {
+	return state.Set(_exitBalanceToConsume, Uint64View(v))
+}
+
+func (state *BeaconStateView) EarliestExitEpoch() (common.Epoch, error) {
+	v, err := state.Get(_earliestExitEpoch)
+	return common.AsEpoch(v, err)
+}
+
+func (state *BeaconStateView) SetEarliestExitEpoch(v common.Epoch) error {
+	return state.Set(_earliestExitEpoch, Uint64View(v))
+}
+
+func (state *BeaconStateView) PendingDeposits() (PendingDepositsList, error) {
+	v, err := state.Get(_pendingDeposits)
+	return AsPendingDeposits(v, err)
+}
+
+func (state *BeaconStateView) PendingPartialWithdrawals() (PendingPartialWithdrawalsList, error) {
+	v, err := state.Get(_pendingPartialWithdrawals)
+	return AsPendingPartialWithdrawals(v, err)
+}
+
+type PendingDepositsList interface {
+	Append(deposit PendingDeposit) error
+}
+
+type PendingPartialWithdrawalsList interface {
+	Append(withdrawal PendingPartialWithdrawal) error
 }
 
 func (state *BeaconStateView) ForkSettings(spec *common.Spec) *common.ForkSettings {

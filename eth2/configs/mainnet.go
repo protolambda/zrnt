@@ -65,6 +65,12 @@ var Mainnet = &common.Spec{
 		MAX_BLOBS_PER_BLOCK:                  6,
 		KZG_COMMITMENT_INCLUSION_PROOF_DEPTH: 17,
 	},
+	ElectraPreset: common.ElectraPreset{
+		MAX_PENDING_DEPOSITS:                134217728,
+		MAX_PENDING_PARTIAL_WITHDRAWALS:     134217728,
+		MAX_DEPOSIT_REQUESTS_PER_PAYLOAD:    8192,
+		MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD: 16,
+	},
 	Config: common.Config{
 		PRESET_BASE:                           "mainnet",
 		CONFIG_NAME:                           "mainnet",

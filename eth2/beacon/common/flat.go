@@ -6,7 +6,6 @@ type FlatValidator struct {
 	ActivationEligibilityEpoch Epoch
 	ActivationEpoch            Epoch
 	ExitEpoch                  Epoch
-	WithdrawableEpoch          Epoch
 	PrincipalBalance           Gwei
 }
 

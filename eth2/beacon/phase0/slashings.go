@@ -23,16 +23,16 @@ func SlashValidator(spec *common.Spec, epc *common.EpochsContext, state common.B
 	if err := v.MakeSlashed(); err != nil {
 		return err
 	}
-	prevWithdrawalEpoch, err := v.WithdrawableEpoch()
-	if err != nil {
-		return err
-	}
-	withdrawalEpoch := currentEpoch + spec.MIN_SLASHING_WITHDRAWABLE_DELAY
-	if withdrawalEpoch > prevWithdrawalEpoch {
-		if err := v.SetWithdrawableEpoch(withdrawalEpoch); err != nil {
-			return err
-		}
-	}
+	//prevWithdrawalEpoch, err := v.WithdrawableEpoch()
+	//if err != nil {
+	//	return err
+	//}
+	//withdrawalEpoch := currentEpoch + spec.MIN_SLASHING_WITHDRAWABLE_DELAY
+	//if withdrawalEpoch > prevWithdrawalEpoch {
+	//	if err := v.SetWithdrawableEpoch(withdrawalEpoch); err != nil {
+	//		return err
+	//	}
+	//}
 
 	effectiveBalance, err := v.EffectiveBalance()
 	if err != nil {

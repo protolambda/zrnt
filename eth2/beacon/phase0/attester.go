@@ -83,9 +83,9 @@ func ComputeEpochAttesterData(ctx context.Context, spec *common.Spec, epc *commo
 			status.Flags |= UnslashedAttester
 		}
 
-		if flat.IsActive(prevEpoch) || (flat.Slashed && (prevEpoch+1 < flat.WithdrawableEpoch)) {
-			status.Flags |= EligibleAttester
-		}
+		//if flat.IsActive(prevEpoch) || (flat.Slashed && (prevEpoch+1 < flat.WithdrawableEpoch)) {
+		//	status.Flags |= EligibleAttester
+		//}
 	}
 
 	processEpoch := func(

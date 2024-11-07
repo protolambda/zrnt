@@ -260,8 +260,5 @@ func InitiateValidatorExit(spec *common.Spec, epc *common.EpochsContext, state c
 	if err := v.SetExitEpoch(exitEp); err != nil {
 		return err
 	}
-	if err := v.SetWithdrawableEpoch(exitEp + spec.MIN_VALIDATOR_WITHDRAWABILITY_DELAY); err != nil {
-		return err
-	}
 	return nil
 }

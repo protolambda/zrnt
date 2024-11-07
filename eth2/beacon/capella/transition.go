@@ -137,11 +137,13 @@ func Eth1WithdrawalCredential(validator common.Validator) common.Eth1Address {
 }
 
 func IsFullyWithdrawableValidator(validator common.Validator, balance common.Gwei, epoch common.Epoch) bool {
-	withdrawableEpoch, err := validator.WithdrawableEpoch()
-	if err != nil {
-		panic(err)
-	}
-	return HasEth1WithdrawalCredential(validator) && withdrawableEpoch <= epoch && balance > 0
+	// TODO fix it
+	return true
+	//withdrawableEpoch, err := validator.WithdrawableEpoch()
+	//if err != nil {
+	//	panic(err)
+	//}
+	//return HasEth1WithdrawalCredential(validator) && withdrawableEpoch <= epoch && balance > 0
 }
 
 func IsPartiallyWithdrawableValidator(spec *common.Spec, validator common.Validator, balance common.Gwei, epoch common.Epoch) bool {

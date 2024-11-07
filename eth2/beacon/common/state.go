@@ -34,8 +34,6 @@ type Validator interface {
 	SetActivationEpoch(epoch Epoch) error
 	ExitEpoch() (Epoch, error)
 	SetExitEpoch(ep Epoch) error
-	WithdrawableEpoch() (Epoch, error)
-	SetWithdrawableEpoch(epoch Epoch) error
 	PrincipalBalance() (Gwei, error)
 	SetPrincipalBalance(pb Gwei) error
 	// Flatten the validator data into destination struct

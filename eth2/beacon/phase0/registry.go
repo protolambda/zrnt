@@ -225,9 +225,9 @@ func ProcessEpochRegistryUpdates(ctx context.Context, spec *common.Spec, epc *co
 			if withdrawEpoch < exitEnd { // practically impossible, but here for spec test introduced in consensus-specs#2887
 				return fmt.Errorf("exit epoch overflow: %d + %d = %d", exitEnd, spec.MIN_VALIDATOR_WITHDRAWABILITY_DELAY, withdrawEpoch)
 			}
-			if err := val.SetWithdrawableEpoch(withdrawEpoch); err != nil {
-				return err
-			}
+			//if err := val.SetWithdrawableEpoch(withdrawEpoch); err != nil {
+			//	return err
+			//}
 			endChurn += 1
 			if endChurn >= registerData.ChurnLimit {
 				endChurn = 0

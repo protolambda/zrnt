@@ -41,13 +41,13 @@ func ComputeEpochAttesterData(ctx context.Context, spec *common.Spec, epc *commo
 		},
 		CurrEpochUnslashedTargetStake: 0,
 	}
-	for i := common.ValidatorIndex(0); i < common.ValidatorIndex(len(flats)); i++ {
-		flat := &flats[i]
-		// eligibility check
-		if flat.IsActive(prevEpoch) || (flat.Slashed && prevEpoch+1 < flat.WithdrawableEpoch) {
-			out.EligibleIndices = append(out.EligibleIndices, i)
-		}
-	}
+	//for i := common.ValidatorIndex(0); i < common.ValidatorIndex(len(flats)); i++ {
+	//	flat := &flats[i]
+	//	// eligibility check
+	//	//if flat.IsActive(prevEpoch) || (flat.Slashed && prevEpoch+1 < flat.WithdrawableEpoch) {
+	//	//	out.EligibleIndices = append(out.EligibleIndices, i)
+	//	//}
+	//}
 	prevEpochParticipationView, err := state.PreviousEpochParticipation()
 	if err != nil {
 		return nil, err

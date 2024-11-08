@@ -18,18 +18,17 @@ type Validator struct {
 	ActivationEligibilityEpoch common.Epoch `json:"activation_eligibility_epoch" yaml:"activation_eligibility_epoch"`
 	ActivationEpoch            common.Epoch `json:"activation_epoch" yaml:"activation_epoch"`
 	ExitEpoch                  common.Epoch `json:"exit_epoch" yaml:"exit_epoch"`
-	WithdrawableEpoch          common.Epoch `json:"withdrawable_epoch" yaml:"withdrawable_epoch"`
 	PrincipalBalance           common.Gwei  `json:"principal_balance" yaml:"principal_balance"`
 }
 
 func (v *Validator) Deserialize(dr *codec.DecodingReader) error {
 	return dr.FixedLenContainer(&v.Pubkey, &v.WithdrawalCredentials, &v.EffectiveBalance, (*BoolView)(&v.Slashed),
-		&v.ActivationEligibilityEpoch, &v.ActivationEpoch, &v.ExitEpoch, &v.WithdrawableEpoch, &v.PrincipalBalance)
+		&v.ActivationEligibilityEpoch, &v.ActivationEpoch, &v.ExitEpoch, &v.PrincipalBalance)
 }
 
 func (v *Validator) Serialize(w *codec.EncodingWriter) error {
 	return w.FixedLenContainer(&v.Pubkey, &v.WithdrawalCredentials, &v.EffectiveBalance, (*BoolView)(&v.Slashed),
-		&v.ActivationEligibilityEpoch, &v.ActivationEpoch, &v.ExitEpoch, &v.WithdrawableEpoch, &v.PrincipalBalance)
+		&v.ActivationEligibilityEpoch, &v.ActivationEpoch, &v.ExitEpoch, &v.PrincipalBalance)
 }
 
 func (a *Validator) ByteLength() uint64 {
@@ -42,7 +41,7 @@ func (*Validator) FixedLength() uint64 {
 
 func (v *Validator) HashTreeRoot(hFn tree.HashFn) common.Root {
 	return hFn.HashTreeRoot(v.Pubkey, v.WithdrawalCredentials, v.EffectiveBalance, (BoolView)(v.Slashed),
-		v.ActivationEligibilityEpoch, v.ActivationEpoch, v.ExitEpoch, v.WithdrawableEpoch, v.PrincipalBalance)
+		v.ActivationEligibilityEpoch, v.ActivationEpoch, v.ExitEpoch, v.PrincipalBalance)
 }
 
 func (v *Validator) View() *ValidatorView {
@@ -55,7 +54,6 @@ func (v *Validator) View() *ValidatorView {
 		Uint64View(v.ActivationEligibilityEpoch),
 		Uint64View(v.ActivationEpoch),
 		Uint64View(v.ExitEpoch),
-		Uint64View(v.WithdrawableEpoch),
 		Uint64View(v.PrincipalBalance),
 	)
 	return &ValidatorView{c}
@@ -70,8 +68,7 @@ var ValidatorType = ContainerType("Validator", []FieldDef{
 	{"activation_eligibility_epoch", common.EpochType}, // When criteria for activation were met
 	{"activation_epoch", common.EpochType},
 	{"exit_epoch", common.EpochType},
-	{"withdrawable_epoch", common.EpochType}, // When validator can withdraw funds
-	{"principal_balance", common.GweiType},   // Principal Balance
+	{"principal_balance", common.GweiType}, // Principal Balance
 })
 
 const (
@@ -83,7 +80,6 @@ const (
 	_validatorActivationEligibilityEpoch
 	_validatorActivationEpoch
 	_validatorExitEpoch
-	_validatorWithdrawableEpoch
 	_validatorPrincipalBalance
 )
 
@@ -145,12 +141,6 @@ func (v *ValidatorView) ExitEpoch() (common.Epoch, error) {
 func (v *ValidatorView) SetExitEpoch(ep common.Epoch) error {
 	return v.Set(_validatorExitEpoch, Uint64View(ep))
 }
-func (v *ValidatorView) WithdrawableEpoch() (common.Epoch, error) {
-	return common.AsEpoch(v.Get(_validatorWithdrawableEpoch))
-}
-func (v *ValidatorView) SetWithdrawableEpoch(epoch common.Epoch) error {
-	return v.Set(_validatorWithdrawableEpoch, Uint64View(epoch))
-}
 func (v *ValidatorView) PrincipalBalance() (common.Gwei, error) {
 	return common.AsGwei(v.Get(_validatorPrincipalBalance))
 }
@@ -170,8 +160,7 @@ func (v *ValidatorView) Flatten(dst *common.FlatValidator) error {
 	dst.ActivationEligibilityEpoch, err = common.AsEpoch(fields[4], err)
 	dst.ActivationEpoch, err = common.AsEpoch(fields[5], err)
 	dst.ExitEpoch, err = common.AsEpoch(fields[6], err)
-	dst.WithdrawableEpoch, err = common.AsEpoch(fields[7], err)
-	dst.PrincipalBalance, err = common.AsGwei(fields[8], err)
+	dst.PrincipalBalance, err = common.AsGwei(fields[7], err)
 	if err != nil {
 		return errors.New("failed to flatten validator")
 	}
@@ -205,12 +194,6 @@ func IsSlashable(v common.Validator, epoch common.Epoch) (bool, error) {
 	if err != nil {
 		return false, err
 	} else if activationEpoch > epoch {
-		return false, nil
-	}
-	withdrawableEpoch, err := v.WithdrawableEpoch()
-	if err != nil {
-		return false, err
-	} else if withdrawableEpoch <= epoch {
 		return false, nil
 	}
 	return true, nil

@@ -144,7 +144,6 @@ func (v *ValidatorView) SetExitEpoch(ep common.Epoch) error {
 func (v *ValidatorView) PrincipalBalance() (common.Gwei, error) {
 	return common.AsGwei(v.Get(_validatorPrincipalBalance))
 }
-
 func (v *ValidatorView) SetPrincipalBalance(pb common.Gwei) error {
 	return v.Set(_validatorPrincipalBalance, Uint64View(pb))
 }

@@ -582,47 +582,9 @@ func (state *BeaconStateView) CopyState() (common.BeaconState, error) {
 	return AsBeaconStateView(state.ContainerView.Copy())
 }
 
-type ExecutionUpgradeBeaconState interface {
-	IsExecutionEnabled(spec *common.Spec, block *BeaconBlock) (bool, error)
-	IsTransitionCompleted() (bool, error)
-	IsTransitionBlock(spec *common.Spec, block *BeaconBlock) (bool, error)
-}
-
 type ExecutionTrackingBeaconState interface {
 	common.BeaconState
 
 	LatestExecutionPayloadHeader() (*ExecutionPayloadHeaderView, error)
 	SetLatestExecutionPayloadHeader(h *ExecutionPayloadHeader) error
-}
-
-func (state *BeaconStateView) IsExecutionEnabled(spec *common.Spec, block *BeaconBlock) (bool, error) {
-	isTransitionCompleted, err := state.IsTransitionCompleted()
-	if err != nil {
-		return false, err
-	}
-	if isTransitionCompleted {
-		return true, nil
-	}
-	return state.IsTransitionBlock(spec, block)
-}
-
-func (state *BeaconStateView) IsTransitionCompleted() (bool, error) {
-	execHeader, err := state.LatestExecutionPayloadHeader()
-	if err != nil {
-		return false, err
-	}
-	empty := ExecutionPayloadHeaderType.DefaultNode().MerkleRoot(tree.GetHashFn())
-	return execHeader.HashTreeRoot(tree.GetHashFn()) != empty, nil
-}
-
-func (state *BeaconStateView) IsTransitionBlock(spec *common.Spec, block *BeaconBlock) (bool, error) {
-	isTransitionCompleted, err := state.IsTransitionCompleted()
-	if err != nil {
-		return false, err
-	}
-	if isTransitionCompleted {
-		return false, nil
-	}
-	empty := ExecutionPayloadType(spec).DefaultNode().MerkleRoot(tree.GetHashFn())
-	return block.Body.ExecutionPayload.HashTreeRoot(spec, tree.GetHashFn()) != empty, nil
 }

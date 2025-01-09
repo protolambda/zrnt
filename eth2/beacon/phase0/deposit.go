@@ -2,6 +2,7 @@ package phase0
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -50,6 +51,13 @@ func (li Deposits) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root 
 		}
 		return nil
 	}, length, uint64(spec.MAX_DEPOSITS))
+}
+
+func (li Deposits) MarshalJSON() ([]byte, error) {
+	if li == nil {
+		return json.Marshal([]common.Deposit{}) // encode as empty list, not null
+	}
+	return json.Marshal([]common.Deposit(li))
 }
 
 // Verify that outstanding deposits are processed up to the maximum number of deposits, then process all in order.

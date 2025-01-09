@@ -59,7 +59,7 @@ func (c *FinalityTestCase) Load(t *testing.T, forkName test_util.ForkName, readP
 			test_util.LoadSpecObj(t, fmt.Sprintf("blocks_%d", i), dst, readPart)
 			digest := common.ComputeForkDigest(c.Spec.CAPELLA_FORK_VERSION, valRoot)
 			return dst.Envelope(c.Spec, digest)
-		case "eip4844":
+		case "deneb":
 			dst := new(deneb.SignedBeaconBlock)
 			test_util.LoadSpecObj(t, fmt.Sprintf("blocks_%d", i), dst, readPart)
 			digest := common.ComputeForkDigest(c.Spec.DENEB_FORK_VERSION, valRoot)

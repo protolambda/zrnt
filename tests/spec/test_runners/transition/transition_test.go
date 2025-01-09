@@ -54,7 +54,7 @@ func (c *TransitionTestCase) Load(t *testing.T, testFork test_util.ForkName, rea
 	case "capella":
 		preForkName = "bellatrix"
 		c.Spec.CAPELLA_FORK_EPOCH = common.Epoch(m.ForkEpoch)
-	case "eip4844":
+	case "deneb":
 		preForkName = "capella"
 		c.Spec.DENEB_FORK_EPOCH = common.Epoch(m.ForkEpoch)
 	default:
@@ -105,7 +105,7 @@ func (c *TransitionTestCase) Load(t *testing.T, testFork test_util.ForkName, rea
 			test_util.LoadSpecObj(t, fmt.Sprintf("blocks_%d", i), dst, readPart)
 			digest := common.ComputeForkDigest(c.Spec.CAPELLA_FORK_VERSION, valRoot)
 			return dst.Envelope(c.Spec, digest)
-		case "eip4844":
+		case "deneb":
 			dst := new(deneb.SignedBeaconBlock)
 			test_util.LoadSpecObj(t, fmt.Sprintf("blocks_%d", i), dst, readPart)
 			digest := common.ComputeForkDigest(c.Spec.DENEB_FORK_VERSION, valRoot)
@@ -138,6 +138,6 @@ func (c *TransitionTestCase) Run() error {
 }
 
 func TestTransition(t *testing.T) {
-	test_util.RunTransitionTest(t, []test_util.ForkName{"altair", "bellatrix", "capella", "eip4844"}, "transition", "core",
+	test_util.RunTransitionTest(t, []test_util.ForkName{"altair", "bellatrix", "capella", "deneb"}, "transition", "core",
 		func() test_util.TransitionTest { return new(TransitionTestCase) })
 }

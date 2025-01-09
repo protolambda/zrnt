@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/protolambda/zrnt/eth2/execution"
 	"io/ioutil"
 	"testing"
 
@@ -26,7 +27,7 @@ import (
 // Fork where the test is organized, and thus the state/block/etc. types default to.
 type ForkName string
 
-var AllForks = []ForkName{"phase0", "altair", "bellatrix", "capella", "eip4844"}
+var AllForks = []ForkName{"phase0", "altair", "bellatrix", "capella", "deneb"}
 
 type BaseTransitionTest struct {
 	Spec *common.Spec
@@ -59,7 +60,7 @@ func LoadState(t *testing.T, fork ForkName, name string, readPart TestPartReader
 			state, err = bellatrix.AsBeaconStateView(bellatrix.BeaconStateType(spec).Deserialize(decodingReader))
 		case "capella":
 			state, err = capella.AsBeaconStateView(capella.BeaconStateType(spec).Deserialize(decodingReader))
-		case "eip4844":
+		case "deneb":
 			state, err = deneb.AsBeaconStateView(deneb.BeaconStateType(spec).Deserialize(decodingReader))
 		default:
 			t.Fatalf("unrecognized fork name: %s", fork)
@@ -142,7 +143,7 @@ func (c *BlocksTestCase) Load(t *testing.T, forkName ForkName, readPart TestPart
 			LoadSpecObj(t, fmt.Sprintf("blocks_%d", i), dst, readPart)
 			digest := common.ComputeForkDigest(c.Spec.CAPELLA_FORK_VERSION, valRoot)
 			return dst.Envelope(c.Spec, digest)
-		case "eip4844":
+		case "deneb":
 			dst := new(deneb.SignedBeaconBlock)
 			LoadSpecObj(t, fmt.Sprintf("blocks_%d", i), dst, readPart)
 			digest := common.ComputeForkDigest(c.Spec.DENEB_FORK_VERSION, valRoot)
@@ -235,7 +236,7 @@ func RunTransitionTest(t *testing.T, forks []ForkName, runnerName string, handle
 	})
 	t.Run("minimal", func(t *testing.T) {
 		spec := *configs.Minimal
-		spec.ExecutionEngine = &NoOpExecutionEngine{}
+		spec.ExecutionEngine = &execution.NoOpExecutionEngine{}
 		for _, fork := range forks {
 			t.Run(string(fork), func(t *testing.T) {
 				RunHandler(t, runnerName+"/"+handlerName, caseRunner, &spec, fork)
@@ -244,7 +245,7 @@ func RunTransitionTest(t *testing.T, forks []ForkName, runnerName string, handle
 	})
 	t.Run("mainnet", func(t *testing.T) {
 		spec := *configs.Mainnet
-		spec.ExecutionEngine = &NoOpExecutionEngine{}
+		spec.ExecutionEngine = &execution.NoOpExecutionEngine{}
 		for _, fork := range forks {
 			t.Run(string(fork), func(t *testing.T) {
 				RunHandler(t, runnerName+"/"+handlerName, caseRunner, &spec, fork)
@@ -252,11 +253,3 @@ func RunTransitionTest(t *testing.T, forks []ForkName, runnerName string, handle
 		}
 	})
 }
-
-type NoOpExecutionEngine struct{}
-
-func (m *NoOpExecutionEngine) ExecutePayload(ctx context.Context, executionPayload interface{}) (valid bool, err error) {
-	return true, nil
-}
-
-var _ common.ExecutionEngine = (*NoOpExecutionEngine)(nil)

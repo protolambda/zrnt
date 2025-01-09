@@ -1,6 +1,7 @@
 package operations
 
 import (
+	"github.com/protolambda/zrnt/eth2/beacon/deneb"
 	"testing"
 
 	"github.com/protolambda/zrnt/eth2/beacon/common"
@@ -23,7 +24,11 @@ func (c *VoluntaryExitTestCase) Run() error {
 	if err != nil {
 		return err
 	}
-	return phase0.ProcessVoluntaryExit(c.Spec, epc, c.Pre, &c.VoluntaryExit)
+	if c.Fork == "deneb" {
+		return deneb.ProcessVoluntaryExit(c.Spec, epc, c.Pre, &c.VoluntaryExit)
+	} else {
+		return phase0.ProcessVoluntaryExit(c.Spec, epc, c.Pre, &c.VoluntaryExit)
+	}
 }
 
 func TestVoluntaryExit(t *testing.T) {

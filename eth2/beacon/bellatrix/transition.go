@@ -92,7 +92,12 @@ func (state *BeaconStateView) ProcessBlock(ctx context.Context, spec *common.Spe
 	if enabled, err := state.IsExecutionEnabled(spec, block); err != nil {
 		return err
 	} else if enabled {
-		if err := ProcessExecutionPayload(ctx, spec, state, &body.ExecutionPayload, spec.ExecutionEngine); err != nil {
+		// New in Bellatrix
+		eng, ok := spec.ExecutionEngine.(ExecutionEngine)
+		if !ok {
+			return fmt.Errorf("provided execution-engine interface does not support Bellatrix: %T", spec.ExecutionEngine)
+		}
+		if err := ProcessExecutionPayload(ctx, spec, state, &body.ExecutionPayload, eng); err != nil {
 			return err
 		}
 	}

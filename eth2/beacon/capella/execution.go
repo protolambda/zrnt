@@ -345,7 +345,24 @@ func (ep *ExecutionPayload) GetWitdrawals() []common.Withdrawal {
 	return ep.Withdrawals
 }
 
+type NewPayloadRequest struct {
+	ExecutionPayload *ExecutionPayload
+}
+
 type ExecutionEngine interface {
-	ExecutePayload(ctx context.Context, executionPayload *ExecutionPayload) (valid bool, err error)
-	// TODO: remaining interface parts
+	CapellaNotifyNewPayload(ctx context.Context, executionPayload *ExecutionPayload) (valid bool, err error)
+	CapellaIsValidBlockHash(ctx context.Context, payload *ExecutionPayload) (bool, error)
+}
+
+func VerifyAndNotifyNewPayload(ctx context.Context, eng ExecutionEngine, newPayloadRequest *NewPayloadRequest) (bool, error) {
+	executionPayload := newPayloadRequest.ExecutionPayload
+
+	// Modified in Capella
+	if ok, err := eng.CapellaIsValidBlockHash(ctx, executionPayload); err != nil {
+		return false, fmt.Errorf("failed to check block hash: %w", err)
+	} else if !ok {
+		return false, nil
+	}
+
+	return eng.CapellaNotifyNewPayload(ctx, executionPayload)
 }

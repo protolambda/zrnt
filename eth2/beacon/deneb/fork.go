@@ -132,10 +132,11 @@ func UpgradeToDeneb(spec *common.Spec, epc *common.EpochsContext, pre *capella.B
 		Timestamp:        oldExecutionHeader.Timestamp,
 		ExtraData:        oldExecutionHeader.ExtraData,
 		BaseFeePerGas:    oldExecutionHeader.BaseFeePerGas,
-		ExcessDataGas:    view.Uint256View{},
 		BlockHash:        oldExecutionHeader.BlockHash,
 		TransactionsRoot: oldExecutionHeader.TransactionsRoot,
 		WithdrawalsRoot:  oldExecutionHeader.WithdrawalsRoot,
+		BlobGasUsed:      0, // new in Deneb
+		ExcessBlobGas:    0, // new in Deneb
 	}
 	nextWithdrawalIndex, err := pre.NextWithdrawalIndex()
 	if err != nil {

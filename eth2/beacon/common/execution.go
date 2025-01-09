@@ -2,9 +2,9 @@ package common
 
 import (
 	"bytes"
-	"context"
 	"encoding/hex"
 	"errors"
+	"fmt"
 
 	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/conv"
@@ -58,6 +58,9 @@ func (otx *ExtraData) UnmarshalText(text []byte) error {
 }
 
 func (otx ExtraData) View() (*ExtraDataView, error) {
+	if len(otx) > MAX_EXTRA_DATA_BYTES {
+		return nil, fmt.Errorf("extra-data is too large to be transformed into SSZ tree form: %d", len(otx))
+	}
 	dec := codec.NewDecodingReader(bytes.NewReader(otx), uint64(len(otx)))
 	return AsExtraData(ExtraDataType.Deserialize(dec))
 }
@@ -79,7 +82,8 @@ func (v *ExtraDataView) Raw() (ExtraData, error) {
 	return ExtraData(buf.Bytes()), nil
 }
 
+// ExecutionEngine represents an extensible execution-engine interface to verify execution payloads with.
+// This engine may implement various interfaces, such as
+// bellatrix.ExecutionEngine, capella.ExecutionEngine, deneb.ExecutionEngine
 type ExecutionEngine interface {
-	ExecutePayload(ctx context.Context, executionPayload interface{}) (valid bool, err error)
-	// TODO: remaining interface parts
 }

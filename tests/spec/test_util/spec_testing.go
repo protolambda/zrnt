@@ -10,8 +10,9 @@ import (
 	"testing"
 
 	"github.com/golang/snappy"
-	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/codec"
+
+	"github.com/protolambda/zrnt/eth2/beacon/common"
 )
 
 type TestPart interface {
@@ -29,6 +30,7 @@ type TestPartReader interface {
 type CaseRunner func(t *testing.T, forkName ForkName, readPart TestPartReader)
 
 func Check(t *testing.T, err error) {
+	t.Helper()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,6 +117,7 @@ func RunHandler(t *testing.T, handlerPath string, caseRunner CaseRunner, spec *c
 }
 
 func LoadSpecObj(t *testing.T, name string, dst common.SpecObj, readPart TestPartReader) bool {
+	t.Helper()
 	p := readPart.Part(name + ".ssz_snappy")
 	if p.Exists() {
 		data, err := ioutil.ReadAll(p)
@@ -131,6 +134,7 @@ func LoadSpecObj(t *testing.T, name string, dst common.SpecObj, readPart TestPar
 }
 
 func LoadSSZ(t *testing.T, name string, dst codec.Deserializable, readPart TestPartReader) bool {
+	t.Helper()
 	p := readPart.Part(name + ".ssz_snappy")
 	if p.Exists() {
 		data, err := ioutil.ReadAll(p)

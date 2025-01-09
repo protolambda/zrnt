@@ -45,7 +45,7 @@ func (c *ForkTestCase) Load(t *testing.T, forkName test_util.ForkName, readPart 
 		preFork = "altair"
 	case "capella":
 		preFork = "bellatrix"
-	case "eip4844", "deneb":
+	case "deneb":
 		preFork = "capella"
 	default:
 		t.Fatalf("unrecognized fork: %s", c.PostFork)
@@ -87,7 +87,7 @@ func (c *ForkTestCase) Run() error {
 			return err
 		}
 		c.Pre = out
-	case "eip4844":
+	case "deneb":
 		out, err := deneb.UpgradeToDeneb(c.Spec, epc, c.Pre.(*capella.BeaconStateView))
 		if err != nil {
 			return err
@@ -114,6 +114,6 @@ func (c *ForkTestCase) Check(t *testing.T) {
 }
 
 func TestFork(t *testing.T) {
-	test_util.RunTransitionTest(t, []test_util.ForkName{"altair", "bellatrix", "capella", "eip4844"}, "fork", "fork",
+	test_util.RunTransitionTest(t, []test_util.ForkName{"altair", "bellatrix", "capella", "deneb"}, "fork", "fork",
 		func() test_util.TransitionTest { return new(ForkTestCase) })
 }

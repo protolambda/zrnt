@@ -39,7 +39,7 @@ func runCase(t *testing.T, forkName test_util.ForkName, readPart test_util.TestP
 		genesisState, err = bellatrix.AsBeaconStateView(bellatrix.BeaconStateType(spec).Deserialize(decodingReader))
 	case "capella":
 		genesisState, err = capella.AsBeaconStateView(capella.BeaconStateType(spec).Deserialize(decodingReader))
-	case "eip4844":
+	case "deneb":
 		genesisState, err = deneb.AsBeaconStateView(deneb.BeaconStateType(spec).Deserialize(decodingReader))
 	default:
 		t.Fatalf("unrecognized fork name: %s", forkName)

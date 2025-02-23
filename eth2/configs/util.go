@@ -1,13 +1,13 @@
 package configs
 
-import "math/big"
+import (
+	"gopkg.in/yaml.v3"
+)
 
-// mustBigInt is a helper function for config initialization.
-// DO NOT USE for untrusted config data. Panics if invalid int.
-func mustBigInt(v string) *big.Int {
-	var x big.Int
-	if err := x.UnmarshalText([]byte(v)); err != nil {
+func mustYAML[T any](data []byte) T {
+	var elem T
+	if err := yaml.Unmarshal(data, &elem); err != nil {
 		panic(err)
 	}
-	return &x
+	return elem
 }

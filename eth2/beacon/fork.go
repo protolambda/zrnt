@@ -3,6 +3,7 @@ package beacon
 import (
 	"context"
 	"fmt"
+	"github.com/protolambda/zrnt/eth2/beacon/electra"
 
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
 	"github.com/protolambda/zrnt/eth2/beacon/bellatrix"
@@ -19,6 +20,8 @@ type ForkDecoder struct {
 	Bellatrix common.ForkDigest
 	Capella   common.ForkDigest
 	Deneb     common.ForkDigest
+	Electra   common.ForkDigest
+	Fulu      common.ForkDigest
 	// TODO more forks
 }
 
@@ -30,6 +33,8 @@ func NewForkDecoder(spec *common.Spec, genesisValRoot common.Root) *ForkDecoder 
 		Bellatrix: common.ComputeForkDigest(spec.BELLATRIX_FORK_VERSION, genesisValRoot),
 		Capella:   common.ComputeForkDigest(spec.CAPELLA_FORK_VERSION, genesisValRoot),
 		Deneb:     common.ComputeForkDigest(spec.DENEB_FORK_VERSION, genesisValRoot),
+		Electra:   common.ComputeForkDigest(spec.ELECTRA_FORK_VERSION, genesisValRoot),
+		Fulu:      common.ComputeForkDigest(spec.FULU_FORK_VERSION, genesisValRoot),
 	}
 }
 
@@ -50,6 +55,8 @@ func (d *ForkDecoder) BlockAllocator(digest common.ForkDigest) (func() OpaqueBlo
 		return func() OpaqueBlock { return new(capella.SignedBeaconBlock) }, nil
 	case d.Deneb:
 		return func() OpaqueBlock { return new(deneb.SignedBeaconBlock) }, nil
+	case d.Electra:
+		return func() OpaqueBlock { return new(electra.SignedBeaconBlock) }, nil
 	default:
 		return nil, fmt.Errorf("unrecognized fork digest: %s", digest)
 	}
@@ -62,12 +69,14 @@ func (d *ForkDecoder) ForkDigest(epoch common.Epoch) common.ForkDigest {
 		return d.Altair
 	} else if epoch < d.Spec.CAPELLA_FORK_EPOCH {
 		return d.Bellatrix
-	} else {
-		// only consider deneb if it's actually set equal or higher than capella, to ignore it if it's missing in a config.
-		if d.Spec.DENEB_FORK_EPOCH >= d.Spec.CAPELLA_FORK_EPOCH && epoch >= d.Spec.DENEB_FORK_EPOCH {
-			return d.Deneb
-		}
+	} else if epoch < d.Spec.DENEB_FORK_EPOCH {
 		return d.Capella
+	} else if epoch < d.Spec.ELECTRA_FORK_EPOCH {
+		return d.Deneb
+	} else if epoch < d.Spec.FULU_FORK_EPOCH {
+		return d.Electra
+	} else {
+		return d.Fulu
 	}
 }
 
@@ -107,7 +116,14 @@ func (s *StandardUpgradeableBeaconState) UpgradeMaybe(ctx context.Context, spec 
 	if tpre, ok := s.BeaconState.(*capella.BeaconStateView); ok && slot == common.Slot(spec.DENEB_FORK_EPOCH)*spec.SLOTS_PER_EPOCH {
 		post, err := deneb.UpgradeToDeneb(spec, epc, tpre)
 		if err != nil {
-			return fmt.Errorf("failed to upgrade bellatrix to capella state: %v", err)
+			return fmt.Errorf("failed to upgrade capella to deneb state: %v", err)
+		}
+		s.BeaconState = post
+	}
+	if tpre, ok := s.BeaconState.(*deneb.BeaconStateView); ok && slot == common.Slot(spec.ELECTRA_FORK_EPOCH)*spec.SLOTS_PER_EPOCH {
+		post, err := electra.UpgradeToElectra(spec, epc, tpre)
+		if err != nil {
+			return fmt.Errorf("failed to upgrade deneb to electra state: %v", err)
 		}
 		s.BeaconState = post
 	}
@@ -165,6 +181,17 @@ func EnvelopeToSignedBeaconBlock(benv *common.BeaconBlockEnvelope) (common.SpecO
 	case *deneb.BeaconBlockBody:
 		return &deneb.SignedBeaconBlock{
 			Message: deneb.BeaconBlock{
+				Slot:          benv.Slot,
+				ProposerIndex: benv.ProposerIndex,
+				ParentRoot:    benv.ParentRoot,
+				StateRoot:     benv.StateRoot,
+				Body:          *x,
+			},
+			Signature: benv.Signature,
+		}, nil
+	case *electra.BeaconBlockBody:
+		return &electra.SignedBeaconBlock{
+			Message: electra.BeaconBlock{
 				Slot:          benv.Slot,
 				ProposerIndex: benv.ProposerIndex,
 				ParentRoot:    benv.ParentRoot,

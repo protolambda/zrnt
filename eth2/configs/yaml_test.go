@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v3"
@@ -19,122 +20,42 @@ func mustLoad(path ...string) []byte {
 	return b
 }
 
-func TestYamlDecodingMainnetConfig(t *testing.T) {
-	var conf common.Config
-	if err := yaml.Unmarshal(mustLoad("configs", "mainnet"), &conf); err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(conf, Mainnet.Config) {
-		t.Fatal("Failed to load mainnet config")
-	}
+func yamlTest[E any](t *testing.T, path ...string) {
+	t.Run("yaml-"+strings.Join(path, "-"), func(t *testing.T) {
+		var conf E
+		if err := yaml.Unmarshal(mustLoad(path...), &conf); err != nil {
+			t.Fatalf("failed to decode: %v", err)
+		}
+		roundTripTest(t, conf)
+	})
 }
 
-func TestYamlDecodingMinimalConfig(t *testing.T) {
-	var conf common.Config
-	if err := yaml.Unmarshal(mustLoad("configs", "minimal"), &conf); err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(conf, Minimal.Config) {
-		t.Fatal("Failed to load minimal config")
-	}
+func roundTripTest[E any](t *testing.T, conf E) {
+	t.Run("roundtrip", func(t *testing.T) {
+		data, err := yaml.Marshal(conf)
+		if err != nil {
+			t.Fatalf("failed to encode: %v", err)
+		}
+		var conf2 E
+		if err := yaml.Unmarshal(data, &conf2); err != nil {
+			t.Fatalf("failed to decode again: %v", err)
+		}
+		if !reflect.DeepEqual(conf, conf2) {
+			t.Fatal("Failed to roundtrip")
+		}
+	})
 }
 
-func TestYamlDecodingMainnetPhase0(t *testing.T) {
-	var conf common.Phase0Preset
-	if err := yaml.Unmarshal(mustLoad("presets", "mainnet", "phase0"), &conf); err != nil {
-		t.Fatal(err)
+func TestConfigs(t *testing.T) {
+	for _, presetName := range []string{"minimal", "mainnet"} {
+		yamlTest[common.Config](t, "configs", presetName)
+		yamlTest[common.Phase0Preset](t, "presets", presetName, "phase0")
+		yamlTest[common.AltairPreset](t, "presets", presetName, "altair")
+		yamlTest[common.BellatrixPreset](t, "presets", presetName, "bellatrix")
+		yamlTest[common.CapellaPreset](t, "presets", presetName, "capella")
+		yamlTest[common.DenebPreset](t, "presets", presetName, "deneb")
+		yamlTest[common.ElectraPreset](t, "presets", presetName, "electra")
 	}
-	if !reflect.DeepEqual(conf, Mainnet.Phase0Preset) {
-		t.Fatal("Failed to load mainnet phase0 preset")
-	}
-}
-
-func TestYamlDecodingMainnetAltair(t *testing.T) {
-	var conf common.AltairPreset
-	if err := yaml.Unmarshal(mustLoad("presets", "mainnet", "altair"), &conf); err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(conf, Mainnet.AltairPreset) {
-		t.Fatal("Failed to load mainnet altair preset")
-	}
-}
-
-func TestYamlDecodingMainnetBellatrix(t *testing.T) {
-	var conf common.BellatrixPreset
-	if err := yaml.Unmarshal(mustLoad("presets", "mainnet", "bellatrix"), &conf); err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(conf, Mainnet.BellatrixPreset) {
-		t.Fatal("Failed to load mainnet bellatrix preset")
-	}
-}
-
-func TestYamlDecodingMainnetCapella(t *testing.T) {
-	var conf common.CapellaPreset
-	if err := yaml.Unmarshal(mustLoad("presets", "mainnet", "capella"), &conf); err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(conf, Mainnet.CapellaPreset) {
-		t.Fatal("Failed to load mainnet capella preset")
-	}
-}
-
-func TestYamlDecodingMainnetDeneb(t *testing.T) {
-	var conf common.DenebPreset
-	if err := yaml.Unmarshal(mustLoad("presets", "mainnet", "deneb"), &conf); err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(conf, Mainnet.DenebPreset) {
-		t.Fatal("Failed to load mainnet deneb preset")
-	}
-}
-
-func TestYamlDecodingMinimalPhase0(t *testing.T) {
-	var conf common.Phase0Preset
-	if err := yaml.Unmarshal(mustLoad("presets", "minimal", "phase0"), &conf); err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(conf, Minimal.Phase0Preset) {
-		t.Fatal("Failed to load minimal phase0 preset")
-	}
-}
-
-func TestYamlDecodingMinimalAltair(t *testing.T) {
-	var conf common.AltairPreset
-	if err := yaml.Unmarshal(mustLoad("presets", "minimal", "altair"), &conf); err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(conf, Minimal.AltairPreset) {
-		t.Fatal("Failed to load minimal altair preset")
-	}
-}
-
-func TestYamlDecodingMinimalBellatrix(t *testing.T) {
-	var conf common.BellatrixPreset
-	if err := yaml.Unmarshal(mustLoad("presets", "minimal", "bellatrix"), &conf); err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(conf, Minimal.BellatrixPreset) {
-		t.Fatal("Failed to load minimal bellatrix preset")
-	}
-}
-
-func TestYamlDecodingMinimalCapella(t *testing.T) {
-	var conf common.CapellaPreset
-	if err := yaml.Unmarshal(mustLoad("presets", "minimal", "capella"), &conf); err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(conf, Minimal.CapellaPreset) {
-		t.Fatal("Failed to load minimal capella preset")
-	}
-}
-
-func TestYamlDecodingMinimalDeneb(t *testing.T) {
-	var conf common.DenebPreset
-	if err := yaml.Unmarshal(mustLoad("presets", "minimal", "deneb"), &conf); err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(conf, Minimal.DenebPreset) {
-		t.Fatal("Failed to load minimal deneb preset")
-	}
+	roundTripTest[common.Spec](t, *Minimal)
+	roundTripTest[common.Spec](t, *Mainnet)
 }

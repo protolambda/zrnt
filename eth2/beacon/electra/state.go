@@ -616,9 +616,17 @@ func (state *BeaconStateView) DepositRequestsStartIndex() (Uint64View, error) {
 	return AsUint64(v, err)
 }
 
+func (state *BeaconStateView) SetDepositRequestsStartIndex(v Uint64View) error {
+	return state.Set(_depositRequestsStartIndex, &v)
+}
+
 func (state *BeaconStateView) DepositBalanceToConsume() (common.Gwei, error) {
 	v, err := state.Get(_depositBalanceToConsume)
 	return common.AsGwei(v, err)
+}
+
+func (state *BeaconStateView) SetDepositBalanceToConsume(v common.Gwei) error {
+	return state.Set(_depositBalanceToConsume, (*Uint64View)(&v))
 }
 
 func (state *BeaconStateView) ExitBalanceToConsume() (common.Gwei, error) {
@@ -626,9 +634,17 @@ func (state *BeaconStateView) ExitBalanceToConsume() (common.Gwei, error) {
 	return common.AsGwei(v, err)
 }
 
+func (state *BeaconStateView) SetExitBalanceToConsume(v common.Gwei) error {
+	return state.Set(_exitBalanceToConsume, Uint64View(v))
+}
+
 func (state *BeaconStateView) EarliestExitEpoch() (common.Epoch, error) {
 	v, err := state.Get(_earliestExitEpoch)
 	return common.AsEpoch(v, err)
+}
+
+func (state *BeaconStateView) SetEarliestExitEpoch(v common.Epoch) error {
+	return state.Set(_earliestExitEpoch, Uint64View(v))
 }
 
 func (state *BeaconStateView) ConsolidationBalanceToConsume() (common.Gwei, error) {
@@ -636,9 +652,17 @@ func (state *BeaconStateView) ConsolidationBalanceToConsume() (common.Gwei, erro
 	return common.AsGwei(v, err)
 }
 
+func (state *BeaconStateView) SetConsolidationBalanceToConsume(v common.Gwei) error {
+	return state.Set(_consolidationBalanceToConsume, Uint64View(v))
+}
+
 func (state *BeaconStateView) EarliestConsolidationEpoch() (common.Epoch, error) {
 	v, err := state.Get(_earliestConsolidationEpoch)
 	return common.AsEpoch(v, err)
+}
+
+func (state *BeaconStateView) SetEarliestConsolidationEpoch(v common.Epoch) error {
+	return state.Set(_earliestConsolidationEpoch, Uint64View(v))
 }
 
 // not exposed via getters yet (yet):

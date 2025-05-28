@@ -3,12 +3,13 @@ package ssz_static
 import (
 	"bytes"
 	"encoding/hex"
-	"github.com/protolambda/zrnt/eth2/beacon/deneb"
-	"github.com/protolambda/zrnt/eth2/beacon/electra"
 	"io/ioutil"
 	"testing"
 
+	"github.com/protolambda/zrnt/eth2/beacon/electra"
+
 	"github.com/protolambda/zrnt/eth2/beacon/capella"
+	"github.com/protolambda/zrnt/eth2/beacon/deneb"
 
 	"github.com/golang/snappy"
 	"github.com/protolambda/ztyp/codec"
@@ -154,6 +155,10 @@ func init() {
 
 	objs["altair"]["LightClientSnapshot"] = func() interface{} { return new(altair.LightClientSnapshot) }
 	objs["altair"]["LightClientUpdate"] = func() interface{} { return new(altair.LightClientUpdate) }
+	objs["altair"]["LightClientHeader"] = func() interface{} { return new(altair.LightClientHeader) }
+	objs["altair"]["LightClientBootstrap"] = func() interface{} { return new(altair.LightClientBootstrap) }
+	objs["altair"]["LightClientFinalityUpdate"] = func() interface{} { return new(altair.LightClientFinalityUpdate) }
+	objs["altair"]["LightClientOptimisticUpdate"] = func() interface{} { return new(altair.LightClientOptimisticUpdate) }
 	objs["altair"]["SyncAggregatorSelectionData"] = func() interface{} { return new(altair.SyncAggregatorSelectionData) }
 	objs["altair"]["SyncCommitteeContribution"] = func() interface{} { return new(altair.SyncCommitteeContribution) }
 	objs["altair"]["ContributionAndProof"] = func() interface{} { return new(altair.ContributionAndProof) }
@@ -178,6 +183,11 @@ func init() {
 	objs["capella"]["Withdrawal"] = func() interface{} { return new(common.Withdrawal) }
 	objs["capella"]["BLSToExecutionChange"] = func() interface{} { return new(common.BLSToExecutionChange) }
 	objs["capella"]["SignedBLSToExecutionChange"] = func() interface{} { return new(common.SignedBLSToExecutionChange) }
+	objs["capella"]["LightClientHeader"] = func() interface{} { return new(capella.LightClientHeader) }
+	objs["capella"]["LightClientBootstrap"] = func() interface{} { return new(capella.LightClientBootstrap) }
+	objs["capella"]["LightClientUpdate"] = func() interface{} { return new(capella.LightClientUpdate) }
+	objs["capella"]["LightClientFinalityUpdate"] = func() interface{} { return new(capella.LightClientFinalityUpdate) }
+	objs["capella"]["LightClientOptimisticUpdate"] = func() interface{} { return new(capella.LightClientOptimisticUpdate) }
 
 	objs["deneb"]["BeaconBlockBody"] = func() interface{} { return new(deneb.BeaconBlockBody) }
 	objs["deneb"]["BeaconBlock"] = func() interface{} { return new(deneb.BeaconBlock) }
@@ -185,6 +195,11 @@ func init() {
 	objs["deneb"]["SignedBeaconBlock"] = func() interface{} { return new(deneb.SignedBeaconBlock) }
 	objs["deneb"]["ExecutionPayload"] = func() interface{} { return new(deneb.ExecutionPayload) }
 	objs["deneb"]["ExecutionPayloadHeader"] = func() interface{} { return new(deneb.ExecutionPayloadHeader) }
+	objs["deneb"]["LightClientHeader"] = func() interface{} { return new(deneb.LightClientHeader) }
+	objs["deneb"]["LightClientBootstrap"] = func() interface{} { return new(deneb.LightClientBootstrap) }
+	objs["deneb"]["LightClientUpdate"] = func() interface{} { return new(deneb.LightClientUpdate) }
+	objs["deneb"]["LightClientFinalityUpdate"] = func() interface{} { return new(deneb.LightClientFinalityUpdate) }
+	objs["deneb"]["LightClientOptimisticUpdate"] = func() interface{} { return new(deneb.LightClientOptimisticUpdate) }
 
 	objs["electra"]["BeaconBlockBody"] = func() interface{} { return new(electra.BeaconBlockBody) }
 	objs["electra"]["BeaconBlock"] = func() interface{} { return new(electra.BeaconBlock) }
@@ -203,6 +218,9 @@ func init() {
 	objs["electra"]["PendingPartialWithdrawal"] = func() interface{} { return new(common.PendingPartialWithdrawal) }
 	objs["electra"]["PendingConsolidation"] = func() interface{} { return new(common.PendingConsolidation) }
 	objs["electra"]["ExecutionRequests"] = func() interface{} { return new(electra.ExecutionRequests) }
+	objs["electra"]["LightClientBootstrap"] = func() interface{} { return new(electra.LightClientBootstrap) }
+	objs["electra"]["LightClientUpdate"] = func() interface{} { return new(electra.LightClientUpdate) }
+	objs["electra"]["LightClientFinalityUpdate"] = func() interface{} { return new(electra.LightClientFinalityUpdate) }
 }
 
 type RootsYAML struct {

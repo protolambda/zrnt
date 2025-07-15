@@ -152,6 +152,13 @@ type ElectraPreset struct {
 	MAX_PENDING_DEPOSITS_PER_EPOCH Uint64View `yaml:"MAX_PENDING_DEPOSITS_PER_EPOCH" json:"MAX_PENDING_DEPOSITS_PER_EPOCH"`
 }
 
+type FuluPreset struct {
+	// Data column parameters  
+	FIELD_ELEMENTS_PER_CELL             Uint64View `yaml:"FIELD_ELEMENTS_PER_CELL" json:"FIELD_ELEMENTS_PER_CELL"`
+	FIELD_ELEMENTS_PER_EXT_BLOB         Uint64View `yaml:"FIELD_ELEMENTS_PER_EXT_BLOB" json:"FIELD_ELEMENTS_PER_EXT_BLOB"`
+	KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH Uint64View `yaml:"KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH" json:"KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH"`
+}
+
 type Config struct {
 	PRESET_BASE string `yaml:"PRESET_BASE" json:"PRESET_BASE"`
 
@@ -347,6 +354,7 @@ type Spec struct {
 	CapellaPreset   `json:",inline" yaml:",inline"`
 	DenebPreset     `json:",inline" yaml:",inline"`
 	ElectraPreset   `json:",inline" yaml:",inline"`
+	FuluPreset      `json:",inline" yaml:",inline"`
 	Config          `json:",inline" yaml:",inline"`
 
 	ExecutionEngine `json:"-" yaml:"-"`

@@ -57,6 +57,8 @@ func (d *ForkDecoder) BlockAllocator(digest common.ForkDigest) (func() OpaqueBlo
 		return func() OpaqueBlock { return new(deneb.SignedBeaconBlock) }, nil
 	case d.Electra:
 		return func() OpaqueBlock { return new(electra.SignedBeaconBlock) }, nil
+	// case d.Fulu:
+	//	return func() OpaqueBlock { return new(fulu.SignedBeaconBlock) }, nil
 	default:
 		return nil, fmt.Errorf("unrecognized fork digest: %s", digest)
 	}
@@ -127,6 +129,14 @@ func (s *StandardUpgradeableBeaconState) UpgradeMaybe(ctx context.Context, spec 
 		}
 		s.BeaconState = post
 	}
+	// Fulu upgrade temporarily disabled due to compilation issues
+	// if tpre, ok := s.BeaconState.(*electra.BeaconStateView); ok && slot == common.Slot(spec.FULU_FORK_EPOCH)*spec.SLOTS_PER_EPOCH {
+	//	post, err := fulu.UpgradeToFulu(spec, epc, tpre)
+	//	if err != nil {
+	//		return fmt.Errorf("failed to upgrade electra to fulu state: %v", err)
+	//	}
+	//	s.BeaconState = post
+	// }
 	return nil
 }
 
@@ -200,6 +210,17 @@ func EnvelopeToSignedBeaconBlock(benv *common.BeaconBlockEnvelope) (common.SpecO
 			},
 			Signature: benv.Signature,
 		}, nil
+	// case *fulu.BeaconBlockBody:
+	//	return &fulu.SignedBeaconBlock{
+	//		Message: fulu.BeaconBlock{
+	//			Slot:          benv.Slot,
+	//			ProposerIndex: benv.ProposerIndex,
+	//			ParentRoot:    benv.ParentRoot,
+	//			StateRoot:     benv.StateRoot,
+	//			Body:          *x,
+	//		},
+	//		Signature: benv.Signature,
+	//	}, nil
 	default:
 		return nil, fmt.Errorf("cannot convert beacon block envelope to full signed block, unrecognized body type: %T", x)
 	}

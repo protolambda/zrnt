@@ -1,10 +1,7 @@
 package fulu
 
 import (
-	"fmt"
-
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
-	"github.com/protolambda/zrnt/eth2/beacon/capella"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/deneb"
 	"github.com/protolambda/zrnt/eth2/beacon/electra"
@@ -110,19 +107,19 @@ type BeaconBlockBody struct {
 func (b *BeaconBlockBody) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
 	return dr.Container(&b.RandaoReveal, &b.Eth1Data, &b.Graffiti,
 		spec.Wrap(&b.ProposerSlashings), spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations), spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
-		&b.SyncAggregate, spec.Wrap(&b.ExecutionPayload), spec.Wrap(&b.BlsToExecutionChanges), spec.Wrap(&b.BlobKzgCommitments))
+		spec.Wrap(&b.SyncAggregate), spec.Wrap(&b.ExecutionPayload), spec.Wrap(&b.BlsToExecutionChanges), spec.Wrap(&b.BlobKzgCommitments))
 }
 
 func (b *BeaconBlockBody) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
 	return w.Container(&b.RandaoReveal, &b.Eth1Data, &b.Graffiti,
 		spec.Wrap(&b.ProposerSlashings), spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations), spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
-		&b.SyncAggregate, spec.Wrap(&b.ExecutionPayload), spec.Wrap(&b.BlsToExecutionChanges), spec.Wrap(&b.BlobKzgCommitments))
+		spec.Wrap(&b.SyncAggregate), spec.Wrap(&b.ExecutionPayload), spec.Wrap(&b.BlsToExecutionChanges), spec.Wrap(&b.BlobKzgCommitments))
 }
 
 func (b *BeaconBlockBody) ByteLength(spec *common.Spec) uint64 {
 	return codec.ContainerLength(&b.RandaoReveal, &b.Eth1Data, &b.Graffiti,
 		spec.Wrap(&b.ProposerSlashings), spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations), spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
-		&b.SyncAggregate, spec.Wrap(&b.ExecutionPayload), spec.Wrap(&b.BlsToExecutionChanges), spec.Wrap(&b.BlobKzgCommitments))
+		spec.Wrap(&b.SyncAggregate), spec.Wrap(&b.ExecutionPayload), spec.Wrap(&b.BlsToExecutionChanges), spec.Wrap(&b.BlobKzgCommitments))
 }
 
 func (b *BeaconBlockBody) FixedLength(*common.Spec) uint64 {
@@ -132,7 +129,7 @@ func (b *BeaconBlockBody) FixedLength(*common.Spec) uint64 {
 func (b *BeaconBlockBody) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
 	return hFn.HashTreeRoot(&b.RandaoReveal, &b.Eth1Data, &b.Graffiti,
 		spec.Wrap(&b.ProposerSlashings), spec.Wrap(&b.AttesterSlashings), spec.Wrap(&b.Attestations), spec.Wrap(&b.Deposits), spec.Wrap(&b.VoluntaryExits),
-		&b.SyncAggregate, spec.Wrap(&b.ExecutionPayload), spec.Wrap(&b.BlsToExecutionChanges), spec.Wrap(&b.BlobKzgCommitments))
+		spec.Wrap(&b.SyncAggregate), spec.Wrap(&b.ExecutionPayload), spec.Wrap(&b.BlsToExecutionChanges), spec.Wrap(&b.BlobKzgCommitments))
 }
 
 type ExecutionPayload struct {
@@ -160,21 +157,21 @@ type ExecutionPayload struct {
 
 func (b *ExecutionPayload) Deserialize(spec *common.Spec, dr *codec.DecodingReader) error {
 	return dr.Container(&b.ParentHash, &b.FeeRecipient, &b.StateRoot, &b.ReceiptsRoot, &b.LogsBloom, &b.PrevRandao,
-		&b.BlockNumber, &b.GasLimit, &b.GasUsed, &b.Timestamp, spec.Wrap(&b.ExtraData), &b.BaseFeePerGas, &b.BlockHash, 
+		&b.BlockNumber, &b.GasLimit, &b.GasUsed, &b.Timestamp, &b.ExtraData, &b.BaseFeePerGas, &b.BlockHash, 
 		spec.Wrap(&b.Transactions), spec.Wrap(&b.Withdrawals), &b.BlobGasUsed, &b.ExcessBlobGas,
 		spec.Wrap(&b.DepositRequests), spec.Wrap(&b.WithdrawalRequests), spec.Wrap(&b.ConsolidationRequests))
 }
 
 func (b *ExecutionPayload) Serialize(spec *common.Spec, w *codec.EncodingWriter) error {
 	return w.Container(&b.ParentHash, &b.FeeRecipient, &b.StateRoot, &b.ReceiptsRoot, &b.LogsBloom, &b.PrevRandao,
-		&b.BlockNumber, &b.GasLimit, &b.GasUsed, &b.Timestamp, spec.Wrap(&b.ExtraData), &b.BaseFeePerGas, &b.BlockHash, 
+		&b.BlockNumber, &b.GasLimit, &b.GasUsed, &b.Timestamp, &b.ExtraData, &b.BaseFeePerGas, &b.BlockHash, 
 		spec.Wrap(&b.Transactions), spec.Wrap(&b.Withdrawals), &b.BlobGasUsed, &b.ExcessBlobGas,
 		spec.Wrap(&b.DepositRequests), spec.Wrap(&b.WithdrawalRequests), spec.Wrap(&b.ConsolidationRequests))
 }
 
 func (b *ExecutionPayload) ByteLength(spec *common.Spec) uint64 {
 	return codec.ContainerLength(&b.ParentHash, &b.FeeRecipient, &b.StateRoot, &b.ReceiptsRoot, &b.LogsBloom, &b.PrevRandao,
-		&b.BlockNumber, &b.GasLimit, &b.GasUsed, &b.Timestamp, spec.Wrap(&b.ExtraData), &b.BaseFeePerGas, &b.BlockHash, 
+		&b.BlockNumber, &b.GasLimit, &b.GasUsed, &b.Timestamp, &b.ExtraData, &b.BaseFeePerGas, &b.BlockHash, 
 		spec.Wrap(&b.Transactions), spec.Wrap(&b.Withdrawals), &b.BlobGasUsed, &b.ExcessBlobGas,
 		spec.Wrap(&b.DepositRequests), spec.Wrap(&b.WithdrawalRequests), spec.Wrap(&b.ConsolidationRequests))
 }
@@ -185,7 +182,7 @@ func (b *ExecutionPayload) FixedLength(*common.Spec) uint64 {
 
 func (b *ExecutionPayload) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Root {
 	return hFn.HashTreeRoot(&b.ParentHash, &b.FeeRecipient, &b.StateRoot, &b.ReceiptsRoot, &b.LogsBloom, &b.PrevRandao,
-		&b.BlockNumber, &b.GasLimit, &b.GasUsed, &b.Timestamp, spec.Wrap(&b.ExtraData), &b.BaseFeePerGas, &b.BlockHash, 
+		&b.BlockNumber, &b.GasLimit, &b.GasUsed, &b.Timestamp, &b.ExtraData, &b.BaseFeePerGas, &b.BlockHash, 
 		spec.Wrap(&b.Transactions), spec.Wrap(&b.Withdrawals), &b.BlobGasUsed, &b.ExcessBlobGas,
 		spec.Wrap(&b.DepositRequests), spec.Wrap(&b.WithdrawalRequests), spec.Wrap(&b.ConsolidationRequests))
 }

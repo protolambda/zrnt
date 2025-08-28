@@ -9,7 +9,7 @@ require (
 	github.com/protolambda/bls12-381-util v0.1.0
 	github.com/protolambda/messagediff v1.4.0
 	github.com/protolambda/ztyp v0.2.2
-	gopkg.in/yaml.v3 v3.0.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
